@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
+@theme {
+  --color-void: #030303;
+  --color-carbon: #0A0A0A;
+  --color-carbon-muted: #121212;
+  --color-carbon-border: #1C1C1C;
+  
+  --color-platinum: #E5E4E2;
+  --color-platinum-bright: #F5F5F3;
+  --color-sub: #71717A;
+  
+  --color-accent: #FFFFFF;
+  --color-accent-hover: #E5E4E2;
+  
+  --color-glass-surface: rgba(255, 255, 255, 0.02);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-highlight: rgba(255, 255, 255, 0.15);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #030303;
+  --foreground: #E5E4E2;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #030303 !important;
+  color: #E5E4E2;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Seleção de Texto: Foco de Alta Precisão */
+::selection {
+  background-color: #FFFFFF;
+  color: #030303;
+}
+
+/* Scrollbar Corporativa Dark Industrial */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #030303;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Glassmorphism Utilitário */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
 }
