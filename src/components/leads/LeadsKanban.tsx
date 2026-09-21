@@ -11,6 +11,7 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  Coins,
   Globe,
   GripVertical,
   Mail,
@@ -44,7 +45,7 @@ const COLUMNS: ColumnConfig[] = [
   },
   {
     id: "negotiation",
-    title: "Em Negociação",
+    title: "Em Prospecção",
     icon: Clock,
     accentColor: "text-emerald-400",
     badgeBg: "bg-emerald-400/10 text-emerald-400 border border-emerald-500/20",
@@ -69,20 +70,25 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
     setIsMounted(true);
   }, []);
 
-  // Mantém os dados sincronizados quando os dados do servidor mudam
+  // Sincroniza novos leads do servidor sem sobrescrever as alterações locais do operador
   useEffect(() => {
-    setLeadsList(initialLeads);
+    setLeadsList((prev) => {
+      if (prev.length === 0) return initialLeads;
+      const existingIds = new Set(prev.map((l) => l.id));
+      const incomingNewLeads = initialLeads.filter((l) => !existingIds.has(l.id));
+      if (incomingNewLeads.length === 0) return prev;
+      return [...prev, ...incomingNewLeads];
+    });
   }, [initialLeads]);
 
-  // Abertura do Slide-over Sheet para detalhes
+  // Abertura do Slide-over Sheet para detalhes executivos do Hunter
   const handleOpenSheet = (lead: Lead) => {
     setSelectedLead(lead);
     setIsSheetOpen(true);
   };
 
-  // Alteração de status pelo modal ou arrasto
+  // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
-    // 1. Atualização Otimista
     setLeadsList((prev) =>
       prev.map((lead) =>
         lead.id === leadId ? { ...lead, status: newStatus } : lead
@@ -93,24 +99,20 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       setSelectedLead((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
 
-    // 2. Persistência assíncrona via Server Action
     try {
-      const result = await updateLeadStatusAction(leadId, newStatus);
-      if (!result.success) {
-        console.error("Falha ao salvar no servidor:", result.error);
-      }
+      await updateLeadStatusAction(leadId, newStatus);
     } catch (err) {
-      console.error("Erro na Server Action de atualização de lead:", err);
+      console.error("Falha ao salvar status no banco de dados:", err);
     }
   };
 
-  // Tratamento do término do arrasto (Drag End)
+  // Tratamento do término do arrasto (Drag End) com movimentação bidirecional livre
   const onDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
 
-    // Se soltou na mesma coluna e na mesma posição
+    // Se soltou exatamente na mesma coluna e na mesma posição, não há alteração
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -118,8 +120,39 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       return;
     }
 
-    const newStatus = destination.droppableId as LeadStatus;
-    await handleStatusChange(draggableId, newStatus);
+    const destStatus = destination.droppableId as LeadStatus;
+
+    // Atualização Otimista Precisa: realoca o lead entre as colunas preservando a ordenação
+    setLeadsList((prev) => {
+      const currentList = [...prev];
+      const targetIndex = currentList.findIndex((item) => item.id === draggableId);
+      if (targetIndex === -1) return prev;
+
+      // Extrai e atualiza o status do lead movimentado
+      const [movedLead] = currentList.splice(targetIndex, 1);
+      const updatedLead = { ...movedLead, status: destStatus };
+
+      // Separa os leads da coluna de destino e os das outras colunas
+      const destLeads = currentList.filter((item) => item.status === destStatus);
+      const otherLeads = currentList.filter((item) => item.status !== destStatus);
+
+      // Insere o card na posição exata de destino
+      destLeads.splice(destination.index, 0, updatedLead);
+
+      // Retorna a lista completa reorganizada
+      return [...destLeads, ...otherLeads];
+    });
+
+    if (selectedLead && selectedLead.id === draggableId) {
+      setSelectedLead((prev) => (prev ? { ...prev, status: destStatus } : null));
+    }
+
+    // Persistência assíncrona no PostgreSQL via Server Action
+    try {
+      await updateLeadStatusAction(draggableId, destStatus);
+    } catch (err) {
+      console.error("Falha na Server Action de atualização de lead:", err);
+    }
   };
 
   const getLeadsByStatus = (status: LeadStatus) => {
@@ -131,15 +164,26 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
     return new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(d);
+  };
+
+  // Helper para exibir nome e empresa destacados
+  const parseLeadTitle = (rawName: string) => {
+    const match = rawName.match(/^(.*?)(?:\s*\((.*?)\))?$/);
+    const name = match?.[1]?.trim() || rawName;
+    const company = match?.[2]?.trim();
+    return { name, company };
   };
 
   return (
     <div className="space-y-6">
-      {/* Board Kanban com Drag-and-Drop */}
+      {/* Board Kanban com Drag-and-Drop Bidirecional */}
       {isMounted ? (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {COLUMNS.map((column) => {
               const columnLeads = getLeadsByStatus(column.id);
               const ColumnIcon = column.icon;
@@ -147,7 +191,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
               return (
                 <div
                   key={column.id}
-                  className="flex flex-col rounded-xl border border-glass-border bg-carbon/60 backdrop-blur-xl shadow-xl overflow-hidden"
+                  className="flex flex-col rounded-xl border border-glass-border bg-carbon/60 backdrop-blur-xl shadow-xl overflow-hidden min-h-[520px]"
                 >
                   {/* Cabeçalho da Coluna */}
                   <div className="flex items-center justify-between border-b border-glass-border p-4 bg-carbon-muted/40">
@@ -171,13 +215,14 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`p-3 space-y-3 min-h-[420px] transition-colors ${
+                        className={`flex flex-col flex-1 p-3 space-y-3 min-h-[460px] transition-colors ${
                           snapshot.isDraggingOver
                             ? "bg-carbon-muted/70 ring-1 ring-accent/30"
                             : ""
                         }`}
                       >
                         {columnLeads.map((lead, index) => {
+                          const parsed = parseLeadTitle(lead.leadName);
                           const isAutomation =
                             lead.origin?.toLowerCase().includes("n8n") ||
                             lead.origin?.toLowerCase().includes("webhook");
@@ -192,24 +237,34 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                 <div
                                   ref={dragProvided.innerRef}
                                   {...dragProvided.draggableProps}
-                                  className={`rounded-lg border bg-carbon p-4 space-y-3 transition-all select-none group cursor-pointer ${
+                                  {...dragProvided.dragHandleProps}
+                                  onClick={(e) => {
+                                    if (dragSnapshot.isDragging) return;
+                                    handleOpenSheet(lead);
+                                  }}
+                                  className={`rounded-lg border bg-carbon p-4 space-y-3 transition-all select-none group cursor-grab active:cursor-grabbing ${
                                     dragSnapshot.isDragging
                                       ? "border-accent shadow-2xl scale-[1.02] ring-2 ring-accent/20 z-50 bg-carbon"
                                       : "border-glass-border hover:border-glass-highlight hover:bg-carbon-muted/40 shadow-md"
                                   }`}
-                                  onClick={() => handleOpenSheet(lead)}
                                 >
-                                  {/* Topo do Card: Nome e Drag Handle */}
+                                  {/* Topo do Card: Nome, Empresa e Grip Icon */}
                                   <div className="flex items-start justify-between gap-2">
-                                    <div className="font-semibold text-xs text-platinum group-hover:text-accent transition-colors leading-snug">
-                                      {lead.leadName}
+                                    <div className="space-y-0.5">
+                                      <div className="font-semibold text-xs text-platinum group-hover:text-accent transition-colors leading-snug">
+                                        {parsed.name}
+                                      </div>
+                                      {parsed.company && (
+                                        <div className="flex items-center gap-1 text-[11px] text-sub">
+                                          <Building2 className="h-3 w-3 shrink-0" />
+                                          <span className="truncate">{parsed.company}</span>
+                                        </div>
+                                      )}
                                     </div>
 
                                     <div
-                                      {...dragProvided.dragHandleProps}
-                                      onClick={(e) => e.stopPropagation()}
                                       title="Arrastar Card"
-                                      className="text-sub/50 hover:text-platinum transition-colors cursor-grab active:cursor-grabbing p-0.5 rounded shrink-0"
+                                      className="text-sub/40 group-hover:text-platinum transition-colors p-0.5 rounded shrink-0"
                                     >
                                       <GripVertical className="h-3.5 w-3.5" />
                                     </div>
@@ -218,15 +273,31 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                   {/* Contatos Rápidos */}
                                   <div className="space-y-1 text-[11px] text-sub font-mono">
                                     {lead.leadEmail && (
-                                      <div className="flex items-center gap-1.5 truncate">
+                                      <div
+                                        className="flex items-center gap-1.5 truncate"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
                                         <Mail className="h-3 w-3 text-sub shrink-0" />
-                                        <span className="truncate">{lead.leadEmail}</span>
+                                        <a
+                                          href={`mailto:${lead.leadEmail}`}
+                                          className="truncate hover:text-platinum transition-colors"
+                                        >
+                                          {lead.leadEmail}
+                                        </a>
                                       </div>
                                     )}
                                     {lead.leadPhone && (
-                                      <div className="flex items-center gap-1.5">
+                                      <div
+                                        className="flex items-center gap-1.5"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
                                         <Phone className="h-3 w-3 text-sub shrink-0" />
-                                        <span>{lead.leadPhone}</span>
+                                        <a
+                                          href={`tel:${lead.leadPhone}`}
+                                          className="hover:text-platinum transition-colors"
+                                        >
+                                          {lead.leadPhone}
+                                        </a>
                                       </div>
                                     )}
                                   </div>
@@ -253,8 +324,9 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                         })}
                         {provided.placeholder}
 
+                        {/* Estado Vazio da Coluna com pointer-events-none para não bloquear o drop */}
                         {columnLeads.length === 0 && (
-                          <div className="flex flex-col items-center justify-center py-12 text-center text-sub border border-dashed border-glass-border/60 rounded-lg">
+                          <div className="flex flex-1 items-center justify-center p-8 text-center text-sub border border-dashed border-glass-border/60 rounded-lg pointer-events-none">
                             <span className="text-[11px] font-mono">
                               Nenhum lead nesta etapa
                             </span>
@@ -274,19 +346,19 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
           {COLUMNS.map((col) => (
             <div
               key={col.id}
-              className="rounded-xl border border-glass-border bg-carbon p-4 min-h-[420px] animate-pulse"
+              className="rounded-xl border border-glass-border bg-carbon p-4 min-h-[520px] animate-pulse"
             >
               <div className="h-5 w-28 bg-carbon-muted rounded mb-4" />
               <div className="space-y-3">
-                <div className="h-20 bg-carbon-muted/50 rounded-lg" />
-                <div className="h-20 bg-carbon-muted/50 rounded-lg" />
+                <div className="h-24 bg-carbon-muted/50 rounded-lg" />
+                <div className="h-24 bg-carbon-muted/50 rounded-lg" />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Slide-over Sheet Lateral para Detalhes do Lead */}
+      {/* Slide-over Sheet Lateral: Dossiê Completo do Vendedor (Hunter) */}
       <LeadDetailsSheet
         lead={selectedLead}
         isOpen={isSheetOpen}

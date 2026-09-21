@@ -1,7 +1,8 @@
 import "dotenv/config";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { companies, users } from "./schema";
+import { companies, leads, users } from "./schema";
 
 async function runSeed() {
   const connectionString = process.env.DATABASE_URL;
@@ -69,6 +70,48 @@ async function runSeed() {
     console.log(`EMAIL: ${user.email}`);
     console.log(`ROLE: ${user.role}`);
     console.log(`USER_ID: ${user.id}`);
+    console.log("------------------------------------------");
+
+    // 3. Seeding de Leads B2B para o Pipeline Comercial
+    const initialLeads = [
+      {
+        companyId: company.id,
+        leadName: "Carlos Eduardo Mendes (Horizon Tech S.A.)",
+        leadEmail: "carlos.mendes@horizontech.com.br",
+        leadPhone: "+55 (11) 98765-4321",
+        origin: "n8n / Webhook Automations",
+        status: "negotiation" as const,
+      },
+      {
+        companyId: company.id,
+        leadName: "Mariana Alencar (Vanguard Logistics)",
+        leadEmail: "m.alencar@vanguardlog.com",
+        leadPhone: "+55 (21) 99887-1122",
+        origin: "Inbound Enterprise",
+        status: "new" as const,
+      },
+      {
+        companyId: company.id,
+        leadName: "Roberto Silveira (Apex Capital Holding)",
+        leadEmail: "roberto.silveira@apexcapital.io",
+        leadPhone: "+55 (11) 98888-7766",
+        origin: "Campanhas B2B / LinkedIn",
+        status: "closed" as const,
+      },
+    ];
+
+    for (const leadData of initialLeads) {
+      const existing = await db
+        .select()
+        .from(leads)
+        .where(eq(leads.leadEmail, leadData.leadEmail))
+        .limit(1);
+
+      if (existing.length === 0) {
+        await db.insert(leads).values(leadData);
+        console.log(`LEAD_INSERIDO: ${leadData.leadName}`);
+      }
+    }
     console.log("------------------------------------------");
   } catch (error) {
     console.error("Falha na execução do seed:", error);

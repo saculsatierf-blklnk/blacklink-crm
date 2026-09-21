@@ -22,8 +22,8 @@ async function getLeads(): Promise<Lead[]> {
   // Fallback de alta fidelidade com 3 leads fictícios
   return [
     {
-      id: "l-a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
-      companyId: "c-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+      id: "a1b2c3d4-e5f6-4a8b-9c0d-1e2f3a4b5c6d",
+      companyId: "44d73af8-8026-4061-8aa9-91a6becd33c9",
       leadName: "Carlos Eduardo Mendes (Horizon Tech S.A.)",
       leadEmail: "carlos.mendes@horizontech.com.br",
       leadPhone: "+55 (11) 98765-4321",
@@ -32,8 +32,8 @@ async function getLeads(): Promise<Lead[]> {
       createdAt: new Date("2026-09-17T10:15:00Z"),
     },
     {
-      id: "l-b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
-      companyId: "c-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+      id: "b2c3d4e5-f6a7-4b9c-8d1e-2f3a4b5c6d7e",
+      companyId: "44d73af8-8026-4061-8aa9-91a6becd33c9",
       leadName: "Mariana Alencar (Vanguard Logistics)",
       leadEmail: "m.alencar@vanguardlog.com",
       leadPhone: "+55 (21) 99887-1122",
@@ -42,8 +42,8 @@ async function getLeads(): Promise<Lead[]> {
       createdAt: new Date("2026-09-17T11:42:00Z"),
     },
     {
-      id: "l-c3d4e5f6-a78b-9c0d-1e2f-3a4b5c6d7e8f",
-      companyId: "c-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
+      id: "c3d4e5f6-a78b-4c0d-9e2f-3a4b5c6d7e8f",
+      companyId: "44d73af8-8026-4061-8aa9-91a6becd33c9",
       leadName: "Roberto Silveira (Apex Capital Holding)",
       leadEmail: "roberto@apexcapital.io",
       leadPhone: "+55 (11) 97123-8899",
