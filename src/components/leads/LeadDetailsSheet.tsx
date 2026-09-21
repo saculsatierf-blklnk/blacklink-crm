@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  AlertCircle,
   Building2,
   Calendar,
   CheckCircle2,
@@ -10,7 +11,6 @@ import {
   Coins,
   Copy,
   FileText,
-  Globe,
   Mail,
   MessageSquare,
   Phone,
@@ -24,12 +24,20 @@ import {
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
 import type { LeadStatus } from "@/actions/leads";
+import {
+  CADENCE_STEPS,
+  calculateStepTemporalStatus,
+  buildDefaultInterpolatedScript,
+  parseLeadInfo,
+  toStartOfDay,
+} from "@/lib/cadence";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
   isOpen: boolean;
   onClose: () => void;
   onStatusChange?: (leadId: string, newStatus: LeadStatus) => void;
+  onCadenceChange?: (leadId: string, completedStepIds: string[]) => void;
 }
 
 interface NoteEntry {
@@ -39,74 +47,13 @@ interface NoteEntry {
   author: string;
 }
 
-interface CadenceStep {
-  id: string;
-  day: string;
-  title: string;
-  description: string;
-}
-
-const DEFAULT_CADENCE_STEPS: CadenceStep[] = [
-  {
-    id: "step-1",
-    day: "Dia 1",
-    title: "Cold Call & Qualificação",
-    description: "Mapeamento inicial de dores e identificação de decisores",
-  },
-  {
-    id: "step-2",
-    day: "Dia 2",
-    title: "E-mail Executivo de Abordagem",
-    description: "Envio de proposta de valor e contextualização de mercado",
-  },
-  {
-    id: "step-3",
-    day: "Dia 3",
-    title: "Conexão & Interação no LinkedIn",
-    description: "Aproximação com os líderes da conta no ambiente corporativo",
-  },
-  {
-    id: "step-4",
-    day: "Dia 5",
-    title: "Follow-up 1 (Cold Call + Mensagem)",
-    description: "Retomada de contato para agendamento de demonstração",
-  },
-  {
-    id: "step-5",
-    day: "Dia 7",
-    title: "Envio de Estudo de Caso & ROI",
-    description: "Apresentação de resultados obtidos em contas similares",
-  },
-  {
-    id: "step-6",
-    day: "Dia 10",
-    title: "Breakup Call / Encerramento",
-    description: "Última tentativa de alinhamento antes do arquivamento",
-  },
-];
-
-const DEFAULT_SCRIPT_TEMPLATE = `Olá {Nome}, tudo bem? Notei que a {Empresa} vem estruturando novas iniciativas comerciais no mercado corporativo.
-
-Como {Cargo}, você provavelmente busca mitigar gargalos operacionais e acelerar a captação de clientes B2B de alto valor.
-
-Desenvolvemos uma estrutura sob medida com potencial de retorno estimado na ordem de {Valor}.
-
-Você teria 10 minutos nesta quinta-feira para conversarmos sobre como aplicar essa estratégia na {Empresa}?`;
-
 export function LeadDetailsSheet({
   lead,
   isOpen,
   onClose,
   onStatusChange,
+  onCadenceChange,
 }: LeadDetailsSheetProps) {
-  // Extração inteligente de Nome e Empresa a partir do campo leadName
-  const parseLeadInfo = (rawName: string) => {
-    const match = rawName.match(/^(.*?)(?:\s*\((.*?)\))?$/);
-    const name = match?.[1]?.trim() || rawName;
-    const company = match?.[2]?.trim() || "Empresa B2B";
-    return { name, company };
-  };
-
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
 
   // Metadados específicos do Hunter (Cargo e Valor Estimado)
@@ -117,71 +64,94 @@ export function LeadDetailsSheet({
   // Checklist de Cadência
   const [completedCadence, setCompletedCadence] = useState<string[]>([]);
 
-  // Script Dinâmico de Abordagem
-  const [scriptTemplate, setScriptTemplate] = useState(DEFAULT_SCRIPT_TEMPLATE);
+  // Script Dinâmico de Abordagem (Sempre Imediatamente Interpolado)
+  const [scriptText, setScriptText] = useState("");
   const [isCopied, setIsCopied] = useState(false);
 
   // Histórico de Anotações
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [newNoteText, setNewNoteText] = useState("");
 
-  // Carrega e sincroniza estados persistidos em localStorage por lead.id
+  // Sincronização ao abrir ou alternar de lead
   useEffect(() => {
     if (!lead) return;
 
-    // 1. Metadados do Hunter
+    // 1. Resolução de Metadados do Hunter
     const metaStorageKey = `blacklink_hunter_meta_${lead.id}`;
     const savedMeta = localStorage.getItem(metaStorageKey);
+    let resolvedRole = "";
+    let resolvedValue = "";
+
     if (savedMeta) {
       try {
         const parsedMeta = JSON.parse(savedMeta);
-        setRoleTitle(parsedMeta.roleTitle || "");
-        setEstimatedValue(parsedMeta.estimatedValue || "");
+        resolvedRole = parsedMeta.roleTitle || "";
+        resolvedValue = parsedMeta.estimatedValue || "";
       } catch {
-        // Fallback
-      }
-    } else {
-      // Valores padrão inteligentes baseados no perfil do lead
-      if (lead.leadName.includes("Mariana")) {
-        setRoleTitle("Diretora de Operações");
-        setEstimatedValue("R$ 45.000,00");
-      } else if (lead.leadName.includes("Carlos")) {
-        setRoleTitle("Head de Novos Negócios");
-        setEstimatedValue("R$ 120.000,00");
-      } else if (lead.leadName.includes("Roberto")) {
-        setRoleTitle("Chief Investment Officer");
-        setEstimatedValue("R$ 250.000,00");
-      } else {
-        setRoleTitle("Decisor Corporativo");
-        setEstimatedValue("R$ 60.000,00");
+        // Ignora
       }
     }
+
+    if (!resolvedRole || !resolvedValue) {
+      if (lead.leadName.includes("Mariana")) {
+        resolvedRole = resolvedRole || "Diretora de Operações";
+        resolvedValue = resolvedValue || "R$ 45.000,00";
+      } else if (lead.leadName.includes("Carlos")) {
+        resolvedRole = resolvedRole || "Head de Novos Negócios";
+        resolvedValue = resolvedValue || "R$ 120.000,00";
+      } else if (lead.leadName.includes("Roberto")) {
+        resolvedRole = resolvedRole || "Chief Investment Officer";
+        resolvedValue = resolvedValue || "R$ 250.000,00";
+      } else {
+        resolvedRole = resolvedRole || "Decisor Comercial";
+        resolvedValue = resolvedValue || "R$ 60.000,00";
+      }
+    }
+
+    setRoleTitle(resolvedRole);
+    setEstimatedValue(resolvedValue);
 
     // 2. Checklist de Cadência
     const cadenceKey = `blacklink_hunter_cadence_${lead.id}`;
     const savedCadence = localStorage.getItem(cadenceKey);
+    let currentCompleted: string[] = [];
+
     if (savedCadence) {
       try {
-        setCompletedCadence(JSON.parse(savedCadence));
+        currentCompleted = JSON.parse(savedCadence);
       } catch {
-        setCompletedCadence([]);
+        currentCompleted = [];
       }
     } else {
-      // Padrão: primeiro item concluído se em negociação/fechado
       if (lead.status === "negotiation" || lead.status === "closed") {
-        setCompletedCadence(["step-1"]);
+        currentCompleted = ["step-1"];
       } else {
-        setCompletedCadence([]);
+        currentCompleted = [];
       }
     }
+    setCompletedCadence(currentCompleted);
 
-    // 3. Script Dinâmico
+    // 3. Script Dinâmico: INTERPOLAÇÃO IMEDIATA
+    // O operador abre o modal e o script já está renderizado com os dados reais do lead
     const scriptKey = `blacklink_hunter_script_${lead.id}`;
     const savedScript = localStorage.getItem(scriptKey);
-    if (savedScript) {
-      setScriptTemplate(savedScript);
+
+    if (savedScript && savedScript.trim()) {
+      // Caso haja placeholders brutos no script salvo, resolve-os na hora
+      const resolved = savedScript
+        .replace(/{Nome}/g, parsed.name || "Prezado(a)")
+        .replace(/{Empresa}/g, parsed.company || "sua organização")
+        .replace(/{Cargo}/g, resolvedRole)
+        .replace(/{Valor}/g, resolvedValue);
+      setScriptText(resolved);
     } else {
-      setScriptTemplate(DEFAULT_SCRIPT_TEMPLATE);
+      const generated = buildDefaultInterpolatedScript({
+        name: parsed.name,
+        company: parsed.company,
+        role: resolvedRole,
+        value: resolvedValue,
+      });
+      setScriptText(generated);
     }
 
     // 4. Histórico de Anotações
@@ -222,7 +192,7 @@ export function LeadDetailsSheet({
 
   if (!isOpen || !lead) return null;
 
-  // Persistência de Metadados
+  // Persistência de Metadados e regeneração do script se necessário
   const handleSaveMeta = () => {
     const metaStorageKey = `blacklink_hunter_meta_${lead.id}`;
     localStorage.setItem(
@@ -232,46 +202,40 @@ export function LeadDetailsSheet({
     setIsEditingMeta(false);
   };
 
-  // Toggle de etapas de cadência
+  // Toggle de etapas de cadência sensíveis ao tempo
   const toggleCadenceStep = (stepId: string) => {
     setCompletedCadence((prev) => {
       const next = prev.includes(stepId)
         ? prev.filter((id) => id !== stepId)
         : [...prev, stepId];
+
       localStorage.setItem(
         `blacklink_hunter_cadence_${lead.id}`,
         JSON.stringify(next)
       );
+
+      // Notifica o componente pai para atualizar o badge do card no Kanban
+      onCadenceChange?.(lead.id, next);
       return next;
     });
   };
 
-  // Interpolação das variáveis no script
-  const interpolateScript = (rawText: string) => {
-    return rawText
-      .replace(/{Nome}/g, parsed.name || "Prezado(a)")
-      .replace(/{Empresa}/g, parsed.company || "sua organização")
-      .replace(/{Cargo}/g, roleTitle || "Executivo")
-      .replace(/{Valor}/g, estimatedValue || "alto impacto");
+  // Edição e persistência do script imediatamente no storage
+  const handleScriptChange = (newText: string) => {
+    setScriptText(newText);
+    localStorage.setItem(`blacklink_hunter_script_${lead.id}`, newText);
   };
 
-  // Atualização e salvamento do script
-  const handleScriptChange = (text: string) => {
-    setScriptTemplate(text);
-    localStorage.setItem(`blacklink_hunter_script_${lead.id}`, text);
-  };
-
-  // Inserção rápida de variável no script
-  const handleInsertVariable = (variableTag: string) => {
-    const updated = scriptTemplate + " " + variableTag;
+  // Inserção rápida de variável já com o valor real do lead
+  const handleInsertResolvedVariable = (val: string) => {
+    const updated = scriptText + " " + val;
     handleScriptChange(updated);
   };
 
-  // Cópia do script interpolado
+  // Cópia direta do script pronto para uso
   const handleCopyScript = async () => {
-    const resolvedScript = interpolateScript(scriptTemplate);
     try {
-      await navigator.clipboard.writeText(resolvedScript);
+      await navigator.clipboard.writeText(scriptText);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
@@ -279,9 +243,15 @@ export function LeadDetailsSheet({
     }
   };
 
-  // Restaurar script padrão
+  // Restaurar script padrão imediatamente interpolado
   const handleResetScript = () => {
-    handleScriptChange(DEFAULT_SCRIPT_TEMPLATE);
+    const resetText = buildDefaultInterpolatedScript({
+      name: parsed.name,
+      company: parsed.company,
+      role: roleTitle,
+      value: estimatedValue,
+    });
+    handleScriptChange(resetText);
   };
 
   // Adicionar nova anotação ao histórico
@@ -325,8 +295,23 @@ export function LeadDetailsSheet({
     }).format(d);
   };
 
+  const formatShortDate = (date: Date) => {
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+    }).format(date);
+  };
+
   const cadenceProgress = Math.round(
-    (completedCadence.length / DEFAULT_CADENCE_STEPS.length) * 100
+    (completedCadence.length / CADENCE_STEPS.length) * 100
+  );
+
+  // Cálculo de dias desde a entrada do lead no funil
+  const leadCreatedDay = toStartOfDay(lead.createdAt);
+  const currentDay = toStartOfDay(new Date());
+  const funnelDays = Math.max(
+    0,
+    Math.round((currentDay.getTime() - leadCreatedDay.getTime()) / (1000 * 60 * 60 * 24))
   );
 
   return (
@@ -373,7 +358,7 @@ export function LeadDetailsSheet({
               </div>
             </div>
 
-            {/* Grid Executivo: Cargo, Valor Estimado, Contato e Origem */}
+            {/* Grid Executivo: Cargo e Valor Estimado */}
             <div className="grid grid-cols-2 gap-3 pt-2">
               {/* Cargo / Posição */}
               <div className="rounded-lg border border-glass-border bg-void/60 p-3 space-y-1">
@@ -422,7 +407,7 @@ export function LeadDetailsSheet({
               </div>
             </div>
 
-            {/* Botão para alternar edição dos metadados */}
+            {/* Ação para alternar edição dos metadados */}
             <div className="flex justify-end">
               {isEditingMeta ? (
                 <button
@@ -490,7 +475,7 @@ export function LeadDetailsSheet({
               </div>
             </div>
 
-            {/* Contatos e Rastreabilidade */}
+            {/* Contatos e Entrada no Funil */}
             <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-sub">
               {lead.leadEmail && (
                 <a
@@ -513,17 +498,32 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 2. CHECKLIST DE CADÊNCIA (HUNTER CADENCE) */}
+          {/* 2. CADÊNCIA TEMPORAL DINÂMICA (Sensível a createdAt) */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckSquare className="h-4 w-4 text-accent" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
-                  Checklist de Cadência
+                  Cadência Temporal Dinâmica
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-platinum font-semibold">
-                {completedCadence.length}/{DEFAULT_CADENCE_STEPS.length} ({cadenceProgress}%)
+                {completedCadence.length}/{CADENCE_STEPS.length} ({cadenceProgress}%)
+              </span>
+            </div>
+
+            {/* Informação de entrada temporal no funil */}
+            <div className="flex items-center justify-between text-[10px] font-mono text-sub border-b border-glass-border/60 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3 w-3 text-sub" />
+                <span>Entrada: {formatDate(lead.createdAt)}</span>
+              </div>
+              <span className="text-platinum">
+                {funnelDays === 0
+                  ? "Entrou hoje no funil"
+                  : funnelDays === 1
+                  ? "Há 1 dia no funil"
+                  : `Há ${funnelDays} dias no funil`}
               </span>
             </div>
 
@@ -535,10 +535,15 @@ export function LeadDetailsSheet({
               />
             </div>
 
-            {/* Lista Interativa de Passos da Cadência */}
+            {/* Lista de Passos da Cadência com Status Temporal Dinâmico */}
             <div className="space-y-2 pt-1">
-              {DEFAULT_CADENCE_STEPS.map((step) => {
+              {CADENCE_STEPS.map((step) => {
                 const isChecked = completedCadence.includes(step.id);
+                const temporal = calculateStepTemporalStatus(
+                  lead.createdAt,
+                  step.dayOffset,
+                  isChecked
+                );
 
                 return (
                   <div
@@ -547,6 +552,10 @@ export function LeadDetailsSheet({
                     className={`flex items-start gap-3 rounded-lg border p-2.5 transition-all cursor-pointer select-none ${
                       isChecked
                         ? "border-emerald-500/30 bg-emerald-500/10 text-platinum"
+                        : temporal.type === "overdue"
+                        ? "border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-platinum"
+                        : temporal.type === "today"
+                        ? "border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 text-platinum"
                         : "border-glass-border bg-carbon hover:border-glass-highlight hover:bg-carbon-muted/40 text-sub"
                     }`}
                   >
@@ -560,21 +569,45 @@ export function LeadDetailsSheet({
                       {isChecked && <CheckCircle2 className="h-3 w-3" />}
                     </div>
 
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-accent">
-                          {step.day}
-                        </span>
-                        <span
-                          className={`text-xs font-semibold ${
-                            isChecked
-                              ? "text-platinum line-through opacity-70"
-                              : "text-platinum"
-                          }`}
-                        >
-                          {step.title}
-                        </span>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-accent">
+                            {step.dayLabel}
+                          </span>
+                          <span
+                            className={`text-xs font-semibold ${
+                              isChecked
+                                ? "text-platinum line-through opacity-70"
+                                : "text-platinum"
+                            }`}
+                          >
+                            {step.title}
+                          </span>
+                        </div>
+
+                        {/* Tag Visual Dinâmica de Tempo */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] font-mono text-sub">
+                            {formatShortDate(temporal.targetDate)}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono uppercase border ${temporal.badgeClass}`}
+                          >
+                            {temporal.type === "overdue" && (
+                              <AlertCircle className="h-2.5 w-2.5" />
+                            )}
+                            {temporal.type === "today" && (
+                              <Zap className="h-2.5 w-2.5" />
+                            )}
+                            {temporal.type === "completed" && (
+                              <CheckCircle2 className="h-2.5 w-2.5" />
+                            )}
+                            <span>{temporal.tag}</span>
+                          </span>
+                        </div>
                       </div>
+
                       <p className="text-[10px] text-sub leading-relaxed">
                         {step.description}
                       </p>
@@ -585,62 +618,60 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 3. SCRIPT DINÂMICO DE ABORDAGEM */}
+          {/* 3. SCRIPT DINÂMICO DE ABORDAGEM (INTERPOLAÇÃO IMEDIATA) */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-platinum" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
-                  Script Dinâmico
+                  Script de Abordagem (Pronto para Uso)
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleResetScript}
-                  title="Restaurar script padrão"
-                  className="flex items-center gap-1 text-[10px] font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Restaurar</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleResetScript}
+                title="Restaurar script padrão imediatamente interpolado"
+                className="flex items-center gap-1 text-[10px] font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Restaurar Padrão</span>
+              </button>
             </div>
 
-            {/* Badges de Inserção de Variáveis */}
+            {/* Badges de Inserção Rápida com Valores Reais */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
               <span className="text-[10px] font-mono text-sub mr-1">
-                Variáveis:
+                Inserir valor:
               </span>
               {[
-                { tag: "{Nome}", val: parsed.name },
-                { tag: "{Empresa}", val: parsed.company },
-                { tag: "{Cargo}", val: roleTitle },
-                { tag: "{Valor}", val: estimatedValue },
-              ].map(({ tag, val }) => (
+                { label: "Nome", val: parsed.name },
+                { label: "Empresa", val: parsed.company },
+                { label: "Cargo", val: roleTitle },
+                { label: "Valor", val: estimatedValue },
+              ].map(({ label, val }) => (
                 <button
-                  key={tag}
+                  key={label}
                   type="button"
-                  onClick={() => handleInsertVariable(tag)}
-                  title={`Inserir ${tag} (${val})`}
+                  onClick={() => handleInsertResolvedVariable(val)}
+                  title={`Inserir "${val}"`}
                   className="rounded border border-glass-border bg-carbon px-2 py-0.5 text-[10px] font-mono text-sub hover:text-accent hover:border-accent/40 transition-colors cursor-pointer"
                 >
-                  {tag}
+                  +{label} ({val.length > 15 ? val.slice(0, 15) + "..." : val})
                 </button>
               ))}
             </div>
 
-            {/* Textarea do Script */}
+            {/* Textarea já com o texto interpolado e pronto para edição direta */}
             <div className="space-y-2">
               <textarea
-                rows={6}
-                value={scriptTemplate}
+                rows={7}
+                value={scriptText}
                 onChange={(e) => handleScriptChange(e.target.value)}
                 className="w-full rounded-lg border border-glass-border bg-carbon p-3 text-xs text-platinum font-mono leading-relaxed focus:border-accent focus:outline-none resize-none"
-                placeholder="Escreva ou edite o script dinâmico..."
+                placeholder="Script de abordagem pronto para o contato..."
               />
 
-              {/* Botão Copiar Script com Interpolação */}
+              {/* Botão Copiar Script com Feedback */}
               <button
                 type="button"
                 onClick={handleCopyScript}
@@ -649,12 +680,12 @@ export function LeadDetailsSheet({
                 {isCopied ? (
                   <>
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Script Resolvido Copiado!</span>
+                    <span>Script Copiado com Sucesso!</span>
                   </>
                 ) : (
                   <>
                     <Copy className="h-3.5 w-3.5" />
-                    <span>Copiar Script com Variáveis Resolvidas</span>
+                    <span>Copiar Script Pronto</span>
                   </>
                 )}
               </button>

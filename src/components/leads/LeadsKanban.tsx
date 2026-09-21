@@ -8,10 +8,11 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
+  AlertCircle,
   Building2,
+  Calendar,
   CheckCircle2,
   Clock,
-  Coins,
   Globe,
   GripVertical,
   Mail,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
 import { updateLeadStatusAction, type LeadStatus } from "@/actions/leads";
+import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 
 interface LeadsKanbanProps {
@@ -65,10 +67,33 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
+  // Mapa reativo do estado de cadência por lead (leadId -> array de step IDs concluídos)
+  const [cadenceMap, setCadenceMap] = useState<Record<string, string[]>>({});
+
   // Garante renderização consistente entre SSR e Client no Drag-and-Drop
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+
+    // Carrega o estado de cadência persistido para cada lead inicial
+    const map: Record<string, string[]> = {};
+    initialLeads.forEach((lead) => {
+      const saved = localStorage.getItem(`blacklink_hunter_cadence_${lead.id}`);
+      if (saved) {
+        try {
+          map[lead.id] = JSON.parse(saved);
+        } catch {
+          map[lead.id] = [];
+        }
+      } else {
+        if (lead.status === "negotiation" || lead.status === "closed") {
+          map[lead.id] = ["step-1"];
+        } else {
+          map[lead.id] = [];
+        }
+      }
+    });
+    setCadenceMap(map);
+  }, [initialLeads]);
 
   // Sincroniza novos leads do servidor sem sobrescrever as alterações locais do operador
   useEffect(() => {
@@ -85,6 +110,14 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
   const handleOpenSheet = (lead: Lead) => {
     setSelectedLead(lead);
     setIsSheetOpen(true);
+  };
+
+  // Atualização em tempo real do mapa de cadência disparada pelo modal
+  const handleCadenceChange = (leadId: string, completedStepIds: string[]) => {
+    setCadenceMap((prev) => ({
+      ...prev,
+      [leadId]: completedStepIds,
+    }));
   };
 
   // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional
@@ -112,7 +145,6 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
 
     if (!destination) return;
 
-    // Se soltou exatamente na mesma coluna e na mesma posição, não há alteração
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -139,7 +171,6 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       // Insere o card na posição exata de destino
       destLeads.splice(destination.index, 0, updatedLead);
 
-      // Retorna a lista completa reorganizada
       return [...destLeads, ...otherLeads];
     });
 
@@ -165,17 +196,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     }).format(d);
-  };
-
-  // Helper para exibir nome e empresa destacados
-  const parseLeadTitle = (rawName: string) => {
-    const match = rawName.match(/^(.*?)(?:\s*\((.*?)\))?$/);
-    const name = match?.[1]?.trim() || rawName;
-    const company = match?.[2]?.trim();
-    return { name, company };
   };
 
   return (
@@ -222,10 +243,18 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                         }`}
                       >
                         {columnLeads.map((lead, index) => {
-                          const parsed = parseLeadTitle(lead.leadName);
+                          const parsed = parseLeadInfo(lead.leadName);
                           const isAutomation =
                             lead.origin?.toLowerCase().includes("n8n") ||
                             lead.origin?.toLowerCase().includes("webhook");
+
+                          // Inteligência Visual Temporal: Determina a Próxima Ação da Cadência
+                          const completed = cadenceMap[lead.id] || [];
+                          const actionInfo = getNextCadenceAction(
+                            lead.createdAt,
+                            completed,
+                            lead.status
+                          );
 
                           return (
                             <Draggable
@@ -248,10 +277,10 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                       : "border-glass-border hover:border-glass-highlight hover:bg-carbon-muted/40 shadow-md"
                                   }`}
                                 >
-                                  {/* Topo do Card: Nome, Empresa e Grip Icon */}
+                                  {/* Topo do Card: Nome, Empresa e Alça */}
                                   <div className="flex items-start justify-between gap-2">
-                                    <div className="space-y-0.5">
-                                      <div className="font-semibold text-xs text-platinum group-hover:text-accent transition-colors leading-snug">
+                                    <div className="space-y-0.5 min-w-0">
+                                      <div className="font-semibold text-xs text-platinum group-hover:text-accent transition-colors leading-snug truncate">
                                         {parsed.name}
                                       </div>
                                       {parsed.company && (
@@ -267,6 +296,32 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                       className="text-sub/40 group-hover:text-platinum transition-colors p-0.5 rounded shrink-0"
                                     >
                                       <GripVertical className="h-3.5 w-3.5" />
+                                    </div>
+                                  </div>
+
+                                  {/* 1. INTELIGÊNCIA VISUAL NO CARD: PRÓXIMA AÇÃO DA CADÊNCIA & STATUS TEMPORAL */}
+                                  <div className="flex items-center justify-between gap-2 border-y border-glass-border/60 py-2">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="text-[9px] font-mono uppercase tracking-wider text-sub shrink-0">
+                                        Ação:
+                                      </span>
+                                      <span
+                                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-mono border truncate ${actionInfo.badgeClass}`}
+                                      >
+                                        {actionInfo.type === "overdue" && (
+                                          <AlertCircle className="h-3 w-3 shrink-0 text-rose-400" />
+                                        )}
+                                        {actionInfo.type === "today" && (
+                                          <Zap className="h-3 w-3 shrink-0 text-amber-300" />
+                                        )}
+                                        {actionInfo.type === "future" && (
+                                          <Clock className="h-3 w-3 shrink-0 text-sub" />
+                                        )}
+                                        {actionInfo.type === "completed" && (
+                                          <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
+                                        )}
+                                        <span className="truncate">{actionInfo.fullLabel}</span>
+                                      </span>
                                     </div>
                                   </div>
 
@@ -315,7 +370,10 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                       </span>
                                     </div>
 
-                                    <span>{formatDate(lead.createdAt)}</span>
+                                    <div className="flex items-center gap-1 text-[10px]">
+                                      <Calendar className="h-3 w-3 text-sub" />
+                                      <span>{formatDate(lead.createdAt)}</span>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -324,7 +382,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                         })}
                         {provided.placeholder}
 
-                        {/* Estado Vazio da Coluna com pointer-events-none para não bloquear o drop */}
+                        {/* Estado Vazio da Coluna */}
                         {columnLeads.length === 0 && (
                           <div className="flex flex-1 items-center justify-center p-8 text-center text-sub border border-dashed border-glass-border/60 rounded-lg pointer-events-none">
                             <span className="text-[11px] font-mono">
@@ -367,6 +425,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
           setSelectedLead(null);
         }}
         onStatusChange={handleStatusChange}
+        onCadenceChange={handleCadenceChange}
       />
     </div>
   );
