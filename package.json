@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "npx tsx src/db/migrate.ts",
-    "db:seed": "npx tsx src/db/seed.ts"
+    "db:seed": "npx tsx src/db/seed.ts",
+    "agent:run": "npx tsx scripts/autonomous-agent.ts --once",
+    "agent:watch": "npx tsx scripts/autonomous-agent.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
