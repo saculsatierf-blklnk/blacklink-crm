@@ -2,7 +2,7 @@ import { desc } from "drizzle-orm";
 import { Download, Filter } from "lucide-react";
 import { db } from "@/db";
 import { leads, type Lead } from "@/db/schema";
-import { LeadsTable } from "@/components/leads/LeadsTable";
+import { LeadsKanban } from "@/components/leads/LeadsKanban";
 
 export const dynamic = "force-dynamic";
 
@@ -87,8 +87,8 @@ export default async function LeadsPage() {
         </div>
       </div>
 
-      {/* Tabela de Leads */}
-      <LeadsTable leads={leadsData} />
+      {/* Board Kanban de Leads B2B */}
+      <LeadsKanban initialLeads={leadsData} />
     </div>
   );
 }
