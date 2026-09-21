@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
 // ==========================================
 // 1. ENUMS
@@ -38,6 +38,20 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export interface CadenceState {
+  completedSteps: string[];
+  roleTitle?: string;
+  estimatedValue?: string;
+  customScript?: string;
+}
+
+export interface NoteEntry {
+  id: string;
+  text: string;
+  createdAt: string;
+  author: string;
+}
+
 /**
  * Leads Comerciais (Isolamento por company_id)
  */
@@ -51,6 +65,17 @@ export const leads = pgTable("leads", {
   leadPhone: varchar("lead_phone", { length: 50 }),
   origin: varchar("origin", { length: 100 }).default("direct"),
   status: leadStatusEnum("status").default("new").notNull(),
+  cadenceState: jsonb("cadence_state")
+    .$type<CadenceState>()
+    .default({ completedSteps: [] })
+    .notNull(),
+  notes: jsonb("notes")
+    .$type<NoteEntry[]>()
+    .default([])
+    .notNull(),
+  scriptVersion: varchar("script_version", { length: 50 })
+    .default("v1_direct")
+    .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

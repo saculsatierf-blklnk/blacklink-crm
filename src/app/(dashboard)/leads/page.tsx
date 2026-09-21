@@ -29,6 +29,20 @@ async function getLeads(): Promise<Lead[]> {
       leadPhone: "+55 (11) 98765-4321",
       origin: "n8n / Webhook Automations",
       status: "negotiation",
+      cadenceState: {
+        completedSteps: ["step-1"],
+        roleTitle: "Head de Novos Negócios",
+        estimatedValue: "R$ 120.000,00",
+      },
+      notes: [
+        {
+          id: "note-1",
+          text: "Lead contatado via automação. Reunião de diagnóstico preliminar solicitada.",
+          createdAt: "2026-09-17T11:00:00Z",
+          author: "Lucas Leite (Hunter)",
+        },
+      ],
+      scriptVersion: "v1_direct",
       createdAt: new Date("2026-09-17T10:15:00Z"),
     },
     {
@@ -39,6 +53,13 @@ async function getLeads(): Promise<Lead[]> {
       leadPhone: "+55 (21) 99887-1122",
       origin: "Inbound Enterprise",
       status: "new",
+      cadenceState: {
+        completedSteps: [],
+        roleTitle: "Diretora de Operações",
+        estimatedValue: "R$ 45.000,00",
+      },
+      notes: [],
+      scriptVersion: "v1_direct",
       createdAt: new Date("2026-09-17T11:42:00Z"),
     },
     {
@@ -49,6 +70,20 @@ async function getLeads(): Promise<Lead[]> {
       leadPhone: "+55 (11) 97123-8899",
       origin: "Campanhas B2B / LinkedIn",
       status: "closed",
+      cadenceState: {
+        completedSteps: ["step-1", "step-2", "step-3", "step-4", "step-5", "step-6"],
+        roleTitle: "Chief Investment Officer",
+        estimatedValue: "R$ 250.000,00",
+      },
+      notes: [
+        {
+          id: "note-2",
+          text: "Contrato executivo assinado. Onboarding iniciado.",
+          createdAt: "2026-09-16T18:00:00Z",
+          author: "Lucas Leite (Hunter)",
+        },
+      ],
+      scriptVersion: "v1_direct",
       createdAt: new Date("2026-09-16T17:30:00Z"),
     },
   ];

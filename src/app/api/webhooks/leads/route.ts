@@ -3,11 +3,22 @@ import type { NextRequest } from "next/server";
 import { db } from "@/db";
 import { leads } from "@/db/schema";
 import { webhookLeadSchema } from "@/lib/validations/webhook";
+import { validateApiKey } from "@/lib/auth/api-key";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // 1. Validação de segurança M2M via header x-api-key
+    if (!validateApiKey(req)) {
+      return NextResponse.json(
+        {
+          error: "Acesso não autorizado. Header x-api-key ausente ou inválido.",
+        },
+        { status: 401 }
+      );
+    }
 
+    // 2. Validação estrutural do payload de entrada
+    const body = await req.json();
     const parsed = webhookLeadSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -22,6 +33,7 @@ export async function POST(req: NextRequest) {
 
     const { companyId, leadName, leadEmail, leadPhone, origin } = parsed.data;
 
+    // 3. Inserção persistida no PostgreSQL com defaults da Fase 2
     const [createdLead] = await db
       .insert(leads)
       .values({
@@ -31,6 +43,9 @@ export async function POST(req: NextRequest) {
         leadPhone: leadPhone?.trim() || null,
         origin: origin?.trim() || "n8n",
         status: "new",
+        cadenceState: { completedSteps: [] },
+        notes: [],
+        scriptVersion: "v1_direct",
       })
       .returning();
 

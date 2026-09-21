@@ -21,6 +21,7 @@ async function testWebhook() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-api-key": "blklnk_live_sec_89234710293847",
       },
       body: JSON.stringify(payload),
     });

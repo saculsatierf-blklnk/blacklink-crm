@@ -17,13 +17,20 @@ import {
   Plus,
   RotateCcw,
   Sparkles,
+  Tag,
   Trash2,
   UserCheck,
   X,
   Zap,
 } from "lucide-react";
-import type { Lead } from "@/db/schema";
-import type { LeadStatus } from "@/actions/leads";
+import type { Lead, NoteEntry } from "@/db/schema";
+import {
+  updateLeadCadenceAction,
+  addLeadNoteAction,
+  deleteLeadNoteAction,
+  updateLeadScriptAction,
+  type LeadStatus,
+} from "@/actions/leads";
 import {
   CADENCE_STEPS,
   calculateStepTemporalStatus,
@@ -40,13 +47,6 @@ interface LeadDetailsSheetProps {
   onCadenceChange?: (leadId: string, completedStepIds: string[]) => void;
 }
 
-interface NoteEntry {
-  id: string;
-  text: string;
-  createdAt: string;
-  author: string;
-}
-
 export function LeadDetailsSheet({
   lead,
   isOpen,
@@ -56,41 +56,31 @@ export function LeadDetailsSheet({
 }: LeadDetailsSheetProps) {
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
 
-  // Metadados específicos do Hunter (Cargo e Valor Estimado)
+  // Metadados específicos do Hunter (persistidos no PostgreSQL via cadenceState)
   const [roleTitle, setRoleTitle] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
   const [isEditingMeta, setIsEditingMeta] = useState(false);
 
-  // Checklist de Cadência
+  // Checklist de Cadência (persistido no PostgreSQL)
   const [completedCadence, setCompletedCadence] = useState<string[]>([]);
 
-  // Script Dinâmico de Abordagem (Sempre Imediatamente Interpolado)
+  // Script Dinâmico de Abordagem (persistido no PostgreSQL)
   const [scriptText, setScriptText] = useState("");
   const [isCopied, setIsCopied] = useState(false);
 
-  // Histórico de Anotações
+  // Histórico de Anotações (persistido no PostgreSQL)
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [newNoteText, setNewNoteText] = useState("");
 
-  // Sincronização ao abrir ou alternar de lead
+  // Sincronização centralizada direta do PostgreSQL ao abrir ou alternar de lead
   useEffect(() => {
     if (!lead) return;
 
-    // 1. Resolução de Metadados do Hunter
-    const metaStorageKey = `blacklink_hunter_meta_${lead.id}`;
-    const savedMeta = localStorage.getItem(metaStorageKey);
-    let resolvedRole = "";
-    let resolvedValue = "";
+    // 1. Resolução de Metadados do Hunter a partir do banco de dados
+    const dbCadenceState = lead.cadenceState || { completedSteps: [] };
 
-    if (savedMeta) {
-      try {
-        const parsedMeta = JSON.parse(savedMeta);
-        resolvedRole = parsedMeta.roleTitle || "";
-        resolvedValue = parsedMeta.estimatedValue || "";
-      } catch {
-        // Ignora
-      }
-    }
+    let resolvedRole = dbCadenceState.roleTitle || "";
+    let resolvedValue = dbCadenceState.estimatedValue || "";
 
     if (!resolvedRole || !resolvedValue) {
       if (lead.leadName.includes("Mariana")) {
@@ -111,34 +101,13 @@ export function LeadDetailsSheet({
     setRoleTitle(resolvedRole);
     setEstimatedValue(resolvedValue);
 
-    // 2. Checklist de Cadência
-    const cadenceKey = `blacklink_hunter_cadence_${lead.id}`;
-    const savedCadence = localStorage.getItem(cadenceKey);
-    let currentCompleted: string[] = [];
-
-    if (savedCadence) {
-      try {
-        currentCompleted = JSON.parse(savedCadence);
-      } catch {
-        currentCompleted = [];
-      }
-    } else {
-      if (lead.status === "negotiation" || lead.status === "closed") {
-        currentCompleted = ["step-1"];
-      } else {
-        currentCompleted = [];
-      }
-    }
+    // 2. Checklist de Cadência a partir do PostgreSQL
+    const currentCompleted = dbCadenceState.completedSteps || [];
     setCompletedCadence(currentCompleted);
 
-    // 3. Script Dinâmico: INTERPOLAÇÃO IMEDIATA
-    // O operador abre o modal e o script já está renderizado com os dados reais do lead
-    const scriptKey = `blacklink_hunter_script_${lead.id}`;
-    const savedScript = localStorage.getItem(scriptKey);
-
-    if (savedScript && savedScript.trim()) {
-      // Caso haja placeholders brutos no script salvo, resolve-os na hora
-      const resolved = savedScript
+    // 3. Script Dinâmico: INTERPOLAÇÃO IMEDIATA persistida no banco
+    if (dbCadenceState.customScript && dbCadenceState.customScript.trim()) {
+      const resolved = dbCadenceState.customScript
         .replace(/{Nome}/g, parsed.name || "Prezado(a)")
         .replace(/{Empresa}/g, parsed.company || "sua organização")
         .replace(/{Cargo}/g, resolvedRole)
@@ -154,25 +123,8 @@ export function LeadDetailsSheet({
       setScriptText(generated);
     }
 
-    // 4. Histórico de Anotações
-    const notesKey = `blacklink_hunter_notes_${lead.id}`;
-    const savedNotes = localStorage.getItem(notesKey);
-    if (savedNotes) {
-      try {
-        setNotes(JSON.parse(savedNotes));
-      } catch {
-        setNotes([]);
-      }
-    } else {
-      setNotes([
-        {
-          id: "note-init",
-          text: `Lead qualificado e inserido no funil via canal "${lead.origin || "Direto"}".`,
-          createdAt: new Date().toISOString(),
-          author: "Lucas Leite (Hunter)",
-        },
-      ]);
-    }
+    // 4. Histórico de Anotações a partir do PostgreSQL
+    setNotes(lead.notes || []);
   }, [lead]);
 
   // Tecla ESC para fechar
@@ -192,41 +144,49 @@ export function LeadDetailsSheet({
 
   if (!isOpen || !lead) return null;
 
-  // Persistência de Metadados e regeneração do script se necessário
-  const handleSaveMeta = () => {
-    const metaStorageKey = `blacklink_hunter_meta_${lead.id}`;
-    localStorage.setItem(
-      metaStorageKey,
-      JSON.stringify({ roleTitle, estimatedValue })
-    );
+  // Persistência de Metadados diretamente no PostgreSQL via Server Action
+  const handleSaveMeta = async () => {
     setIsEditingMeta(false);
+    try {
+      await updateLeadCadenceAction(lead.id, {
+        roleTitle,
+        estimatedValue,
+      });
+    } catch (error) {
+      console.error("Falha ao persistir metadados no banco:", error);
+    }
   };
 
-  // Toggle de etapas de cadência sensíveis ao tempo
-  const toggleCadenceStep = (stepId: string) => {
-    setCompletedCadence((prev) => {
-      const next = prev.includes(stepId)
-        ? prev.filter((id) => id !== stepId)
-        : [...prev, stepId];
+  // Toggle de etapas de cadência diretamente no PostgreSQL
+  const toggleCadenceStep = async (stepId: string) => {
+    const next = completedCadence.includes(stepId)
+      ? completedCadence.filter((id) => id !== stepId)
+      : [...completedCadence, stepId];
 
-      localStorage.setItem(
-        `blacklink_hunter_cadence_${lead.id}`,
-        JSON.stringify(next)
-      );
+    // Atualização otimista imediata
+    setCompletedCadence(next);
+    onCadenceChange?.(lead.id, next);
 
-      // Notifica o componente pai para atualizar o badge do card no Kanban
-      onCadenceChange?.(lead.id, next);
-      return next;
-    });
+    // Persistência centralizada no banco
+    try {
+      await updateLeadCadenceAction(lead.id, {
+        completedSteps: next,
+      });
+    } catch (error) {
+      console.error("Falha ao salvar cadência no banco:", error);
+    }
   };
 
-  // Edição e persistência do script imediatamente no storage
+  // Edição e persistência do script diretamente no PostgreSQL
   const handleScriptChange = (newText: string) => {
     setScriptText(newText);
-    localStorage.setItem(`blacklink_hunter_script_${lead.id}`, newText);
+    // Persistência no banco
+    updateLeadScriptAction(lead.id, newText, lead.scriptVersion).catch((err) =>
+      console.error("Falha ao salvar script no banco:", err)
+    );
   };
 
-  // Inserção rápida de variável já com o valor real do lead
+  // Inserção rápida de valor já resolvido
   const handleInsertResolvedVariable = (val: string) => {
     const updated = scriptText + " " + val;
     handleScriptChange(updated);
@@ -254,34 +214,43 @@ export function LeadDetailsSheet({
     handleScriptChange(resetText);
   };
 
-  // Adicionar nova anotação ao histórico
-  const handleAddNote = () => {
+  // Adicionar nova anotação ao histórico relacional no PostgreSQL
+  const handleAddNote = async () => {
     if (!newNoteText.trim()) return;
 
-    const newEntry: NoteEntry = {
+    const notePayload = newNoteText.trim();
+    setNewNoteText("");
+
+    // Otimista
+    const tempNote: NoteEntry = {
       id: "note-" + Date.now(),
-      text: newNoteText.trim(),
+      text: notePayload,
       createdAt: new Date().toISOString(),
       author: "Lucas Leite (Hunter)",
     };
+    setNotes((prev) => [tempNote, ...prev]);
 
-    const updated = [newEntry, ...notes];
-    setNotes(updated);
-    localStorage.setItem(
-      `blacklink_hunter_notes_${lead.id}`,
-      JSON.stringify(updated)
-    );
-    setNewNoteText("");
+    // Persistência no PostgreSQL
+    try {
+      const res = await addLeadNoteAction(lead.id, notePayload, "Lucas Leite (Hunter)");
+      if (res.success && res.note) {
+        setNotes((prev) =>
+          prev.map((n) => (n.id === tempNote.id ? (res.note as NoteEntry) : n))
+        );
+      }
+    } catch (error) {
+      console.error("Falha ao salvar nota no banco:", error);
+    }
   };
 
-  // Excluir anotação
-  const handleDeleteNote = (noteId: string) => {
-    const updated = notes.filter((n) => n.id !== noteId);
-    setNotes(updated);
-    localStorage.setItem(
-      `blacklink_hunter_notes_${lead.id}`,
-      JSON.stringify(updated)
-    );
+  // Excluir anotação diretamente no PostgreSQL
+  const handleDeleteNote = async (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    try {
+      await deleteLeadNoteAction(lead.id, noteId);
+    } catch (error) {
+      console.error("Falha ao excluir nota no banco:", error);
+    }
   };
 
   const formatDate = (dateString: string | Date) => {
@@ -306,7 +275,6 @@ export function LeadDetailsSheet({
     (completedCadence.length / CADENCE_STEPS.length) * 100
   );
 
-  // Cálculo de dias desde a entrada do lead no funil
   const leadCreatedDay = toStartOfDay(lead.createdAt);
   const currentDay = toStartOfDay(new Date());
   const funnelDays = Math.max(
@@ -332,8 +300,9 @@ export function LeadDetailsSheet({
                 <span className="inline-flex items-center rounded-md border border-glass-border bg-carbon-muted px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-widest text-sub">
                   Dossiê do Hunter
                 </span>
-                <span className="text-[10px] font-mono text-sub">
-                  ID: {lead.id.slice(0, 8)}...
+                <span className="inline-flex items-center gap-1 rounded border border-glass-border bg-void/60 px-2 py-0.5 text-[10px] font-mono text-accent">
+                  <Tag className="h-2.5 w-2.5" />
+                  <span>{lead.scriptVersion || "v1_direct"}</span>
                 </span>
               </div>
               <button
@@ -415,7 +384,7 @@ export function LeadDetailsSheet({
                   onClick={handleSaveMeta}
                   className="text-[11px] font-mono text-accent hover:underline cursor-pointer"
                 >
-                  Salvar Metadados
+                  Salvar no Banco
                 </button>
               ) : (
                 <button
@@ -498,7 +467,7 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 2. CADÊNCIA TEMPORAL DINÂMICA (Sensível a createdAt) */}
+          {/* 2. CADÊNCIA TEMPORAL DINÂMICA (Baseada no PostgreSQL) */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -535,7 +504,7 @@ export function LeadDetailsSheet({
               />
             </div>
 
-            {/* Lista de Passos da Cadência com Status Temporal Dinâmico */}
+            {/* Lista de Passos da Cadência */}
             <div className="space-y-2 pt-1">
               {CADENCE_STEPS.map((step) => {
                 const isChecked = completedCadence.includes(step.id);
@@ -618,7 +587,7 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 3. SCRIPT DINÂMICO DE ABORDAGEM (INTERPOLAÇÃO IMEDIATA) */}
+          {/* 3. SCRIPT DINÂMICO DE ABORDAGEM (Centralizado no PostgreSQL) */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -692,7 +661,7 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 4. HISTÓRICO DE ANOTAÇÕES (LOG DE NOTAS) */}
+          {/* 4. HISTÓRICO DE ANOTAÇÕES (Persistido no PostgreSQL) */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-platinum" />

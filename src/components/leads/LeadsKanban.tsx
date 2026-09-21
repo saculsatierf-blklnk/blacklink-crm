@@ -18,6 +18,7 @@ import {
   Mail,
   Phone,
   Sparkles,
+  Tag,
   Zap,
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
@@ -67,30 +68,16 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Mapa reativo do estado de cadência por lead (leadId -> array de step IDs concluídos)
+  // Mapa reativo do estado de cadência por lead derivado do PostgreSQL (sem localStorage)
   const [cadenceMap, setCadenceMap] = useState<Record<string, string[]>>({});
 
-  // Garante renderização consistente entre SSR e Client no Drag-and-Drop
   useEffect(() => {
     setIsMounted(true);
 
-    // Carrega o estado de cadência persistido para cada lead inicial
+    // Inicialização direta a partir do schema PostgreSQL (cadenceState.completedSteps)
     const map: Record<string, string[]> = {};
     initialLeads.forEach((lead) => {
-      const saved = localStorage.getItem(`blacklink_hunter_cadence_${lead.id}`);
-      if (saved) {
-        try {
-          map[lead.id] = JSON.parse(saved);
-        } catch {
-          map[lead.id] = [];
-        }
-      } else {
-        if (lead.status === "negotiation" || lead.status === "closed") {
-          map[lead.id] = ["step-1"];
-        } else {
-          map[lead.id] = [];
-        }
-      }
+      map[lead.id] = lead.cadenceState?.completedSteps || [];
     });
     setCadenceMap(map);
   }, [initialLeads]);
@@ -118,6 +105,20 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       ...prev,
       [leadId]: completedStepIds,
     }));
+
+    setLeadsList((prev) =>
+      prev.map((lead) =>
+        lead.id === leadId
+          ? {
+              ...lead,
+              cadenceState: {
+                ...(lead.cadenceState || { completedSteps: [] }),
+                completedSteps: completedStepIds,
+              },
+            }
+          : lead
+      )
+    );
   };
 
   // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional
@@ -154,21 +155,18 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
 
     const destStatus = destination.droppableId as LeadStatus;
 
-    // Atualização Otimista Precisa: realoca o lead entre as colunas preservando a ordenação
+    // Atualização Otimista Precisa
     setLeadsList((prev) => {
       const currentList = [...prev];
       const targetIndex = currentList.findIndex((item) => item.id === draggableId);
       if (targetIndex === -1) return prev;
 
-      // Extrai e atualiza o status do lead movimentado
       const [movedLead] = currentList.splice(targetIndex, 1);
       const updatedLead = { ...movedLead, status: destStatus };
 
-      // Separa os leads da coluna de destino e os das outras colunas
       const destLeads = currentList.filter((item) => item.status === destStatus);
       const otherLeads = currentList.filter((item) => item.status !== destStatus);
 
-      // Insere o card na posição exata de destino
       destLeads.splice(destination.index, 0, updatedLead);
 
       return [...destLeads, ...otherLeads];
@@ -196,6 +194,8 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(d);
   };
 
@@ -248,8 +248,11 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                             lead.origin?.toLowerCase().includes("n8n") ||
                             lead.origin?.toLowerCase().includes("webhook");
 
-                          // Inteligência Visual Temporal: Determina a Próxima Ação da Cadência
-                          const completed = cadenceMap[lead.id] || [];
+                          // Inteligência Visual Temporal derivada dos dados do PostgreSQL
+                          const completed =
+                            cadenceMap[lead.id] ||
+                            lead.cadenceState?.completedSteps ||
+                            [];
                           const actionInfo = getNextCadenceAction(
                             lead.createdAt,
                             completed,
@@ -299,7 +302,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                     </div>
                                   </div>
 
-                                  {/* 1. INTELIGÊNCIA VISUAL NO CARD: PRÓXIMA AÇÃO DA CADÊNCIA & STATUS TEMPORAL */}
+                                  {/* Inteligência Visual: Próxima Ação da Cadência & Versão A/B */}
                                   <div className="flex items-center justify-between gap-2 border-y border-glass-border/60 py-2">
                                     <div className="flex items-center gap-1.5 min-w-0">
                                       <span className="text-[9px] font-mono uppercase tracking-wider text-sub shrink-0">
@@ -323,6 +326,14 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                         <span className="truncate">{actionInfo.fullLabel}</span>
                                       </span>
                                     </div>
+
+                                    <span
+                                      title="Versão do Script A/B"
+                                      className="flex items-center gap-1 rounded border border-glass-border bg-void/50 px-1.5 py-0.5 text-[9px] font-mono text-sub shrink-0"
+                                    >
+                                      <Tag className="h-2.5 w-2.5" />
+                                      <span>{lead.scriptVersion || "v1"}</span>
+                                    </span>
                                   </div>
 
                                   {/* Contatos Rápidos */}
