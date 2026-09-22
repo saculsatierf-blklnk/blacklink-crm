@@ -1,15 +1,17 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   leads,
   dealTelemetryEmbeddings,
+  type Lead,
   type CadenceState,
   type NoteEntry,
   type TelemetryEvent,
 } from "@/db/schema";
+import { getOperator } from "@/lib/operators";
 import {
   TELEMETRY_WEIGHTS,
   calculateDealScore,
@@ -428,4 +430,242 @@ export async function updateDealScoreAction(
     };
   }
 }
+
+export interface CollidedLeadData {
+  id: string;
+  leadName: string;
+  leadEmail: string | null;
+  ownerId: string;
+  ownerName: string;
+  status: string;
+  notes: NoteEntry[];
+}
+
+export interface CollisionCheckResult {
+  collision: boolean;
+  collidedWith?: "email" | "domain";
+  domain?: string;
+  collidedLead?: CollidedLeadData;
+}
+
+const GENERIC_FREEMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "hotmail.com",
+  "outlook.com",
+  "yahoo.com",
+  "yahoo.com.br",
+  "icloud.com",
+  "uol.com.br",
+  "bol.com.br",
+  "live.com",
+  "terra.com.br",
+]);
+
+/**
+ * Radar Anti-Colisão: Varre o banco em tempo real por e-mail ou domínio corporativo
+ */
+export async function checkLeadCollisionAction(
+  email: string
+): Promise<CollisionCheckResult> {
+  try {
+    const cleanEmail = email?.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      return { collision: false };
+    }
+
+    const domain = cleanEmail.split("@")[1]?.trim().toLowerCase();
+    const isCorporateDomain = domain && !GENERIC_FREEMAIL_DOMAINS.has(domain);
+
+    // 1. Busca por e-mail exato
+    const [exactMatch] = await db
+      .select({
+        id: leads.id,
+        leadName: leads.leadName,
+        leadEmail: leads.leadEmail,
+        ownerId: leads.ownerId,
+        status: leads.status,
+        notes: leads.notes,
+      })
+      .from(leads)
+      .where(ilike(leads.leadEmail, cleanEmail))
+      .limit(1);
+
+    if (exactMatch) {
+      const op = getOperator(exactMatch.ownerId);
+      return {
+        collision: true,
+        collidedWith: "email",
+        domain,
+        collidedLead: {
+          ...exactMatch,
+          ownerName: op.name,
+        },
+      };
+    }
+
+    // 2. Busca por domínio corporativo idêntico
+    if (isCorporateDomain) {
+      const [domainMatch] = await db
+        .select({
+          id: leads.id,
+          leadName: leads.leadName,
+          leadEmail: leads.leadEmail,
+          ownerId: leads.ownerId,
+          status: leads.status,
+          notes: leads.notes,
+        })
+        .from(leads)
+        .where(ilike(leads.leadEmail, `%@${domain}`))
+        .limit(1);
+
+      if (domainMatch) {
+        const op = getOperator(domainMatch.ownerId);
+        return {
+          collision: true,
+          collidedWith: "domain",
+          domain,
+          collidedLead: {
+            ...domainMatch,
+            ownerName: op.name,
+          },
+        };
+      }
+    }
+
+    return { collision: false };
+  } catch (error) {
+    console.error("Erro na verificação de colisão de lead:", error);
+    return { collision: false };
+  }
+}
+
+export interface CreateLeadInput {
+  name: string;
+  company: string;
+  roleTitle?: string;
+  email: string;
+  phone?: string;
+  estimatedValue?: string;
+  ownerId?: string;
+  initialNote?: string;
+}
+
+/**
+ * Criação atômica de lead com bloqueio de colisão e vinculação de propriedade (owner)
+ */
+export async function createLeadAction(
+  input: CreateLeadInput
+): Promise<ActionResponse & { lead?: Lead }> {
+  try {
+    const { name, company, roleTitle, email, phone, estimatedValue, ownerId, initialNote } = input;
+
+    if (!name?.trim() || !company?.trim() || !email?.trim()) {
+      return { success: false, leadId: "", error: "Nome, empresa e e-mail são obrigatórios." };
+    }
+
+    // Validação estrita anti-colisão antes de persistir
+    const collisionCheck = await checkLeadCollisionAction(email);
+    if (collisionCheck.collision && collisionCheck.collidedLead) {
+      return {
+        success: false,
+        leadId: collisionCheck.collidedLead.id,
+        error: `Colisão detectada: A conta '${collisionCheck.collidedLead.leadName}' já pertence a ${collisionCheck.collidedLead.ownerName}.`,
+      };
+    }
+
+    // Resolução de companyId para isolamento multi-tenant
+    const [existingLead] = await db.select({ companyId: leads.companyId }).from(leads).limit(1);
+    const companyId = existingLead?.companyId || "44d73af8-8026-4061-8aa9-91a6becd33c9";
+
+    const assignedOwner = ownerId || "lucas.leite";
+    const op = getOperator(assignedOwner);
+
+    const initialNotes: NoteEntry[] = initialNote?.trim()
+      ? [
+          {
+            id: "note-" + Date.now(),
+            text: initialNote.trim(),
+            createdAt: new Date().toISOString(),
+            author: `${op.name} (${op.role})`,
+          },
+        ]
+      : [];
+
+    const cadenceState: CadenceState = {
+      completedSteps: [],
+      roleTitle: roleTitle?.trim() || "Decisor Comercial",
+      estimatedValue: estimatedValue?.trim() || "R$ 50.000,00",
+    };
+
+    const [newLead] = await db
+      .insert(leads)
+      .values({
+        companyId,
+        leadName: `${name.trim()} (${company.trim()})`,
+        leadEmail: email.trim().toLowerCase(),
+        leadPhone: phone?.trim() || null,
+        origin: "Hunter Manual / Radar",
+        status: "new",
+        ownerId: assignedOwner,
+        cadenceState,
+        notes: initialNotes,
+        dealScore: 50,
+        telemetryEvents: [],
+        scriptVersion: "v1_direct",
+      })
+      .returning();
+
+    try {
+      revalidatePath("/leads");
+    } catch {
+      // Ignorado fora do request context
+    }
+
+    return { success: true, leadId: newLead.id, lead: newLead };
+  } catch (error) {
+    console.error("Falha ao criar novo lead:", error);
+    return {
+      success: false,
+      leadId: "",
+      error: error instanceof Error ? error.message : "Erro interno ao cadastrar lead.",
+    };
+  }
+}
+
+/**
+ * Atualiza o operador responsável (dono) do lead
+ */
+export async function updateLeadOwnerAction(
+  leadId: string,
+  newOwnerId: string
+): Promise<ActionResponse & { newOwnerId: string }> {
+  try {
+    if (!leadId || !newOwnerId) {
+      return { success: false, leadId, newOwnerId, error: "Identificadores inválidos." };
+    }
+
+    if (!UUID_REGEX.test(leadId)) {
+      return { success: true, leadId, newOwnerId };
+    }
+
+    await db.update(leads).set({ ownerId: newOwnerId }).where(eq(leads.id, leadId));
+
+    try {
+      revalidatePath("/leads");
+    } catch {
+      // Ignorado
+    }
+
+    return { success: true, leadId, newOwnerId };
+  } catch (error) {
+    console.error("Falha ao transferir proprietário do lead:", error);
+    return {
+      success: false,
+      leadId,
+      newOwnerId,
+      error: error instanceof Error ? error.message : "Erro ao alterar proprietário.",
+    };
+  }
+}
+
 

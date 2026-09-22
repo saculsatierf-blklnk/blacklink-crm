@@ -8,9 +8,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
-  Activity,
   AlertCircle,
-  Bot,
   Building2,
   Calendar,
   CheckCircle2,
@@ -18,20 +16,19 @@ import {
   Globe,
   GripVertical,
   Mail,
-  Mic,
   Phone,
-  PhoneCall,
-  Radio,
+  Plus,
   Sparkles,
-  Tag,
-  TrendingUp,
+  User,
+  Users,
   Zap,
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
 import { updateLeadStatusAction, type LeadStatus } from "@/actions/leads";
 import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
-import { resolveNextBestAction } from "@/lib/predictive";
+import { OPERATORS, getOperator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
+import { AddLeadModal } from "./AddLeadModal";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
@@ -73,93 +70,18 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Conexão e telemetria do Streaming de Alta Frequência (WSS / SSE)
-  const [isStreamConnected, setIsStreamConnected] = useState(false);
-  const [latestLivePulse, setLatestLivePulse] = useState<string | null>(null);
-  const [streamEventCount, setStreamEventCount] = useState(0);
+  // Silo de Propriedade: Filtro de Operador Ativo
+  const [activeOperator, setActiveOperator] = useState<string>("todos");
 
-  // Conexão com o Deal Momentum Stream (Latência Zero)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let eventSource: EventSource | null = null;
-
-    try {
-      eventSource = new EventSource("/api/v1/stream/deal-momentum");
-
-      eventSource.onopen = () => {
-        setIsStreamConnected(true);
-      };
-
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (
-            data.type === "telemetry" ||
-            data.type === "score_update" ||
-            data.type === "nlp_objection"
-          ) {
-            setStreamEventCount((c) => c + 1);
-
-            if (data.leadId) {
-              setLeadsList((prev) =>
-                prev.map((lead) =>
-                  lead.id === data.leadId
-                    ? {
-                        ...lead,
-                        dealScore:
-                          typeof data.score === "number"
-                            ? data.score
-                            : lead.dealScore,
-                      }
-                    : lead
-                )
-              );
-
-              setSelectedLead((prev) =>
-                prev && prev.id === data.leadId
-                  ? {
-                      ...prev,
-                      dealScore:
-                        typeof data.score === "number"
-                          ? data.score
-                          : prev.dealScore,
-                    }
-                  : prev
-              );
-
-              setLatestLivePulse(data.leadId);
-              setTimeout(() => setLatestLivePulse(null), 3500);
-            }
-          }
-        } catch {
-          // Ignorado
-        }
-      };
-
-      eventSource.onerror = () => {
-        setIsStreamConnected(false);
-      };
-    } catch (err) {
-      console.warn("Falha ao inicializar EventSource de telemetria:", err);
-    }
-
-    return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, []);
-
-  // Mapa reativo do estado de cadência por lead derivado do PostgreSQL (sem localStorage)
+  // Mapa reativo do estado de cadência por lead derivado do PostgreSQL
   const [cadenceMap, setCadenceMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     setIsMounted(true);
 
-    // Inicialização direta a partir do schema PostgreSQL (cadenceState.completedSteps)
     const map: Record<string, string[]> = {};
     initialLeads.forEach((lead) => {
       map[lead.id] = lead.cadenceState?.completedSteps || [];
@@ -206,17 +128,15 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
     );
   };
 
-  // Atualização em tempo real do Deal Momentum Score disparada pelo modal
-  const handleScoreChange = (leadId: string, newScore: number) => {
+  // Atualização de proprietário (owner)
+  const handleOwnerChange = (leadId: string, newOwnerId: string) => {
     setLeadsList((prev) =>
       prev.map((lead) =>
-        lead.id === leadId ? { ...lead, dealScore: newScore } : lead
+        lead.id === leadId ? { ...lead, ownerId: newOwnerId } : lead
       )
     );
     if (selectedLead && selectedLead.id === leadId) {
-      setSelectedLead((prev) =>
-        prev ? { ...prev, dealScore: newScore } : null
-      );
+      setSelectedLead((prev) => (prev ? { ...prev, ownerId: newOwnerId } : null));
     }
   };
 
@@ -236,6 +156,17 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       await updateLeadStatusAction(leadId, newStatus);
     } catch (err) {
       console.error("Falha ao salvar status no banco de dados:", err);
+    }
+  };
+
+  // Callback de novo lead cadastrado via AddLeadModal
+  const handleLeadCreated = (newLead: Lead) => {
+    setLeadsList((prev) => [newLead, ...prev]);
+    if (newLead.cadenceState?.completedSteps) {
+      setCadenceMap((prev) => ({
+        ...prev,
+        [newLead.id]: newLead.cadenceState.completedSteps,
+      }));
     }
   };
 
@@ -275,7 +206,6 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
       setSelectedLead((prev) => (prev ? { ...prev, status: destStatus } : null));
     }
 
-    // Persistência assíncrona no PostgreSQL via Server Action
     try {
       await updateLeadStatusAction(draggableId, destStatus);
     } catch (err) {
@@ -283,8 +213,14 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
     }
   };
 
+  // Filtragem estrita pelo Silo de Propriedade (Ownership)
+  const displayedLeads =
+    activeOperator === "todos"
+      ? leadsList
+      : leadsList.filter((l) => (l.ownerId || "lucas.leite") === activeOperator);
+
   const getLeadsByStatus = (status: LeadStatus) => {
-    return leadsList.filter((lead) => lead.status === status);
+    return displayedLeads.filter((lead) => lead.status === status);
   };
 
   const formatDate = (date: Date | string) => {
@@ -298,66 +234,52 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
     }).format(d);
   };
 
-  // Estatísticas da Matriz Preditiva de Decisão
-  const closingCount = leadsList.filter((l) => (l.dealScore ?? 50) > 85).length;
-  const tractionCount = leadsList.filter(
-    (l) => (l.dealScore ?? 50) >= 65 && (l.dealScore ?? 50) <= 85
-  ).length;
-  const nurturingCount = leadsList.filter((l) => (l.dealScore ?? 50) < 65).length;
-
   return (
     <div className="space-y-6">
-      {/* Barra de Telemetria e Streaming em Tempo Real */}
+      {/* Barra Operacional do Hunter: Silo de Propriedade & Novo Lead */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-glass-border bg-carbon/80 backdrop-blur-xl px-4 py-3 shadow-lg">
+        {/* Seletor de Operador Ativo */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              {isStreamConnected && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              )}
-              <span
-                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                  isStreamConnected ? "bg-emerald-500" : "bg-zinc-500"
-                }`}
-              />
-            </span>
-            <span className="text-xs font-mono font-semibold tracking-wider text-platinum uppercase">
-              {isStreamConnected
-                ? "Deal Momentum Stream Ativo"
-                : "Conectando ao Stream..."}
+            <Users className="h-4 w-4 text-accent" />
+            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-platinum">
+              Operador Ativo:
             </span>
           </div>
 
+          <select
+            value={activeOperator}
+            onChange={(e) => setActiveOperator(e.target.value)}
+            className="rounded-md border border-glass-border bg-carbon-muted px-3 py-1.5 text-xs font-mono text-platinum focus:border-accent focus:outline-none cursor-pointer"
+          >
+            <option value="todos">Todos os Operadores ({leadsList.length})</option>
+            {OPERATORS.map((op) => {
+              const count = leadsList.filter(
+                (l) => (l.ownerId || "lucas.leite") === op.id
+              ).length;
+              return (
+                <option key={op.id} value={op.id}>
+                  {op.name} ({op.role}) — {count} contas
+                </option>
+              );
+            })}
+          </select>
+
           <span className="hidden sm:inline-block text-[11px] font-mono text-sub border-l border-glass-border pl-3">
-            Latência Zero • Push Contínuo {streamEventCount > 0 ? `(${streamEventCount} eventos)` : ""}
+            {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
           </span>
         </div>
 
-        {/* Distribuição por Zonas de Ação Recomendada */}
-        <div className="flex items-center gap-2 text-[11px] font-mono">
-          <span
-            title="Zona de Fechamento (Score > 85%)"
-            className="flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-400 font-semibold"
+        {/* Botão de Criação de Lead com Radar Anti-Colisão */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-1.5 text-xs font-mono font-bold text-void hover:bg-platinum transition-all cursor-pointer shadow-md"
           >
-            <PhoneCall className="h-3 w-3" />
-            <span>Fechamento: {closingCount}</span>
-          </span>
-
-          <span
-            title="Zona de Tração (Score 65% - 84%)"
-            className="flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-amber-300 font-semibold"
-          >
-            <Mic className="h-3 w-3" />
-            <span>Tração: {tractionCount}</span>
-          </span>
-
-          <span
-            title="Zona de Nutrição (Score < 65%)"
-            className="flex items-center gap-1 rounded-md border border-glass-border bg-void/50 px-2 py-0.5 text-sub"
-          >
-            <Bot className="h-3 w-3" />
-            <span>Nutrição: {nurturingCount}</span>
-          </span>
+            <Plus className="h-3.5 w-3.5" />
+            <span>Novo Lead</span>
+          </button>
         </div>
       </div>
 
@@ -404,9 +326,6 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                       >
                         {columnLeads.map((lead, index) => {
                           const parsed = parseLeadInfo(lead.leadName);
-                          const isAutomation =
-                            lead.origin?.toLowerCase().includes("n8n") ||
-                            lead.origin?.toLowerCase().includes("webhook");
 
                           // Inteligência Visual Temporal derivada dos dados do PostgreSQL
                           const completed =
@@ -419,15 +338,8 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                             lead.status
                           );
 
-                          // Matriz Preditiva de Ação Recomendada (NBA)
-                          const nba = resolveNextBestAction(
-                            lead.dealScore ?? 50,
-                            {
-                              name: parsed.name,
-                              company: parsed.company,
-                            }
-                          );
-                          const isPulsing = latestLivePulse === lead.id;
+                          // Resolução do Dono da Conta (Ownership)
+                          const op = getOperator(lead.ownerId);
 
                           return (
                             <Draggable
@@ -445,10 +357,6 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                     handleOpenSheet(lead);
                                   }}
                                   className={`rounded-lg border bg-carbon p-4 space-y-3 transition-all select-none group cursor-grab active:cursor-grabbing ${
-                                    isPulsing
-                                      ? "ring-2 ring-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.35)] animate-pulse"
-                                      : ""
-                                  } ${
                                     dragSnapshot.isDragging
                                       ? "border-accent shadow-2xl scale-[1.02] ring-2 ring-accent/20 z-50 bg-carbon"
                                       : "border-glass-border hover:border-glass-highlight hover:bg-carbon-muted/40 shadow-md"
@@ -476,54 +384,21 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                     </div>
                                   </div>
 
-                                  {/* Matriz Preditiva: Comando Imperativo (NBA) & Deal Score */}
-                                  <div className="space-y-1.5 rounded-lg border border-glass-border/70 bg-void/50 p-2.5">
-                                    <div className="flex items-center justify-between gap-1.5">
-                                      <span
-                                        className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] font-mono border ${nba.badgeClass}`}
-                                      >
-                                        {nba.zone === "closing" && (
-                                          <PhoneCall className="h-3 w-3 shrink-0 text-emerald-400" />
-                                        )}
-                                        {nba.zone === "traction" && (
-                                          <Mic className="h-3 w-3 shrink-0 text-amber-300" />
-                                        )}
-                                        {nba.zone === "nurturing" && (
-                                          <Bot className="h-3 w-3 shrink-0 text-sub" />
-                                        )}
-                                        <span className="truncate">{nba.command}</span>
-                                      </span>
-
-                                      <span className="text-[10px] font-mono font-bold text-platinum">
-                                        {lead.dealScore ?? 50}%
-                                      </span>
-                                    </div>
-
-                                    {/* Barra de Momentum */}
-                                    <div className="w-full bg-carbon-muted/70 h-1.5 rounded-full overflow-hidden">
-                                      <div
-                                        className={`h-full transition-all duration-700 ${
-                                          nba.zone === "closing"
-                                            ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-                                            : nba.zone === "traction"
-                                            ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                                            : "bg-sub/60"
-                                        }`}
-                                        style={{
-                                          width: `${Math.max(
-                                            5,
-                                            Math.min(100, lead.dealScore ?? 50)
-                                          )}%`,
-                                        }}
-                                      />
-                                    </div>
+                                  {/* Linha Operacional do Hunter: Cargo & Valor Estimado */}
+                                  <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-sub bg-void/50 rounded px-2.5 py-1.5 border border-glass-border/40">
+                                    <span className="truncate max-w-[150px] text-sub">
+                                      {lead.cadenceState?.roleTitle || "Decisor Comercial"}
+                                    </span>
+                                    <span className="font-bold text-accent shrink-0">
+                                      {lead.cadenceState?.estimatedValue || "R$ 50.000,00"}
+                                    </span>
                                   </div>
 
-                                  {/* Inteligência Visual: Próxima Ação da Cadência & Versão A/B */}
+                                  {/* Inteligência Operacional: Próxima Ação da Cadência & Dono */}
                                   <div className="flex items-center justify-between gap-2 border-y border-glass-border/60 py-2">
                                     <div className="flex items-center gap-1.5 min-w-0">
                                       <span className="text-[9px] font-mono uppercase tracking-wider text-sub shrink-0">
-                                        Ação:
+                                        Cadência:
                                       </span>
                                       <span
                                         className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-mono border truncate ${actionInfo.badgeClass}`}
@@ -544,12 +419,13 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                       </span>
                                     </div>
 
+                                    {/* Dono do Lead (Silo de Propriedade) */}
                                     <span
-                                      title="Versão do Script A/B"
-                                      className="flex items-center gap-1 rounded border border-glass-border bg-void/50 px-1.5 py-0.5 text-[9px] font-mono text-sub shrink-0"
+                                      title={`Responsável: ${op.name} (${op.role})`}
+                                      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-mono shrink-0 ${op.badgeClass}`}
                                     >
-                                      <Tag className="h-2.5 w-2.5" />
-                                      <span>{lead.scriptVersion || "v1"}</span>
+                                      <User className="h-2.5 w-2.5" />
+                                      <span>{op.shortName}</span>
                                     </span>
                                   </div>
 
@@ -588,11 +464,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                   {/* Rodapé do Card: Origem e Data */}
                                   <div className="flex items-center justify-between border-t border-glass-border/60 pt-2.5 text-[10px] font-mono text-sub">
                                     <div className="flex items-center gap-1">
-                                      {isAutomation ? (
-                                        <Zap className="h-3 w-3 text-amber-300" />
-                                      ) : (
-                                        <Globe className="h-3 w-3 text-sub" />
-                                      )}
+                                      <Globe className="h-3 w-3 text-sub" />
                                       <span className="truncate max-w-[120px]">
                                         {lead.origin || "Direto"}
                                       </span>
@@ -654,7 +526,15 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
         }}
         onStatusChange={handleStatusChange}
         onCadenceChange={handleCadenceChange}
-        onScoreChange={handleScoreChange}
+        onOwnerChange={handleOwnerChange}
+      />
+
+      {/* Modal de Criação de Lead com Radar Anti-Colisão */}
+      <AddLeadModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onLeadCreated={handleLeadCreated}
+        defaultOwnerId={activeOperator !== "todos" ? activeOperator : "lucas.leite"}
       />
     </div>
   );

@@ -1,0 +1,1 @@
+ALTER TABLE "leads" ADD COLUMN "owner_id" varchar(100) DEFAULT 'lucas.leite' NOT NULL;

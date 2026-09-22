@@ -88,6 +88,9 @@ export const leads = pgTable("leads", {
   scriptVersion: varchar("script_version", { length: 50 })
     .default("v1_direct")
     .notNull(),
+  ownerId: varchar("owner_id", { length: 100 })
+    .default("lucas.leite")
+    .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

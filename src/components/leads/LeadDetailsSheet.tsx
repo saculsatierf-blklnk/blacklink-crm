@@ -2,46 +2,35 @@
 
 import { useEffect, useState } from "react";
 import {
-  Activity,
   AlertCircle,
-  Bot,
   Building2,
   Calendar,
   Check,
   CheckCircle2,
   CheckSquare,
-  ChevronDown,
-  ChevronUp,
   Clock,
   Coins,
   Copy,
-  Cpu,
-  Database,
   FileText,
   Mail,
   MessageSquare,
-  Mic,
   Phone,
-  PhoneCall,
   Plus,
-  Radio,
   RotateCcw,
-  Send,
   Sparkles,
-  Tag,
   Trash2,
-  TrendingUp,
+  User,
   UserCheck,
   X,
   Zap,
 } from "lucide-react";
-import type { Lead, NoteEntry, TelemetryEvent } from "@/db/schema";
+import type { Lead, NoteEntry } from "@/db/schema";
 import {
   updateLeadCadenceAction,
   addLeadNoteAction,
   deleteLeadNoteAction,
   updateLeadScriptAction,
-  recordTelemetryEventAction,
+  updateLeadOwnerAction,
   type LeadStatus,
 } from "@/actions/leads";
 import {
@@ -51,11 +40,7 @@ import {
   parseLeadInfo,
   toStartOfDay,
 } from "@/lib/cadence";
-import {
-  TELEMETRY_WEIGHTS,
-  resolveNextBestAction,
-  type NextBestAction,
-} from "@/lib/predictive";
+import { OPERATORS, getOperator } from "@/lib/operators";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
@@ -63,7 +48,7 @@ interface LeadDetailsSheetProps {
   onClose: () => void;
   onStatusChange?: (leadId: string, newStatus: LeadStatus) => void;
   onCadenceChange?: (leadId: string, completedStepIds: string[]) => void;
-  onScoreChange?: (leadId: string, newScore: number) => void;
+  onOwnerChange?: (leadId: string, newOwnerId: string) => void;
 }
 
 export function LeadDetailsSheet({
@@ -72,19 +57,20 @@ export function LeadDetailsSheet({
   onClose,
   onStatusChange,
   onCadenceChange,
-  onScoreChange,
+  onOwnerChange,
 }: LeadDetailsSheetProps) {
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
 
-  // Metadados específicos do Hunter (persistidos no PostgreSQL via cadenceState)
+  // Metadados operacionais do Hunter (persistidos no PostgreSQL)
   const [roleTitle, setRoleTitle] = useState("");
   const [estimatedValue, setEstimatedValue] = useState("");
+  const [ownerId, setOwnerId] = useState("lucas.leite");
   const [isEditingMeta, setIsEditingMeta] = useState(false);
 
   // Checklist de Cadência (persistido no PostgreSQL)
   const [completedCadence, setCompletedCadence] = useState<string[]>([]);
 
-  // Script Dinâmico de Abordagem (persistido no PostgreSQL)
+  // Roteiro Operacional de Abordagem (persistido no PostgreSQL)
   const [scriptText, setScriptText] = useState("");
   const [isCopied, setIsCopied] = useState(false);
 
@@ -92,31 +78,11 @@ export function LeadDetailsSheet({
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [newNoteText, setNewNoteText] = useState("");
 
-  // Motor Preditivo e Deal Momentum
-  const [dealScore, setDealScore] = useState<number>(50);
-  const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
-  const [isTriggeringTelemetry, setIsTriggeringTelemetry] = useState(false);
-  const [isNbaScriptCopied, setIsNbaScriptCopied] = useState(false);
-
-  // Ingestão NLP e Vetorização pgvector
-  const [transcriptText, setTranscriptText] = useState("");
-  const [isProcessingNlp, setIsProcessingNlp] = useState(false);
-  const [nlpSuccessMessage, setNlpSuccessMessage] = useState<string | null>(null);
-  const [detectedObjection, setDetectedObjection] = useState<string | null>(null);
-  const [isNlpExpanded, setIsNlpExpanded] = useState(false);
-
-  // Sincronização centralizada direta do PostgreSQL ao abrir ou alternar de lead
+  // Sincronização direta a partir do PostgreSQL ao abrir ou alternar de lead
   useEffect(() => {
     if (!lead) return;
 
-    // Reseta estados do motor preditivo para o lead ativo
-    setDealScore(lead.dealScore ?? 50);
-    setTelemetryEvents(lead.telemetryEvents || []);
-    setTranscriptText("");
-    setNlpSuccessMessage(null);
-    setDetectedObjection(null);
-
-    // 1. Resolução de Metadados do Hunter a partir do banco de dados
+    // 1. Resolução de Metadados Operacionais
     const dbCadenceState = lead.cadenceState || { completedSteps: [] };
 
     let resolvedRole = dbCadenceState.roleTitle || "";
@@ -140,12 +106,13 @@ export function LeadDetailsSheet({
 
     setRoleTitle(resolvedRole);
     setEstimatedValue(resolvedValue);
+    setOwnerId(lead.ownerId || "lucas.leite");
 
-    // 2. Checklist de Cadência a partir do PostgreSQL
+    // 2. Checklist de Cadência
     const currentCompleted = dbCadenceState.completedSteps || [];
     setCompletedCadence(currentCompleted);
 
-    // 3. Script Dinâmico: INTERPOLAÇÃO IMEDIATA persistida no banco
+    // 3. Roteiro Dinâmico com Interpolação Imediata
     if (dbCadenceState.customScript && dbCadenceState.customScript.trim()) {
       const resolved = dbCadenceState.customScript
         .replace(/{Nome}/g, parsed.name || "Prezado(a)")
@@ -163,7 +130,7 @@ export function LeadDetailsSheet({
       setScriptText(generated);
     }
 
-    // 4. Histórico de Anotações a partir do PostgreSQL
+    // 4. Histórico de Anotações
     setNotes(lead.notes || []);
   }, [lead]);
 
@@ -184,7 +151,7 @@ export function LeadDetailsSheet({
 
   if (!isOpen || !lead) return null;
 
-  // Persistência de Metadados diretamente no PostgreSQL via Server Action
+  // Persistência de Metadados no PostgreSQL
   const handleSaveMeta = async () => {
     setIsEditingMeta(false);
     try {
@@ -197,17 +164,26 @@ export function LeadDetailsSheet({
     }
   };
 
+  // Alteração de Dono da Conta (Silo de Propriedade)
+  const handleOwnerSelect = async (newOwner: string) => {
+    setOwnerId(newOwner);
+    onOwnerChange?.(lead.id, newOwner);
+    try {
+      await updateLeadOwnerAction(lead.id, newOwner);
+    } catch (err) {
+      console.error("Falha ao atualizar dono da conta:", err);
+    }
+  };
+
   // Toggle de etapas de cadência diretamente no PostgreSQL
   const toggleCadenceStep = async (stepId: string) => {
     const next = completedCadence.includes(stepId)
       ? completedCadence.filter((id) => id !== stepId)
       : [...completedCadence, stepId];
 
-    // Atualização otimista imediata
     setCompletedCadence(next);
     onCadenceChange?.(lead.id, next);
 
-    // Persistência centralizada no banco
     try {
       await updateLeadCadenceAction(lead.id, {
         completedSteps: next,
@@ -220,16 +196,9 @@ export function LeadDetailsSheet({
   // Edição e persistência do script diretamente no PostgreSQL
   const handleScriptChange = (newText: string) => {
     setScriptText(newText);
-    // Persistência no banco
     updateLeadScriptAction(lead.id, newText, lead.scriptVersion).catch((err) =>
-      console.error("Falha ao salvar script no banco:", err)
+      console.error("Falha ao salvar roteiro no banco:", err)
     );
-  };
-
-  // Inserção rápida de valor já resolvido
-  const handleInsertResolvedVariable = (val: string) => {
-    const updated = scriptText + " " + val;
-    handleScriptChange(updated);
   };
 
   // Cópia direta do script pronto para uso
@@ -243,7 +212,7 @@ export function LeadDetailsSheet({
     }
   };
 
-  // Restaurar script padrão imediatamente interpolado
+  // Restaurar roteiro padrão interpolado
   const handleResetScript = () => {
     const resetText = buildDefaultInterpolatedScript({
       name: parsed.name,
@@ -261,18 +230,17 @@ export function LeadDetailsSheet({
     const notePayload = newNoteText.trim();
     setNewNoteText("");
 
-    // Otimista
+    const activeOp = getOperator(ownerId);
     const tempNote: NoteEntry = {
       id: "note-" + Date.now(),
       text: notePayload,
       createdAt: new Date().toISOString(),
-      author: "Lucas Leite (Hunter)",
+      author: `${activeOp.name} (${activeOp.role})`,
     };
     setNotes((prev) => [tempNote, ...prev]);
 
-    // Persistência no PostgreSQL
     try {
-      const res = await addLeadNoteAction(lead.id, notePayload, "Lucas Leite (Hunter)");
+      const res = await addLeadNoteAction(lead.id, notePayload, tempNote.author);
       if (res.success && res.note) {
         setNotes((prev) =>
           prev.map((n) => (n.id === tempNote.id ? (res.note as NoteEntry) : n))
@@ -292,78 +260,6 @@ export function LeadDetailsSheet({
       console.error("Falha ao excluir nota no banco:", error);
     }
   };
-
-  // Disparo de Evento de Telemetria com Ponderação Estrita
-  const handleTriggerTelemetry = async (type: string) => {
-    if (!lead) return;
-    setIsTriggeringTelemetry(true);
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/telemetry`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (typeof data.score === "number") {
-          setDealScore(data.score);
-          onScoreChange?.(lead.id, data.score);
-        }
-        if (data.event) {
-          setTelemetryEvents((prev) => [data.event, ...prev]);
-        }
-      }
-    } catch (err) {
-      console.error("Falha ao registrar telemetria:", err);
-    } finally {
-      setIsTriggeringTelemetry(false);
-    }
-  };
-
-  // Ingestão e Processamento NLP de Transcrição VoIP com pgvector
-  const handleProcessTranscript = async () => {
-    if (!lead || !transcriptText.trim()) return;
-    setIsProcessingNlp(true);
-    setNlpSuccessMessage(null);
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/nlp-transcript`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transcript: transcriptText.trim(),
-          source: "VoIP / Gravação Hunter",
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (typeof data.newScore === "number") {
-          setDealScore(data.newScore);
-          onScoreChange?.(lead.id, data.newScore);
-        }
-        if (data.insights?.objection) {
-          setDetectedObjection(data.insights.objection);
-        }
-        setNlpSuccessMessage(
-          `Transcrição vetorizada e salva com sucesso no pgvector (${data.insights?.dimensions || 1536}d). Objeção detectada: "${data.insights?.objection}".`
-        );
-        setTranscriptText("");
-        if (data.lead?.notes) {
-          setNotes(data.lead.notes);
-        }
-      }
-    } catch (err) {
-      console.error("Falha ao processar transcrição NLP:", err);
-    } finally {
-      setIsProcessingNlp(false);
-    }
-  };
-
-  // Resolução da Matriz Preditiva de Decisão (NBA)
-  const nba = resolveNextBestAction(dealScore, {
-    name: parsed.name,
-    company: parsed.company,
-    latestObjection: detectedObjection || undefined,
-  });
 
   const formatDate = (dateString: string | Date) => {
     const d = new Date(dateString);
@@ -391,7 +287,9 @@ export function LeadDetailsSheet({
   const currentDay = toStartOfDay(new Date());
   const funnelDays = Math.max(
     0,
-    Math.round((currentDay.getTime() - leadCreatedDay.getTime()) / (1000 * 60 * 60 * 24))
+    Math.round(
+      (currentDay.getTime() - leadCreatedDay.getTime()) / (1000 * 60 * 60 * 24)
+    )
   );
 
   return (
@@ -402,21 +300,16 @@ export function LeadDetailsSheet({
         className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
       />
 
-      {/* Painel Lateral Slide-over (Drawer Executivo do Hunter) */}
+      {/* Painel Lateral Slide-over (Dossiê do Hunter) */}
       <div className="relative z-50 flex h-full w-full max-w-xl flex-col justify-between border-l border-glass-border bg-carbon p-6 shadow-2xl sm:p-8 animate-in slide-in-from-right duration-200">
         <div className="space-y-6 overflow-y-auto pr-1">
-          {/* 1. TOPO: Cabeçalho com Nome, Empresa, Cargo e Valor Estimado */}
+          {/* 1. TOPO: Cabeçalho com Nome, Empresa, Cargo e Dono */}
           <div className="border-b border-glass-border pb-5 space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-md border border-glass-border bg-carbon-muted px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-widest text-sub">
-                  Dossiê do Hunter
-                </span>
-                <span className="inline-flex items-center gap-1 rounded border border-glass-border bg-void/60 px-2 py-0.5 text-[10px] font-mono text-accent">
-                  <Tag className="h-2.5 w-2.5" />
-                  <span>{lead.scriptVersion || "v1_direct"}</span>
-                </span>
-              </div>
+              <span className="inline-flex items-center rounded-md border border-glass-border bg-carbon-muted px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-widest text-sub">
+                Dossiê da Conta
+              </span>
+
               <button
                 onClick={onClose}
                 className="flex h-8 w-8 items-center justify-center rounded-md border border-glass-border bg-carbon-muted text-sub hover:text-platinum hover:border-accent/40 transition-colors cursor-pointer"
@@ -439,8 +332,8 @@ export function LeadDetailsSheet({
               </div>
             </div>
 
-            {/* Grid Executivo: Cargo e Valor Estimado */}
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            {/* Grid Operacional: Cargo, Valor Estimado e Dono da Conta */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
               {/* Cargo / Posição */}
               <div className="rounded-lg border border-glass-border bg-void/60 p-3 space-y-1">
                 <div className="flex items-center justify-between">
@@ -486,9 +379,30 @@ export function LeadDetailsSheet({
                   </div>
                 )}
               </div>
+
+              {/* Dono da Conta (Silo de Propriedade) */}
+              <div className="rounded-lg border border-glass-border bg-void/60 p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
+                    Proprietário
+                  </span>
+                  <User className="h-3.5 w-3.5 text-sub" />
+                </div>
+                <select
+                  value={ownerId}
+                  onChange={(e) => handleOwnerSelect(e.target.value)}
+                  className="w-full rounded border border-glass-border bg-carbon px-2 py-1 text-xs text-platinum font-mono focus:border-accent focus:outline-none cursor-pointer"
+                >
+                  {OPERATORS.map((op) => (
+                    <option key={op.id} value={op.id} className="bg-carbon text-platinum">
+                      {op.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Ação para alternar edição dos metadados */}
+            {/* Alternar edição dos metadados */}
             <div className="flex justify-end">
               {isEditingMeta ? (
                 <button
@@ -496,7 +410,7 @@ export function LeadDetailsSheet({
                   onClick={handleSaveMeta}
                   className="text-[11px] font-mono text-accent hover:underline cursor-pointer"
                 >
-                  Salvar no Banco
+                  Salvar Alterações
                 </button>
               ) : (
                 <button
@@ -506,264 +420,6 @@ export function LeadDetailsSheet({
                 >
                   Editar Cargo / Valor
                 </button>
-              )}
-            </div>
-
-            {/* COCKPIT DO MOTOR PREDITIVO (CLOSER - LATÊNCIA ZERO) */}
-            <div className="rounded-xl border border-glass-border bg-void/80 p-4 space-y-4 shadow-xl">
-              {/* Cabeçalho do Cockpit: Título & Score Gauge */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-emerald-400" />
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum">
-                    Deal Momentum Preditivo
-                  </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-mono border ${nba.badgeClass}`}
-                  >
-                    {nba.zoneLabel}
-                  </span>
-                  <span className="text-sm font-mono font-bold text-platinum">
-                    {dealScore}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Barra de Momentum Visual */}
-              <div className="space-y-1">
-                <div className="w-full bg-carbon-muted h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-700 ${
-                      nba.zone === "closing"
-                        ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]"
-                        : nba.zone === "traction"
-                        ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                        : "bg-sub/60"
-                    }`}
-                    style={{ width: `${Math.max(5, Math.min(100, dealScore))}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[9px] font-mono text-sub">
-                  <span>Nutrição (&lt;65%)</span>
-                  <span>Tração (65-84%)</span>
-                  <span>Fechamento (&gt;85%)</span>
-                </div>
-              </div>
-
-              {/* Banner do Comando Imperativo (NBA) */}
-              <div className="rounded-lg border border-glass-border bg-carbon p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {nba.zone === "closing" && (
-                      <PhoneCall className="h-4 w-4 text-emerald-400" />
-                    )}
-                    {nba.zone === "traction" && (
-                      <Mic className="h-4 w-4 text-amber-300" />
-                    )}
-                    {nba.zone === "nurturing" && (
-                      <Bot className="h-4 w-4 text-sub" />
-                    )}
-                    <span className="text-xs font-mono font-bold text-platinum tracking-wide">
-                      {nba.command}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-sub">
-                    {nba.subtitle}
-                  </span>
-                </div>
-
-                {/* Roteiro da Ação Recomendada */}
-                <div className="rounded bg-void/60 p-2.5 border border-glass-border text-xs text-sub font-mono leading-relaxed relative">
-                  <div className="pr-7 text-[11px] whitespace-pre-wrap">
-                    {nba.scriptRecommendation}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(
-                        nba.scriptRecommendation
-                      );
-                      setIsNbaScriptCopied(true);
-                      setTimeout(() => setIsNbaScriptCopied(false), 2000);
-                    }}
-                    title="Copiar Roteiro da Ação"
-                    className="absolute top-2 right-2 p-1 rounded hover:bg-white/10 text-sub hover:text-platinum transition-colors cursor-pointer"
-                  >
-                    {isNbaScriptCopied ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-400" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Gatilhos de Telemetria de Alta Frequência (Push em Tempo Real) */}
-              <div className="space-y-2 pt-1 border-t border-glass-border/60">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
-                    Gatilhos de Telemetria (Push Real-Time)
-                  </span>
-                  {isTriggeringTelemetry && (
-                    <span className="text-[9px] font-mono text-emerald-400 animate-pulse">
-                      Transmitindo...
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    disabled={isTriggeringTelemetry}
-                    onClick={() => handleTriggerTelemetry("proposal_view_120s")}
-                    className="flex items-center justify-between gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-mono text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="truncate">Proposta &gt; 120s</span>
-                    <span className="font-bold shrink-0">+40%</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isTriggeringTelemetry}
-                    onClick={() =>
-                      handleTriggerTelemetry("internal_forward_multithread")
-                    }
-                    className="flex items-center justify-between gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-mono text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="truncate">Multi-threading</span>
-                    <span className="font-bold shrink-0">+25%</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isTriggeringTelemetry}
-                    onClick={() =>
-                      handleTriggerTelemetry("pricing_page_recurrent")
-                    }
-                    className="flex items-center justify-between gap-1 rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1.5 text-[10px] font-mono text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="truncate">Página Preços</span>
-                    <span className="font-bold shrink-0">+20%</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isTriggeringTelemetry}
-                    onClick={() => handleTriggerTelemetry("case_study_view")}
-                    className="flex items-center justify-between gap-1 rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1.5 text-[10px] font-mono text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="truncate">Estudo de Caso</span>
-                    <span className="font-bold shrink-0">+15%</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isTriggeringTelemetry}
-                    onClick={() =>
-                      handleTriggerTelemetry("silence_post_pitch_48h")
-                    }
-                    className="flex items-center justify-between gap-1 rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-[10px] font-mono text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer disabled:opacity-50 col-span-2 sm:col-span-1"
-                  >
-                    <span className="truncate">Silêncio &gt; 48h</span>
-                    <span className="font-bold shrink-0">-30%</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Ingestão de Transcrição VoIP e Vetorização pgvector (1536d) */}
-              <div className="space-y-2 pt-1 border-t border-glass-border/60">
-                <button
-                  type="button"
-                  onClick={() => setIsNlpExpanded((prev) => !prev)}
-                  className="flex w-full items-center justify-between text-[10px] font-mono uppercase tracking-wider text-sub hover:text-platinum transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Database className="h-3.5 w-3.5 text-accent" />
-                    <span>Ingestão de Transcrição NLP (pgvector 1536d)</span>
-                  </div>
-                  {isNlpExpanded ? (
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                </button>
-
-                {isNlpExpanded && (
-                  <div className="space-y-2 pt-2 animate-in fade-in duration-200">
-                    <textarea
-                      value={transcriptText}
-                      onChange={(e) => setTranscriptText(e.target.value)}
-                      rows={3}
-                      placeholder="Cole a transcrição da chamada VoIP ou resumo da reunião..."
-                      className="w-full rounded-md border border-glass-border bg-carbon px-2.5 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
-                    />
-
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-mono text-sub">
-                        Indexa embedding 1536d no Supabase
-                      </span>
-
-                      <button
-                        type="button"
-                        disabled={isProcessingNlp || !transcriptText.trim()}
-                        onClick={handleProcessTranscript}
-                        className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-mono font-semibold text-void hover:bg-platinum transition-all cursor-pointer disabled:opacity-40"
-                      >
-                        {isProcessingNlp ? (
-                          <span className="animate-spin text-void">⚡</span>
-                        ) : (
-                          <Send className="h-3 w-3" />
-                        )}
-                        <span>Processar NLP</span>
-                      </button>
-                    </div>
-
-                    {nlpSuccessMessage && (
-                      <div className="rounded border border-emerald-500/40 bg-emerald-500/10 p-2 text-[11px] font-mono text-emerald-300">
-                        {nlpSuccessMessage}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Histórico Recente de Eventos de Telemetria */}
-              {telemetryEvents.length > 0 && (
-                <div className="space-y-1.5 pt-1 border-t border-glass-border/60">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-sub block">
-                    Log de Telemetria do Deal ({telemetryEvents.length} eventos)
-                  </span>
-                  <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
-                    {telemetryEvents.map((evt, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between rounded bg-carbon px-2 py-1 text-[10px] font-mono border border-glass-border/40"
-                      >
-                        <span className="truncate text-sub max-w-[260px]">
-                          {evt.details || evt.type}
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span
-                            className={
-                              evt.weight > 0
-                                ? "text-emerald-400 font-bold"
-                                : evt.weight < 0
-                                ? "text-rose-400 font-bold"
-                                : "text-sub"
-                            }
-                          >
-                            {evt.weight > 0 ? `+${evt.weight}%` : `${evt.weight}%`}
-                          </span>
-                          <span className="text-sub/60">
-                            {formatShortDate(new Date(evt.timestamp))}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
             </div>
 
@@ -814,8 +470,8 @@ export function LeadDetailsSheet({
               </div>
             </div>
 
-            {/* Contatos e Entrada no Funil */}
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-sub">
+            {/* Contatos Rápidos */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-sub">
               {lead.leadEmail && (
                 <a
                   href={`mailto:${lead.leadEmail}`}
@@ -837,13 +493,13 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 2. CADÊNCIA TEMPORAL DINÂMICA (Baseada no PostgreSQL) */}
+          {/* 2. CADÊNCIA TEMPORAL OPERACIONAL */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckSquare className="h-4 w-4 text-accent" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
-                  Cadência Temporal Dinâmica
+                  Cadência Temporal de Execução
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-platinum font-semibold">
@@ -851,73 +507,86 @@ export function LeadDetailsSheet({
               </span>
             </div>
 
-            {/* Informação de entrada temporal no funil */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-sub border-b border-glass-border/60 pb-2">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="h-3 w-3 text-sub" />
-                <span>Entrada: {formatDate(lead.createdAt)}</span>
-              </div>
-              <span className="text-platinum">
-                {funnelDays === 0
-                  ? "Entrou hoje no funil"
-                  : funnelDays === 1
-                  ? "Há 1 dia no funil"
-                  : `Há ${funnelDays} dias no funil`}
-              </span>
-            </div>
-
-            {/* Barra de Progresso Visual */}
-            <div className="h-1.5 w-full rounded-full bg-carbon-muted overflow-hidden">
+            {/* Barra de Progresso da Cadência */}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-carbon-muted">
               <div
                 className="h-full bg-accent transition-all duration-300"
                 style={{ width: `${cadenceProgress}%` }}
               />
             </div>
 
-            {/* Lista de Passos da Cadência */}
+            <p className="text-[11px] text-sub leading-relaxed">
+              Cronograma operacional de contatos estruturado pelo tempo de entrada no funil.
+            </p>
+
+            {/* Lista Interativa de Passos da Cadência */}
             <div className="space-y-2 pt-1">
               {CADENCE_STEPS.map((step) => {
-                const isChecked = completedCadence.includes(step.id);
-                const temporal = calculateStepTemporalStatus(
+                const isCompleted = completedCadence.includes(step.id);
+                const temporalInfo = calculateStepTemporalStatus(
                   lead.createdAt,
                   step.dayOffset,
-                  isChecked
+                  isCompleted
                 );
+                const isOverdue = !isCompleted && temporalInfo.type === "overdue";
+                const isToday = !isCompleted && temporalInfo.type === "today";
+                const StepIcon =
+                  step.id === "step-1" || step.id === "step-4"
+                    ? Phone
+                    : step.id === "step-2"
+                    ? Mail
+                    : step.id === "step-3"
+                    ? UserCheck
+                    : step.id === "step-5"
+                    ? FileText
+                    : Clock;
 
                 return (
                   <div
                     key={step.id}
                     onClick={() => toggleCadenceStep(step.id)}
-                    className={`flex items-start gap-3 rounded-lg border p-2.5 transition-all cursor-pointer select-none ${
-                      isChecked
-                        ? "border-emerald-500/30 bg-emerald-500/10 text-platinum"
-                        : temporal.type === "overdue"
-                        ? "border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-platinum"
-                        : temporal.type === "today"
-                        ? "border-amber-400/30 bg-amber-400/5 hover:bg-amber-400/10 text-platinum"
-                        : "border-glass-border bg-carbon hover:border-glass-highlight hover:bg-carbon-muted/40 text-sub"
+                    className={`flex items-start gap-3 rounded-lg border p-3 transition-all cursor-pointer ${
+                      isCompleted
+                        ? "border-emerald-500/40 bg-emerald-500/5 text-sub"
+                        : temporalInfo.type === "overdue"
+                        ? "border-rose-500/50 bg-rose-500/10 hover:border-rose-400"
+                        : temporalInfo.type === "today"
+                        ? "border-amber-400/60 bg-amber-400/10 hover:border-amber-300"
+                        : "border-glass-border bg-carbon hover:border-glass-highlight hover:bg-carbon-muted/30"
                     }`}
                   >
-                    <div
-                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                        isChecked
-                          ? "border-emerald-400 bg-emerald-400 text-void font-bold"
-                          : "border-glass-border bg-void"
-                      }`}
-                    >
-                      {isChecked && <CheckCircle2 className="h-3 w-3" />}
+                    {/* Checkbox */}
+                    <div className="pt-0.5">
+                      <div
+                        className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                          isCompleted
+                            ? "border-emerald-400 bg-emerald-400 text-void"
+                            : "border-glass-border bg-void"
+                        }`}
+                      >
+                        {isCompleted && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
                     </div>
 
+                    {/* Detalhes do Passo */}
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-accent">
-                            {step.dayLabel}
-                          </span>
+                        <div className="flex items-center gap-1.5">
+                          <StepIcon
+                            className={`h-3.5 w-3.5 ${
+                              isCompleted
+                                ? "text-emerald-400"
+                                : temporalInfo.type === "overdue"
+                                ? "text-rose-400"
+                                : temporalInfo.type === "today"
+                                ? "text-amber-300"
+                                : "text-sub"
+                            }`}
+                          />
                           <span
                             className={`text-xs font-semibold ${
-                              isChecked
-                                ? "text-platinum line-through opacity-70"
+                              isCompleted
+                                ? "line-through text-sub"
                                 : "text-platinum"
                             }`}
                           >
@@ -925,31 +594,18 @@ export function LeadDetailsSheet({
                           </span>
                         </div>
 
-                        {/* Tag Visual Dinâmica de Tempo */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] font-mono text-sub">
-                            {formatShortDate(temporal.targetDate)}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-mono uppercase border ${temporal.badgeClass}`}
-                          >
-                            {temporal.type === "overdue" && (
-                              <AlertCircle className="h-2.5 w-2.5" />
-                            )}
-                            {temporal.type === "today" && (
-                              <Zap className="h-2.5 w-2.5" />
-                            )}
-                            {temporal.type === "completed" && (
-                              <CheckCircle2 className="h-2.5 w-2.5" />
-                            )}
-                            <span>{temporal.tag}</span>
-                          </span>
-                        </div>
+                        {/* Badge de Status Temporal */}
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider font-semibold border ${temporalInfo.badgeClass}`}
+                        >
+                          {temporalInfo.tag}
+                        </span>
                       </div>
 
-                      <p className="text-[10px] text-sub leading-relaxed">
-                        {step.description}
-                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-sub font-mono">
+                        <span>{step.description}</span>
+                        <span>{formatShortDate(temporalInfo.targetDate)}</span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -957,104 +613,91 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 3. SCRIPT DINÂMICO DE ABORDAGEM (Centralizado no PostgreSQL) */}
+          {/* 3. ROTEIRO OPERACIONAL DE ABORDAGEM */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-platinum" />
+                <FileText className="h-4 w-4 text-accent" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
-                  Script de Abordagem (Pronto para Uso)
+                  Roteiro de Abordagem do Hunter
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={handleResetScript}
-                title="Restaurar script padrão imediatamente interpolado"
-                className="flex items-center gap-1 text-[10px] font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>Restaurar Padrão</span>
-              </button>
-            </div>
 
-            {/* Badges de Inserção Rápida com Valores Reais */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[10px] font-mono text-sub mr-1">
-                Inserir valor:
-              </span>
-              {[
-                { label: "Nome", val: parsed.name },
-                { label: "Empresa", val: parsed.company },
-                { label: "Cargo", val: roleTitle },
-                { label: "Valor", val: estimatedValue },
-              ].map(({ label, val }) => (
+              <div className="flex items-center gap-2">
                 <button
-                  key={label}
                   type="button"
-                  onClick={() => handleInsertResolvedVariable(val)}
-                  title={`Inserir "${val}"`}
-                  className="rounded border border-glass-border bg-carbon px-2 py-0.5 text-[10px] font-mono text-sub hover:text-accent hover:border-accent/40 transition-colors cursor-pointer"
+                  onClick={handleResetScript}
+                  className="flex items-center gap-1 text-[11px] font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
+                  title="Restaurar roteiro padrão"
                 >
-                  +{label} ({val.length > 15 ? val.slice(0, 15) + "..." : val})
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Restaurar</span>
                 </button>
-              ))}
+
+                <button
+                  type="button"
+                  onClick={handleCopyScript}
+                  className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer ${
+                    isCopied
+                      ? "bg-emerald-500 text-void"
+                      : "bg-accent text-void hover:bg-accent-hover shadow-sm"
+                  }`}
+                >
+                  {isCopied ? (
+                    <>
+                      <Check className="h-3 w-3" />
+                      <span>Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      <span>Copiar Roteiro</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Textarea já com o texto interpolado e pronto para edição direta */}
-            <div className="space-y-2">
-              <textarea
-                rows={7}
-                value={scriptText}
-                onChange={(e) => handleScriptChange(e.target.value)}
-                className="w-full rounded-lg border border-glass-border bg-carbon p-3 text-xs text-platinum font-mono leading-relaxed focus:border-accent focus:outline-none resize-none"
-                placeholder="Script de abordagem pronto para o contato..."
-              />
+            <p className="text-[11px] text-sub leading-relaxed">
+              Mensagem com variáveis interpoladas pronta para envio via WhatsApp ou E-mail.
+            </p>
 
-              {/* Botão Copiar Script com Feedback */}
-              <button
-                type="button"
-                onClick={handleCopyScript}
-                className="w-full flex h-9 items-center justify-center gap-2 rounded-md bg-accent text-void text-xs font-semibold hover:bg-accent-hover transition-colors cursor-pointer shadow-md"
-              >
-                {isCopied ? (
-                  <>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Script Copiado com Sucesso!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    <span>Copiar Script Pronto</span>
-                  </>
-                )}
-              </button>
-            </div>
+            {/* Textarea do Roteiro */}
+            <textarea
+              value={scriptText}
+              onChange={(e) => handleScriptChange(e.target.value)}
+              rows={5}
+              className="w-full rounded-lg border border-glass-border bg-carbon p-3 text-xs font-mono text-platinum leading-relaxed focus:border-accent focus:outline-none"
+              placeholder="Digite o roteiro da abordagem..."
+            />
           </div>
 
-          {/* 4. HISTÓRICO DE ANOTAÇÕES (Persistido no PostgreSQL) */}
+          {/* 4. HISTÓRICO DE ANOTAÇÕES */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-platinum" />
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
-                Histórico & Anotações
-              </h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-accent" />
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
+                  Histórico de Anotações ({notes.length})
+                </h3>
+              </div>
             </div>
 
-            {/* Input para Nova Anotação */}
+            {/* Campo para Nova Anotação */}
             <div className="space-y-2">
               <textarea
-                rows={2}
                 value={newNoteText}
                 onChange={(e) => setNewNoteText(e.target.value)}
-                className="w-full rounded-lg border border-glass-border bg-carbon p-2.5 text-xs text-platinum font-mono focus:border-accent focus:outline-none resize-none"
-                placeholder="Registrar anotação rápida, feedback de ligação ou objeção..."
+                placeholder="Adicionar anotação (ex: decisor em viagem, ligar na terça-feira)..."
+                rows={2}
+                className="w-full rounded-md border border-glass-border bg-carbon p-2.5 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
               />
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={handleAddNote}
                   disabled={!newNoteText.trim()}
-                  className="flex h-8 items-center gap-1.5 rounded-md border border-glass-border bg-carbon px-3 text-xs font-mono text-platinum hover:bg-carbon-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  onClick={handleAddNote}
+                  className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-mono font-semibold text-void transition-all hover:bg-accent-hover disabled:opacity-40 cursor-pointer"
                 >
                   <Plus className="h-3 w-3" />
                   <span>Salvar Anotação</span>
@@ -1065,32 +708,37 @@ export function LeadDetailsSheet({
             {/* Lista Cronológica de Anotações */}
             <div className="space-y-2 pt-2">
               {notes.length === 0 ? (
-                <div className="text-center py-4 text-xs font-mono text-sub">
+                <div className="rounded-md border border-dashed border-glass-border p-4 text-center text-xs text-sub font-mono">
                   Nenhuma anotação registrada ainda.
                 </div>
               ) : (
                 notes.map((note) => (
                   <div
                     key={note.id}
-                    className="rounded-lg border border-glass-border bg-carbon p-3 space-y-1 group"
+                    className="flex items-start justify-between gap-3 rounded-lg border border-glass-border bg-carbon p-3"
                   >
-                    <div className="flex items-center justify-between text-[10px] font-mono text-sub">
-                      <span>{note.author}</span>
-                      <div className="flex items-center gap-2">
-                        <span>{formatDate(note.createdAt)}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteNote(note.id)}
-                          title="Remover anotação"
-                          className="opacity-0 group-hover:opacity-100 text-sub hover:text-red-400 transition-opacity cursor-pointer"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-sub">
+                        <span className="font-semibold text-platinum">{note.author}</span>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-2.5 w-2.5" />
+                          <span>{formatDate(note.createdAt)}</span>
+                        </div>
                       </div>
+                      <p className="text-xs font-mono text-platinum leading-relaxed whitespace-pre-wrap">
+                        {note.text}
+                      </p>
                     </div>
-                    <p className="text-xs text-platinum leading-relaxed whitespace-pre-wrap">
-                      {note.text}
-                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNote(note.id)}
+                      className="text-sub/40 hover:text-rose-400 transition-colors p-1 cursor-pointer"
+                      title="Excluir Anotação"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 ))
               )}
@@ -1098,14 +746,20 @@ export function LeadDetailsSheet({
           </div>
         </div>
 
-        {/* Rodapé do Modal */}
-        <div className="pt-4 border-t border-glass-border flex gap-3">
+        {/* Rodapé do Slide-over */}
+        <div className="border-t border-glass-border pt-4 flex items-center justify-between text-[11px] font-mono text-sub">
+          <div className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5 text-sub" />
+            <span>
+              No pipeline há {funnelDays} {funnelDays === 1 ? "dia" : "dias"}
+            </span>
+          </div>
+
           <button
-            type="button"
             onClick={onClose}
-            className="w-full flex h-10 items-center justify-center rounded-md border border-glass-border bg-carbon text-xs font-semibold text-platinum hover:bg-carbon-muted transition-colors cursor-pointer"
+            className="rounded-md border border-glass-border bg-carbon px-4 py-2 text-xs font-mono text-platinum hover:bg-carbon-muted transition-colors cursor-pointer"
           >
-            Fechar Dossiê
+            Fechar
           </button>
         </div>
       </div>
