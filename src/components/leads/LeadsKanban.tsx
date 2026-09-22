@@ -8,7 +8,9 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
+  Activity,
   AlertCircle,
+  Bot,
   Building2,
   Calendar,
   CheckCircle2,
@@ -16,14 +18,19 @@ import {
   Globe,
   GripVertical,
   Mail,
+  Mic,
   Phone,
+  PhoneCall,
+  Radio,
   Sparkles,
   Tag,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
 import { updateLeadStatusAction, type LeadStatus } from "@/actions/leads";
 import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
+import { resolveNextBestAction } from "@/lib/predictive";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 
 interface LeadsKanbanProps {
@@ -67,6 +74,84 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Conexão e telemetria do Streaming de Alta Frequência (WSS / SSE)
+  const [isStreamConnected, setIsStreamConnected] = useState(false);
+  const [latestLivePulse, setLatestLivePulse] = useState<string | null>(null);
+  const [streamEventCount, setStreamEventCount] = useState(0);
+
+  // Conexão com o Deal Momentum Stream (Latência Zero)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let eventSource: EventSource | null = null;
+
+    try {
+      eventSource = new EventSource("/api/v1/stream/deal-momentum");
+
+      eventSource.onopen = () => {
+        setIsStreamConnected(true);
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (
+            data.type === "telemetry" ||
+            data.type === "score_update" ||
+            data.type === "nlp_objection"
+          ) {
+            setStreamEventCount((c) => c + 1);
+
+            if (data.leadId) {
+              setLeadsList((prev) =>
+                prev.map((lead) =>
+                  lead.id === data.leadId
+                    ? {
+                        ...lead,
+                        dealScore:
+                          typeof data.score === "number"
+                            ? data.score
+                            : lead.dealScore,
+                      }
+                    : lead
+                )
+              );
+
+              setSelectedLead((prev) =>
+                prev && prev.id === data.leadId
+                  ? {
+                      ...prev,
+                      dealScore:
+                        typeof data.score === "number"
+                          ? data.score
+                          : prev.dealScore,
+                    }
+                  : prev
+              );
+
+              setLatestLivePulse(data.leadId);
+              setTimeout(() => setLatestLivePulse(null), 3500);
+            }
+          }
+        } catch {
+          // Ignorado
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsStreamConnected(false);
+      };
+    } catch (err) {
+      console.warn("Falha ao inicializar EventSource de telemetria:", err);
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, []);
 
   // Mapa reativo do estado de cadência por lead derivado do PostgreSQL (sem localStorage)
   const [cadenceMap, setCadenceMap] = useState<Record<string, string[]>>({});
@@ -119,6 +204,20 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
           : lead
       )
     );
+  };
+
+  // Atualização em tempo real do Deal Momentum Score disparada pelo modal
+  const handleScoreChange = (leadId: string, newScore: number) => {
+    setLeadsList((prev) =>
+      prev.map((lead) =>
+        lead.id === leadId ? { ...lead, dealScore: newScore } : lead
+      )
+    );
+    if (selectedLead && selectedLead.id === leadId) {
+      setSelectedLead((prev) =>
+        prev ? { ...prev, dealScore: newScore } : null
+      );
+    }
   };
 
   // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional
@@ -199,8 +298,69 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
     }).format(d);
   };
 
+  // Estatísticas da Matriz Preditiva de Decisão
+  const closingCount = leadsList.filter((l) => (l.dealScore ?? 50) > 85).length;
+  const tractionCount = leadsList.filter(
+    (l) => (l.dealScore ?? 50) >= 65 && (l.dealScore ?? 50) <= 85
+  ).length;
+  const nurturingCount = leadsList.filter((l) => (l.dealScore ?? 50) < 65).length;
+
   return (
     <div className="space-y-6">
+      {/* Barra de Telemetria e Streaming em Tempo Real */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-glass-border bg-carbon/80 backdrop-blur-xl px-4 py-3 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              {isStreamConnected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                  isStreamConnected ? "bg-emerald-500" : "bg-zinc-500"
+                }`}
+              />
+            </span>
+            <span className="text-xs font-mono font-semibold tracking-wider text-platinum uppercase">
+              {isStreamConnected
+                ? "Deal Momentum Stream Ativo"
+                : "Conectando ao Stream..."}
+            </span>
+          </div>
+
+          <span className="hidden sm:inline-block text-[11px] font-mono text-sub border-l border-glass-border pl-3">
+            Latência Zero • Push Contínuo {streamEventCount > 0 ? `(${streamEventCount} eventos)` : ""}
+          </span>
+        </div>
+
+        {/* Distribuição por Zonas de Ação Recomendada */}
+        <div className="flex items-center gap-2 text-[11px] font-mono">
+          <span
+            title="Zona de Fechamento (Score > 85%)"
+            className="flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-400 font-semibold"
+          >
+            <PhoneCall className="h-3 w-3" />
+            <span>Fechamento: {closingCount}</span>
+          </span>
+
+          <span
+            title="Zona de Tração (Score 65% - 84%)"
+            className="flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-amber-300 font-semibold"
+          >
+            <Mic className="h-3 w-3" />
+            <span>Tração: {tractionCount}</span>
+          </span>
+
+          <span
+            title="Zona de Nutrição (Score < 65%)"
+            className="flex items-center gap-1 rounded-md border border-glass-border bg-void/50 px-2 py-0.5 text-sub"
+          >
+            <Bot className="h-3 w-3" />
+            <span>Nutrição: {nurturingCount}</span>
+          </span>
+        </div>
+      </div>
+
       {/* Board Kanban com Drag-and-Drop Bidirecional */}
       {isMounted ? (
         <DragDropContext onDragEnd={onDragEnd}>
@@ -259,6 +419,16 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                             lead.status
                           );
 
+                          // Matriz Preditiva de Ação Recomendada (NBA)
+                          const nba = resolveNextBestAction(
+                            lead.dealScore ?? 50,
+                            {
+                              name: parsed.name,
+                              company: parsed.company,
+                            }
+                          );
+                          const isPulsing = latestLivePulse === lead.id;
+
                           return (
                             <Draggable
                               key={lead.id}
@@ -275,6 +445,10 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                     handleOpenSheet(lead);
                                   }}
                                   className={`rounded-lg border bg-carbon p-4 space-y-3 transition-all select-none group cursor-grab active:cursor-grabbing ${
+                                    isPulsing
+                                      ? "ring-2 ring-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.35)] animate-pulse"
+                                      : ""
+                                  } ${
                                     dragSnapshot.isDragging
                                       ? "border-accent shadow-2xl scale-[1.02] ring-2 ring-accent/20 z-50 bg-carbon"
                                       : "border-glass-border hover:border-glass-highlight hover:bg-carbon-muted/40 shadow-md"
@@ -299,6 +473,49 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                       className="text-sub/40 group-hover:text-platinum transition-colors p-0.5 rounded shrink-0"
                                     >
                                       <GripVertical className="h-3.5 w-3.5" />
+                                    </div>
+                                  </div>
+
+                                  {/* Matriz Preditiva: Comando Imperativo (NBA) & Deal Score */}
+                                  <div className="space-y-1.5 rounded-lg border border-glass-border/70 bg-void/50 p-2.5">
+                                    <div className="flex items-center justify-between gap-1.5">
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[10px] font-mono border ${nba.badgeClass}`}
+                                      >
+                                        {nba.zone === "closing" && (
+                                          <PhoneCall className="h-3 w-3 shrink-0 text-emerald-400" />
+                                        )}
+                                        {nba.zone === "traction" && (
+                                          <Mic className="h-3 w-3 shrink-0 text-amber-300" />
+                                        )}
+                                        {nba.zone === "nurturing" && (
+                                          <Bot className="h-3 w-3 shrink-0 text-sub" />
+                                        )}
+                                        <span className="truncate">{nba.command}</span>
+                                      </span>
+
+                                      <span className="text-[10px] font-mono font-bold text-platinum">
+                                        {lead.dealScore ?? 50}%
+                                      </span>
+                                    </div>
+
+                                    {/* Barra de Momentum */}
+                                    <div className="w-full bg-carbon-muted/70 h-1.5 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full transition-all duration-700 ${
+                                          nba.zone === "closing"
+                                            ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+                                            : nba.zone === "traction"
+                                            ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
+                                            : "bg-sub/60"
+                                        }`}
+                                        style={{
+                                          width: `${Math.max(
+                                            5,
+                                            Math.min(100, lead.dealScore ?? 50)
+                                          )}%`,
+                                        }}
+                                      />
                                     </div>
                                   </div>
 
@@ -437,6 +654,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
         }}
         onStatusChange={handleStatusChange}
         onCadenceChange={handleCadenceChange}
+        onScoreChange={handleScoreChange}
       />
     </div>
   );

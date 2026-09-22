@@ -2,33 +2,46 @@
 
 import { useEffect, useState } from "react";
 import {
+  Activity,
   AlertCircle,
+  Bot,
   Building2,
   Calendar,
+  Check,
   CheckCircle2,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Coins,
   Copy,
+  Cpu,
+  Database,
   FileText,
   Mail,
   MessageSquare,
+  Mic,
   Phone,
+  PhoneCall,
   Plus,
+  Radio,
   RotateCcw,
+  Send,
   Sparkles,
   Tag,
   Trash2,
+  TrendingUp,
   UserCheck,
   X,
   Zap,
 } from "lucide-react";
-import type { Lead, NoteEntry } from "@/db/schema";
+import type { Lead, NoteEntry, TelemetryEvent } from "@/db/schema";
 import {
   updateLeadCadenceAction,
   addLeadNoteAction,
   deleteLeadNoteAction,
   updateLeadScriptAction,
+  recordTelemetryEventAction,
   type LeadStatus,
 } from "@/actions/leads";
 import {
@@ -38,6 +51,11 @@ import {
   parseLeadInfo,
   toStartOfDay,
 } from "@/lib/cadence";
+import {
+  TELEMETRY_WEIGHTS,
+  resolveNextBestAction,
+  type NextBestAction,
+} from "@/lib/predictive";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
@@ -45,6 +63,7 @@ interface LeadDetailsSheetProps {
   onClose: () => void;
   onStatusChange?: (leadId: string, newStatus: LeadStatus) => void;
   onCadenceChange?: (leadId: string, completedStepIds: string[]) => void;
+  onScoreChange?: (leadId: string, newScore: number) => void;
 }
 
 export function LeadDetailsSheet({
@@ -53,6 +72,7 @@ export function LeadDetailsSheet({
   onClose,
   onStatusChange,
   onCadenceChange,
+  onScoreChange,
 }: LeadDetailsSheetProps) {
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
 
@@ -72,9 +92,29 @@ export function LeadDetailsSheet({
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [newNoteText, setNewNoteText] = useState("");
 
+  // Motor Preditivo e Deal Momentum
+  const [dealScore, setDealScore] = useState<number>(50);
+  const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
+  const [isTriggeringTelemetry, setIsTriggeringTelemetry] = useState(false);
+  const [isNbaScriptCopied, setIsNbaScriptCopied] = useState(false);
+
+  // Ingestão NLP e Vetorização pgvector
+  const [transcriptText, setTranscriptText] = useState("");
+  const [isProcessingNlp, setIsProcessingNlp] = useState(false);
+  const [nlpSuccessMessage, setNlpSuccessMessage] = useState<string | null>(null);
+  const [detectedObjection, setDetectedObjection] = useState<string | null>(null);
+  const [isNlpExpanded, setIsNlpExpanded] = useState(false);
+
   // Sincronização centralizada direta do PostgreSQL ao abrir ou alternar de lead
   useEffect(() => {
     if (!lead) return;
+
+    // Reseta estados do motor preditivo para o lead ativo
+    setDealScore(lead.dealScore ?? 50);
+    setTelemetryEvents(lead.telemetryEvents || []);
+    setTranscriptText("");
+    setNlpSuccessMessage(null);
+    setDetectedObjection(null);
 
     // 1. Resolução de Metadados do Hunter a partir do banco de dados
     const dbCadenceState = lead.cadenceState || { completedSteps: [] };
@@ -253,6 +293,78 @@ export function LeadDetailsSheet({
     }
   };
 
+  // Disparo de Evento de Telemetria com Ponderação Estrita
+  const handleTriggerTelemetry = async (type: string) => {
+    if (!lead) return;
+    setIsTriggeringTelemetry(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/telemetry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.score === "number") {
+          setDealScore(data.score);
+          onScoreChange?.(lead.id, data.score);
+        }
+        if (data.event) {
+          setTelemetryEvents((prev) => [data.event, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error("Falha ao registrar telemetria:", err);
+    } finally {
+      setIsTriggeringTelemetry(false);
+    }
+  };
+
+  // Ingestão e Processamento NLP de Transcrição VoIP com pgvector
+  const handleProcessTranscript = async () => {
+    if (!lead || !transcriptText.trim()) return;
+    setIsProcessingNlp(true);
+    setNlpSuccessMessage(null);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/nlp-transcript`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: transcriptText.trim(),
+          source: "VoIP / Gravação Hunter",
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.newScore === "number") {
+          setDealScore(data.newScore);
+          onScoreChange?.(lead.id, data.newScore);
+        }
+        if (data.insights?.objection) {
+          setDetectedObjection(data.insights.objection);
+        }
+        setNlpSuccessMessage(
+          `Transcrição vetorizada e salva com sucesso no pgvector (${data.insights?.dimensions || 1536}d). Objeção detectada: "${data.insights?.objection}".`
+        );
+        setTranscriptText("");
+        if (data.lead?.notes) {
+          setNotes(data.lead.notes);
+        }
+      }
+    } catch (err) {
+      console.error("Falha ao processar transcrição NLP:", err);
+    } finally {
+      setIsProcessingNlp(false);
+    }
+  };
+
+  // Resolução da Matriz Preditiva de Decisão (NBA)
+  const nba = resolveNextBestAction(dealScore, {
+    name: parsed.name,
+    company: parsed.company,
+    latestObjection: detectedObjection || undefined,
+  });
+
   const formatDate = (dateString: string | Date) => {
     const d = new Date(dateString);
     return new Intl.DateTimeFormat("pt-BR", {
@@ -394,6 +506,264 @@ export function LeadDetailsSheet({
                 >
                   Editar Cargo / Valor
                 </button>
+              )}
+            </div>
+
+            {/* COCKPIT DO MOTOR PREDITIVO (CLOSER - LATÊNCIA ZERO) */}
+            <div className="rounded-xl border border-glass-border bg-void/80 p-4 space-y-4 shadow-xl">
+              {/* Cabeçalho do Cockpit: Título & Score Gauge */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-emerald-400" />
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum">
+                    Deal Momentum Preditivo
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-mono border ${nba.badgeClass}`}
+                  >
+                    {nba.zoneLabel}
+                  </span>
+                  <span className="text-sm font-mono font-bold text-platinum">
+                    {dealScore}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra de Momentum Visual */}
+              <div className="space-y-1">
+                <div className="w-full bg-carbon-muted h-2 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-700 ${
+                      nba.zone === "closing"
+                        ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]"
+                        : nba.zone === "traction"
+                        ? "bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                        : "bg-sub/60"
+                    }`}
+                    style={{ width: `${Math.max(5, Math.min(100, dealScore))}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[9px] font-mono text-sub">
+                  <span>Nutrição (&lt;65%)</span>
+                  <span>Tração (65-84%)</span>
+                  <span>Fechamento (&gt;85%)</span>
+                </div>
+              </div>
+
+              {/* Banner do Comando Imperativo (NBA) */}
+              <div className="rounded-lg border border-glass-border bg-carbon p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {nba.zone === "closing" && (
+                      <PhoneCall className="h-4 w-4 text-emerald-400" />
+                    )}
+                    {nba.zone === "traction" && (
+                      <Mic className="h-4 w-4 text-amber-300" />
+                    )}
+                    {nba.zone === "nurturing" && (
+                      <Bot className="h-4 w-4 text-sub" />
+                    )}
+                    <span className="text-xs font-mono font-bold text-platinum tracking-wide">
+                      {nba.command}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-sub">
+                    {nba.subtitle}
+                  </span>
+                </div>
+
+                {/* Roteiro da Ação Recomendada */}
+                <div className="rounded bg-void/60 p-2.5 border border-glass-border text-xs text-sub font-mono leading-relaxed relative">
+                  <div className="pr-7 text-[11px] whitespace-pre-wrap">
+                    {nba.scriptRecommendation}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(
+                        nba.scriptRecommendation
+                      );
+                      setIsNbaScriptCopied(true);
+                      setTimeout(() => setIsNbaScriptCopied(false), 2000);
+                    }}
+                    title="Copiar Roteiro da Ação"
+                    className="absolute top-2 right-2 p-1 rounded hover:bg-white/10 text-sub hover:text-platinum transition-colors cursor-pointer"
+                  >
+                    {isNbaScriptCopied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Gatilhos de Telemetria de Alta Frequência (Push em Tempo Real) */}
+              <div className="space-y-2 pt-1 border-t border-glass-border/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
+                    Gatilhos de Telemetria (Push Real-Time)
+                  </span>
+                  {isTriggeringTelemetry && (
+                    <span className="text-[9px] font-mono text-emerald-400 animate-pulse">
+                      Transmitindo...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isTriggeringTelemetry}
+                    onClick={() => handleTriggerTelemetry("proposal_view_120s")}
+                    className="flex items-center justify-between gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-mono text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="truncate">Proposta &gt; 120s</span>
+                    <span className="font-bold shrink-0">+40%</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isTriggeringTelemetry}
+                    onClick={() =>
+                      handleTriggerTelemetry("internal_forward_multithread")
+                    }
+                    className="flex items-center justify-between gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-[10px] font-mono text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="truncate">Multi-threading</span>
+                    <span className="font-bold shrink-0">+25%</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isTriggeringTelemetry}
+                    onClick={() =>
+                      handleTriggerTelemetry("pricing_page_recurrent")
+                    }
+                    className="flex items-center justify-between gap-1 rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1.5 text-[10px] font-mono text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="truncate">Página Preços</span>
+                    <span className="font-bold shrink-0">+20%</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isTriggeringTelemetry}
+                    onClick={() => handleTriggerTelemetry("case_study_view")}
+                    className="flex items-center justify-between gap-1 rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1.5 text-[10px] font-mono text-amber-300 hover:bg-amber-400/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="truncate">Estudo de Caso</span>
+                    <span className="font-bold shrink-0">+15%</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isTriggeringTelemetry}
+                    onClick={() =>
+                      handleTriggerTelemetry("silence_post_pitch_48h")
+                    }
+                    className="flex items-center justify-between gap-1 rounded border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-[10px] font-mono text-rose-300 hover:bg-rose-500/20 transition-all cursor-pointer disabled:opacity-50 col-span-2 sm:col-span-1"
+                  >
+                    <span className="truncate">Silêncio &gt; 48h</span>
+                    <span className="font-bold shrink-0">-30%</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Ingestão de Transcrição VoIP e Vetorização pgvector (1536d) */}
+              <div className="space-y-2 pt-1 border-t border-glass-border/60">
+                <button
+                  type="button"
+                  onClick={() => setIsNlpExpanded((prev) => !prev)}
+                  className="flex w-full items-center justify-between text-[10px] font-mono uppercase tracking-wider text-sub hover:text-platinum transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Database className="h-3.5 w-3.5 text-accent" />
+                    <span>Ingestão de Transcrição NLP (pgvector 1536d)</span>
+                  </div>
+                  {isNlpExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </button>
+
+                {isNlpExpanded && (
+                  <div className="space-y-2 pt-2 animate-in fade-in duration-200">
+                    <textarea
+                      value={transcriptText}
+                      onChange={(e) => setTranscriptText(e.target.value)}
+                      rows={3}
+                      placeholder="Cole a transcrição da chamada VoIP ou resumo da reunião..."
+                      className="w-full rounded-md border border-glass-border bg-carbon px-2.5 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
+                    />
+
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono text-sub">
+                        Indexa embedding 1536d no Supabase
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={isProcessingNlp || !transcriptText.trim()}
+                        onClick={handleProcessTranscript}
+                        className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-mono font-semibold text-void hover:bg-platinum transition-all cursor-pointer disabled:opacity-40"
+                      >
+                        {isProcessingNlp ? (
+                          <span className="animate-spin text-void">⚡</span>
+                        ) : (
+                          <Send className="h-3 w-3" />
+                        )}
+                        <span>Processar NLP</span>
+                      </button>
+                    </div>
+
+                    {nlpSuccessMessage && (
+                      <div className="rounded border border-emerald-500/40 bg-emerald-500/10 p-2 text-[11px] font-mono text-emerald-300">
+                        {nlpSuccessMessage}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Histórico Recente de Eventos de Telemetria */}
+              {telemetryEvents.length > 0 && (
+                <div className="space-y-1.5 pt-1 border-t border-glass-border/60">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-sub block">
+                    Log de Telemetria do Deal ({telemetryEvents.length} eventos)
+                  </span>
+                  <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
+                    {telemetryEvents.map((evt, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between rounded bg-carbon px-2 py-1 text-[10px] font-mono border border-glass-border/40"
+                      >
+                        <span className="truncate text-sub max-w-[260px]">
+                          {evt.details || evt.type}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={
+                              evt.weight > 0
+                                ? "text-emerald-400 font-bold"
+                                : evt.weight < 0
+                                ? "text-rose-400 font-bold"
+                                : "text-sub"
+                            }
+                          >
+                            {evt.weight > 0 ? `+${evt.weight}%` : `${evt.weight}%`}
+                          </span>
+                          <span className="text-sub/60">
+                            {formatShortDate(new Date(evt.timestamp))}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 

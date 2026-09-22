@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar, vector } from "drizzle-orm/pg-core";
 
 // ==========================================
 // 1. ENUMS
@@ -52,6 +52,13 @@ export interface NoteEntry {
   author: string;
 }
 
+export interface TelemetryEvent {
+  type: string;
+  weight: number;
+  timestamp: string;
+  details?: string;
+}
+
 /**
  * Leads Comerciais (Isolamento por company_id)
  */
@@ -65,6 +72,11 @@ export const leads = pgTable("leads", {
   leadPhone: varchar("lead_phone", { length: 50 }),
   origin: varchar("origin", { length: 100 }).default("direct"),
   status: leadStatusEnum("status").default("new").notNull(),
+  dealScore: integer("deal_score").default(50).notNull(),
+  telemetryEvents: jsonb("telemetry_events")
+    .$type<TelemetryEvent[]>()
+    .default([])
+    .notNull(),
   cadenceState: jsonb("cadence_state")
     .$type<CadenceState>()
     .default({ completedSteps: [] })
@@ -76,6 +88,21 @@ export const leads = pgTable("leads", {
   scriptVersion: varchar("script_version", { length: 50 })
     .default("v1_direct")
     .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Embeddings e Telemetria Preditiva de Negócios (pgvector 1536 dimensões)
+ */
+export const dealTelemetryEmbeddings = pgTable("deal_telemetry_embeddings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  leadId: uuid("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  contentType: varchar("content_type", { length: 50 }).notNull(), // 'objection' | 'call_transcript' | 'meeting_summary' | 'proposal_feedback'
+  rawContent: text("raw_content").notNull(),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -110,12 +137,23 @@ export const usersRelations = relations(users, ({ one }) => ({
   }),
 }));
 
-export const leadsRelations = relations(leads, ({ one }) => ({
+export const leadsRelations = relations(leads, ({ one, many }) => ({
   company: one(companies, {
     fields: [leads.companyId],
     references: [companies.id],
   }),
+  telemetryEmbeddings: many(dealTelemetryEmbeddings),
 }));
+
+export const dealTelemetryEmbeddingsRelations = relations(
+  dealTelemetryEmbeddings,
+  ({ one }) => ({
+    lead: one(leads, {
+      fields: [dealTelemetryEmbeddings.leadId],
+      references: [leads.id],
+    }),
+  })
+);
 
 export const socialContentsRelations = relations(socialContents, ({ one }) => ({
   company: one(companies, {
@@ -136,6 +174,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
+
+export type DealTelemetryEmbedding = typeof dealTelemetryEmbeddings.$inferSelect;
+export type NewDealTelemetryEmbedding = typeof dealTelemetryEmbeddings.$inferInsert;
 
 export type SocialContent = typeof socialContents.$inferSelect;
 export type NewSocialContent = typeof socialContents.$inferInsert;

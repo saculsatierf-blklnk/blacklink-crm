@@ -15,6 +15,13 @@
       "when": 1790020451100,
       "tag": "0001_awesome_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790098846943,
+      "tag": "0002_jazzy_mandarin",
+      "breakpoints": true
     }
   ]
 }

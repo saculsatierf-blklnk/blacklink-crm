@@ -3,7 +3,20 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { leads, type CadenceState, type NoteEntry } from "@/db/schema";
+import {
+  leads,
+  dealTelemetryEmbeddings,
+  type CadenceState,
+  type NoteEntry,
+  type TelemetryEvent,
+} from "@/db/schema";
+import {
+  TELEMETRY_WEIGHTS,
+  calculateDealScore,
+  resolveNextBestAction,
+} from "@/lib/predictive";
+import { broadcastDealEvent } from "@/lib/deal-stream";
+import { parseLeadInfo } from "@/lib/cadence";
 
 export type LeadStatus = "new" | "negotiation" | "closed";
 
@@ -273,3 +286,146 @@ export async function updateLeadScriptAction(
     };
   }
 }
+
+/**
+ * Registra um evento de telemetria ponderado e recalcula o Deal Momentum Score
+ */
+export async function recordTelemetryEventAction(
+  leadId: string,
+  eventType: string,
+  customWeight?: number,
+  details?: string
+): Promise<ActionResponse & { score?: number; event?: TelemetryEvent }> {
+  try {
+    if (!leadId || !eventType) {
+      return { success: false, leadId, error: "Parâmetros obrigatórios ausentes." };
+    }
+
+    const config = TELEMETRY_WEIGHTS[eventType];
+    const weight =
+      typeof customWeight === "number" ? customWeight : config?.weight ?? 0;
+    const label = config?.label || eventType;
+
+    const newEvent: TelemetryEvent = {
+      type: eventType,
+      weight,
+      timestamp: new Date().toISOString(),
+      details: details || label,
+    };
+
+    if (!UUID_REGEX.test(leadId)) {
+      return { success: true, leadId, score: 75, event: newEvent };
+    }
+
+    const [existing] = await db
+      .select({
+        id: leads.id,
+        leadName: leads.leadName,
+        dealScore: leads.dealScore,
+        telemetryEvents: leads.telemetryEvents,
+      })
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+
+    if (!existing) {
+      return { success: false, leadId, error: "Lead não encontrado." };
+    }
+
+    const currentEvents = existing.telemetryEvents || [];
+    const updatedEvents = [newEvent, ...currentEvents];
+    const newScore = calculateDealScore(updatedEvents, 50);
+
+    await db
+      .update(leads)
+      .set({
+        dealScore: newScore,
+        telemetryEvents: updatedEvents,
+      })
+      .where(eq(leads.id, leadId));
+
+    const parsed = parseLeadInfo(existing.leadName);
+    const nba = resolveNextBestAction(newScore, {
+      name: parsed.name,
+      company: parsed.company,
+    });
+
+    broadcastDealEvent({
+      type: "telemetry",
+      leadId: existing.id,
+      leadName: parsed.name,
+      company: parsed.company,
+      score: newScore,
+      delta: weight,
+      triggerType: eventType,
+      triggerLabel: label,
+      command: nba.command,
+      zone: nba.zone,
+      details: newEvent.details,
+    });
+
+    return { success: true, leadId, score: newScore, event: newEvent };
+  } catch (error) {
+    console.error("Falha ao registrar telemetria via Server Action:", error);
+    return {
+      success: false,
+      leadId,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro interno ao registrar telemetria.",
+    };
+  }
+}
+
+/**
+ * Atualiza diretamente o Deal Momentum Score de um lead
+ */
+export async function updateDealScoreAction(
+  leadId: string,
+  newScore: number
+): Promise<ActionResponse & { score: number }> {
+  try {
+    const clampedScore = Math.max(0, Math.min(100, Math.round(newScore)));
+
+    if (!UUID_REGEX.test(leadId)) {
+      return { success: true, leadId, score: clampedScore };
+    }
+
+    const [lead] = await db
+      .update(leads)
+      .set({ dealScore: clampedScore })
+      .where(eq(leads.id, leadId))
+      .returning({ id: leads.id, leadName: leads.leadName });
+
+    if (lead) {
+      const parsed = parseLeadInfo(lead.leadName);
+      const nba = resolveNextBestAction(clampedScore, {
+        name: parsed.name,
+        company: parsed.company,
+      });
+
+      broadcastDealEvent({
+        type: "score_update",
+        leadId: lead.id,
+        leadName: parsed.name,
+        company: parsed.company,
+        score: clampedScore,
+        command: nba.command,
+        zone: nba.zone,
+      });
+    }
+
+    return { success: true, leadId, score: clampedScore };
+  } catch (error) {
+    console.error("Falha ao atualizar score via Server Action:", error);
+    return {
+      success: false,
+      leadId,
+      score: newScore,
+      error:
+        error instanceof Error ? error.message : "Erro interno ao atualizar score.",
+    };
+  }
+}
+

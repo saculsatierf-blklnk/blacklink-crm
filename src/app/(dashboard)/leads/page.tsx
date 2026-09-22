@@ -29,6 +29,15 @@ async function getLeads(): Promise<Lead[]> {
       leadPhone: "+55 (11) 98765-4321",
       origin: "n8n / Webhook Automations",
       status: "negotiation",
+      dealScore: 72,
+      telemetryEvents: [
+        {
+          type: "pricing_page_recurrent",
+          weight: 20,
+          timestamp: "2026-09-21T14:00:00Z",
+          details: "2 visualizações da tabela de preços nas últimas 24h",
+        },
+      ],
       cadenceState: {
         completedSteps: ["step-1"],
         roleTitle: "Head de Novos Negócios",
@@ -53,6 +62,8 @@ async function getLeads(): Promise<Lead[]> {
       leadPhone: "+55 (21) 99887-1122",
       origin: "Inbound Enterprise",
       status: "new",
+      dealScore: 45,
+      telemetryEvents: [],
       cadenceState: {
         completedSteps: [],
         roleTitle: "Diretora de Operações",
@@ -70,6 +81,21 @@ async function getLeads(): Promise<Lead[]> {
       leadPhone: "+55 (11) 97123-8899",
       origin: "Campanhas B2B / LinkedIn",
       status: "closed",
+      dealScore: 92,
+      telemetryEvents: [
+        {
+          type: "proposal_view_120s",
+          weight: 40,
+          timestamp: "2026-09-20T10:00:00Z",
+          details: "Proposta visualizada por 240 segundos",
+        },
+        {
+          type: "internal_forward_multithread",
+          weight: 25,
+          timestamp: "2026-09-20T11:30:00Z",
+          details: "Encaminhado internamente para 3 decisores",
+        },
+      ],
       cadenceState: {
         completedSteps: ["step-1", "step-2", "step-3", "step-4", "step-5", "step-6"],
         roleTitle: "Chief Investment Officer",
