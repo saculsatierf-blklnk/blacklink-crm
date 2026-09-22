@@ -40,9 +40,21 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  initialRole?: "admin" | "commercial";
+}
+
+export function Sidebar({ initialRole }: SidebarProps) {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
+
+  const activeRole = user?.role || initialRole || "admin";
+  const isCommercial = activeRole === "commercial";
+
+  // Perfil comercial visualiza exclusivamente a aba Leads B2B
+  const visibleNavItems = isCommercial
+    ? navItems.filter((item) => item.href === "/leads")
+    : navItems;
 
   return (
     <aside className="hidden md:flex flex-col w-64 shrink-0 bg-carbon border-r border-glass-border min-h-screen text-platinum">
@@ -55,17 +67,19 @@ export function Sidebar() {
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-platinum">
             Black Link
           </span>
-          <span className="text-[10px] font-mono text-sub">CRM &bull; SaaS Enterprise</span>
+          <span className="text-[10px] font-mono text-sub">
+            {isCommercial ? "Operação Comercial" : "CRM • SaaS Enterprise"}
+          </span>
         </div>
       </div>
 
       {/* Navigation Links */}
       <nav className="flex-1 p-4 space-y-1.5">
         <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-sub">
-          Navegação Principal
+          {isCommercial ? "Operação de Vendas" : "Navegação Principal"}
         </div>
 
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || (item.href === "/" && pathname === "/");
 
@@ -91,10 +105,10 @@ export function Sidebar() {
         <div className="rounded-lg border border-glass-border bg-void/50 p-3 space-y-1">
           <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-sub">
             <Shield className="h-3 w-3 text-platinum" />
-            <span>Tenant Ativo</span>
+            <span>Perfil: {isCommercial ? "Comercial (Hunter)" : "Administrador"}</span>
           </div>
           <div className="text-xs font-semibold text-platinum truncate">
-            Black Link Matriz B2B
+            {isCommercial ? "Pipeline de Prospecção" : "Black Link Matriz B2B"}
           </div>
           <div className="text-[10px] text-sub font-mono truncate">
             ID: {user?.company_id ? user.company_id.slice(0, 16) + "..." : "c-enterprise-main"}

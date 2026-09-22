@@ -4,7 +4,11 @@ import { LogOut, Search, User as UserIcon } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 
-export function Header() {
+interface HeaderProps {
+  initialRole?: "admin" | "commercial";
+}
+
+export function Header({ initialRole }: HeaderProps) {
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
 
@@ -13,8 +17,13 @@ export function Header() {
     await logoutAction();
   };
 
-  const displayName = user?.name || "Operador Black Link Enterprise";
-  const displayRole = user?.role || "admin";
+  const currentRole = user?.role || initialRole || "admin";
+  const displayName =
+    user?.name ||
+    (currentRole === "commercial"
+      ? "Operador Comercial (Hunter)"
+      : "Operador Black Link Enterprise");
+  const displayRole = currentRole;
 
   return (
     <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-glass-border bg-carbon/80 px-6 backdrop-blur-md">

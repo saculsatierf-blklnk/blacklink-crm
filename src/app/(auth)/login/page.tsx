@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, ArrowRight, Lock, Mail, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowRight, Lock, Mail, ShieldCheck, Users } from "lucide-react";
 import { loginAction } from "@/actions/auth";
 import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LoginPage() {
+  const [selectedRole, setSelectedRole] = useState<"commercial" | "admin">("commercial");
   const [serverError, setServerError] = useState<string | null>(null);
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -28,16 +29,22 @@ export default function LoginPage() {
     try {
       setServerError(null);
 
+      const isCommercial = selectedRole === "commercial";
+
       // Injeta o estado inicial do operador no Zustand
       setUser({
-        id: "u-9e8a7b6c-5d4e-3f2a-1b0c-9d8e7f6a5b4c",
+        id: isCommercial
+          ? "u-commercial-hunter-01"
+          : "u-9e8a7b6c-5d4e-3f2a-1b0c-9d8e7f6a5b4c",
         company_id: "c-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
-        role: "admin",
-        name: "Operador Black Link Enterprise",
+        role: selectedRole,
+        name: isCommercial
+          ? "Operador Comercial (Hunter)"
+          : "Operador Black Link Enterprise",
         email: data.email,
       });
 
-      const result = await loginAction(data);
+      const result = await loginAction({ ...data, role: selectedRole });
 
       if (result?.error) {
         setServerError(result.error);
@@ -85,6 +92,41 @@ export default function LoginPage() {
                 <span>{serverError}</span>
               </div>
             )}
+
+            {/* Seletor de Perfil de Acesso (RBAC) */}
+            <div className="space-y-1.5">
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-sub">
+                Perfil de Acesso
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("commercial")}
+                  disabled={isSubmitting}
+                  className={`flex items-center justify-center gap-1.5 rounded-md border p-2.5 text-xs font-mono transition-all cursor-pointer ${
+                    selectedRole === "commercial"
+                      ? "border-accent bg-carbon-muted text-accent font-semibold shadow-inner"
+                      : "border-glass-border bg-void/60 text-sub hover:text-platinum hover:bg-carbon-muted/40"
+                  }`}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  <span>Comercial</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole("admin")}
+                  disabled={isSubmitting}
+                  className={`flex items-center justify-center gap-1.5 rounded-md border p-2.5 text-xs font-mono transition-all cursor-pointer ${
+                    selectedRole === "admin"
+                      ? "border-accent bg-carbon-muted text-accent font-semibold shadow-inner"
+                      : "border-glass-border bg-void/60 text-sub hover:text-platinum hover:bg-carbon-muted/40"
+                  }`}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>Administrador</span>
+                </button>
+              </div>
+            </div>
 
             {/* Campo E-mail */}
             <div className="space-y-1.5">

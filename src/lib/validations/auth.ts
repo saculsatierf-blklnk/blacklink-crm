@@ -8,6 +8,7 @@ export const loginSchema = z.object({
   password: z
     .string()
     .min(6, "A credencial de acesso deve conter ao menos 6 caracteres."),
+  role: z.enum(["admin", "commercial"]).optional(),
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;

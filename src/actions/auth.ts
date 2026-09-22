@@ -21,14 +21,31 @@ export async function loginAction(
     };
   }
 
-  const { email } = parsed.data;
+  const { email, role } = parsed.data;
 
-  // Mock de sessão corporativa aprovada
+  // Resolução de perfil (RBAC: admin vs commercial)
+  const isCommercialEmail =
+    email.toLowerCase().includes("hunter") ||
+    email.toLowerCase().includes("commercial") ||
+    email.toLowerCase().includes("comercial") ||
+    email.toLowerCase().includes("sdr") ||
+    email.toLowerCase().includes("closer");
+
+  const resolvedRole: "admin" | "commercial" =
+    role || (isCommercialEmail ? "commercial" : "admin");
+
+  // Sessão corporativa com perfil atribuído
   const sessionPayload = {
-    id: "u-9e8a7b6c-5d4e-3f2a-1b0c-9d8e7f6a5b4c",
+    id:
+      resolvedRole === "commercial"
+        ? "u-commercial-hunter-01"
+        : "u-9e8a7b6c-5d4e-3f2a-1b0c-9d8e7f6a5b4c",
     company_id: "c-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
-    role: "admin",
-    name: "Operador Black Link Enterprise",
+    role: resolvedRole,
+    name:
+      resolvedRole === "commercial"
+        ? "Operador Comercial (Hunter)"
+        : "Operador Black Link Enterprise",
     email: email.toLowerCase().trim(),
     createdAt: new Date().toISOString(),
   };
@@ -45,8 +62,9 @@ export async function loginAction(
     maxAge: 60 * 60 * 24 * 7, // 7 dias
   });
 
-  // Redirecionamento nativo do Next.js para a rota inicial
-  redirect("/");
+  // Redirecionamento condicional pós-autenticação
+  const destination = resolvedRole === "commercial" ? "/leads" : "/";
+  redirect(destination);
 }
 
 export async function logoutAction() {
