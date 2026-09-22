@@ -10,6 +10,7 @@ import {
   type CadenceState,
   type NoteEntry,
   type TelemetryEvent,
+  type ActivityType,
 } from "@/db/schema";
 import { getOperator } from "@/lib/operators";
 import {
@@ -664,6 +665,152 @@ export async function updateLeadOwnerAction(
       leadId,
       newOwnerId,
       error: error instanceof Error ? error.message : "Erro ao alterar proprietário.",
+    };
+  }
+}
+
+export interface ScheduleActivityParams {
+  leadId: string;
+  activityDate: string;
+  activityType: ActivityType | string;
+  assignedOperatorId: string;
+  currentOperatorId?: string;
+}
+
+export interface ScheduleActivityResult extends ActionResponse {
+  updatedLead?: Lead;
+  note?: NoteEntry;
+  isHandOff?: boolean;
+  newOwnerId?: string;
+}
+
+/**
+ * Agenda compromisso (data/hora + tipo) e executa o Hand-off automático se o operador mudar
+ */
+export async function scheduleLeadActivityAction(
+  params: ScheduleActivityParams
+): Promise<ScheduleActivityResult> {
+  try {
+    const {
+      leadId,
+      activityDate,
+      activityType,
+      assignedOperatorId,
+      currentOperatorId,
+    } = params;
+
+    if (!leadId || !activityDate || !activityType || !assignedOperatorId) {
+      return {
+        success: false,
+        leadId: leadId || "",
+        error: "Parâmetros obrigatórios ausentes para o agendamento.",
+      };
+    }
+
+    const scheduledDate = new Date(activityDate);
+    if (isNaN(scheduledDate.getTime())) {
+      return {
+        success: false,
+        leadId,
+        error: "Data ou horário da atividade inválido.",
+      };
+    }
+
+    if (!UUID_REGEX.test(leadId)) {
+      return {
+        success: true,
+        leadId,
+        isHandOff: false,
+        newOwnerId: assignedOperatorId,
+      };
+    }
+
+    const [currentLead] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+
+    if (!currentLead) {
+      return {
+        success: false,
+        leadId,
+        error: "Lead não encontrado no banco de dados.",
+      };
+    }
+
+    const currentOwner = currentLead.ownerId || "lucas.leite";
+    const newOp = getOperator(assignedOperatorId);
+    const activeCurrentOp = getOperator(currentOperatorId || currentOwner);
+
+    // Identifica se houve transferência de bastão (Hand-off)
+    const isHandOff = assignedOperatorId !== currentOwner;
+
+    // Rótulo amigável do tipo da atividade
+    const typeLabels: Record<string, string> = {
+      reuniao: "Reunião",
+      call: "Ligação",
+      follow_up: "Follow-up",
+    };
+    const displayType = typeLabels[activityType.toLowerCase()] || activityType;
+
+    const formattedDateTime = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(scheduledDate);
+
+    // Registro do log no histórico
+    const noteText = isHandOff
+      ? `Hand-off: Atividade [${displayType}] agendada para [${formattedDateTime}]. Conta transferida para o operador [${newOp.name}].`
+      : `Atividade [${displayType}] agendada para [${formattedDateTime}].`;
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      text: noteText,
+      createdAt: new Date().toISOString(),
+      author: isHandOff ? `${activeCurrentOp.name} (Hand-off)` : activeCurrentOp.name,
+    };
+
+    const currentNotes = currentLead.notes || [];
+    const updatedNotes = [newNote, ...currentNotes];
+
+    const [updatedLead] = await db
+      .update(leads)
+      .set({
+        nextActivityDate: scheduledDate,
+        nextActivityType: activityType,
+        notes: updatedNotes,
+        ...(isHandOff ? { ownerId: assignedOperatorId } : {}),
+      })
+      .where(eq(leads.id, leadId))
+      .returning();
+
+    try {
+      revalidatePath("/leads");
+    } catch {
+      // Ignorado fora do contexto de requisição
+    }
+
+    return {
+      success: true,
+      leadId,
+      updatedLead,
+      note: newNote,
+      isHandOff,
+      newOwnerId: isHandOff ? assignedOperatorId : currentOwner,
+    };
+  } catch (error) {
+    console.error("Falha ao agendar atividade e processar Hand-off:", error);
+    return {
+      success: false,
+      leadId: params.leadId || "",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro interno ao processar agendamento de atividade.",
     };
   }
 }

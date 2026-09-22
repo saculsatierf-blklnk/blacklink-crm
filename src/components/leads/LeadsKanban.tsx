@@ -66,6 +66,59 @@ const COLUMNS: ColumnConfig[] = [
   },
 ];
 
+/**
+ * Calcula dados visuais para a próxima atividade agendada com destaque de urgência
+ */
+function getActivityInfo(date?: Date | string | null, type?: string | null) {
+  if (!date) return null;
+  const activityDate = new Date(date);
+  if (isNaN(activityDate.getTime())) return null;
+
+  const now = new Date();
+  const isToday =
+    activityDate.getDate() === now.getDate() &&
+    activityDate.getMonth() === now.getMonth() &&
+    activityDate.getFullYear() === now.getFullYear();
+
+  const isOverdue = activityDate.getTime() < now.getTime() && !isToday;
+
+  const typeLabels: Record<string, string> = {
+    reuniao: "Reunião",
+    call: "Ligação",
+    follow_up: "Follow-up",
+  };
+  const label = typeLabels[type?.toLowerCase() || ""] || type || "Atividade";
+
+  const dayMonth = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(activityDate);
+  const time = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(activityDate);
+
+  const formattedStr = `${label}: ${dayMonth} - ${time}`;
+
+  let badgeClass = "border-glass-border bg-void/60 text-platinum";
+
+  if (isToday) {
+    badgeClass =
+      "border-amber-400/80 bg-amber-400/20 text-amber-300 font-bold shadow-[0_0_12px_rgba(251,191,36,0.3)] animate-pulse";
+  } else if (isOverdue) {
+    badgeClass =
+      "border-rose-500/80 bg-rose-500/20 text-rose-300 font-bold shadow-[0_0_12px_rgba(244,63,94,0.3)]";
+  }
+
+  return {
+    label,
+    formattedStr,
+    isToday,
+    isOverdue,
+    badgeClass,
+  };
+}
+
 export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -167,6 +220,39 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
         ...prev,
         [newLead.id]: newLead.cadenceState.completedSteps,
       }));
+    }
+  };
+
+  // Callback de atividade agendada e Hand-off processado
+  const handleActivityScheduled = (
+    leadId: string,
+    activityDate: Date,
+    activityType: string,
+    newOwnerId?: string
+  ) => {
+    setLeadsList((prev) =>
+      prev.map((l) =>
+        l.id === leadId
+          ? {
+              ...l,
+              nextActivityDate: activityDate,
+              nextActivityType: activityType,
+              ...(newOwnerId ? { ownerId: newOwnerId } : {}),
+            }
+          : l
+      )
+    );
+    if (selectedLead && selectedLead.id === leadId) {
+      setSelectedLead((prev) =>
+        prev
+          ? {
+              ...prev,
+              nextActivityDate: activityDate,
+              nextActivityType: activityType,
+              ...(newOwnerId ? { ownerId: newOwnerId } : {}),
+            }
+          : null
+      );
     }
   };
 
@@ -341,6 +427,12 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                           // Resolução do Dono da Conta (Ownership)
                           const op = getOperator(lead.ownerId);
 
+                          // Inteligência de Agenda & Atividade Agendada
+                          const activityInfo = getActivityInfo(
+                            lead.nextActivityDate,
+                            lead.nextActivityType
+                          );
+
                           return (
                             <Draggable
                               key={lead.id}
@@ -393,6 +485,28 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
                                       {lead.cadenceState?.estimatedValue || "R$ 50.000,00"}
                                     </span>
                                   </div>
+
+                                  {/* Badge de Próxima Atividade Agendada (com urgência para hoje) */}
+                                  {activityInfo && (
+                                    <div
+                                      className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[10px] font-mono border transition-all ${activityInfo.badgeClass}`}
+                                    >
+                                      <Calendar className="h-3 w-3 shrink-0" />
+                                      <span className="truncate">
+                                        📅 {activityInfo.formattedStr}
+                                      </span>
+                                      {activityInfo.isToday && (
+                                        <span className="ml-auto text-[8px] uppercase tracking-wider rounded bg-amber-400/30 px-1 py-0.2 shrink-0">
+                                          Hoje
+                                        </span>
+                                      )}
+                                      {activityInfo.isOverdue && (
+                                        <span className="ml-auto text-[8px] uppercase tracking-wider rounded bg-rose-500/30 px-1 py-0.2 shrink-0">
+                                          Atrasado
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* Inteligência Operacional: Próxima Ação da Cadência & Dono */}
                                   <div className="flex items-center justify-between gap-2 border-y border-glass-border/60 py-2">
@@ -527,6 +641,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
         onStatusChange={handleStatusChange}
         onCadenceChange={handleCadenceChange}
         onOwnerChange={handleOwnerChange}
+        onActivityScheduled={handleActivityScheduled}
       />
 
       {/* Modal de Criação de Lead com Radar Anti-Colisão */}

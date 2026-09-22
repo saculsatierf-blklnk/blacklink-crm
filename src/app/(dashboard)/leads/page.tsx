@@ -53,6 +53,8 @@ async function getLeads(): Promise<Lead[]> {
       ],
       scriptVersion: "v1_direct",
       ownerId: "lucas.leite",
+      nextActivityDate: new Date(),
+      nextActivityType: "reuniao",
       createdAt: new Date("2026-09-17T10:15:00Z"),
     },
     {
@@ -73,6 +75,8 @@ async function getLeads(): Promise<Lead[]> {
       notes: [],
       scriptVersion: "v1_direct",
       ownerId: "mariana.silva",
+      nextActivityDate: null,
+      nextActivityType: null,
       createdAt: new Date("2026-09-17T11:42:00Z"),
     },
     {
@@ -113,6 +117,8 @@ async function getLeads(): Promise<Lead[]> {
       ],
       scriptVersion: "v1_direct",
       ownerId: "lucas.leite",
+      nextActivityDate: null,
+      nextActivityType: null,
       createdAt: new Date("2026-09-16T17:30:00Z"),
     },
   ];

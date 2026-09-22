@@ -29,6 +29,13 @@
       "when": 1790104365586,
       "tag": "0003_elite_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790107517635,
+      "tag": "0004_shocking_wallow",
+      "breakpoints": true
     }
   ]
 }

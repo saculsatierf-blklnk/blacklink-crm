@@ -59,6 +59,8 @@ export interface TelemetryEvent {
   details?: string;
 }
 
+export type ActivityType = "reuniao" | "call" | "follow_up";
+
 /**
  * Leads Comerciais (Isolamento por company_id)
  */
@@ -91,6 +93,8 @@ export const leads = pgTable("leads", {
   ownerId: varchar("owner_id", { length: 100 })
     .default("lucas.leite")
     .notNull(),
+  nextActivityDate: timestamp("next_activity_date", { withTimezone: true }),
+  nextActivityType: varchar("next_activity_type", { length: 50 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

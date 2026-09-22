@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
+  ArrowRightLeft,
   Building2,
   Calendar,
   Check,
@@ -31,6 +32,7 @@ import {
   deleteLeadNoteAction,
   updateLeadScriptAction,
   updateLeadOwnerAction,
+  scheduleLeadActivityAction,
   type LeadStatus,
 } from "@/actions/leads";
 import {
@@ -49,6 +51,12 @@ interface LeadDetailsSheetProps {
   onStatusChange?: (leadId: string, newStatus: LeadStatus) => void;
   onCadenceChange?: (leadId: string, completedStepIds: string[]) => void;
   onOwnerChange?: (leadId: string, newOwnerId: string) => void;
+  onActivityScheduled?: (
+    leadId: string,
+    activityDate: Date,
+    activityType: string,
+    newOwnerId?: string
+  ) => void;
 }
 
 export function LeadDetailsSheet({
@@ -58,6 +66,7 @@ export function LeadDetailsSheet({
   onStatusChange,
   onCadenceChange,
   onOwnerChange,
+  onActivityScheduled,
 }: LeadDetailsSheetProps) {
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
 
@@ -77,6 +86,15 @@ export function LeadDetailsSheet({
   // Histórico de Anotações (persistido no PostgreSQL)
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [newNoteText, setNewNoteText] = useState("");
+
+  // Agenda & Hand-off (persistido no PostgreSQL)
+  const [activityDate, setActivityDate] = useState("");
+  const [activityType, setActivityType] = useState<string>("reuniao");
+  const [assignedOperatorId, setAssignedOperatorId] = useState("lucas.leite");
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleFeedback, setScheduleFeedback] = useState<string | null>(null);
+  const [currentActivityDate, setCurrentActivityDate] = useState<Date | null>(null);
+  const [currentActivityType, setCurrentActivityType] = useState<string | null>(null);
 
   // Sincronização direta a partir do PostgreSQL ao abrir ou alternar de lead
   useEffect(() => {
@@ -132,6 +150,29 @@ export function LeadDetailsSheet({
 
     // 4. Histórico de Anotações
     setNotes(lead.notes || []);
+
+    // 5. Agendamento de Atividade & Hand-off
+    setCurrentActivityDate(lead.nextActivityDate ? new Date(lead.nextActivityDate) : null);
+    setCurrentActivityType(lead.nextActivityType || null);
+    setAssignedOperatorId(lead.ownerId || "lucas.leite");
+
+    if (lead.nextActivityDate) {
+      const d = new Date(lead.nextActivityDate);
+      const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setActivityDate(localIso);
+      setActivityType(lead.nextActivityType || "reuniao");
+    } else {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(14, 0, 0, 0);
+      const localIso = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setActivityDate(localIso);
+      setActivityType("reuniao");
+    }
   }, [lead]);
 
   // Tecla ESC para fechar
@@ -258,6 +299,63 @@ export function LeadDetailsSheet({
       await deleteLeadNoteAction(lead.id, noteId);
     } catch (error) {
       console.error("Falha ao excluir nota no banco:", error);
+    }
+  };
+
+  // Agendamento de Atividade e Passagem de Bastão (Hand-off)
+  const handleScheduleActivity = async () => {
+    if (!lead || !activityDate) {
+      setScheduleFeedback("Selecione data e horário para o compromisso.");
+      return;
+    }
+
+    setIsScheduling(true);
+    setScheduleFeedback(null);
+
+    try {
+      const res = await scheduleLeadActivityAction({
+        leadId: lead.id,
+        activityDate: new Date(activityDate).toISOString(),
+        activityType,
+        assignedOperatorId,
+        currentOperatorId: ownerId,
+      });
+
+      if (res.success) {
+        const scheduledDateObj = new Date(activityDate);
+        setCurrentActivityDate(scheduledDateObj);
+        setCurrentActivityType(activityType);
+
+        if (res.isHandOff && res.newOwnerId) {
+          setOwnerId(res.newOwnerId);
+          onOwnerChange?.(lead.id, res.newOwnerId);
+        }
+
+        if (res.note) {
+          setNotes((prev) => [res.note as NoteEntry, ...prev]);
+        }
+
+        onActivityScheduled?.(
+          lead.id,
+          scheduledDateObj,
+          activityType,
+          res.isHandOff ? res.newOwnerId : undefined
+        );
+
+        setScheduleFeedback(
+          res.isHandOff
+            ? `Compromisso agendado e conta transferida para ${getOperator(assignedOperatorId).name}!`
+            : "Compromisso agendado com sucesso!"
+        );
+        setTimeout(() => setScheduleFeedback(null), 4000);
+      } else {
+        setScheduleFeedback(res.error || "Falha ao agendar atividade.");
+      }
+    } catch (err) {
+      console.error("Erro ao agendar atividade:", err);
+      setScheduleFeedback("Erro interno ao processar agendamento.");
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -493,7 +591,170 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 2. CADÊNCIA TEMPORAL OPERACIONAL */}
+          {/* 2. AGENDA & PASSAGEM DE BASTÃO (HAND-OFF) */}
+          <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-accent" />
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
+                  Agendar Atividade & Hand-off
+                </h3>
+              </div>
+
+              {currentActivityDate && (
+                <span className="inline-flex items-center gap-1.5 rounded border border-glass-border bg-carbon px-2.5 py-1 text-[10px] font-mono text-platinum shadow-sm">
+                  <Clock className="h-3 w-3 text-accent" />
+                  <span>
+                    {currentActivityType === "reuniao"
+                      ? "Reunião"
+                      : currentActivityType === "call"
+                      ? "Ligação"
+                      : "Follow-up"}
+                    :{" "}
+                    {new Intl.DateTimeFormat("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }).format(currentActivityDate)}
+                  </span>
+                </span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-sub leading-relaxed">
+              Agende o próximo compromisso no calendário. Ao atribuir um operador diferente do atual, a propriedade da conta será transferida automaticamente (Hand-off).
+            </p>
+
+            {/* Formulário de Agendamento */}
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Data e Hora */}
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-sub">
+                    Data e Horário
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={activityDate}
+                    onChange={(e) => setActivityDate(e.target.value)}
+                    className="w-full rounded border border-glass-border bg-carbon px-2.5 py-1.5 text-xs text-platinum font-mono focus:border-accent focus:outline-none"
+                  />
+                </div>
+
+                {/* Tipo de Atividade */}
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-sub">
+                    Tipo de Compromisso
+                  </label>
+                  <select
+                    value={activityType}
+                    onChange={(e) => setActivityType(e.target.value)}
+                    className="w-full rounded border border-glass-border bg-carbon px-2.5 py-1.5 text-xs text-platinum font-mono focus:border-accent focus:outline-none cursor-pointer"
+                  >
+                    <option value="reuniao" className="bg-carbon text-platinum">
+                      Reunião Executiva (Demonstração)
+                    </option>
+                    <option value="call" className="bg-carbon text-platinum">
+                      Ligação / Call de Qualificação
+                    </option>
+                    <option value="follow_up" className="bg-carbon text-platinum">
+                      Follow-up Comercial
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Seletor de Operador Responsável (Hand-off) */}
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-sub">
+                  Operador Responsável pela Execução
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {OPERATORS.map((op) => {
+                    const isSelected = assignedOperatorId === op.id;
+                    const isCurrentOwner = ownerId === op.id;
+                    return (
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => setAssignedOperatorId(op.id)}
+                        className={`flex flex-col items-start gap-0.5 rounded-lg border p-2 text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-accent bg-carbon-muted text-accent font-semibold shadow-inner"
+                            : "border-glass-border bg-carbon text-sub hover:text-platinum hover:bg-carbon-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-mono font-medium truncate">
+                            {op.shortName}
+                          </span>
+                          {isCurrentOwner && (
+                            <span className="text-[9px] font-mono px-1 rounded bg-void text-sub">
+                              Atual
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-sub truncate">{op.role}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Alerta de Hand-off se operador for diferente */}
+              {assignedOperatorId !== ownerId && (
+                <div className="flex items-center gap-2 rounded-md border border-amber-400/40 bg-amber-400/10 p-2.5 text-xs text-amber-300 font-mono">
+                  <ArrowRightLeft className="h-4 w-4 shrink-0 text-amber-300" />
+                  <span>
+                    <strong>Passagem de Bastão:</strong> A conta será transferida de{" "}
+                    <strong>{getOperator(ownerId).name}</strong> para{" "}
+                    <strong>{getOperator(assignedOperatorId).name}</strong>.
+                  </span>
+                </div>
+              )}
+
+              {/* Feedback de sucesso ou erro */}
+              {scheduleFeedback && (
+                <div
+                  className={`rounded-md border p-2.5 text-xs font-mono ${
+                    scheduleFeedback.includes("sucesso") ||
+                    scheduleFeedback.includes("transferida")
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                      : "border-rose-500/40 bg-rose-500/10 text-rose-400"
+                  }`}
+                >
+                  {scheduleFeedback}
+                </div>
+              )}
+
+              {/* Botão de Confirmação */}
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  disabled={isScheduling}
+                  onClick={handleScheduleActivity}
+                  className="flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-xs font-mono font-semibold text-void transition-all hover:bg-accent-hover disabled:opacity-50 cursor-pointer shadow-md"
+                >
+                  {isScheduling ? (
+                    <span>Registrando Compromisso...</span>
+                  ) : assignedOperatorId !== ownerId ? (
+                    <>
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                      <span>Agendar & Transferir Bastão</span>
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>Confirmar Agendamento</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. CADÊNCIA TEMPORAL OPERACIONAL */}
           <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
