@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
   const isHttps =
     request.headers.get("x-forwarded-proto") === "https" ||
     !host.includes("localhost");
-  const protocol = isHttps ? "https" : "http";
-  const baseUrl = `${protocol}://${host}`;
+  const scheme = isHttps ? "https" : "http";
+  const baseUrl = `${scheme}://${host}`;
   const redirectUri = `${baseUrl}/api/auth/callback/google`;
 
   const params = new URLSearchParams({

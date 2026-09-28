@@ -1,0 +1,267 @@
+{
+  "name": "Black Link • Orquestrador de Criativos B2B & Tráfego",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "blacklink-marketing-generate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Webhook Inicial (CRM)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [220, 300],
+      "webhookId": "blacklink-marketing-generate"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "theme",
+              "value": "={{ $json.body.theme || 'Como Escalar Vendas B2B sem Perder Margem' }}"
+            },
+            {
+              "name": "targetAudience",
+              "value": "={{ $json.body.targetAudience || 'Decisores B2B, CEOs e Diretores Comerciais' }}"
+            },
+            {
+              "name": "competitorsReferences",
+              "value": "={{ $json.body.competitorsReferences || 'Comunicação minimalista e de alta densidade' }}"
+            },
+            {
+              "name": "format",
+              "value": "={{ $json.body.format || 'carousel' }}"
+            },
+            {
+              "name": "crmBaseUrl",
+              "value": "={{ $json.body.crmBaseUrl || 'https://blacklink-crm.netlify.app' }}"
+            }
+          ],
+          "boolean": [
+            {
+              "name": "publishToInstagram",
+              "value": "={{ Boolean($json.body.publishToInstagram) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Normalizar Variáveis",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Você é o Diretor de Criação e Copywriter Chefe da Black Link, um ecossistema de vendas B2B de altíssimo padrão com estética Dark Industrial minimalista.\\n\\nGere uma estratégia completa de criativo para o seguinte briefing:\\n- Tema: {{ $json.theme }}\\n- Público-Alvo: {{ $json.targetAudience }}\\n- Referências: {{ $json.competitorsReferences }}\\n- Formato: {{ $json.format }}\\n\\nResponda ESTRITAMENTE em formato JSON (sem blocos markdown ```json) seguindo este esquema exato:\\n{\\n  \\\"hookHeadline\\\": \\\"Gancho de 1 linha de alto impacto e curiosidade\\\",\\n  \\\"bodyCopy\\\": \\\"Texto persuasivo completo para a legenda com quebras de linha e tese central\\\",\\n  \\\"ctaText\\\": \\\"Chamada para ação direta\\\",\\n  \\\"hashtags\\\": [\\\"#VendasB2B\\\", \\\"#BlackLink\\\", \\\"#Growth\\\"],\\n  \\\"slides\\\": [\\n    {\\n      \\\"slideNumber\\\": 1,\\n      \\\"headline\\\": \\\"Título em alto contraste do slide\\\",\\n      \\\"bodyText\\\": \\\"Explicação de 2 a 3 linhas densas\\\",\\n      \\\"visualPrompt\\\": \\\"Diretriz visual dark minimalista\\\"\\n    }\\n  ]\\n}\\n\\nSe o formato for carrossel, crie 5 slides progressivos. Se for story, crie 3 slides verticais. Se for post, crie 1 slide.\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.7,\n    \"topP\": 0.95,\n    \"maxOutputTokens\": 2048\n  }\n}"
+      },
+      "id": "3d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Gemini 1.5 Pro (Copy & Roteiro)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet rawText = '';\n\ntry {\n  rawText = response.candidates[0].content.parts[0].text;\n} catch (e) {\n  throw new Error('Falha ao extrair texto da resposta do Gemini: ' + JSON.stringify(response));\n}\n\n// Limpa marcações markdown se presentes\nrawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();\nconst parsed = JSON.parse(rawText);\n\nconst context = $('Normalizar Variáveis').first().json;\nconst crmBaseUrl = context.crmBaseUrl || 'https://blacklink-crm.netlify.app';\nconst totalSlides = parsed.slides ? parsed.slides.length : 1;\n\n// Monta URLs dinâmicas do renderizador server-side do Black Link\nconst slidesComImagens = (parsed.slides || []).map((slide, index) => {\n  const slideNum = slide.slideNumber || index + 1;\n  const query = new URLSearchParams({\n    slide: String(slideNum),\n    total: String(totalSlides),\n    headline: slide.headline || '',\n    body: slide.bodyText || '',\n    format: context.format || 'carousel'\n  });\n  const imageUrl = `${crmBaseUrl}/api/marketing/render-slide?${query.toString()}`;\n  return {\n    ...slide,\n    slideNumber: slideNum,\n    imageUrl\n  };\n});\n\nreturn {\n  id: `cr-n8n-${Date.now()}`,\n  theme: context.theme,\n  format: context.format,\n  targetAudience: context.targetAudience,\n  hookHeadline: parsed.hookHeadline,\n  bodyCopy: parsed.bodyCopy,\n  ctaText: parsed.ctaText,\n  hashtags: parsed.hashtags || ['#VendasB2B', '#BlackLink'],\n  slides: slidesComImagens,\n  imageUrls: slidesComImagens.map(s => s.imageUrl),\n  publishToInstagram: context.publishToInstagram,\n  createdAt: new Date().toISOString(),\n  source: 'n8n'\n};"
+      },
+      "id": "4d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Parsear JSON & Montar Slides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.publishToInstagram }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "5d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Publicar no Instagram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1160, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.imageUrls[0] }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.hookHeadline }}\n\n{{ $json.bodyCopy }}\n\n{{ $json.ctaText }}\n\n{{ $json.hashtags.join(' ') }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_ACCESS_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "id": "6d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Meta Graph: Criar Container IG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media_publish",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_ACCESS_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "id": "7d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Meta Graph: Publicar no Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1640, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "8d234567-89ab-cdef-0123-456789abcdef",
+      "name": "Devolver Resposta ao CRM",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Inicial (CRM)": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Variáveis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Variáveis": {
+      "main": [
+        [
+          {
+            "node": "Gemini 1.5 Pro (Copy & Roteiro)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 1.5 Pro (Copy & Roteiro)": {
+      "main": [
+        [
+          {
+            "node": "Parsear JSON & Montar Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear JSON & Montar Slides": {
+      "main": [
+        [
+          {
+            "node": "Publicar no Instagram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publicar no Instagram?": {
+      "main": [
+        [
+          {
+            "node": "Meta Graph: Criar Container IG",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Devolver Resposta ao CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Graph: Criar Container IG": {
+      "main": [
+        [
+          {
+            "node": "Meta Graph: Publicar no Feed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta Graph: Publicar no Feed": {
+      "main": [
+        [
+          {
+            "node": "Devolver Resposta ao CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0"
+}
