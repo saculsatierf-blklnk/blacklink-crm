@@ -187,7 +187,19 @@ export default function RegisterPage() {
           {serverError && (
             <div className="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span className="leading-snug">{serverError}</span>
+              <div className="flex-1 leading-snug">
+                <span>{serverError}</span>
+                {serverError.includes("já está cadastrado") && (
+                  <div className="mt-1.5">
+                    <Link
+                      href="/login"
+                      className="font-semibold text-platinum hover:text-accent underline underline-offset-2"
+                    >
+                      Acessar tela de login com este e-mail &rarr;
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
