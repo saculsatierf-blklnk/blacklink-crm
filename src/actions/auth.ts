@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, users } from "@/db/schema";
+import { companies, users, verificationTokens } from "@/db/schema";
+import { sendVerificationEmail } from "@/lib/mailer";
 import {
   loginSchema,
   registerCompanySchema,
@@ -252,6 +253,196 @@ export async function registerCompanyAdminAction(
     return {
       error: "Falha ao registrar a conta corporativa. Verifique os dados e tente novamente.",
     };
+  }
+
+  redirect(destination);
+}
+
+export interface RequestCodeResult {
+  success: boolean;
+  error?: string;
+  email?: string;
+  devCode?: string;
+}
+
+/**
+ * Envia uma chave de verificação por e-mail para validar a posse da conta corporativa
+ */
+export async function requestRegistrationCodeAction(
+  values: RegisterCompanyFormValues
+): Promise<RequestCodeResult> {
+  const parsed = registerCompanySchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message || "Dados de cadastro inválidos.",
+    };
+  }
+
+  const { companyName, fullName, email, password } = parsed.data;
+  const cleanEmail = email.toLowerCase().trim();
+
+  try {
+    // 1. Verifica se e-mail corporativo já existe
+    const existing = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
+      .limit(1);
+
+    if (existing.length > 0) {
+      return {
+        success: false,
+        error: "Este e-mail corporativo já está cadastrado. Realize o login.",
+      };
+    }
+
+    // 2. Gera chave numérica de 6 dígitos
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 3. Criptografa a chave de acesso (senha) para persistência segura
+    const hashRes = await db.execute(
+      sql`SELECT crypt(${password}, gen_salt('bf')) as hash;`
+    );
+    const passwordHash = String(hashRes[0]?.hash);
+
+    // 4. Remove solicitações prévias não confirmadas para este e-mail
+    await db
+      .delete(verificationTokens)
+      .where(sql`LOWER(${verificationTokens.email}) = ${cleanEmail}`);
+
+    // 5. Salva novo token temporário com validade de 15 minutos
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await db.insert(verificationTokens).values({
+      email: cleanEmail,
+      token: verificationCode,
+      companyName: companyName.trim(),
+      fullName: fullName.trim(),
+      passwordHash,
+      expiresAt,
+    });
+
+    // 6. Envia o e-mail real com o template executivo
+    await sendVerificationEmail({
+      toEmail: cleanEmail,
+      recipientName: fullName.trim(),
+      companyName: companyName.trim(),
+      verificationCode,
+    });
+
+    return {
+      success: true,
+      email: cleanEmail,
+      devCode: !process.env.SMTP_HOST ? verificationCode : undefined,
+    };
+  } catch (err: unknown) {
+    console.error("Falha ao gerar chave de verificação:", err);
+    return {
+      success: false,
+      error: "Falha ao processar solicitação da chave de acesso. Tente novamente.",
+    };
+  }
+}
+
+/**
+ * Validação da chave de verificação e criação definitiva da conta corporativa
+ */
+export async function verifyCodeAndActivateAccountAction({
+  email,
+  code,
+}: {
+  email: string;
+  code: string;
+}): Promise<AuthActionResult> {
+  const cleanEmail = email.toLowerCase().trim();
+  const cleanCode = code.trim().replace(/\D/g, "");
+
+  if (cleanCode.length !== 6) {
+    return { error: "A chave de segurança deve conter exatamente 6 dígitos numéricos." };
+  }
+
+  let destination = "/";
+
+  try {
+    const records = await db
+      .select()
+      .from(verificationTokens)
+      .where(
+        sql`LOWER(${verificationTokens.email}) = ${cleanEmail} AND ${verificationTokens.token} = ${cleanCode} AND ${verificationTokens.expiresAt} > NOW()`
+      )
+      .orderBy(sql`${verificationTokens.createdAt} DESC`)
+      .limit(1);
+
+    if (records.length === 0) {
+      return {
+        error: "Chave de acesso incorreta ou expirada. Verifique o código e tente novamente.",
+      };
+    }
+
+    const tokenData = records[0];
+
+    // 1. Cria a Empresa no banco
+    const [newCompany] = await db
+      .insert(companies)
+      .values({
+        corporateName: tokenData.companyName,
+      })
+      .returning({ id: companies.id });
+
+    if (!newCompany?.id) {
+      return { error: "Erro ao registrar a empresa no banco de dados." };
+    }
+
+    // 2. Insere o Administrador na tabela users
+    const insertRes = await db.execute(
+      sql`
+        INSERT INTO users (company_id, full_name, email, password_hash, role)
+        VALUES (
+          ${newCompany.id}::uuid,
+          ${tokenData.fullName},
+          ${cleanEmail},
+          ${tokenData.passwordHash},
+          'admin'
+        )
+        RETURNING id, full_name, email, role, company_id;
+      `
+    );
+
+    const newUser = insertRes[0];
+    if (!newUser?.id) {
+      return { error: "Erro ao inicializar o usuário administrador." };
+    }
+
+    // 3. Remove os tokens já utilizados
+    await db
+      .delete(verificationTokens)
+      .where(sql`LOWER(${verificationTokens.email}) = ${cleanEmail}`);
+
+    // 4. Criação do cookie de sessão corporativa
+    const sessionPayload = {
+      id: String(newUser.id),
+      company_id: String(newCompany.id),
+      role: "admin" as const,
+      name: String(newUser.full_name || tokenData.fullName),
+      email: cleanEmail,
+      createdAt: new Date().toISOString(),
+    };
+
+    const sessionToken = Buffer.from(JSON.stringify(sessionPayload)).toString("base64url");
+    const cookieStore = await cookies();
+    cookieStore.set("blacklink_session", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+      throw err;
+    }
+    console.error("Falha ao ativar conta:", err);
+    return { error: "Falha na validação da chave corporativa. Tente novamente." };
   }
 
   redirect(destination);

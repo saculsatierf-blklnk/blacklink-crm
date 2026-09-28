@@ -38,6 +38,20 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Chaves de Ativação e Verificação Temporária de E-mail
+ */
+export const verificationTokens = pgTable("verification_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: varchar("email", { length: 255 }).notNull(),
+  token: varchar("token", { length: 20 }).notNull(),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  fullName: varchar("full_name", { length: 255 }).notNull(),
+  passwordHash: text("password_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export interface CadenceState {
   completedSteps: string[];
   roleTitle?: string;
