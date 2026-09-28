@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  DATABASE_URL = "postgresql://postgres:82283703Lu!@db.vtblcaqihlknddadycpr.supabase.co:5432/postgres"
+
+[context.production.environment]
+  DATABASE_URL = "postgresql://postgres:82283703Lu!@db.vtblcaqihlknddadycpr.supabase.co:5432/postgres"
+
+[context.deploy-preview.environment]
+  DATABASE_URL = "postgresql://postgres:82283703Lu!@db.vtblcaqihlknddadycpr.supabase.co:5432/postgres"

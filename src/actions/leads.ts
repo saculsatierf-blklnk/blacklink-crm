@@ -692,12 +692,21 @@ export async function createLeadAction(
     }
 
     return { success: true, leadId: newLead.id, lead: newLead };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Falha ao criar novo lead:", error);
+    const detail = error?.cause?.message || error?.detail || error?.message || "";
+    let cleanMessage = "Erro ao persistir conta no banco de dados.";
+    if (detail.includes("connect") || detail.includes("ECONNREFUSED") || detail.includes("timeout")) {
+      cleanMessage = "Falha de conexão com a base de dados. Verifique a conectividade com o Supabase.";
+    } else if (detail.includes("unique") || detail.includes("duplicate")) {
+      cleanMessage = "Esta conta ou e-mail já se encontra cadastrada no sistema.";
+    } else if (error instanceof Error && !error.message.includes("Failed query")) {
+      cleanMessage = error.message;
+    }
     return {
       success: false,
       leadId: "",
-      error: error instanceof Error ? error.message : "Erro interno ao cadastrar lead.",
+      error: cleanMessage,
     };
   }
 }
