@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut, Search, User as UserIcon, Users } from "lucide-react";
+import { Compass, LogOut, Search, User as UserIcon, Users } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useTourStore } from "@/store/useTourStore";
 import { TeamManagementModal } from "@/components/team/TeamManagementModal";
 
 interface HeaderProps {
@@ -14,6 +15,7 @@ export function Header({ initialRole }: HeaderProps) {
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
+  const resetTour = useTourStore((state) => state.resetTour);
 
   const handleLogout = async () => {
     clearSession();
@@ -40,7 +42,7 @@ export function Header({ initialRole }: HeaderProps) {
       <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-glass-border bg-carbon/80 px-6 backdrop-blur-md">
         {/* Busca e Contexto Global */}
         <div className="flex items-center gap-4">
-          <div className="relative hidden sm:block">
+          <div data-tour="header-search" className="relative hidden sm:block">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-sub" />
             <input
               type="text"
@@ -50,10 +52,21 @@ export function Header({ initialRole }: HeaderProps) {
           </div>
         </div>
 
-        {/* Gestão de Equipe, Identidade do Operador e Ação de Logout */}
+        {/* Gestão de Equipe, Tutorial Interativo, Identidade do Operador e Ação de Logout */}
         <div className="flex items-center gap-3">
+          {/* Botão de Disparo do Tutorial Interativo */}
+          <button
+            onClick={() => resetTour()}
+            className="flex h-9 items-center gap-1.5 rounded-md border border-glass-border bg-carbon px-2.5 text-xs text-sub hover:text-platinum hover:border-accent/40 transition-colors cursor-pointer"
+            title="Iniciar Tutorial Guiado Passo a Passo"
+          >
+            <Compass className="h-3.5 w-3.5 text-accent" />
+            <span className="hidden lg:inline font-mono">Tutorial Guiado</span>
+          </button>
+
           {isAdmin && (
             <button
+              data-tour="header-team"
               onClick={() => setIsTeamModalOpen(true)}
               className="flex h-9 items-center gap-1.5 rounded-md border border-glass-border bg-carbon px-3 text-xs text-sub hover:text-platinum hover:border-accent/40 transition-colors cursor-pointer"
               title="Gerenciar Equipe e Operadores"

@@ -33,6 +33,8 @@ import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
 import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
+import { StartTourButton } from "@/components/tour/StartTourButton";
+import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
@@ -342,7 +344,7 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
       {/* Barra Operacional do Hunter: Silo de Propriedade & Novo Lead */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-glass-border bg-carbon/80 backdrop-blur-xl px-4 py-3 shadow-lg">
         {/* Seletor de Operador Ativo */}
-        <div className="flex items-center gap-3">
+        <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-accent" />
             <span className="text-xs font-mono font-semibold uppercase tracking-wider text-platinum">
@@ -373,9 +375,16 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
           </span>
         </div>
 
-        {/* Botão de Criação de Lead com Radar Anti-Colisão */}
+        {/* Botão de Criação de Lead com Radar Anti-Colisão & Guia */}
         <div className="flex items-center gap-2">
+          <StartTourButton
+            steps={KANBAN_TOUR_STEPS}
+            variant="secondary"
+            label="Guia da Esteira"
+          />
+
           <button
+            data-tour="kanban-new-lead"
             type="button"
             onClick={() => setIsAddModalOpen(true)}
             className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-1.5 text-xs font-mono font-bold text-void hover:bg-platinum transition-all cursor-pointer shadow-md"
@@ -389,7 +398,7 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
       {/* Board Kanban com Drag-and-Drop Bidirecional */}
       {isMounted ? (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          <div data-tour="kanban-columns" className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {COLUMNS.map((column) => {
               const columnLeads = getLeadsByStatus(column.id);
               const ColumnIcon = column.icon;

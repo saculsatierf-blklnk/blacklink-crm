@@ -59,7 +59,10 @@ export function Sidebar({ initialRole }: SidebarProps) {
   return (
     <aside className="hidden md:flex flex-col w-64 shrink-0 bg-carbon border-r border-glass-border min-h-screen text-platinum">
       {/* Brand Header */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-glass-border">
+      <div
+        data-tour="sidebar-brand"
+        className="flex h-16 items-center gap-3 px-6 border-b border-glass-border"
+      >
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-void font-bold text-sm tracking-widest">
           BL
         </div>
@@ -74,7 +77,7 @@ export function Sidebar({ initialRole }: SidebarProps) {
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 p-4 space-y-1.5">
+      <nav data-tour="sidebar-nav" className="flex-1 p-4 space-y-1.5">
         <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-sub">
           {isCommercial ? "Operação de Vendas" : "Navegação Principal"}
         </div>

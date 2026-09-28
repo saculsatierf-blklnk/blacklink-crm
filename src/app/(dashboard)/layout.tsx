@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { GuidedTourModal } from "@/components/tour/GuidedTourModal";
 
 export default async function DashboardLayout({
   children,
@@ -34,6 +35,9 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+
+      {/* Tour Guiado Interativo com Spotlight e Foco Passo a Passo */}
+      <GuidedTourModal />
     </div>
   );
 }

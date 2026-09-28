@@ -23,6 +23,7 @@ import {
 import { db } from "@/db";
 import { leads, socialContents } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
+import { StartTourButton } from "@/components/tour/StartTourButton";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -96,7 +97,9 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <StartTourButton variant="secondary" label="Tutorial Guiado" />
           <Link
+            data-tour="dashboard-new-lead"
             href="/leads"
             className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-3.5 text-xs font-semibold text-void transition-colors hover:bg-accent-hover cursor-pointer"
           >
@@ -107,7 +110,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Grid de Métricas Executivas Reais */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section data-tour="metrics-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Métrica 1: Leads Ativos */}
         <div className="rounded-xl border border-glass-border bg-carbon p-6 space-y-3 transition-all hover:border-glass-highlight">
           <div className="flex items-center justify-between text-sub">
@@ -202,9 +205,12 @@ export default async function DashboardPage() {
               </p>
             </div>
           </div>
-          <span className="rounded bg-accent/10 border border-accent/20 px-2 py-1 text-[11px] font-mono text-accent shrink-0">
-            Ambiente Pronto para Operação
-          </span>
+          <div className="flex items-center gap-2">
+            <StartTourButton variant="primary" label="Iniciar Tour Interativo" />
+            <span className="rounded bg-accent/10 border border-accent/20 px-2.5 py-1 text-[11px] font-mono text-accent shrink-0">
+              Ambiente Pronto
+            </span>
+          </div>
         </div>
 
         {/* Grid de 4 Passos do Tutorial */}
