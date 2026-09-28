@@ -1,9 +1,8 @@
 "use client";
 
-import { Calendar, Layers, Sparkles, TrendingUp } from "lucide-react";
+import { Calendar, Sparkles } from "lucide-react";
 import { useMarketingStore } from "@/store/useMarketingStore";
-import { CreativeGeneratorForm } from "@/components/marketing/CreativeGeneratorForm";
-import { CreativeAssetViewer } from "@/components/marketing/CreativeAssetViewer";
+import { CreativeStudioWizard } from "@/components/marketing/studio/CreativeStudioWizard";
 import { AdPerformanceTable } from "@/components/marketing/AdPerformanceTable";
 import { MarketingScheduleView } from "@/components/marketing/MarketingScheduleView";
 
@@ -28,7 +27,7 @@ export function MarketingTabsWrapper() {
           }`}
         >
           <Sparkles className="h-3.5 w-3.5 text-accent" />
-          <span>Geração & Performance de Tráfego</span>
+          <span>Estúdio de Criação & Tráfego</span>
         </button>
 
         <button
@@ -53,19 +52,11 @@ export function MarketingTabsWrapper() {
       {/* Conteúdo Dinâmico Baseado na Aba Ativa */}
       {activeMarketingTab === "studio" ? (
         <div className="space-y-8 animate-in fade-in duration-200">
-          {/* ÁREA SUPERIOR: SPLIT VIEW (CONFIGURAÇÃO vs VISUALIZADOR) */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-            <div className="xl:col-span-5">
-              <CreativeGeneratorForm />
-            </div>
+          {/* ESTÚDIO DE CO-CRIAÇÃO PROGRESSIVA WIZARD 3 ETAPAS */}
+          <CreativeStudioWizard />
 
-            <div className="xl:col-span-7">
-              <CreativeAssetViewer />
-            </div>
-          </div>
-
-          {/* ÁREA INFERIOR: ROBÔ DE TRÁFEGO PAGO */}
-          <div className="pt-2">
+          {/* MONITORAMENTO & ROBÔ DE TRÁFEGO PAGO */}
+          <div className="pt-4 border-t border-glass-border/70">
             <AdPerformanceTable />
           </div>
         </div>

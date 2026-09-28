@@ -9,7 +9,13 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { theme, targetAudience, competitorsReferences, format = "carousel" } = body;
+    const {
+      theme,
+      targetAudience,
+      competitorsReferences,
+      nicheValueProposition,
+      format = "carousel",
+    } = body;
 
     if (!theme || typeof theme !== "string" || !theme.trim()) {
       return NextResponse.json(
@@ -34,6 +40,7 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             theme,
+            nicheValueProposition: nicheValueProposition || "Inteligência comercial e conversão B2B",
             targetAudience: targetAudience || "Decisores B2B (CEOs, Diretores Comerciais, Heads de Vendas)",
             competitorsReferences: competitorsReferences || "Nenhuma informada",
             format,

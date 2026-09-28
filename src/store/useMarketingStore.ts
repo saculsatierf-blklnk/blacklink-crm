@@ -23,6 +23,7 @@ export interface GeneratedCreativeResult {
   format: CreativeFormat;
   targetAudience: string;
   competitorsReferences?: string;
+  nicheValueProposition?: string;
   hookHeadline: string;
   bodyCopy: string;
   ctaText: string;
@@ -38,6 +39,7 @@ export interface ScheduledPost {
   theme: string;
   format: CreativeFormat;
   targetAudience?: string;
+  nicheValueProposition?: string;
   scheduledDate: string; // "2026-10-01 10:00" ou ISO
   status: PostApprovalStatus;
   hookHeadline: string;
@@ -98,6 +100,7 @@ export interface OptimizationSummary {
 }
 
 export interface MarketingFormData {
+  nicheValueProposition: string;
   theme: string;
   targetAudience: string;
   competitorsReferences: string;
@@ -108,6 +111,23 @@ interface MarketingState {
   // Navegação Interna da Rota /marketing
   activeMarketingTab: "studio" | "schedule";
   setActiveMarketingTab: (tab: "studio" | "schedule") => void;
+
+  // Wizard de Co-criação Estilo CarrosseIA (3 Etapas)
+  currentWizardStep: 1 | 2 | 3;
+  setWizardStep: (step: 1 | 2 | 3) => void;
+  activeEditingSlideIndex: number;
+  setActiveEditingSlideIndex: (index: number) => void;
+  draftCarousel: ScheduledPost | null;
+  setDraftCarousel: (draft: ScheduledPost | null) => void;
+  updateDraftSlide: (
+    slideIndex: number,
+    field: "headline" | "bodyText",
+    value: string
+  ) => void;
+  updateDraftCaption: (caption: string) => void;
+  updateDraftHashtags: (hashtags: string[]) => void;
+  saveDraftToSchedule: (scheduledDate?: string) => Promise<boolean>;
+  resetStudioWizard: () => void;
 
   formData: MarketingFormData;
   isLoading: boolean;
@@ -148,9 +168,10 @@ interface MarketingState {
 }
 
 const INITIAL_FORM_DATA: MarketingFormData = {
-  theme: "",
-  targetAudience: "",
-  competitorsReferences: "",
+  nicheValueProposition: "Inteligência comercial B2B e automação de prospecção sem colisões de equipe",
+  theme: "Como Dominar Contas Enterprise sem Perder Margem Operacional",
+  targetAudience: "Diretores Comerciais, CEOs e Heads de Vendas B2B",
+  competitorsReferences: "Comunicação minimalista em Dark Industrial, dados densos e sem jargões rasos",
   format: "carousel",
 };
 
@@ -374,6 +395,113 @@ export const useMarketingStore = create<MarketingState>()(
       activeMarketingTab: "studio",
       setActiveMarketingTab: (tab) => set({ activeMarketingTab: tab }),
 
+      // Wizard Estilo CarrosseIA (3 Etapas)
+      currentWizardStep: 1,
+      setWizardStep: (step) => set({ currentWizardStep: step }),
+      activeEditingSlideIndex: 0,
+      setActiveEditingSlideIndex: (index) => set({ activeEditingSlideIndex: index }),
+      draftCarousel: null,
+      setDraftCarousel: (draft) => set({ draftCarousel: draft }),
+
+      updateDraftSlide: (slideIndex, field, value) => {
+        const { draftCarousel } = get();
+        if (!draftCarousel || !draftCarousel.slides) return;
+
+        const updatedSlides = draftCarousel.slides.map((slide, idx) => {
+          if (idx !== slideIndex) return slide;
+          const updatedSlide = { ...slide, [field]: value };
+
+          // Atualiza a URL do render-slide para preview dinâmico
+          const query = new URLSearchParams({
+            slide: String(updatedSlide.slideNumber || idx + 1),
+            total: String(draftCarousel.slides.length),
+            headline: updatedSlide.headline || "",
+            body: updatedSlide.bodyText || "",
+            format: draftCarousel.format || "carousel",
+            theme: draftCarousel.theme || "",
+          });
+          updatedSlide.imageUrl = `/api/marketing/render-slide?${query.toString()}`;
+          return updatedSlide;
+        });
+
+        const updatedImageUrls = updatedSlides.map((s) => s.imageUrl || "");
+
+        set({
+          draftCarousel: {
+            ...draftCarousel,
+            slides: updatedSlides,
+            imageUrls: updatedImageUrls,
+            hookHeadline:
+              slideIndex === 0 && field === "headline"
+                ? value
+                : draftCarousel.hookHeadline,
+          },
+        });
+      },
+
+      updateDraftCaption: (caption) => {
+        const { draftCarousel } = get();
+        if (!draftCarousel) return;
+        set({
+          draftCarousel: {
+            ...draftCarousel,
+            bodyCopy: caption,
+          },
+        });
+      },
+
+      updateDraftHashtags: (hashtags) => {
+        const { draftCarousel } = get();
+        if (!draftCarousel) return;
+        set({
+          draftCarousel: {
+            ...draftCarousel,
+            hashtags,
+          },
+        });
+      },
+
+      saveDraftToSchedule: async (scheduledDate) => {
+        const { draftCarousel, scheduledPosts } = get();
+        if (!draftCarousel) return false;
+
+        const dateToSave =
+          scheduledDate || draftCarousel.scheduledDate || "Amanhã • 10:00";
+        const finalPost: ScheduledPost = {
+          ...draftCarousel,
+          scheduledDate: dateToSave,
+          status: "awaiting_approval",
+          createdAt: new Date().toISOString(),
+        };
+
+        try {
+          await fetch("/api/marketing/schedule/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ post: finalPost }),
+          });
+        } catch (e) {
+          console.warn("Aviso ao persistir post no Supabase:", e);
+        }
+
+        set({
+          scheduledPosts: [finalPost, ...scheduledPosts],
+          draftCarousel: null,
+          currentWizardStep: 1,
+          activeMarketingTab: "schedule", // Redireciona para a aba Cronograma & Aprovação
+        });
+
+        return true;
+      },
+
+      resetStudioWizard: () => {
+        set({
+          currentWizardStep: 1,
+          draftCarousel: null,
+          activeEditingSlideIndex: 0,
+        });
+      },
+
       formData: INITIAL_FORM_DATA,
       isLoading: false,
       statusMessage: "",
@@ -408,7 +536,7 @@ export const useMarketingStore = create<MarketingState>()(
       resetForm: () => set({ formData: INITIAL_FORM_DATA, error: null }),
 
       generateCreatives: async () => {
-        const { formData, history, scheduledPosts } = get();
+        const { formData, history } = get();
 
         if (!formData.theme.trim()) {
           set({ error: "Por favor, defina o tema principal do criativo." });
@@ -418,16 +546,16 @@ export const useMarketingStore = create<MarketingState>()(
         set({
           isLoading: true,
           error: null,
-          statusMessage: "Disparando automação para o webhook do n8n...",
+          statusMessage: "Disparando briefing para a IA e automador n8n...",
         });
 
         try {
           const statusTimer1 = setTimeout(() => {
-            set({ statusMessage: "Processando persona e referências com IA..." });
+            set({ statusMessage: "Processando proposta de valor e personas B2B..." });
           }, 800);
 
           const statusTimer2 = setTimeout(() => {
-            set({ statusMessage: "Compondo carrosséis e copywriting persuasivo..." });
+            set({ statusMessage: "Construindo lâminas e copywriting persuasivo..." });
           }, 1800);
 
           const response = await fetch("/api/marketing/generate", {
@@ -446,13 +574,14 @@ export const useMarketingStore = create<MarketingState>()(
 
           const result: GeneratedCreativeResult = await response.json();
 
-          // Cria automaticamente um item no Cronograma em estado 'Aguardando Aprovação'
-          const newScheduledPost: ScheduledPost = {
-            id: `post-sch-${Date.now()}`,
+          // Constrói o rascunho de trabalho no estúdio (Etapa 2)
+          const newDraft: ScheduledPost = {
+            id: `post-draft-${Date.now()}`,
             theme: result.theme,
             format: result.format,
             targetAudience: result.targetAudience,
-            scheduledDate: "Próxima Terça • 11:00",
+            nicheValueProposition: formData.nicheValueProposition,
+            scheduledDate: "Amanhã • 10:00",
             status: "awaiting_approval",
             hookHeadline: result.hookHeadline,
             bodyCopy: result.bodyCopy,
@@ -467,8 +596,10 @@ export const useMarketingStore = create<MarketingState>()(
             isLoading: false,
             statusMessage: "",
             activeResult: result,
+            draftCarousel: newDraft,
+            currentWizardStep: 2, // Transita automaticamente para a Etapa 2
+            activeEditingSlideIndex: 0,
             history: [result, ...history.filter((h) => h.id !== result.id)].slice(0, 10),
-            scheduledPosts: [newScheduledPost, ...scheduledPosts],
           });
 
           return result;
@@ -529,7 +660,6 @@ export const useMarketingStore = create<MarketingState>()(
           return true;
         } catch (err: any) {
           console.error("Erro ao aprovar post:", err);
-          // Atualiza status localmente em modo resiliente
           const updated = scheduledPosts.map((p) =>
             p.id === id
               ? {
@@ -567,7 +697,6 @@ export const useMarketingStore = create<MarketingState>()(
           error: null,
         });
 
-        // Atualiza imediatamente o status para 'refação solicitada'
         const initialUpdate = scheduledPosts.map((p) =>
           p.id === id
             ? {
