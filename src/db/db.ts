@@ -4,7 +4,7 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 const DEFAULT_SUPABASE_URL =
-  "postgresql://postgres:82283703Lu!@db.vtblcaqihlknddadycpr.supabase.co:5432/postgres";
+  "postgresql://postgres.vtblcaqihlknddadycpr:82283703Lu!@aws-0-us-west-2.pooler.supabase.com:6543/postgres";
 
 const rawConnectionString = process.env.DATABASE_URL || DEFAULT_SUPABASE_URL;
 
