@@ -498,9 +498,15 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
                                     <span className="truncate max-w-[150px] text-sub">
                                       {lead.cadenceState?.roleTitle || "Decisor Comercial"}
                                     </span>
-                                    <span className="font-bold text-accent shrink-0">
-                                      {lead.cadenceState?.estimatedValue || "R$ 50.000,00"}
-                                    </span>
+                                    {lead.cadenceState?.estimatedValue ? (
+                                      <span className="font-bold text-accent shrink-0">
+                                        {lead.cadenceState.estimatedValue}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] text-sub/50 italic shrink-0">
+                                        Valor a definir
+                                      </span>
+                                    )}
                                   </div>
 
                                   {/* Badge de Próxima Atividade Agendada (com urgência para hoje) */}

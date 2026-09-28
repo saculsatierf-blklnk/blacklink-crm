@@ -7,17 +7,21 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  Building2,
+  CheckCircle2,
   Lock,
   Mail,
   ShieldCheck,
-  Users,
+  User,
 } from "lucide-react";
-import { loginAction } from "@/actions/auth";
-import { loginSchema, type LoginFormValues } from "@/lib/validations/auth";
+import { registerCompanyAdminAction } from "@/actions/auth";
+import {
+  registerCompanySchema,
+  type RegisterCompanyFormValues,
+} from "@/lib/validations/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 
-export default function LoginPage() {
-  const [selectedRole, setSelectedRole] = useState<"commercial" | "admin">("commercial");
+export default function RegisterPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showGoogleNotice, setShowGoogleNotice] = useState(false);
   const setUser = useAuthStore((state) => state.setUser);
@@ -26,47 +30,39 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterCompanyFormValues>({
+    resolver: zodResolver(registerCompanySchema),
     defaultValues: {
+      companyName: "",
+      fullName: "",
       email: "",
       password: "",
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: RegisterCompanyFormValues) => {
     try {
       setServerError(null);
 
-      const cleanEmail = data.email.toLowerCase().trim();
-      const isCommercial =
-        cleanEmail === "comercial@blacklink.com" ||
-        cleanEmail.includes("comercial") ||
-        cleanEmail.includes("hunter") ||
-        (selectedRole === "commercial" && cleanEmail !== "adm@blacklink.com");
-
-      const resolvedRole: "commercial" | "admin" = isCommercial ? "commercial" : "admin";
-
-      // Injeta o estado inicial do operador no Zustand
-      setUser({
-        id: isCommercial ? "u-commercial-hunter-01" : "u-admin-master-01",
-        company_id: "cad1caea-2de8-46f3-8dd0-17ab0ede7377",
-        role: resolvedRole,
-        name: isCommercial ? "Operador Comercial" : "Administrador",
-        email: data.email,
-      });
-
-      const result = await loginAction({ ...data, role: resolvedRole });
+      const result = await registerCompanyAdminAction(data);
 
       if (result?.error) {
         setServerError(result.error);
+      } else {
+        // Atualiza estado local da sessão
+        setUser({
+          id: "new-admin",
+          company_id: "new-tenant",
+          role: "admin",
+          name: data.fullName,
+          email: data.email,
+        });
       }
     } catch (err) {
-      // O redirect do Next.js lança um erro interno intencional (NEXT_REDIRECT)
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
         return;
       }
-      setServerError("Falha na autenticação corporativa. Verifique os dados inseridos.");
+      setServerError("Erro ao cadastrar a conta corporativa. Tente novamente.");
     }
   };
 
@@ -86,7 +82,7 @@ export default function LoginPage() {
             Black Link <span className="text-sub font-normal">CRM</span>
           </h1>
           <p className="text-xs text-sub tracking-tight">
-            Autenticação executiva para acesso ao painel de inteligência e dados
+            Cadastro do primeiro Administrador e inicialização da empresa
           </p>
         </div>
 
@@ -95,9 +91,11 @@ export default function LoginPage() {
           <div className="flex items-center justify-between border-b border-glass-border/70 pb-3">
             <span className="text-xs font-mono uppercase tracking-widest text-sub flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-platinum" />
-              Ambiente Restrito
+              Conta Mestre
             </span>
-            <span className="text-[10px] font-mono text-sub">TLS 1.3 / B2B</span>
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+              Administrador
+            </span>
           </div>
 
           {/* Botão Google OAuth */}
@@ -131,8 +129,8 @@ export default function LoginPage() {
             {showGoogleNotice && (
               <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-[11px] text-amber-200 leading-relaxed">
                 <span className="font-semibold block mb-0.5">Integração Google OAuth:</span>
-                O acesso direto via Google pode ser habilitado com chaves GOOGLE_CLIENT_ID nas configurações de ambiente.
-                Para entrar agora, utilize seu e-mail e chave de acesso cadastrados.
+                O acesso direto com Google é sincronizado com as chaves corporativas no ambiente de produção.
+                Para registro imediato agora, conclua com o formulário corporativo abaixo.
               </div>
             )}
           </div>
@@ -140,7 +138,7 @@ export default function LoginPage() {
           <div className="relative flex items-center justify-center">
             <div className="w-full border-t border-glass-border" />
             <span className="absolute bg-carbon px-2 text-[10px] font-mono text-sub uppercase">
-              ou acesse com e-mail
+              ou preencha os dados
             </span>
           </div>
 
@@ -153,48 +151,65 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Seletor de Perfil de Acesso (RBAC) */}
+            {/* Nome da Empresa */}
             <div className="space-y-1.5">
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-sub">
-                Perfil de Acesso
+              <label
+                htmlFor="companyName"
+                className="block font-mono text-[11px] uppercase tracking-wider text-sub"
+              >
+                Nome da Empresa / Organização *
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole("commercial")}
+              <div className="relative">
+                <Building2 className="absolute left-3 top-3 h-4 w-4 text-sub" />
+                <input
+                  id="companyName"
+                  type="text"
+                  placeholder="Ex: Black Link Soluções B2B"
                   disabled={isSubmitting}
-                  className={`flex items-center justify-center gap-1.5 rounded-md border p-2.5 text-xs font-mono transition-all cursor-pointer ${
-                    selectedRole === "commercial"
-                      ? "border-accent bg-carbon-muted text-accent font-semibold shadow-inner"
-                      : "border-glass-border bg-void/60 text-sub hover:text-platinum hover:bg-carbon-muted/40"
-                  }`}
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  <span>Comercial</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole("admin")}
-                  disabled={isSubmitting}
-                  className={`flex items-center justify-center gap-1.5 rounded-md border p-2.5 text-xs font-mono transition-all cursor-pointer ${
-                    selectedRole === "admin"
-                      ? "border-accent bg-carbon-muted text-accent font-semibold shadow-inner"
-                      : "border-glass-border bg-void/60 text-sub hover:text-platinum hover:bg-carbon-muted/40"
-                  }`}
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>Administrador</span>
-                </button>
+                  {...register("companyName")}
+                  className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+                />
               </div>
+              {errors.companyName && (
+                <span className="text-[11px] text-red-400 font-mono">
+                  {errors.companyName.message}
+                </span>
+              )}
             </div>
 
-            {/* Campo E-mail */}
+            {/* Nome do Administrador */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="fullName"
+                className="block font-mono text-[11px] uppercase tracking-wider text-sub"
+              >
+                Nome Completo do Administrador *
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-sub" />
+                <input
+                  id="fullName"
+                  type="text"
+                  placeholder="Ex: Lucas Leite"
+                  disabled={isSubmitting}
+                  {...register("fullName")}
+                  className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+                />
+              </div>
+              {errors.fullName && (
+                <span className="text-[11px] text-red-400 font-mono">
+                  {errors.fullName.message}
+                </span>
+              )}
+            </div>
+
+            {/* E-mail Corporativo */}
             <div className="space-y-1.5">
               <label
                 htmlFor="email"
                 className="block font-mono text-[11px] uppercase tracking-wider text-sub"
               >
-                E-mail Corporativo
+                E-mail Corporativo *
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-sub" />
@@ -215,21 +230,21 @@ export default function LoginPage() {
               )}
             </div>
 
-            {/* Campo Senha */}
+            {/* Senha */}
             <div className="space-y-1.5">
               <label
                 htmlFor="password"
                 className="block font-mono text-[11px] uppercase tracking-wider text-sub"
               >
-                Chave de Acesso
+                Chave de Acesso (Senha) *
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-sub" />
                 <input
                   id="password"
                   type="password"
-                  placeholder="••••••••••••"
-                  autoComplete="current-password"
+                  placeholder="Mínimo 6 caracteres"
+                  autoComplete="new-password"
                   disabled={isSubmitting}
                   {...register("password")}
                   className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
@@ -242,6 +257,18 @@ export default function LoginPage() {
               )}
             </div>
 
+            {/* Informações sobre Permissões */}
+            <div className="rounded-lg border border-glass-border bg-void/60 p-3 space-y-1 text-[11px] text-sub">
+              <div className="flex items-center gap-1.5 text-platinum font-semibold">
+                <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+                <span>Poderes do Administrador</span>
+              </div>
+              <p>
+                Como primeiro titular, você terá permissão total para gerenciar a equipe,
+                adicionar novos administradores ou operadores comerciais.
+              </p>
+            </div>
+
             {/* Botão de Submissão */}
             <button
               type="submit"
@@ -249,29 +276,29 @@ export default function LoginPage() {
               className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-xs font-semibold text-void transition-colors hover:bg-accent-hover cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
-                <span className="font-mono text-xs">Validando Credenciais...</span>
+                <span className="font-mono text-xs">Inicializando Organização...</span>
               ) : (
                 <>
-                  <span>Acessar Painel Corporativo</span>
+                  <span>Criar Conta Corporativa</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Link para Cadastro */}
+          {/* Link para Login */}
           <div className="border-t border-glass-border/70 pt-4 text-center">
-            <span className="text-xs text-sub">Primeiro acesso na plataforma? </span>
+            <span className="text-xs text-sub">Já possui uma conta corporativa? </span>
             <Link
-              href="/register"
+              href="/login"
               className="text-xs font-semibold text-platinum hover:text-accent transition-colors underline-offset-4 hover:underline"
             >
-              Cadastre sua Empresa &rarr;
+              Fazer Login
             </Link>
           </div>
         </div>
 
-        {/* Rodapé do Login */}
+        {/* Rodapé */}
         <div className="text-center text-[11px] text-sub font-mono">
           Black Link Ecosystem &copy; {new Date().getFullYear()} &bull; Todos os direitos reservados.
         </div>

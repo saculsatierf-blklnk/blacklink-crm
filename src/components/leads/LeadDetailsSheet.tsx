@@ -13,6 +13,7 @@ import {
   Coins,
   Copy,
   FileText,
+  ListTodo,
   Mail,
   MessageSquare,
   Phone,
@@ -97,6 +98,7 @@ export function LeadDetailsSheet({
   const [scheduleFeedback, setScheduleFeedback] = useState<string | null>(null);
   const [currentActivityDate, setCurrentActivityDate] = useState<Date | null>(null);
   const [currentActivityType, setCurrentActivityType] = useState<string | null>(null);
+  const [cadenceFilter, setCadenceFilter] = useState<"daily" | "weekly" | "monthly" | "all">("all");
 
   // Sincronização direta a partir do PostgreSQL ao abrir ou alternar de lead
   useEffect(() => {
@@ -105,24 +107,8 @@ export function LeadDetailsSheet({
     // 1. Resolução de Metadados Operacionais
     const dbCadenceState = lead.cadenceState || { completedSteps: [] };
 
-    let resolvedRole = dbCadenceState.roleTitle || "";
-    let resolvedValue = dbCadenceState.estimatedValue || "";
-
-    if (!resolvedRole || !resolvedValue) {
-      if (lead.leadName.includes("Mariana")) {
-        resolvedRole = resolvedRole || "Diretora de Operações";
-        resolvedValue = resolvedValue || "R$ 45.000,00";
-      } else if (lead.leadName.includes("Carlos")) {
-        resolvedRole = resolvedRole || "Head de Novos Negócios";
-        resolvedValue = resolvedValue || "R$ 120.000,00";
-      } else if (lead.leadName.includes("Roberto")) {
-        resolvedRole = resolvedRole || "Chief Investment Officer";
-        resolvedValue = resolvedValue || "R$ 250.000,00";
-      } else {
-        resolvedRole = resolvedRole || "Decisor Comercial";
-        resolvedValue = resolvedValue || "R$ 60.000,00";
-      }
-    }
+    const resolvedRole = dbCadenceState.roleTitle || "";
+    const resolvedValue = dbCadenceState.estimatedValue || "";
 
     setRoleTitle(resolvedRole);
     setEstimatedValue(resolvedValue);
@@ -392,6 +378,36 @@ export function LeadDetailsSheet({
     )
   );
 
+  const getStepDiffDays = (dayOffset: number) => {
+    const targetDate = new Date(leadCreatedDay);
+    targetDate.setDate(targetDate.getDate() + dayOffset);
+    return Math.round((targetDate.getTime() - currentDay.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const dailySteps = CADENCE_STEPS.filter((step) => {
+    const diff = getStepDiffDays(step.dayOffset);
+    return diff <= 0;
+  });
+
+  const weeklySteps = CADENCE_STEPS.filter((step) => {
+    const diff = getStepDiffDays(step.dayOffset);
+    return diff <= 7;
+  });
+
+  const monthlySteps = CADENCE_STEPS.filter((step) => {
+    const diff = getStepDiffDays(step.dayOffset);
+    return diff <= 30;
+  });
+
+  const filteredSteps =
+    cadenceFilter === "daily"
+      ? (dailySteps.length > 0 ? dailySteps : [CADENCE_STEPS[0]])
+      : cadenceFilter === "weekly"
+      ? weeklySteps
+      : cadenceFilter === "monthly"
+      ? monthlySteps
+      : CADENCE_STEPS;
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop Translúcido com Blur */}
@@ -452,7 +468,7 @@ export function LeadDetailsSheet({
                   />
                 ) : (
                   <div className="text-xs font-mono font-medium text-platinum truncate">
-                    {roleTitle || "Decisor Comercial"}
+                    {roleTitle || "Cargo a definir"}
                   </div>
                 )}
               </div>
@@ -756,11 +772,11 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 3. CADÊNCIA TEMPORAL OPERACIONAL */}
-          <div className="rounded-xl border border-glass-border bg-void/50 p-4 space-y-3">
+          {/* 3. CADÊNCIA TEMPORAL OPERACIONAL (ESTILO APPLE REMINDERS / TAREFAS IPHONE) */}
+          <div className="rounded-xl border border-glass-border bg-void/60 p-4 space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CheckSquare className="h-4 w-4 text-accent" />
+                <ListTodo className="h-4 w-4 text-accent" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-platinum">
                   Cadência Temporal de Execução
                 </h3>
@@ -778,101 +794,153 @@ export function LeadDetailsSheet({
               />
             </div>
 
-            <p className="text-[11px] text-sub leading-relaxed">
-              Cronograma operacional de contatos estruturado pelo tempo de entrada no funil.
-            </p>
+            {/* Seletor Temporal Segmentado Estilo iOS */}
+            <div className="grid grid-cols-4 gap-1 rounded-xl bg-carbon-muted/70 p-1 border border-glass-border">
+              <button
+                type="button"
+                onClick={() => setCadenceFilter("daily")}
+                className={`flex flex-col items-center justify-center rounded-lg py-1.5 px-1 text-center transition-all cursor-pointer ${
+                  cadenceFilter === "daily"
+                    ? "bg-accent text-void font-bold shadow-md"
+                    : "text-sub hover:text-platinum hover:bg-carbon/60"
+                }`}
+              >
+                <span className="text-[10px] font-mono uppercase tracking-wider">Hoje</span>
+                <span className="text-[11px] font-semibold">{dailySteps.length}</span>
+              </button>
 
-            {/* Lista Interativa de Passos da Cadência */}
-            <div className="space-y-2 pt-1">
-              {CADENCE_STEPS.map((step) => {
-                const isCompleted = completedCadence.includes(step.id);
-                const temporalInfo = calculateStepTemporalStatus(
-                  lead.createdAt,
-                  step.dayOffset,
-                  isCompleted
-                );
-                const isOverdue = !isCompleted && temporalInfo.type === "overdue";
-                const isToday = !isCompleted && temporalInfo.type === "today";
-                const StepIcon =
-                  step.id === "step-1" || step.id === "step-4"
-                    ? Phone
-                    : step.id === "step-2"
-                    ? Mail
-                    : step.id === "step-3"
-                    ? UserCheck
-                    : step.id === "step-5"
-                    ? FileText
-                    : Clock;
+              <button
+                type="button"
+                onClick={() => setCadenceFilter("weekly")}
+                className={`flex flex-col items-center justify-center rounded-lg py-1.5 px-1 text-center transition-all cursor-pointer ${
+                  cadenceFilter === "weekly"
+                    ? "bg-accent text-void font-bold shadow-md"
+                    : "text-sub hover:text-platinum hover:bg-carbon/60"
+                }`}
+              >
+                <span className="text-[10px] font-mono uppercase tracking-wider">Semanal</span>
+                <span className="text-[11px] font-semibold">{weeklySteps.length}</span>
+              </button>
 
-                return (
-                  <div
-                    key={step.id}
-                    onClick={() => toggleCadenceStep(step.id)}
-                    className={`flex items-start gap-3 rounded-lg border p-3 transition-all cursor-pointer ${
-                      isCompleted
-                        ? "border-emerald-500/40 bg-emerald-500/5 text-sub"
-                        : temporalInfo.type === "overdue"
-                        ? "border-rose-500/50 bg-rose-500/10 hover:border-rose-400"
-                        : temporalInfo.type === "today"
-                        ? "border-amber-400/60 bg-amber-400/10 hover:border-amber-300"
-                        : "border-glass-border bg-carbon hover:border-glass-highlight hover:bg-carbon-muted/30"
-                    }`}
+              <button
+                type="button"
+                onClick={() => setCadenceFilter("monthly")}
+                className={`flex flex-col items-center justify-center rounded-lg py-1.5 px-1 text-center transition-all cursor-pointer ${
+                  cadenceFilter === "monthly"
+                    ? "bg-accent text-void font-bold shadow-md"
+                    : "text-sub hover:text-platinum hover:bg-carbon/60"
+                }`}
+              >
+                <span className="text-[10px] font-mono uppercase tracking-wider">Mensal</span>
+                <span className="text-[11px] font-semibold">{monthlySteps.length}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCadenceFilter("all")}
+                className={`flex flex-col items-center justify-center rounded-lg py-1.5 px-1 text-center transition-all cursor-pointer ${
+                  cadenceFilter === "all"
+                    ? "bg-accent text-void font-bold shadow-md"
+                    : "text-sub hover:text-platinum hover:bg-carbon/60"
+                }`}
+              >
+                <span className="text-[10px] font-mono uppercase tracking-wider">Cadeia</span>
+                <span className="text-[11px] font-semibold">{CADENCE_STEPS.length}</span>
+              </button>
+            </div>
+
+            {/* Lista Estilo Apple Reminders (iPhone) */}
+            <div className="rounded-xl border border-glass-border bg-carbon divide-y divide-glass-border/40 overflow-hidden shadow-inner">
+              {filteredSteps.length === 0 ? (
+                <div className="p-6 text-center space-y-2">
+                  <CheckCircle2 className="h-6 w-6 text-sub/50 mx-auto" />
+                  <p className="text-xs text-sub">Nenhuma tarefa pendente para este período.</p>
+                  <button
+                    type="button"
+                    onClick={() => setCadenceFilter("all")}
+                    className="text-xs font-mono text-accent hover:underline cursor-pointer"
                   >
-                    {/* Checkbox */}
-                    <div className="pt-0.5">
-                      <div
-                        className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
-                          isCompleted
-                            ? "border-emerald-400 bg-emerald-400 text-void"
-                            : "border-glass-border bg-void"
-                        }`}
-                      >
-                        {isCompleted && <Check className="h-3 w-3 stroke-[3]" />}
-                      </div>
-                    </div>
+                    Ver cadeia completa de prospecção &rarr;
+                  </button>
+                </div>
+              ) : (
+                filteredSteps.map((step) => {
+                  const isCompleted = completedCadence.includes(step.id);
+                  const temporalInfo = calculateStepTemporalStatus(
+                    lead.createdAt,
+                    step.dayOffset,
+                    isCompleted
+                  );
 
-                    {/* Detalhes do Passo */}
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <StepIcon
-                            className={`h-3.5 w-3.5 ${
-                              isCompleted
-                                ? "text-emerald-400"
-                                : temporalInfo.type === "overdue"
-                                ? "text-rose-400"
-                                : temporalInfo.type === "today"
-                                ? "text-amber-300"
-                                : "text-sub"
-                            }`}
-                          />
-                          <span
-                            className={`text-xs font-semibold ${
-                              isCompleted
-                                ? "line-through text-sub"
-                                : "text-platinum"
-                            }`}
-                          >
-                            {step.title}
-                          </span>
+                  const StepIcon =
+                    step.id === "step-1" || step.id === "step-4"
+                      ? Phone
+                      : step.id === "step-2"
+                      ? Mail
+                      : step.id === "step-3"
+                      ? UserCheck
+                      : step.id === "step-5"
+                      ? FileText
+                      : Clock;
+
+                  return (
+                    <div
+                      key={step.id}
+                      onClick={() => toggleCadenceStep(step.id)}
+                      className={`group flex items-center justify-between gap-3.5 p-3.5 transition-colors cursor-pointer ${
+                        isCompleted
+                          ? "bg-carbon/30 opacity-70 hover:opacity-100"
+                          : "hover:bg-carbon-muted/40"
+                      }`}
+                    >
+                      {/* Botão de Check Circular Apple Style */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                            isCompleted
+                              ? "border-emerald-500 bg-emerald-500 text-void shadow-sm"
+                              : "border-sub/50 group-hover:border-accent group-hover:bg-white/5"
+                          }`}
+                        >
+                          {isCompleted && <Check className="h-3 w-3 stroke-[3]" />}
                         </div>
 
-                        {/* Badge de Status Temporal */}
+                        {/* Conteúdo da Linha */}
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-xs font-medium tracking-tight ${
+                                isCompleted
+                                  ? "line-through text-sub"
+                                  : "text-platinum group-hover:text-accent"
+                              }`}
+                            >
+                              {step.title}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-sub/70 truncate">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Metadados à Direita: Canal e Status Temporal */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1 text-[10px] text-sub font-mono">
+                          <StepIcon className="h-3 w-3 text-sub/80" />
+                          <span className="hidden sm:inline">{step.shortAction}</span>
+                        </div>
+
                         <span
                           className={`rounded px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider font-semibold border ${temporalInfo.badgeClass}`}
                         >
                           {temporalInfo.tag}
                         </span>
                       </div>
-
-                      <div className="flex items-center justify-between text-[10px] text-sub font-mono">
-                        <span>{step.description}</span>
-                        <span>{formatShortDate(temporalInfo.targetDate)}</span>
-                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 

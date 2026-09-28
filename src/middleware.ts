@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const sessionToken = request.cookies.get("blacklink_session")?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthRoute = pathname === "/login";
+  const isAuthRoute = pathname === "/login" || pathname === "/register";
   const isApiRoute = pathname.startsWith("/api");
 
   // Permite tráfego direto para rotas de API e Webhooks externos (ex: n8n)

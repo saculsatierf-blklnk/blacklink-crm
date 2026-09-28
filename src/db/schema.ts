@@ -19,7 +19,7 @@ export const socialContentStatusEnum = pgEnum("social_content_status", ["draft",
 export const companies = pgTable("companies", {
   id: uuid("id").defaultRandom().primaryKey(),
   corporateName: varchar("corporate_name", { length: 255 }).notNull(),
-  documentCnpj: varchar("document_cnpj", { length: 18 }).notNull().unique(),
+  documentCnpj: varchar("document_cnpj", { length: 18 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
