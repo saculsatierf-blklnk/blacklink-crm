@@ -1,7 +1,7 @@
 import "dotenv/config";
 import postgres from "postgres";
 
-async function runSeed() {
+async function runTabulaRasa() {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
@@ -9,7 +9,7 @@ async function runSeed() {
     process.exit(1);
   }
 
-  console.log("Iniciando processo de seeding corporativo (Tabula Rasa)...");
+  console.log("Iniciando rotina de limpeza estrutural e setup Tabula Rasa...");
 
   const isLocal =
     connectionString.includes("localhost") ||
@@ -21,11 +21,13 @@ async function runSeed() {
   });
 
   try {
-    // 1. Extensões e Tipos
+    // 1. Garantir extensões e enums necessários
+    console.log("Configurando extensões e enums...");
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto;`;
     await sql`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'commercial';`;
 
-    // 2. Limpeza estrutural
+    // 2. Limpeza estrutural (Tabula Rasa) respeitando chaves estrangeiras
+    console.log("Executando limpeza em cascata das tabelas...");
     await sql`
       DO $$
       BEGIN
@@ -49,8 +51,10 @@ async function runSeed() {
         END IF;
       END $$;
     `;
+    console.log("Todas as tabelas foram limpas com sucesso.");
 
-    // 3. Tenant Principal
+    // 3. Criação do Tenant Principal
+    console.log("Criando tenant principal na tabela companies...");
     const [company] = await sql`
       INSERT INTO companies (id, corporate_name, document_cnpj)
       VALUES (
@@ -60,8 +64,12 @@ async function runSeed() {
       )
       RETURNING id, corporate_name, document_cnpj;
     `;
+    console.log(`Tenant criado: ${company.corporate_name} (ID: ${company.id})`);
 
-    // 4. Usuários
+    // 4. Criação dos dois perfis com hash pgcrypto (bcrypt)
+    console.log("Criando perfis de acesso na tabela users...");
+
+    // Perfil 1: Administrador (adm@blacklink.com)
     const [adminUser] = await sql`
       INSERT INTO users (id, company_id, full_name, email, password_hash, role)
       VALUES (
@@ -74,7 +82,9 @@ async function runSeed() {
       )
       RETURNING id, full_name, email, role;
     `;
+    console.log(`Usuário Administrador criado: ${adminUser.email} (Role: ${adminUser.role})`);
 
+    // Perfil 2: Operador Comercial (comercial@blacklink.com)
     const [commercialUser] = await sql`
       INSERT INTO users (id, company_id, full_name, email, password_hash, role)
       VALUES (
@@ -87,19 +97,30 @@ async function runSeed() {
       )
       RETURNING id, full_name, email, role;
     `;
+    console.log(`Usuário Comercial criado: ${commercialUser.email} (Role: ${commercialUser.role})`);
+
+    // 5. Verificação da autenticação criptográfica
+    const verifyAdmin = await sql`
+      SELECT (password_hash = crypt('363900', password_hash)) as is_valid 
+      FROM users WHERE email = 'adm@blacklink.com';
+    `;
+    const verifyCommercial = await sql`
+      SELECT (password_hash = crypt('363900', password_hash)) as is_valid 
+      FROM users WHERE email = 'comercial@blacklink.com';
+    `;
 
     console.log("------------------------------------------");
-    console.log("SEEDING_TABULA_RASA_CONCLUIDO");
+    console.log("TABULA_RASA_CONCLUIDA_COM_SUCESSO");
     console.log(`EMPRESA: ${company.corporate_name} (${company.id})`);
-    console.log(`ADMIN: ${adminUser.email}`);
-    console.log(`COMERCIAL: ${commercialUser.email}`);
+    console.log(`ADMIN: ${adminUser.email} - Senha validada: ${verifyAdmin[0].is_valid}`);
+    console.log(`COMERCIAL: ${commercialUser.email} - Senha validada: ${verifyCommercial[0].is_valid}`);
     console.log("------------------------------------------");
   } catch (error) {
-    console.error("Falha na execução do seed:", error);
+    console.error("Falha ao executar rotina Tabula Rasa:", error);
     process.exit(1);
   } finally {
     await sql.end();
   }
 }
 
-runSeed();
+runTabulaRasa();

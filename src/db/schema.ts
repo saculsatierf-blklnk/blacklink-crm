@@ -5,7 +5,7 @@ import { integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar, vector
 // 1. ENUMS
 // ==========================================
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "editor", "viewer"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "commercial", "editor", "viewer"]);
 export const leadStatusEnum = pgEnum("lead_status", ["new", "negotiation", "closed"]);
 export const socialContentStatusEnum = pgEnum("social_content_status", ["draft", "pending", "approved"]);
 

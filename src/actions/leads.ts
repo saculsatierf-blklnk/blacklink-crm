@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
   leads,
+  companies,
   dealTelemetryEmbeddings,
   type Lead,
   type CadenceState,
@@ -575,8 +576,8 @@ export async function createLeadAction(
     }
 
     // Resolução de companyId para isolamento multi-tenant
-    const [existingLead] = await db.select({ companyId: leads.companyId }).from(leads).limit(1);
-    const companyId = existingLead?.companyId || "44d73af8-8026-4061-8aa9-91a6becd33c9";
+    const [mainCompany] = await db.select({ id: companies.id }).from(companies).limit(1);
+    const companyId = mainCompany?.id || "cad1caea-2de8-46f3-8dd0-17ab0ede7377";
 
     const assignedOwner = ownerId || "lucas.leite";
     const op = getOperator(assignedOwner);

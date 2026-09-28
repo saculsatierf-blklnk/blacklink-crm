@@ -29,22 +29,29 @@ export default function LoginPage() {
     try {
       setServerError(null);
 
-      const isCommercial = selectedRole === "commercial";
+      const cleanEmail = data.email.toLowerCase().trim();
+      const isCommercial =
+        cleanEmail === "comercial@blacklink.com" ||
+        cleanEmail.includes("comercial") ||
+        cleanEmail.includes("hunter") ||
+        (selectedRole === "commercial" && cleanEmail !== "adm@blacklink.com");
+
+      const resolvedRole: "commercial" | "admin" = isCommercial ? "commercial" : "admin";
 
       // Injeta o estado inicial do operador no Zustand
       setUser({
         id: isCommercial
           ? "u-commercial-hunter-01"
-          : "u-9e8a7b6c-5d4e-3f2a-1b0c-9d8e7f6a5b4c",
-        company_id: "c-0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d",
-        role: selectedRole,
+          : "u-admin-master-01",
+        company_id: "cad1caea-2de8-46f3-8dd0-17ab0ede7377",
+        role: resolvedRole,
         name: isCommercial
           ? "Operador Comercial (Hunter)"
-          : "Operador Black Link Enterprise",
+          : "Administrador Black Link",
         email: data.email,
       });
 
-      const result = await loginAction({ ...data, role: selectedRole });
+      const result = await loginAction({ ...data, role: resolvedRole });
 
       if (result?.error) {
         setServerError(result.error);
@@ -141,7 +148,7 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
-                  placeholder="operador@blacklink.com.br"
+                  placeholder="adm@blacklink.com ou comercial@blacklink.com"
                   autoComplete="email"
                   disabled={isSubmitting}
                   {...register("email")}
