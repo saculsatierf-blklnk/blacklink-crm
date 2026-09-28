@@ -4,41 +4,50 @@ export interface Operator {
   shortName: string;
   role: string;
   badgeClass: string;
+  email?: string;
 }
 
+/**
+ * Operadores padrão vinculados ao tenant principal (Black Link Enterprise)
+ * IDs sincronizados com a tabela users no PostgreSQL
+ */
 export const OPERATORS: Operator[] = [
   {
-    id: "lucas.leite",
-    name: "Lucas Leite",
-    shortName: "Lucas L.",
-    role: "Hunter Principal",
-    badgeClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
-  },
-  {
-    id: "mariana.silva",
-    name: "Mariana Silva",
-    shortName: "Mariana S.",
-    role: "Closer Senior",
-    badgeClass: "border-blue-500/40 bg-blue-500/10 text-blue-400",
-  },
-  {
-    id: "carlos.mendes",
-    name: "Carlos Mendes",
-    shortName: "Carlos M.",
-    role: "SDR Enterprise",
+    id: "8ceda3ae-ba24-4545-9e75-2e9f88e0de74",
+    name: "Administrador Black Link",
+    shortName: "Admin",
+    role: "Administrador",
     badgeClass: "border-purple-500/40 bg-purple-500/10 text-purple-400",
+    email: "adm@blacklink.com",
+  },
+  {
+    id: "070af81b-047d-480a-8207-10d93b1a3c38",
+    name: "Operador Comercial (Hunter)",
+    shortName: "Hunter",
+    role: "Hunter Comercial",
+    badgeClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
+    email: "comercial@blacklink.com",
   },
 ];
 
 export function getOperator(id?: string | null): Operator {
+  if (!id) return OPERATORS[0];
   const found = OPERATORS.find((op) => op.id === id);
-  return (
-    found || {
-      id: id || "desconhecido",
-      name: id || "Operador",
-      shortName: id || "Operador",
-      role: "Vendas",
-      badgeClass: "border-glass-border bg-void/50 text-sub",
-    }
-  );
+  if (found) return found;
+
+  // Fallbacks para compatibilidade com registros legados
+  if (id === "lucas.leite" || id === "commercial") {
+    return OPERATORS[1];
+  }
+  if (id === "admin") {
+    return OPERATORS[0];
+  }
+
+  return {
+    id,
+    name: id,
+    shortName: id.length > 12 ? id.slice(0, 8) + "..." : id,
+    role: "Operador",
+    badgeClass: "border-glass-border bg-void/50 text-sub",
+  };
 }

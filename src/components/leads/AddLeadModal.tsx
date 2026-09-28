@@ -5,9 +5,6 @@ import {
   AlertTriangle,
   Building2,
   CheckCircle2,
-  Clock,
-  Coins,
-  FileText,
   Mail,
   Phone,
   Radar,
@@ -20,37 +17,92 @@ import type { Lead, NoteEntry } from "@/db/schema";
 import {
   checkLeadCollisionAction,
   createLeadAction,
+  getCompanyOperatorsAction,
   type CollisionCheckResult,
 } from "@/actions/leads";
-import { OPERATORS } from "@/lib/operators";
+import { OPERATORS, type Operator } from "@/lib/operators";
 
 interface AddLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLeadCreated: (newLead: Lead) => void;
   defaultOwnerId?: string;
+  operators?: Operator[];
+}
+
+const COUNTRY_CODES = [
+  { code: "+55", label: "Brasil", flag: "🇧🇷" },
+  { code: "+1", label: "EUA / Canadá", flag: "🇺🇸" },
+  { code: "+351", label: "Portugal", flag: "🇵🇹" },
+  { code: "+34", label: "Espanha", flag: "🇪🇸" },
+  { code: "+44", label: "Reino Unido", flag: "🇬🇧" },
+  { code: "+54", label: "Argentina", flag: "🇦🇷" },
+  { code: "+598", label: "Uruguai", flag: "🇺🇾" },
+  { code: "+56", label: "Chile", flag: "🇨🇱" },
+  { code: "+57", label: "Colômbia", flag: "🇨🇴" },
+  { code: "+52", label: "México", flag: "🇲🇽" },
+];
+
+function formatBRPhone(rawDigits: string): string {
+  const digits = rawDigits.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 
 export function AddLeadModal({
   isOpen,
   onClose,
   onLeadCreated,
-  defaultOwnerId = "lucas.leite",
+  defaultOwnerId,
+  operators: propOperators,
 }: AddLeadModalProps) {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [estimatedValue, setEstimatedValue] = useState("");
-  const [ownerId, setOwnerId] = useState(defaultOwnerId);
+  const [selectedDdi, setSelectedDdi] = useState("+55");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [ownerId, setOwnerId] = useState(defaultOwnerId || "");
   const [initialNote, setInitialNote] = useState("");
+
+  // Operadores dinâmicos da base
+  const [operatorsList, setOperatorsList] = useState<Operator[]>(
+    propOperators && propOperators.length > 0 ? propOperators : OPERATORS
+  );
 
   // Estado do Radar Anti-Colisão
   const [isCheckingCollision, setIsCheckingCollision] = useState(false);
   const [collisionResult, setCollisionResult] = useState<CollisionCheckResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Carrega operadores reais vinculados ao tenant no PostgreSQL
+  useEffect(() => {
+    if (propOperators && propOperators.length > 0) {
+      setOperatorsList(propOperators);
+      if (!ownerId && propOperators[0]?.id) {
+        setOwnerId(propOperators[0].id);
+      }
+      return;
+    }
+
+    getCompanyOperatorsAction().then((ops) => {
+      if (ops && ops.length > 0) {
+        setOperatorsList(ops);
+        setOwnerId((prev) => {
+          if (!prev || prev === "todos" || prev === "lucas.leite" || !ops.some((o) => o.id === prev)) {
+            return ops[0].id;
+          }
+          return prev;
+        });
+      }
+    });
+  }, [propOperators, isOpen]);
 
   // Atualiza defaultOwner quando alterado externamente
   useEffect(() => {
@@ -91,11 +143,28 @@ export function AddLeadModal({
     email.trim().length > 0 &&
     !hasCollision;
 
+  const handlePhoneChange = (val: string) => {
+    if (selectedDdi === "+55") {
+      setPhoneNumber(formatBRPhone(val));
+    } else {
+      setPhoneNumber(val);
+    }
+  };
+
+  const handleDdiChange = (newDdi: string) => {
+    setSelectedDdi(newDdi);
+    if (newDdi === "+55") {
+      setPhoneNumber(formatBRPhone(phoneNumber));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid || isPending) return;
 
     setSubmitError(null);
+
+    const fullPhone = phoneNumber.trim() ? `${selectedDdi} ${phoneNumber.trim()}` : undefined;
 
     startTransition(async () => {
       const res = await createLeadAction({
@@ -103,9 +172,8 @@ export function AddLeadModal({
         company,
         roleTitle,
         email,
-        phone,
-        estimatedValue,
-        ownerId,
+        phone: fullPhone,
+        ownerId: ownerId || undefined,
         initialNote,
       });
 
@@ -123,8 +191,8 @@ export function AddLeadModal({
     setCompany("");
     setRoleTitle("");
     setEmail("");
-    setPhone("");
-    setEstimatedValue("");
+    setSelectedDdi("+55");
+    setPhoneNumber("");
     setInitialNote("");
     setCollisionResult(null);
     setSubmitError(null);
@@ -343,7 +411,7 @@ export function AddLeadModal({
             </div>
           )}
 
-          {/* Linha 3: Cargo e Valor Estimado */}
+          {/* Linha 3: Cargo e Telefone / WhatsApp com DDI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
@@ -363,55 +431,50 @@ export function AddLeadModal({
 
             <div className="space-y-1.5">
               <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
-                Valor Estimado
+                Telefone / WhatsApp
               </label>
-              <div className="relative">
-                <Coins className="absolute left-3 top-2.5 h-3.5 w-3.5 text-accent" />
-                <input
-                  type="text"
-                  value={estimatedValue}
-                  onChange={(e) => setEstimatedValue(e.target.value)}
-                  placeholder="Ex: R$ 50.000,00"
-                  className="w-full rounded-md border border-glass-border bg-carbon-muted pl-9 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
-                />
+              <div className="flex rounded-md border border-glass-border bg-carbon-muted focus-within:border-accent overflow-hidden">
+                <select
+                  value={selectedDdi}
+                  onChange={(e) => handleDdiChange(e.target.value)}
+                  className="bg-carbon px-2.5 py-2 text-xs font-mono text-platinum border-r border-glass-border focus:outline-none cursor-pointer"
+                >
+                  {COUNTRY_CODES.map((item) => (
+                    <option key={item.code} value={item.code} className="bg-carbon text-platinum">
+                      {item.flag} {item.code}
+                    </option>
+                  ))}
+                </select>
+                <div className="relative flex-1 flex items-center">
+                  <Phone className="absolute left-2.5 h-3.5 w-3.5 text-sub pointer-events-none" />
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder={selectedDdi === "+55" ? "(11) 9XXXX-XXXX" : "Número de telefone"}
+                    className="w-full bg-transparent pl-8 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Linha 4: Telefone e Operador Responsável */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
-                Telefone / WhatsApp
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-3.5 w-3.5 text-sub" />
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Ex: +55 (11) 98765-4321"
-                  className="w-full rounded-md border border-glass-border bg-carbon-muted pl-9 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
-                Operador Responsável (Dono)
-              </label>
-              <select
-                value={ownerId}
-                onChange={(e) => setOwnerId(e.target.value)}
-                className="w-full rounded-md border border-glass-border bg-carbon-muted px-3 py-2 text-xs font-mono text-platinum focus:border-accent focus:outline-none cursor-pointer"
-              >
-                {OPERATORS.map((op) => (
-                  <option key={op.id} value={op.id} className="bg-carbon text-platinum">
-                    {op.name} ({op.role})
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Linha 4: Operador Responsável (Dono Dinâmico) */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+              Operador Responsável (Dono)
+            </label>
+            <select
+              value={ownerId}
+              onChange={(e) => setOwnerId(e.target.value)}
+              className="w-full rounded-md border border-glass-border bg-carbon-muted px-3 py-2 text-xs font-mono text-platinum focus:border-accent focus:outline-none cursor-pointer"
+            >
+              {operatorsList.map((op) => (
+                <option key={op.id} value={op.id} className="bg-carbon text-platinum">
+                  {op.name} ({op.role})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Linha 5: Anotação Inicial */}

@@ -2,10 +2,12 @@
 
 import { eq, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { db } from "@/db";
 import {
   leads,
   companies,
+  users,
   dealTelemetryEmbeddings,
   type Lead,
   type CadenceState,
@@ -13,7 +15,7 @@ import {
   type TelemetryEvent,
   type ActivityType,
 } from "@/db/schema";
-import { getOperator } from "@/lib/operators";
+import { getOperator, OPERATORS, type Operator } from "@/lib/operators";
 import {
   TELEMETRY_WEIGHTS,
   calculateDealScore,
@@ -553,6 +555,67 @@ export interface CreateLeadInput {
 }
 
 /**
+ * Recupera o contexto do usuário autenticado através do cookie de sessão
+ */
+async function getSessionContext() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("blacklink_session")?.value;
+    if (!token) return null;
+    const jsonStr = Buffer.from(token, "base64url").toString("utf-8");
+    return JSON.parse(jsonStr) as {
+      id?: string;
+      company_id?: string;
+      role?: string;
+      name?: string;
+      email?: string;
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retorna os operadores reais vinculados ao company_id do tenant da sessão
+ */
+export async function getCompanyOperatorsAction(): Promise<Operator[]> {
+  try {
+    const session = await getSessionContext();
+    const companyId = session?.company_id || "cad1caea-2de8-46f3-8dd0-17ab0ede7377";
+
+    const tenantUsers = await db
+      .select({
+        id: users.id,
+        name: users.fullName,
+        email: users.email,
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.companyId, companyId));
+
+    if (tenantUsers && tenantUsers.length > 0) {
+      return tenantUsers.map((u) => {
+        const isAdmin = u.role === "admin";
+        return {
+          id: u.id,
+          name: u.name,
+          shortName: u.name.split(" ")[0],
+          role: isAdmin ? "Administrador" : "Hunter Comercial",
+          badgeClass: isAdmin
+            ? "border-purple-500/40 bg-purple-500/10 text-purple-400"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400",
+          email: u.email,
+        };
+      });
+    }
+  } catch (error) {
+    console.warn("Falha ao buscar operadores dinâmicos no banco:", error);
+  }
+
+  return OPERATORS;
+}
+
+/**
  * Criação atômica de lead com bloqueio de colisão e vinculação de propriedade (owner)
  */
 export async function createLeadAction(
@@ -575,12 +638,17 @@ export async function createLeadAction(
       };
     }
 
-    // Resolução de companyId para isolamento multi-tenant
-    const [mainCompany] = await db.select({ id: companies.id }).from(companies).limit(1);
-    const companyId = mainCompany?.id || "cad1caea-2de8-46f3-8dd0-17ab0ede7377";
+    // Captura com prioridade absoluta o ID da empresa através do contexto da sessão do usuário autenticado
+    const session = await getSessionContext();
+    const companyId = session?.company_id || "cad1caea-2de8-46f3-8dd0-17ab0ede7377";
 
-    const assignedOwner = ownerId || "lucas.leite";
+    // Resolução do operador responsável: respeita o selecionado ou vincula à sessão ativa
+    const assignedOwner =
+      ownerId && ownerId !== "todos"
+        ? ownerId
+        : session?.id || "070af81b-047d-480a-8207-10d93b1a3c38";
     const op = getOperator(assignedOwner);
+    const authorName = op.name || session?.name || "Operador Comercial";
 
     const initialNotes: NoteEntry[] = initialNote?.trim()
       ? [
@@ -588,7 +656,7 @@ export async function createLeadAction(
             id: "note-" + Date.now(),
             text: initialNote.trim(),
             createdAt: new Date().toISOString(),
-            author: `${op.name} (${op.role})`,
+            author: authorName,
           },
         ]
       : [];
@@ -596,7 +664,7 @@ export async function createLeadAction(
     const cadenceState: CadenceState = {
       completedSteps: [],
       roleTitle: roleTitle?.trim() || "Decisor Comercial",
-      estimatedValue: estimatedValue?.trim() || "R$ 50.000,00",
+      estimatedValue: estimatedValue?.trim() || undefined,
     };
 
     const [newLead] = await db

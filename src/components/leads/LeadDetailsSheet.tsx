@@ -42,7 +42,7 @@ import {
   parseLeadInfo,
   toStartOfDay,
 } from "@/lib/cadence";
-import { OPERATORS, getOperator } from "@/lib/operators";
+import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
@@ -57,6 +57,7 @@ interface LeadDetailsSheetProps {
     activityType: string,
     newOwnerId?: string
   ) => void;
+  operators?: Operator[];
 }
 
 export function LeadDetailsSheet({
@@ -67,6 +68,7 @@ export function LeadDetailsSheet({
   onCadenceChange,
   onOwnerChange,
   onActivityScheduled,
+  operators = OPERATORS,
 }: LeadDetailsSheetProps) {
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
 
@@ -473,7 +475,7 @@ export function LeadDetailsSheet({
                   />
                 ) : (
                   <div className="text-xs font-mono font-bold text-accent truncate">
-                    {estimatedValue || "R$ 45.000,00"}
+                    {estimatedValue || "A Definir (Pós-Qualificação)"}
                   </div>
                 )}
               </div>
@@ -491,7 +493,7 @@ export function LeadDetailsSheet({
                   onChange={(e) => handleOwnerSelect(e.target.value)}
                   className="w-full rounded border border-glass-border bg-carbon px-2 py-1 text-xs text-platinum font-mono focus:border-accent focus:outline-none cursor-pointer"
                 >
-                  {OPERATORS.map((op) => (
+                  {operators.map((op) => (
                     <option key={op.id} value={op.id} className="bg-carbon text-platinum">
                       {op.name}
                     </option>
@@ -671,7 +673,7 @@ export function LeadDetailsSheet({
                   Operador Responsável pela Execução
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {OPERATORS.map((op) => {
+                  {operators.map((op) => {
                     const isSelected = assignedOperatorId === op.id;
                     const isCurrentOwner = ownerId === op.id;
                     return (

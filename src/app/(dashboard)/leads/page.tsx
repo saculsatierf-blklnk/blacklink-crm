@@ -3,6 +3,7 @@ import { Download, Filter } from "lucide-react";
 import { db } from "@/db";
 import { leads, type Lead } from "@/db/schema";
 import { LeadsKanban } from "@/components/leads/LeadsKanban";
+import { getCompanyOperatorsAction } from "@/actions/leads";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,10 @@ async function getLeads(): Promise<Lead[]> {
 }
 
 export default async function LeadsPage() {
-  const leadsData = await getLeads();
+  const [leadsData, operators] = await Promise.all([
+    getLeads(),
+    getCompanyOperatorsAction(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -50,7 +54,7 @@ export default async function LeadsPage() {
       </div>
 
       {/* Board Kanban de Leads B2B */}
-      <LeadsKanban initialLeads={leadsData} />
+      <LeadsKanban initialLeads={leadsData} initialOperators={operators} />
     </div>
   );
 }

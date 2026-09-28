@@ -24,14 +24,19 @@ import {
   Zap,
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
-import { updateLeadStatusAction, type LeadStatus } from "@/actions/leads";
+import {
+  updateLeadStatusAction,
+  getCompanyOperatorsAction,
+  type LeadStatus,
+} from "@/actions/leads";
 import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
-import { OPERATORS, getOperator } from "@/lib/operators";
+import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
+  initialOperators?: Operator[];
 }
 
 interface ColumnConfig {
@@ -119,8 +124,9 @@ function getActivityInfo(date?: Date | string | null, type?: string | null) {
   };
 }
 
-export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
+export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps) {
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
+  const [operators, setOperators] = useState<Operator[]>(initialOperators || OPERATORS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -128,6 +134,17 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
 
   // Silo de Propriedade: Filtro de Operador Ativo
   const [activeOperator, setActiveOperator] = useState<string>("todos");
+
+  // Sincroniza operadores dinâmicos
+  useEffect(() => {
+    if (initialOperators && initialOperators.length > 0) {
+      setOperators(initialOperators);
+      return;
+    }
+    getCompanyOperatorsAction().then((ops) => {
+      if (ops && ops.length > 0) setOperators(ops);
+    });
+  }, [initialOperators]);
 
   // Mapa reativo do estado de cadência por lead derivado do PostgreSQL
   const [cadenceMap, setCadenceMap] = useState<Record<string, string[]>>({});
@@ -339,9 +356,9 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
             className="rounded-md border border-glass-border bg-carbon-muted px-3 py-1.5 text-xs font-mono text-platinum focus:border-accent focus:outline-none cursor-pointer"
           >
             <option value="todos">Todos os Operadores ({leadsList.length})</option>
-            {OPERATORS.map((op) => {
+            {operators.map((op) => {
               const count = leadsList.filter(
-                (l) => (l.ownerId || "lucas.leite") === op.id
+                (l) => (l.ownerId || operators[0]?.id) === op.id
               ).length;
               return (
                 <option key={op.id} value={op.id}>
@@ -642,6 +659,7 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
         onCadenceChange={handleCadenceChange}
         onOwnerChange={handleOwnerChange}
         onActivityScheduled={handleActivityScheduled}
+        operators={operators}
       />
 
       {/* Modal de Criação de Lead com Radar Anti-Colisão */}
@@ -649,7 +667,8 @@ export function LeadsKanban({ initialLeads }: LeadsKanbanProps) {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onLeadCreated={handleLeadCreated}
-        defaultOwnerId={activeOperator !== "todos" ? activeOperator : "lucas.leite"}
+        defaultOwnerId={activeOperator !== "todos" ? activeOperator : operators[0]?.id}
+        operators={operators}
       />
     </div>
   );
