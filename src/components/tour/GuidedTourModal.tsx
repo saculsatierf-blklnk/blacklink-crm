@@ -66,7 +66,7 @@ export function GuidedTourModal() {
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
-  // Localiza e mede o elemento alvo na tela
+  // Localiza e mede o elemento alvo na tela sem forçar rolagem
   const measureTarget = useCallback(() => {
     if (!isActive || !currentStep) {
       setRect(null);
@@ -77,22 +77,6 @@ export function GuidedTourModal() {
 
     if (targetEl) {
       const bRect = targetEl.getBoundingClientRect();
-
-      // Rola a tela suavemente para que o elemento fique visível
-      const isOutOfView =
-        bRect.top < 80 ||
-        bRect.bottom > window.innerHeight - 80 ||
-        bRect.left < 20 ||
-        bRect.right > window.innerWidth - 20;
-
-      if (isOutOfView) {
-        targetEl.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "center",
-        });
-      }
-
       setRect({
         top: bRect.top,
         left: bRect.left,
@@ -102,16 +86,42 @@ export function GuidedTourModal() {
         right: bRect.right,
       });
     } else {
-      // Se não encontrou o elemento imediatamente, tenta novamente em breve
       setRect(null);
     }
   }, [isActive, currentStep]);
 
+  // Rola suavemente para o elemento alvo UMA ÚNICA VEZ ao trocar de passo (exceto elementos fixos da barra lateral)
+  useEffect(() => {
+    if (!isActive || !currentStep) return;
+
+    // Não rola a página para elementos que já estão fixos na barra lateral ou cabeçalho
+    if (
+      currentStep.target.startsWith("sidebar") ||
+      currentStep.target.startsWith("header")
+    ) {
+      return;
+    }
+
+    const targetEl = document.querySelector(`[data-tour="${currentStep.target}"]`);
+    if (targetEl) {
+      const bRect = targetEl.getBoundingClientRect();
+      const isOutOfView =
+        bRect.top < 80 ||
+        bRect.bottom > window.innerHeight - 80;
+
+      if (isOutOfView) {
+        targetEl.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }
+  }, [isActive, currentStepIndex, currentStep]);
+
   useEffect(() => {
     measureTarget();
 
-    // Re-mede em intervalos curtos caso ocorra carregamento de conteúdo ou animações
-    const timer = setTimeout(measureTarget, 250);
+    const timer = setTimeout(measureTarget, 200);
     const scrollHandler = () => measureTarget();
 
     window.addEventListener("scroll", scrollHandler, { passive: true });

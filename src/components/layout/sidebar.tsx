@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Settings,
   Shield,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -29,9 +30,9 @@ const navItems: NavItem[] = [
     icon: Users,
   },
   {
-    label: "Conteúdos",
-    href: "/conteudos",
-    icon: FileText,
+    label: "Marketing",
+    href: "/marketing",
+    icon: Sparkles,
   },
   {
     label: "Configurações",

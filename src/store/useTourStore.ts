@@ -28,7 +28,7 @@ export const DASHBOARD_TOUR_STEPS: TourStep[] = [
     title: "Navegação & Módulos",
     badge: "Módulos",
     description:
-      "Navegue entre o Painel Executivo e a área de Leads B2B. O perfil Comercial tem acesso focado exclusivamente na execução do pipeline de vendas.",
+      "Navegue entre o Painel Executivo, a esteira de Leads B2B e o novo gerador autônomo de Marketing & Tráfego Pago.",
     placement: "right",
   },
   {

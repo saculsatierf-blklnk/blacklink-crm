@@ -407,10 +407,10 @@ export default async function DashboardPage() {
                 </p>
               </div>
               <Link
-                href="/conteudos"
+                href="/marketing"
                 className="inline-flex items-center gap-1.5 rounded-md border border-glass-border bg-carbon-muted px-3 py-1.5 text-xs font-semibold text-platinum hover:border-accent/40 transition-colors"
               >
-                <span>Acessar Módulo de Conteúdo</span>
+                <span>Acessar Módulo de Marketing</span>
               </Link>
             </div>
           ) : (
