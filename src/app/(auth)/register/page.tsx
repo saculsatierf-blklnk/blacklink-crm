@@ -32,7 +32,6 @@ export default function RegisterPage() {
   const [step, setStep] = useState<"form" | "verify">("form");
   const [serverError, setServerError] = useState<string | null>(null);
   const [targetEmail, setTargetEmail] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -72,9 +71,6 @@ export default function RegisterPage() {
 
       if (res.success && res.email) {
         setTargetEmail(res.email);
-        if (res.devCode) {
-          setDevCode(res.devCode);
-        }
         setStep("verify");
         setResendCooldown(60);
       } else {
@@ -94,7 +90,6 @@ export default function RegisterPage() {
       const res = await requestRegistrationCodeAction(data);
 
       if (res.success) {
-        if (res.devCode) setDevCode(res.devCode);
         setResendCooldown(60);
       } else {
         setServerError(res.error || "Erro ao reenviar chave.");
@@ -392,24 +387,6 @@ export default function RegisterPage() {
                   <span className="font-semibold text-platinum font-mono">{targetEmail}</span>.
                 </p>
               </div>
-
-              {/* Informação sobre ambiente de testes / sandbox */}
-              {devCode && (
-                <div className="rounded-lg border border-amber-400/40 bg-amber-400/10 p-3.5 space-y-1.5 text-[11px] text-amber-200">
-                  <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-amber-300">
-                    <KeyRound className="h-3.5 w-3.5" />
-                    <span>Chave Gerada para seu E-mail</span>
-                  </div>
-                  <p className="leading-snug">
-                    Insira o código numérico abaixo para ativar o seu acesso:
-                  </p>
-                  <div className="mt-1 flex items-center justify-center">
-                    <span className="font-mono text-xl font-bold tracking-widest bg-carbon px-4 py-1.5 rounded border border-amber-400/40 text-amber-300 select-all">
-                      {devCode}
-                    </span>
-                  </div>
-                </div>
-              )}
 
               <form onSubmit={handleVerifyCode} className="space-y-4">
                 <div className="space-y-2">

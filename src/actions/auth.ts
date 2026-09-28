@@ -262,7 +262,6 @@ export interface RequestCodeResult {
   success: boolean;
   error?: string;
   email?: string;
-  devCode?: string;
 }
 
 /**
@@ -323,17 +322,23 @@ export async function requestRegistrationCodeAction(
     });
 
     // 6. Envia o e-mail real com o template executivo
-    await sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
       toEmail: cleanEmail,
       recipientName: fullName.trim(),
       companyName: companyName.trim(),
       verificationCode,
     });
 
+    if (!emailResult.success) {
+      return {
+        success: false,
+        error: emailResult.error || "Não foi possível enviar a chave para o seu e-mail.",
+      };
+    }
+
     return {
       success: true,
       email: cleanEmail,
-      devCode: !process.env.SMTP_HOST ? verificationCode : undefined,
     };
   } catch (err: unknown) {
     console.error("Falha ao gerar chave de verificação:", err);
