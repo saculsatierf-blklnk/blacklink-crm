@@ -21,6 +21,14 @@ export type { LoginFormValues, RegisterCompanyFormValues, CreateTeamMemberFormVa
 export interface AuthActionResult {
   error?: string;
   success?: boolean;
+  user?: {
+    id: string;
+    company_id: string;
+    role: "admin" | "commercial";
+    name: string;
+    email: string;
+  };
+  destination?: string;
 }
 
 export interface TeamMember {
@@ -157,9 +165,18 @@ export async function loginAction(
     maxAge: 60 * 60 * 24 * 7, // 7 dias
   });
 
-  // Redirecionamento condicional pós-autenticação (RBAC)
   const destination = sessionPayload.role === "commercial" ? "/leads" : "/";
-  redirect(destination);
+  return {
+    success: true,
+    user: {
+      id: sessionPayload.id,
+      company_id: sessionPayload.company_id,
+      role: sessionPayload.role,
+      name: sessionPayload.name,
+      email: sessionPayload.email,
+    },
+    destination,
+  };
 }
 
 /**
@@ -637,3 +654,183 @@ export async function logoutAction() {
   cookieStore.delete("blacklink_session");
   redirect("/login");
 }
+
+/**
+ * Solicitação de chave de acesso rápido via Google (envia código de 6 dígitos para o Gmail)
+ */
+export async function requestGoogleLoginCodeAction(email: string): Promise<{ success: boolean; error?: string }> {
+  const cleanEmail = email.toLowerCase().trim();
+  if (!cleanEmail || !cleanEmail.includes("@")) {
+    return { success: false, error: "Por favor, informe um e-mail válido." };
+  }
+
+  try {
+    const userRecords = await db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        email: users.email,
+        companyId: users.companyId,
+      })
+      .from(users)
+      .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
+      .limit(1);
+
+    if (userRecords.length === 0) {
+      return {
+        success: false,
+        error: "Nenhuma conta corporativa encontrada com este e-mail. Por favor, cadastre sua empresa primeiro.",
+      };
+    }
+
+    const user = userRecords[0];
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Remove tokens anteriores deste e-mail
+    await db
+      .delete(verificationTokens)
+      .where(sql`LOWER(${verificationTokens.email}) = ${cleanEmail}`);
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    await db.insert(verificationTokens).values({
+      email: cleanEmail,
+      token: verificationCode,
+      companyName: "Black Link CRM",
+      fullName: user.fullName || "Operador",
+      passwordHash: "google-magic-login",
+      expiresAt,
+    });
+
+    const emailRes = await sendVerificationEmail({
+      toEmail: cleanEmail,
+      recipientName: user.fullName || "Operador",
+      companyName: "Black Link CRM",
+      verificationCode,
+    });
+
+    if (!emailRes.success) {
+      return {
+        success: false,
+        error: emailRes.error || "Falha ao enviar a chave para o seu e-mail.",
+      };
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    console.error("Erro ao solicitar chave Google:", err);
+    return {
+      success: false,
+      error: "Falha na comunicação com o servidor de autenticação.",
+    };
+  }
+}
+
+/**
+ * Validação da chave Google de 6 dígitos e criação da sessão corporativa
+ */
+export async function verifyGoogleLoginCodeAction({
+  email,
+  code,
+}: {
+  email: string;
+  code: string;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  user?: {
+    id: string;
+    company_id: string;
+    role: "admin" | "commercial";
+    name: string;
+    email: string;
+  };
+  destination?: string;
+}> {
+  const cleanEmail = email.toLowerCase().trim();
+  const cleanCode = code.trim();
+
+  try {
+    const tokens = await db
+      .select()
+      .from(verificationTokens)
+      .where(
+        sql`LOWER(${verificationTokens.email}) = ${cleanEmail} AND ${verificationTokens.token} = ${cleanCode} AND ${verificationTokens.expiresAt} > NOW()`
+      )
+      .limit(1);
+
+    if (tokens.length === 0) {
+      return {
+        success: false,
+        error: "Chave de acesso incorreta ou expirada. Verifique o código em seu e-mail.",
+      };
+    }
+
+    // Busca usuário real na tabela users
+    const userRecords = await db
+      .select({
+        id: users.id,
+        companyId: users.companyId,
+        fullName: users.fullName,
+        email: users.email,
+        role: users.role,
+      })
+      .from(users)
+      .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
+      .limit(1);
+
+    if (userRecords.length === 0) {
+      return {
+        success: false,
+        error: "Usuário corporativo não localizado na base de dados.",
+      };
+    }
+
+    const dbUser = userRecords[0];
+
+    // Remove token utilizado
+    await db
+      .delete(verificationTokens)
+      .where(sql`LOWER(${verificationTokens.email}) = ${cleanEmail}`);
+
+    const role = (dbUser.role as "admin" | "commercial") || "admin";
+    const sessionPayload = {
+      id: dbUser.id,
+      company_id: dbUser.companyId,
+      role,
+      name: dbUser.fullName,
+      email: dbUser.email,
+      createdAt: new Date().toISOString(),
+    };
+
+    const sessionToken = Buffer.from(JSON.stringify(sessionPayload)).toString("base64url");
+    const cookieStore = await cookies();
+    cookieStore.set("blacklink_session", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
+    const destination = role === "commercial" ? "/leads" : "/";
+
+    return {
+      success: true,
+      user: {
+        id: dbUser.id,
+        company_id: dbUser.companyId,
+        role,
+        name: dbUser.fullName,
+        email: dbUser.email,
+      },
+      destination,
+    };
+  } catch (err: unknown) {
+    console.error("Erro na validação da chave Google:", err);
+    return {
+      success: false,
+      error: "Falha ao validar a chave corporativa.",
+    };
+  }
+}
+
