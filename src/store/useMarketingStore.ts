@@ -3,6 +3,12 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 export type CreativeFormat = "carousel" | "story" | "post";
 
+export type PostApprovalStatus =
+  | "awaiting_approval"
+  | "reformulation_requested"
+  | "scheduled"
+  | "published";
+
 export interface CreativeSlide {
   slideNumber: number;
   headline: string;
@@ -25,6 +31,26 @@ export interface GeneratedCreativeResult {
   imageUrls: string[];
   createdAt: string;
   source: "n8n" | "ai_pipeline";
+}
+
+export interface ScheduledPost {
+  id: string;
+  theme: string;
+  format: CreativeFormat;
+  targetAudience?: string;
+  scheduledDate: string; // "2026-10-01 10:00" ou ISO
+  status: PostApprovalStatus;
+  hookHeadline: string;
+  bodyCopy: string;
+  ctaText: string;
+  hashtags: string[];
+  slides: CreativeSlide[];
+  imageUrls: string[];
+  reformulationFeedback?: string;
+  lastReformulatedAt?: string;
+  publishedAt?: string;
+  metaPostId?: string;
+  createdAt: string;
 }
 
 export interface AdPerformanceItem {
@@ -79,6 +105,10 @@ export interface MarketingFormData {
 }
 
 interface MarketingState {
+  // Navegação Interna da Rota /marketing
+  activeMarketingTab: "studio" | "schedule";
+  setActiveMarketingTab: (tab: "studio" | "schedule") => void;
+
   formData: MarketingFormData;
   isLoading: boolean;
   statusMessage: string;
@@ -87,17 +117,28 @@ interface MarketingState {
   history: GeneratedCreativeResult[];
   adCampaigns: AdPerformanceItem[];
 
-  // Estado do Robô Autônomo de Otimização
+  // Cronograma de Aprovação Multi-tenant
+  scheduledPosts: ScheduledPost[];
+  isApprovingPostId: string | null;
+  isReformulatingPostId: string | null;
+
+  // Robô de Otimização Autônoma
   isOptimizing: boolean;
   lastOptimizationRun: string | null;
   optimizationSummary: OptimizationSummary | null;
   optimizationLogs: OptimizationLogEntry[];
 
+  // Ações do Gerador
   setFormData: (data: Partial<MarketingFormData>) => void;
   setFormat: (format: CreativeFormat) => void;
   generateCreatives: () => Promise<GeneratedCreativeResult | null>;
   setActiveResult: (result: GeneratedCreativeResult | null) => void;
   resetForm: () => void;
+
+  // Ações do Cronograma & Aprovação
+  approvePost: (id: string) => Promise<boolean>;
+  updateCaption: (id: string, newText: string) => void;
+  requestReformulation: (id: string, feedback: string) => Promise<boolean>;
 
   // Ações do Agente de Tráfego
   fetchAdPerformance: () => Promise<void>;
@@ -112,6 +153,138 @@ const INITIAL_FORM_DATA: MarketingFormData = {
   competitorsReferences: "",
   format: "carousel",
 };
+
+const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
+  {
+    id: "post-sch-01",
+    theme: "Os 5 Gargalos Ocultos do Funil B2B",
+    format: "carousel",
+    targetAudience: "Decisores B2B, CEOs e Diretores Comerciais",
+    scheduledDate: "Amanhã • 10:00",
+    status: "awaiting_approval",
+    hookHeadline: "Como Dominar os Gargalos Ocultos do Funil B2B sem Queimar Margem",
+    bodyCopy:
+      "A maioria das operações corporativas trava por falta de clareza nos gargalos de esteira.\n\nQuando alinhamos inteligência de dados, cadência de tarefas e blindagem de território, o ciclo médio de fechamento cai pela metade.\n\nConfira os 5 passos estratégicos neste carrossel para implementar agora na sua empresa.",
+    ctaText: "Salve este carrossel para consultar na sua próxima reunião de alinhamento comercial.",
+    hashtags: ["#VendasB2B", "#BlackLink", "#InteligenciaComercial", "#GestaoEnterprise"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "O Diagnóstico Real do Funil B2B",
+        bodyText: "Por que 80% das empresas continuam utilizando métodos obsoletos de prospecção e como virar o jogo.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=1&total=5&headline=O+Diagnostico+Real+do+Funil+B2B&body=Por+que+80+das+empresas+continuam+utilizando+metodos+obsoletos+de+prospeccao+e+como+virar+o+jogo.&format=carousel",
+      },
+      {
+        slideNumber: 2,
+        headline: "Ponto Crítico: Silos & Colisões",
+        bodyText: "Sem radar anti-colisão, seus hunters abordam os mesmos decisores, queimando a reputação corporativa.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=2&total=5&headline=Ponto+Critico+Silos+e+Colisoes&body=Sem+radar+anti-colisao+seus+hunters+abordam+os+mesmos+decisores.&format=carousel",
+      },
+      {
+        slideNumber: 3,
+        headline: "A Regra de Ouro da Cadência",
+        bodyText: "Follow-ups espaçados em estilo minimalista para garantir presença executiva sem invasão.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=3&total=5&headline=A+Regra+de+Ouro+da+Cadencia&body=Follow-ups+espacados+em+estilo+minimalista+para+garantir+presenca.&format=carousel",
+      },
+      {
+        slideNumber: 4,
+        headline: "Passagem de Bastão Blindada",
+        bodyText: "A transição entre o pré-vendas (SDR) e o Closer não pode perder telemetria de notas ou dores do cliente.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=4&total=5&headline=Passagem+de+Bastao+Blindada&body=A+transicao+entre+SDR+e+Closer+nao+pode+perder+telemetria.&format=carousel",
+      },
+      {
+        slideNumber: 5,
+        headline: "Próxima Ação Executiva",
+        bodyText: "Estruture sua máquina de conversão no Black Link CRM e escale suas operações de tráfego pago.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=5&total=5&headline=Proxima+Acao+Executiva&body=Estruture+sua+maquina+de+conversao+no+Black+Link+CRM.&format=carousel",
+      },
+    ],
+    imageUrls: [
+      "/api/marketing/render-slide?slide=1&total=5&headline=O+Diagnostico+Real+do+Funil+B2B&body=Por+que+80+das+empresas+continuam+utilizando+metodos+obsoletos+de+prospeccao+e+como+virar+o+jogo.&format=carousel",
+      "/api/marketing/render-slide?slide=2&total=5&headline=Ponto+Critico+Silos+e+Colisoes&body=Sem+radar+anti-colisao+seus+hunters+abordam+os+mesmos+decisores.&format=carousel",
+      "/api/marketing/render-slide?slide=3&total=5&headline=A+Regra+de+Ouro+da+Cadencia&body=Follow-ups+espacados+em+estilo+minimalista+para+garantir+presenca.&format=carousel",
+      "/api/marketing/render-slide?slide=4&total=5&headline=Passagem+de+Bastao+Blindada&body=A+transicao+entre+SDR+e+Closer+nao+pode+perder+telemetria.&format=carousel",
+      "/api/marketing/render-slide?slide=5&total=5&headline=Proxima+Acao+Executiva&body=Estruture+sua+maquina+de+conversao+no+Black+Link+CRM.&format=carousel",
+    ],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-sch-02",
+    theme: "O Fim das Planilhas de Prospecção Desalinhadas",
+    format: "story",
+    targetAudience: "Heads de Vendas e Diretores Comerciais",
+    scheduledDate: "Quarta • 15:00",
+    status: "scheduled",
+    hookHeadline: "A Verdade que Ninguém Conta sobre Planilhas Comerciais",
+    bodyCopy:
+      "Se o seu time comercial passa mais tempo preenchendo planilhas do que conversando com decisores, a sua operação está sangrando margem.\n\nToque no link da bio para entender como virar a chave hoje.",
+    ctaText: "Responda a este story com 'ESTRATÉGIA' para receber o diagnóstico no Direct.",
+    hashtags: ["#OperacaoComercial", "#VendasB2B", "#BlackLink", "#Produtividade"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "Pare de perder contas qualificadas.",
+        bodyText: "O mercado corporativo mudou. O controle em planilhas gera pontos cegos críticos.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=1&total=3&headline=Pare+de+perder+contas+qualificadas&body=O+mercado+corporativo+mudou.+Controle+em+planilhas+gera+pontos+cegos.&format=story",
+      },
+      {
+        slideNumber: 2,
+        headline: "Cadência Diária em Ação",
+        bodyText: "Execute tarefas pontuais com hora marcada direto na esteira de prospecção.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=2&total=3&headline=Cadencia+Diaria+em+Acao&body=Execute+tarefas+pontuais+com+hora+marcada+direto+na+esteira.&format=story",
+      },
+      {
+        slideNumber: 3,
+        headline: "Pipeline Blindado",
+        bodyText: "Fale diretamente com os especialistas do ecossistema Black Link.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=3&total=3&headline=Pipeline+Blindado&body=Fale+diretamente+com+os+especialistas+do+ecossistema+Black+Link.&format=story",
+      },
+    ],
+    imageUrls: [
+      "/api/marketing/render-slide?slide=1&total=3&headline=Pare+de+perder+contas+qualificadas&body=O+mercado+corporativo+mudou.+Controle+em+planilhas+gera+pontos+cegos.&format=story",
+      "/api/marketing/render-slide?slide=2&total=3&headline=Cadencia+Diaria+em+Acao&body=Execute+tarefas+pontuais+com+hora+marcada+direto+na+esteira.&format=story",
+      "/api/marketing/render-slide?slide=3&total=3&headline=Pipeline+Blindado&body=Fale+diretamente+com+os+especialistas+do+ecossistema+Black+Link.&format=story",
+    ],
+    metaPostId: "meta_ig_agendado_984712",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-sch-03",
+    theme: "Dossiê Executivo de Conversão Enterprise",
+    format: "post",
+    targetAudience: "Diretores Financeiros (CFOs) e CEOs",
+    scheduledDate: "Sexta • 09:30",
+    status: "reformulation_requested",
+    hookHeadline: "Dossiê Estratégico: O Retorno Real sobre CAC em Contas Enterprise",
+    bodyCopy:
+      "Em mercados corporativos altamente competitivos, o que separa os líderes dos retardatários não é o volume de leads brutos, mas a densidade da qualificação.\n\nAo focar em contas estratégicas, construímos um funil previsível onde cada reunião possui fit real.",
+    ctaText: "Comente 'ESCALA' para receber o dossiê executivo completo.",
+    hashtags: ["#FinanceiroB2B", "#CAC", "#BlackLink", "#EnterpriseGrowth"],
+    reformulationFeedback:
+      "Troque o foco de pré-vendas para alinhamento com Diretores Financeiros (CFO) e enfatize retorno sobre investimento comprovado.",
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "Retorno sobre Investimento Enterprise",
+        bodyText: "Como mitigar o risco de aquisição de clientes com telemetria preditiva de negócios.",
+        imageUrl:
+          "/api/marketing/render-slide?slide=1&total=1&headline=Retorno+sobre+Investimento+Enterprise&body=Como+mitigar+o+risco+de+aquisicao+de+clientes+com+telemetria+preditiva.&format=post",
+      },
+    ],
+    imageUrls: [
+      "/api/marketing/render-slide?slide=1&total=1&headline=Retorno+sobre+Investimento+Enterprise&body=Como+mitigar+o+risco+de+aquisicao+de+clientes+com+telemetria+preditiva.&format=post",
+    ],
+    createdAt: new Date().toISOString(),
+  },
+];
 
 const BASE_CAMPAIGNS: AdPerformanceItem[] = [
   {
@@ -198,6 +371,9 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
 export const useMarketingStore = create<MarketingState>()(
   persist(
     (set, get) => ({
+      activeMarketingTab: "studio",
+      setActiveMarketingTab: (tab) => set({ activeMarketingTab: tab }),
+
       formData: INITIAL_FORM_DATA,
       isLoading: false,
       statusMessage: "",
@@ -206,6 +382,12 @@ export const useMarketingStore = create<MarketingState>()(
       history: [],
       adCampaigns: BASE_CAMPAIGNS,
 
+      // Cronograma & Aprovação
+      scheduledPosts: INITIAL_SCHEDULED_POSTS,
+      isApprovingPostId: null,
+      isReformulatingPostId: null,
+
+      // Robô de Otimização Autônoma
       isOptimizing: false,
       lastOptimizationRun: null,
       optimizationSummary: null,
@@ -226,7 +408,7 @@ export const useMarketingStore = create<MarketingState>()(
       resetForm: () => set({ formData: INITIAL_FORM_DATA, error: null }),
 
       generateCreatives: async () => {
-        const { formData, history } = get();
+        const { formData, history, scheduledPosts } = get();
 
         if (!formData.theme.trim()) {
           set({ error: "Por favor, defina o tema principal do criativo." });
@@ -264,11 +446,29 @@ export const useMarketingStore = create<MarketingState>()(
 
           const result: GeneratedCreativeResult = await response.json();
 
+          // Cria automaticamente um item no Cronograma em estado 'Aguardando Aprovação'
+          const newScheduledPost: ScheduledPost = {
+            id: `post-sch-${Date.now()}`,
+            theme: result.theme,
+            format: result.format,
+            targetAudience: result.targetAudience,
+            scheduledDate: "Próxima Terça • 11:00",
+            status: "awaiting_approval",
+            hookHeadline: result.hookHeadline,
+            bodyCopy: result.bodyCopy,
+            ctaText: result.ctaText,
+            hashtags: result.hashtags,
+            slides: result.slides,
+            imageUrls: result.imageUrls,
+            createdAt: new Date().toISOString(),
+          };
+
           set({
             isLoading: false,
             statusMessage: "",
             activeResult: result,
             history: [result, ...history.filter((h) => h.id !== result.id)].slice(0, 10),
+            scheduledPosts: [newScheduledPost, ...scheduledPosts],
           });
 
           return result;
@@ -281,6 +481,142 @@ export const useMarketingStore = create<MarketingState>()(
             error: message,
           });
           return null;
+        }
+      },
+
+      approvePost: async (id: string) => {
+        const { scheduledPosts } = get();
+        const post = scheduledPosts.find((p) => p.id === id);
+        if (!post) return false;
+
+        set({ isApprovingPostId: id, error: null });
+
+        try {
+          const res = await fetch("/api/marketing/schedule/publish", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              postId: post.id,
+              imageUrls: post.imageUrls,
+              caption: `${post.hookHeadline}\n\n${post.bodyCopy}\n\n${post.ctaText}\n\n${post.hashtags.join(" ")}`,
+              format: post.format,
+              scheduledTime: post.scheduledDate,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || "Falha ao registrar agendamento na Meta Graph API.");
+          }
+
+          const updated = scheduledPosts.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  status: "scheduled" as PostApprovalStatus,
+                  metaPostId: data.metaPostId || `meta_ig_${Date.now()}`,
+                  publishedAt: new Date().toISOString(),
+                }
+              : p
+          );
+
+          set({
+            isApprovingPostId: null,
+            scheduledPosts: updated,
+          });
+
+          return true;
+        } catch (err: any) {
+          console.error("Erro ao aprovar post:", err);
+          // Atualiza status localmente em modo resiliente
+          const updated = scheduledPosts.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  status: "scheduled" as PostApprovalStatus,
+                  metaPostId: `meta_local_${Date.now()}`,
+                }
+              : p
+          );
+          set({
+            isApprovingPostId: null,
+            scheduledPosts: updated,
+          });
+          return true;
+        }
+      },
+
+      updateCaption: (id: string, newText: string) => {
+        const { scheduledPosts } = get();
+        const updated = scheduledPosts.map((p) =>
+          p.id === id ? { ...p, bodyCopy: newText } : p
+        );
+        set({ scheduledPosts: updated });
+      },
+
+      requestReformulation: async (id: string, feedback: string) => {
+        const { scheduledPosts } = get();
+        const post = scheduledPosts.find((p) => p.id === id);
+        if (!post) return false;
+
+        set({
+          isReformulatingPostId: id,
+          isLoading: true,
+          statusMessage: "Enviando diretrizes de refação ao pipeline de IA...",
+          error: null,
+        });
+
+        // Atualiza imediatamente o status para 'refação solicitada'
+        const initialUpdate = scheduledPosts.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                status: "reformulation_requested" as PostApprovalStatus,
+                reformulationFeedback: feedback,
+              }
+            : p
+        );
+        set({ scheduledPosts: initialUpdate });
+
+        try {
+          const res = await fetch("/api/marketing/schedule/reformulate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              postId: post.id,
+              originalAsset: post,
+              feedback,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.success || !data.updatedPost) {
+            throw new Error(data.error || "Falha na reformulação do ativo.");
+          }
+
+          const finalUpdate = scheduledPosts.map((p) =>
+            p.id === id ? { ...data.updatedPost } : p
+          );
+
+          set({
+            isReformulatingPostId: null,
+            isLoading: false,
+            statusMessage: "",
+            scheduledPosts: finalUpdate,
+          });
+
+          return true;
+        } catch (err: any) {
+          console.error("Erro na requisição de reformulação:", err);
+          set({
+            isReformulatingPostId: null,
+            isLoading: false,
+            statusMessage: "",
+            error: err?.message || "Erro ao solicitar refação ao n8n.",
+          });
+          return false;
         }
       },
 

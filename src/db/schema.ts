@@ -8,6 +8,12 @@ import { integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar, vector
 export const userRoleEnum = pgEnum("user_role", ["admin", "commercial", "editor", "viewer"]);
 export const leadStatusEnum = pgEnum("lead_status", ["new", "negotiation", "closed"]);
 export const socialContentStatusEnum = pgEnum("social_content_status", ["draft", "pending", "approved"]);
+export const postApprovalStatusEnum = pgEnum("post_approval_status", [
+  "awaiting_approval",
+  "reformulation_requested",
+  "scheduled",
+  "published",
+]);
 
 // ==========================================
 // 2. MULTI-TENANT TABLES
@@ -20,6 +26,8 @@ export const companies = pgTable("companies", {
   id: uuid("id").defaultRandom().primaryKey(),
   corporateName: varchar("corporate_name", { length: 255 }).notNull(),
   documentCnpj: varchar("document_cnpj", { length: 18 }),
+  instagramAccountId: varchar("instagram_account_id", { length: 100 }),
+  metaAccessToken: text("meta_access_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -141,6 +149,29 @@ export const socialContents = pgTable("social_contents", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Publicações e Criativos no Cronograma de Aprovação Multi-tenant
+ */
+export const scheduledPosts = pgTable("scheduled_posts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  theme: varchar("theme", { length: 255 }).notNull(),
+  format: varchar("format", { length: 50 }).default("carousel").notNull(),
+  scheduledDate: timestamp("scheduled_date", { withTimezone: true }).notNull(),
+  status: postApprovalStatusEnum("status").default("awaiting_approval").notNull(),
+  hookHeadline: varchar("hook_headline", { length: 255 }).notNull(),
+  bodyCopy: text("body_copy").notNull(),
+  ctaText: text("cta_text"),
+  hashtags: jsonb("hashtags").$type<string[]>().default([]).notNull(),
+  slides: jsonb("slides").$type<any[]>().default([]).notNull(),
+  imageUrls: jsonb("image_urls").$type<string[]>().default([]).notNull(),
+  reformulationFeedback: text("reformulation_feedback"),
+  metaPostId: varchar("meta_post_id", { length: 100 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ==========================================
 // 3. RELATIONS & MULTI-TENANCY CONSTRAINTS
 // ==========================================
@@ -149,6 +180,7 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   users: many(users),
   leads: many(leads),
   socialContents: many(socialContents),
+  scheduledPosts: many(scheduledPosts),
 }));
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -183,6 +215,13 @@ export const socialContentsRelations = relations(socialContents, ({ one }) => ({
   }),
 }));
 
+export const scheduledPostsRelations = relations(scheduledPosts, ({ one }) => ({
+  company: one(companies, {
+    fields: [scheduledPosts.companyId],
+    references: [companies.id],
+  }),
+}));
+
 // ==========================================
 // 4. TYPE INFERENCE
 // ==========================================
@@ -201,3 +240,6 @@ export type NewDealTelemetryEmbedding = typeof dealTelemetryEmbeddings.$inferIns
 
 export type SocialContent = typeof socialContents.$inferSelect;
 export type NewSocialContent = typeof socialContents.$inferInsert;
+
+export type ScheduledPostDb = typeof scheduledPosts.$inferSelect;
+export type NewScheduledPostDb = typeof scheduledPosts.$inferInsert;
