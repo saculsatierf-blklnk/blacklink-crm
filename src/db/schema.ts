@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar, vector } from "drizzle-orm/pg-core";
+import { integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar, vector } from "drizzle-orm/pg-core";
 
 // ==========================================
 // 1. ENUMS
@@ -13,6 +13,19 @@ export const postApprovalStatusEnum = pgEnum("post_approval_status", [
   "reformulation_requested",
   "scheduled",
   "published",
+]);
+export const sourceTypeEnum = pgEnum("source_type", ["ai_generated", "manual"]);
+export const taskStatusEnum = pgEnum("task_status", [
+  "backlog",
+  "in_production",
+  "internal_review",
+  "awaiting_client",
+  "done",
+]);
+export const invoicePaymentStatusEnum = pgEnum("invoice_payment_status", [
+  "pending",
+  "paid",
+  "overdue",
 ]);
 
 // ==========================================
@@ -159,6 +172,7 @@ export const scheduledPosts = pgTable("scheduled_posts", {
     .references(() => companies.id, { onDelete: "cascade" }),
   theme: varchar("theme", { length: 255 }).notNull(),
   format: varchar("format", { length: 50 }).default("carousel").notNull(),
+  sourceType: sourceTypeEnum("source_type").default("ai_generated").notNull(),
   scheduledDate: timestamp("scheduled_date", { withTimezone: true }).notNull(),
   status: postApprovalStatusEnum("status").default("awaiting_approval").notNull(),
   hookHeadline: varchar("hook_headline", { length: 255 }).notNull(),
@@ -172,6 +186,41 @@ export const scheduledPosts = pgTable("scheduled_posts", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Gestão de Prazos, Refações e Tarefas (Kanban de Operações Multi-tenant)
+ */
+export const tasks = pgTable("tasks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  assigneeId: varchar("assignee_id", { length: 100 }),
+  assigneeName: varchar("assignee_name", { length: 255 }).default("Equipe Black Link"),
+  dueDate: timestamp("due_date", { withTimezone: true }),
+  priority: varchar("priority", { length: 50 }).default("medium"),
+  status: taskStatusEnum("status").default("backlog").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Controle de Faturamento, Cobranças e Notas Fiscais
+ */
+export const invoices = pgTable("invoices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  companyId: uuid("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
+  paymentStatus: invoicePaymentStatusEnum("payment_status").default("pending").notNull(),
+  invoicePdfUrl: text("invoice_pdf_url"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // ==========================================
 // 3. RELATIONS & MULTI-TENANCY CONSTRAINTS
 // ==========================================
@@ -181,6 +230,8 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   leads: many(leads),
   socialContents: many(socialContents),
   scheduledPosts: many(scheduledPosts),
+  tasks: many(tasks),
+  invoices: many(invoices),
 }));
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -222,6 +273,20 @@ export const scheduledPostsRelations = relations(scheduledPosts, ({ one }) => ({
   }),
 }));
 
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  company: one(companies, {
+    fields: [tasks.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  company: one(companies, {
+    fields: [invoices.companyId],
+    references: [companies.id],
+  }),
+}));
+
 // ==========================================
 // 4. TYPE INFERENCE
 // ==========================================
@@ -243,3 +308,9 @@ export type NewSocialContent = typeof socialContents.$inferInsert;
 
 export type ScheduledPostDb = typeof scheduledPosts.$inferSelect;
 export type NewScheduledPostDb = typeof scheduledPosts.$inferInsert;
+
+export type TaskDb = typeof tasks.$inferSelect;
+export type NewTaskDb = typeof tasks.$inferInsert;
+
+export type InvoiceDb = typeof invoices.$inferSelect;
+export type NewInvoiceDb = typeof invoices.$inferInsert;

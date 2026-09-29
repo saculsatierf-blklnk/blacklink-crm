@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   FileText,
+  Layers,
   LayoutDashboard,
+  Receipt,
   Settings,
   Shield,
   Sparkles,
@@ -33,6 +35,16 @@ const navItems: NavItem[] = [
     label: "Marketing",
     href: "/marketing",
     icon: Sparkles,
+  },
+  {
+    label: "Operação & Prazos",
+    href: "/operacao",
+    icon: Layers,
+  },
+  {
+    label: "Faturamento",
+    href: "/faturamento",
+    icon: Receipt,
   },
   {
     label: "Configurações",

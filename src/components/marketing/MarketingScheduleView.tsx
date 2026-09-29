@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Send,
   Sparkles,
+  UploadCloud,
   Zap,
 } from "lucide-react";
 import {
@@ -22,6 +23,7 @@ import {
   type ScheduledPost,
   type PostApprovalStatus,
 } from "@/store/useMarketingStore";
+import { ManualAssetUploadModal } from "./ManualAssetUploadModal";
 
 export function MarketingScheduleView() {
   const {
@@ -35,6 +37,7 @@ export function MarketingScheduleView() {
 
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
+  const [isManualUploadModalOpen, setIsManualUploadModalOpen] = useState<boolean>(false);
 
   // Estados locais para reformulação e navegação de slides
   const [reformulateOpenId, setReformulateOpenId] = useState<string | null>(null);
@@ -107,6 +110,16 @@ export function MarketingScheduleView() {
 
         {/* Controles de Visualização e Filtros */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Botão de Upload Manual ("A Prateleira") */}
+          <button
+            type="button"
+            onClick={() => setIsManualUploadModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3.5 py-1.5 text-xs font-mono font-bold text-accent hover:bg-accent hover:text-void transition-all cursor-pointer shadow-sm"
+          >
+            <UploadCloud className="h-3.5 w-3.5" />
+            <span>+ Upload Manual de Ativo</span>
+          </button>
+
           {/* Switcher de Modo: Timeline ou Calendário */}
           <div className="flex items-center rounded-lg border border-glass-border bg-void/50 p-1">
             <button
@@ -234,13 +247,24 @@ export function MarketingScheduleView() {
                       0{postIndex + 1}
                     </span>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-bold text-platinum font-sans">
                           {post.theme}
                         </h3>
                         <span className="rounded bg-void border border-glass-border px-2 py-0.5 text-[10px] font-mono text-sub uppercase">
                           {post.format}
                         </span>
+                        {post.sourceType === "manual" ? (
+                          <span className="rounded bg-zinc-800/80 border border-zinc-700/60 px-2 py-0.5 text-[10px] font-mono text-zinc-300 font-semibold flex items-center gap-1">
+                            <UploadCloud className="h-2.5 w-2.5 text-accent" />
+                            Manual • Prateleira
+                          </span>
+                        ) : (
+                          <span className="rounded bg-cyan-950/60 border border-cyan-800/40 px-2 py-0.5 text-[10px] font-mono text-cyan-300 font-semibold flex items-center gap-1">
+                            <Sparkles className="h-2.5 w-2.5 text-cyan-400" />
+                            IA Autônoma
+                          </span>
+                        )}
                       </div>
                       <span className="text-[11px] text-sub font-mono">
                         Público: {post.targetAudience || "Decisores B2B"}
@@ -511,6 +535,16 @@ export function MarketingScheduleView() {
           })}
         </div>
       )}
+
+      {/* Modal de Upload Manual ("A Prateleira") */}
+      <ManualAssetUploadModal
+        isOpen={isManualUploadModalOpen}
+        onClose={() => setIsManualUploadModalOpen(false)}
+        onSuccess={() => {
+          setActionSuccessMessage("Ativo manual adicionado à esteira de aprovação com sucesso!");
+          setTimeout(() => setActionSuccessMessage(null), 4000);
+        }}
+      />
     </div>
   );
 }

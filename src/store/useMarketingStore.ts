@@ -38,6 +38,7 @@ export interface ScheduledPost {
   id: string;
   theme: string;
   format: CreativeFormat;
+  sourceType?: "ai_generated" | "manual";
   targetAudience?: string;
   nicheValueProposition?: string;
   scheduledDate: string; // "2026-10-01 10:00" ou ISO
@@ -159,6 +160,7 @@ interface MarketingState {
   approvePost: (id: string) => Promise<boolean>;
   updateCaption: (id: string, newText: string) => void;
   requestReformulation: (id: string, feedback: string) => Promise<boolean>;
+  addManualPost: (newPost: ScheduledPost) => void;
 
   // Ações do Agente de Tráfego
   fetchAdPerformance: () => Promise<void>;
@@ -747,6 +749,13 @@ export const useMarketingStore = create<MarketingState>()(
           });
           return false;
         }
+      },
+
+      addManualPost: (newPost: ScheduledPost) => {
+        const { scheduledPosts } = get();
+        set({
+          scheduledPosts: [newPost, ...scheduledPosts],
+        });
       },
 
       fetchAdPerformance: async () => {
