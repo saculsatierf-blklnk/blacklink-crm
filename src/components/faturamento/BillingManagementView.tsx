@@ -27,6 +27,7 @@ import {
   type Invoice,
   type InvoicePaymentStatus,
 } from "@/store/useBillingStore";
+import { GlassCard } from "@/components/ui/GlassCard";
 
 export function BillingManagementView() {
   const {
@@ -75,7 +76,6 @@ export function BillingManagementView() {
   const formatDueDateInfo = (dateStr: string, status: InvoicePaymentStatus) => {
     const date = new Date(dateStr);
     const now = new Date();
-    // Zera horas para comparação de dias
     const diffTime = date.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -93,12 +93,12 @@ export function BillingManagementView() {
       return {
         text: formatted,
         label: `Atrasado há ${Math.abs(diffDays)}d`,
-        color: "text-red-400 font-semibold",
+        color: "text-red-400 font-medium",
       };
     }
 
     if (diffDays === 0) {
-      return { text: formatted, label: "Vence hoje!", color: "text-amber-400 font-semibold" };
+      return { text: formatted, label: "Vence hoje!", color: "text-amber-400 font-medium" };
     }
 
     return {
@@ -169,7 +169,7 @@ export function BillingManagementView() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-12 animate-in fade-in duration-300">
       {/* Input de arquivo invisível para anexo de Nota Fiscal */}
       <input
         type="file"
@@ -180,20 +180,20 @@ export function BillingManagementView() {
       />
 
       {/* Top Banner & Ações */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 border-b border-white/10 pb-8">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-              <Receipt className="h-4 w-4" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+              <Receipt className="h-5 w-5" />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-white">
-              Controle de Faturamento & Contratos
+            <h1 className="text-2xl lg:text-3xl font-medium tracking-tight text-white">
+              Faturamento & Contratos
             </h1>
-            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
+            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3.5 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
               Multi-tenant Financeiro
             </span>
           </div>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+          <p className="text-xs lg:text-sm text-zinc-400 mt-2 leading-relaxed">
             Gestão de retainers mensais, liquidação de cobranças, vencimentos e auditoria de Notas Fiscais anexas.
           </p>
         </div>
@@ -202,7 +202,7 @@ export function BillingManagementView() {
           <button
             type="button"
             onClick={() => fetchInvoices()}
-            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
             title="Atualizar dados"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
@@ -212,7 +212,7 @@ export function BillingManagementView() {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-white text-black px-5 py-2 text-xs font-semibold tracking-tight hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+            className="flex items-center gap-2 rounded-xl bg-white text-black px-5 py-2.5 text-xs font-semibold tracking-tight hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)]"
           >
             <Plus className="h-4 w-4" />
             <span>+ Nova Cobrança</span>
@@ -221,46 +221,48 @@ export function BillingManagementView() {
       </div>
 
       {/* KPI Cards de Faturamento Apple Glass */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 shadow-2xl shadow-black/50">
-          <span className="text-[11px] font-mono tracking-wider text-zinc-400 uppercase font-semibold">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
+        <GlassCard className="p-6 lg:p-8">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-3 block">
             MRR / Faturado Total
           </span>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-white">
+          <div className="text-3xl lg:text-4xl font-medium tracking-tight text-white">
             {formatBRL(metrics.totalMRR)}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 shadow-2xl shadow-black/50">
-          <span className="text-[11px] font-mono tracking-wider text-emerald-400 uppercase font-semibold">
+        <GlassCard className="p-6 lg:p-8">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400 mb-3 block">
             Recebido / Liquidado
           </span>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-emerald-300">
+          <div className="text-3xl lg:text-4xl font-medium tracking-tight text-emerald-300">
             {formatBRL(metrics.totalPaid)}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 shadow-2xl shadow-black/50">
-          <span className="text-[11px] font-mono tracking-wider text-amber-400 uppercase font-semibold">
+        <GlassCard className="p-6 lg:p-8">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400 mb-3 block">
             A Receber (No Prazo)
           </span>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-amber-300">
+          <div className="text-3xl lg:text-4xl font-medium tracking-tight text-amber-300">
             {formatBRL(metrics.totalPending)}
           </div>
-        </div>
+        </GlassCard>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 shadow-2xl shadow-black/50">
-          <span className="text-[11px] font-mono tracking-wider text-red-400 uppercase font-semibold">
+        <GlassCard className="p-6 lg:p-8">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 mb-3 block">
             Em Atraso
           </span>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-red-300">
+          <div className="text-3xl lg:text-4xl font-medium tracking-tight text-red-300">
             {formatBRL(metrics.totalOverdue)}
           </div>
-        </div>
+        </GlassCard>
       </div>
 
       {/* Controles de Filtros & Busca Apple Glass */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-3.5">
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+        
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-400" />
           <input
@@ -268,18 +270,18 @@ export function BillingManagementView() {
             placeholder="Buscar por descrição de contrato ou valor..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-3.5 py-2 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+            className="w-full rounded-xl bg-black/20 border border-white/10 pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors"
           />
         </div>
 
         {/* Filtros de Status */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/20 border border-white/10">
           <button
             type="button"
             onClick={() => setStatusFilter("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
               statusFilter === "all"
-                ? "bg-white/[0.15] border border-white/20 text-white font-semibold shadow-sm"
+                ? "bg-white/[0.12] text-white font-medium shadow-sm border border-white/10"
                 : "text-zinc-400 hover:text-white"
             }`}
           >
@@ -290,7 +292,7 @@ export function BillingManagementView() {
             onClick={() => setStatusFilter("paid")}
             className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
               statusFilter === "paid"
-                ? "bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40"
+                ? "bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30"
                 : "text-zinc-400 hover:text-emerald-300"
             }`}
           >
@@ -301,7 +303,7 @@ export function BillingManagementView() {
             onClick={() => setStatusFilter("pending")}
             className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
               statusFilter === "pending"
-                ? "bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40"
+                ? "bg-amber-500/20 text-amber-300 font-medium border border-amber-500/30"
                 : "text-zinc-400 hover:text-amber-300"
             }`}
           >
@@ -312,7 +314,7 @@ export function BillingManagementView() {
             onClick={() => setStatusFilter("overdue")}
             className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
               statusFilter === "overdue"
-                ? "bg-red-500/20 text-red-300 font-semibold border border-red-500/40"
+                ? "bg-red-500/20 text-red-300 font-medium border border-red-500/30"
                 : "text-zinc-400 hover:text-red-300"
             }`}
           >
@@ -322,23 +324,25 @@ export function BillingManagementView() {
       </div>
 
       {/* Tabela Executiva de Cobranças Apple Glass */}
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl overflow-hidden shadow-2xl shadow-black/60">
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-white/10 bg-white/[0.02] font-mono text-[10px] uppercase tracking-widest text-zinc-400">
+            <thead className="border-b border-white/[0.08] bg-white/[0.01] font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-400">
               <tr>
-                <th className="px-6 py-4">Serviço / Contrato</th>
-                <th className="px-6 py-4">Valor (BRL)</th>
-                <th className="px-6 py-4">Vencimento</th>
-                <th className="px-6 py-4">Status de Pagamento</th>
-                <th className="px-6 py-4">Nota Fiscal (PDF)</th>
-                <th className="px-6 py-4 text-right">Ações Executivas</th>
+                <th className="px-6 py-4 font-medium">Serviço / Contrato</th>
+                <th className="px-6 py-4 font-medium">Valor (BRL)</th>
+                <th className="px-6 py-4 font-medium">Vencimento</th>
+                <th className="px-6 py-4 font-medium">Status de Pagamento</th>
+                <th className="px-6 py-4 font-medium">Nota Fiscal (PDF)</th>
+                <th className="px-6 py-4 text-right font-medium">Ações Executivas</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-14 text-center text-zinc-400">
+                  <td colSpan={6} className="px-6 py-16 text-center text-zinc-500">
                     Nenhuma cobrança localizada com os filtros atuais.
                   </td>
                 </tr>
@@ -351,25 +355,25 @@ export function BillingManagementView() {
                   return (
                     <tr
                       key={invoice.id}
-                      className="hover:bg-white/[0.03] transition-colors group"
+                      className="hover:bg-white/[0.02] transition-colors group"
                     >
                       {/* Descrição do Serviço */}
-                      <td className="px-6 py-4.5">
-                        <div className="font-semibold text-white tracking-tight font-sans text-sm">
+                      <td className="px-6 py-5">
+                        <div className="font-medium text-white tracking-tight font-sans text-sm">
                           {invoice.title}
                         </div>
-                        <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                        <div className="text-[10px] text-zinc-500 font-mono mt-1">
                           ID: {invoice.id.slice(0, 8)} &bull; Emitido via Black Link Hub
                         </div>
                       </td>
 
                       {/* Valor */}
-                      <td className="px-6 py-4.5 font-bold text-white text-sm">
+                      <td className="px-6 py-5 font-medium text-white text-sm">
                         {formatBRL(invoice.amount)}
                       </td>
 
                       {/* Vencimento */}
-                      <td className="px-6 py-4.5">
+                      <td className="px-6 py-5">
                         <div className="text-zinc-200">{dueInfo.text}</div>
                         <div className={`text-[10px] mt-0.5 ${dueInfo.color}`}>
                           {dueInfo.label}
@@ -377,21 +381,21 @@ export function BillingManagementView() {
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4.5">
+                      <td className="px-6 py-5">
                         {invoice.paymentStatus === "paid" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-300">
                             <CheckCircle2 className="h-3 w-3" />
                             Pago
                           </span>
                         )}
                         {invoice.paymentStatus === "pending" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-300">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-300">
                             <Clock className="h-3 w-3" />
                             Pendente
                           </span>
                         )}
                         {invoice.paymentStatus === "overdue" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-300">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-medium text-red-300">
                             <AlertCircle className="h-3 w-3" />
                             Atrasado
                           </span>
@@ -399,13 +403,13 @@ export function BillingManagementView() {
                       </td>
 
                       {/* Nota Fiscal PDF */}
-                      <td className="px-6 py-4.5">
+                      <td className="px-6 py-5">
                         {invoice.invoicePdfUrl ? (
                           <a
                             href={invoice.invoicePdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-950/40 px-3 py-1.5 text-xs text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/40 transition-all shadow-sm"
+                            className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-950/30 px-3 py-1.5 text-xs text-cyan-300 hover:border-cyan-400 hover:bg-cyan-900/40 transition-all shadow-sm"
                           >
                             <FileText className="h-3.5 w-3.5" />
                             <span>Ver NF Anexa</span>
@@ -434,7 +438,7 @@ export function BillingManagementView() {
                       </td>
 
                       {/* Ações */}
-                      <td className="px-6 py-4.5 text-right">
+                      <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-2.5">
                           {/* Botão Copiar Pix */}
                           <button
@@ -444,7 +448,7 @@ export function BillingManagementView() {
                             title="Copiar Payload Pix"
                           >
                             {isCopied ? (
-                              <span className="text-[10px] text-emerald-400 font-bold font-sans">Copiado!</span>
+                              <span className="text-[10px] text-emerald-400 font-medium font-sans">Copiado!</span>
                             ) : (
                               <Copy className="h-3.5 w-3.5" />
                             )}
@@ -455,7 +459,7 @@ export function BillingManagementView() {
                             <button
                               type="button"
                               onClick={() => markAsPaid(invoice.id)}
-                              className="rounded-xl bg-emerald-500/20 border border-emerald-500/40 px-3 py-1.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/30 transition-all cursor-pointer"
+                              className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-[11px] font-medium text-emerald-300 hover:bg-emerald-500/20 transition-all cursor-pointer"
                             >
                               Baixar Pago
                             </button>
@@ -484,13 +488,15 @@ export function BillingManagementView() {
       {/* Modal de Criação de Cobrança Apple Glass */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-2xl p-4 sm:p-6 animate-fadeIn">
-          <div className="w-full max-w-md rounded-3xl border border-white/15 bg-black/90 p-8 sm:p-10 shadow-2xl shadow-black/90 space-y-6">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="relative overflow-hidden w-full max-w-md rounded-3xl border border-white/[0.12] bg-[#0A0A0A]/95 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl space-y-6">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
+            <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-md">
                   <Plus className="h-4 w-4" />
                 </div>
-                <h3 className="text-base font-semibold text-white tracking-tight">
+                <h3 className="text-lg font-medium text-white tracking-tight">
                   Registrar Nova Cobrança
                 </h3>
               </div>
@@ -503,9 +509,9 @@ export function BillingManagementView() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateInvoice} className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold tracking-tight text-zinc-300">
+            <form onSubmit={handleCreateInvoice} className="relative z-10 space-y-5 text-xs">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                   Descrição do Serviço / Contrato *
                 </label>
                 <input
@@ -514,12 +520,12 @@ export function BillingManagementView() {
                   placeholder="Ex: Retainer Mensal: Growth & Tráfego B2B"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+                  className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold tracking-tight text-zinc-300">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                   Valor da Cobrança (R$) *
                 </label>
                 <input
@@ -529,13 +535,13 @@ export function BillingManagementView() {
                   placeholder="Ex: 6500.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+                  className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold tracking-tight text-zinc-300">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                     Data de Vencimento *
                   </label>
                   <input
@@ -543,38 +549,38 @@ export function BillingManagementView() {
                     required
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 font-mono text-white focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 font-mono text-xs text-white focus:border-white/30 focus:ring-0 focus:outline-none transition-colors"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold tracking-tight text-zinc-300">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                     Status Inicial
                   </label>
                   <select
                     value={paymentStatus}
                     onChange={(e) => setPaymentStatus(e.target.value as InvoicePaymentStatus)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 font-mono text-white focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all cursor-pointer"
+                    className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 font-mono text-xs text-white focus:border-white/30 focus:outline-none transition-colors cursor-pointer"
                   >
-                    <option value="pending">Pendente</option>
-                    <option value="paid">Pago</option>
-                    <option value="overdue">Em Atraso</option>
+                    <option value="pending" className="bg-[#0A0A0A] text-white">Pendente</option>
+                    <option value="paid" className="bg-[#0A0A0A] text-white">Pago</option>
+                    <option value="overdue" className="bg-[#0A0A0A] text-white">Em Atraso</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-5 border-t border-white/10">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                  className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !title.trim() || !amount}
-                  className="flex items-center gap-2 rounded-xl bg-white text-black px-5 py-2.5 font-semibold hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                  className="flex items-center gap-2 rounded-xl bg-white text-black px-6 py-2.5 text-xs font-semibold hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
                 >
                   {isSubmitting ? (
                     <>

@@ -24,14 +24,19 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-black text-zinc-100 selection:bg-white selection:text-black">
+    <div className="min-h-screen bg-[#050505] text-zinc-200 selection:bg-white/30 font-sans">
+      {/* Luzes radiais para efeito de refração no vidro */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-zinc-800/30 blur-[150px]" />
+        <div className="absolute top-[70%] -right-[10%] w-[40%] h-[50%] rounded-full bg-zinc-700/20 blur-[150px]" />
+      </div>
+
       {/* Sidebar Flutuante/Translúcida Desktop */}
       <Sidebar initialRole={userRole} />
 
-      {/* Estrutura Principal com Offset da Sidebar Fixa, Header Translúcido e Main Canvas com Respiro Extremo */}
-      <div className="flex flex-1 flex-col min-w-0 md:pl-64 min-h-screen">
+      <div className="relative z-10 w-full max-w-[1600px] mx-auto md:pl-64 flex flex-col min-h-screen">
         <Header initialRole={userRole} />
-        <main className="flex-1 p-8 lg:p-12 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-8 lg:p-12">
           {children}
         </main>
       </div>

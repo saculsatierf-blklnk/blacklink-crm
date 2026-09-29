@@ -145,17 +145,17 @@ export function TeamManagementModal({
       />
 
       {/* Modal */}
-      <div className="relative z-50 flex flex-col w-full max-w-2xl max-h-[90vh] rounded-xl border border-glass-border bg-carbon p-6 shadow-2xl overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-50 flex flex-col w-full max-w-2xl max-h-[90vh] rounded-xl border border-white/10 bg-[#0A0A0A] p-6 shadow-2xl overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-glass-border pb-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-accent" />
-              <h2 className="text-base font-bold font-mono uppercase tracking-wider text-platinum">
+              <h2 className="text-base font-bold font-mono uppercase tracking-wider text-white">
                 Gestão da Equipe & Operadores
               </h2>
             </div>
-            <p className="text-xs text-sub">
+            <p className="text-xs text-zinc-400">
               Cadastre novos operadores comerciais ou administradores para atuarem nas contas da empresa.
             </p>
           </div>
@@ -163,7 +163,7 @@ export function TeamManagementModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-glass-border bg-carbon-muted text-sub hover:text-platinum transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -186,13 +186,13 @@ export function TeamManagementModal({
 
         {/* Botão para Exibir/Ocultar Formulário de Cadastro */}
         <div className="mt-5 flex items-center justify-between">
-          <span className="text-xs font-mono uppercase tracking-wider text-sub">
+          <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
             Membros Cadastrados ({members.length})
           </span>
           <button
             type="button"
             onClick={() => setIsAdding(!isAdding)}
-            className="flex items-center gap-1.5 rounded-md border border-glass-border bg-carbon-muted px-3 py-1.5 text-xs font-mono text-platinum hover:border-accent/40 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-white hover:border-white/20 transition-colors cursor-pointer"
           >
             <UserPlus className="h-3.5 w-3.5 text-accent" />
             <span>{isAdding ? "Cancelar Cadastro" : "+ Novo Membro"}</span>
@@ -203,30 +203,30 @@ export function TeamManagementModal({
         {isAdding && (
           <form
             onSubmit={handleCreateMember}
-            className="mt-4 space-y-4 rounded-xl border border-glass-border bg-void/60 p-4 animate-in fade-in slide-in-from-top-2 duration-150"
+            className="mt-4 space-y-4 rounded-xl border border-white/10 bg-black/30 p-4 animate-in fade-in slide-in-from-top-2 duration-150"
           >
-            <div className="flex items-center justify-between border-b border-glass-border/50 pb-2">
-              <span className="text-xs font-semibold text-platinum">
+            <div className="flex items-center justify-between border-b border-white/10/50 pb-2">
+              <span className="text-xs font-semibold text-white">
                 Cadastrar Operador na Empresa
               </span>
-              <span className="text-[10px] font-mono text-sub">Acesso Imediato</span>
+              <span className="text-[10px] font-mono text-zinc-400">Acesso Imediato</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Nome */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
                   Nome Completo *
                 </label>
                 <div className="relative">
-                  <User className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-sub" />
+                  <User className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-400" />
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Ex: Carlos Mendes"
                     disabled={isPending}
-                    className="h-9 w-full rounded border border-glass-border bg-carbon pl-8 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none"
+                    className="h-9 w-full rounded border border-white/10 bg-[#0A0A0A] pl-8 pr-3 text-xs text-white placeholder:text-zinc-400 focus:border-white/30 focus:outline-none"
                     required
                   />
                 </div>
@@ -234,18 +234,18 @@ export function TeamManagementModal({
 
               {/* E-mail */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
                   E-mail Corporativo *
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-sub" />
+                  <Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-400" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="operador@empresa.com"
                     disabled={isPending}
-                    className="h-9 w-full rounded border border-glass-border bg-carbon pl-8 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none"
+                    className="h-9 w-full rounded border border-white/10 bg-[#0A0A0A] pl-8 pr-3 text-xs text-white placeholder:text-zinc-400 focus:border-white/30 focus:outline-none"
                     required
                   />
                 </div>
@@ -255,18 +255,18 @@ export function TeamManagementModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Senha */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
                   Chave de Acesso (Senha) *
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-sub" />
+                  <Lock className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-400" />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
                     disabled={isPending}
-                    className="h-9 w-full rounded border border-glass-border bg-carbon pl-8 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none"
+                    className="h-9 w-full rounded border border-white/10 bg-[#0A0A0A] pl-8 pr-3 text-xs text-white placeholder:text-zinc-400 focus:border-white/30 focus:outline-none"
                     required
                   />
                 </div>
@@ -274,7 +274,7 @@ export function TeamManagementModal({
 
               {/* Perfil de Acesso */}
               <div className="space-y-1">
-                <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
                   Perfil de Acesso (Função) *
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -284,7 +284,7 @@ export function TeamManagementModal({
                     className={`flex items-center justify-center gap-1.5 rounded border p-2 text-xs font-mono transition-all cursor-pointer ${
                       role === "commercial"
                         ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400 font-semibold"
-                        : "border-glass-border bg-carbon text-sub hover:text-platinum"
+                        : "border-white/10 bg-[#0A0A0A] text-zinc-400 hover:text-white"
                     }`}
                   >
                     <span>Comercial</span>
@@ -295,7 +295,7 @@ export function TeamManagementModal({
                     className={`flex items-center justify-center gap-1.5 rounded border p-2 text-xs font-mono transition-all cursor-pointer ${
                       role === "admin"
                         ? "border-purple-500/50 bg-purple-500/10 text-purple-400 font-semibold"
-                        : "border-glass-border bg-carbon text-sub hover:text-platinum"
+                        : "border-white/10 bg-[#0A0A0A] text-zinc-400 hover:text-white"
                     }`}
                   >
                     <span>Administrador</span>
@@ -304,11 +304,11 @@ export function TeamManagementModal({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-glass-border/40">
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/10/40">
               <button
                 type="button"
                 onClick={() => setIsAdding(false)}
-                className="rounded border border-glass-border bg-carbon px-3 py-1.5 text-xs text-sub hover:text-platinum cursor-pointer"
+                className="rounded border border-white/10 bg-[#0A0A0A] px-3 py-1.5 text-xs text-zinc-400 hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
@@ -326,11 +326,11 @@ export function TeamManagementModal({
         {/* Lista de Membros */}
         <div className="mt-4 space-y-2">
           {isLoading ? (
-            <div className="py-8 text-center text-xs font-mono text-sub">
+            <div className="py-8 text-center text-xs font-mono text-zinc-400">
               Carregando membros da equipe...
             </div>
           ) : members.length === 0 ? (
-            <div className="py-8 text-center text-xs text-sub">
+            <div className="py-8 text-center text-xs text-zinc-400">
               Nenhum operador adicional cadastrado para esta empresa.
             </div>
           ) : (
@@ -341,7 +341,7 @@ export function TeamManagementModal({
               return (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between rounded-lg border border-glass-border bg-carbon p-3 hover:border-glass-highlight transition-all"
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-[#0A0A0A] p-3 hover:border-white/20 transition-all"
                 >
                   <div className="flex items-center gap-3">
                     {/* Avatar com Iniciais */}
@@ -362,16 +362,16 @@ export function TeamManagementModal({
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-platinum">
+                        <span className="text-xs font-semibold text-white">
                           {member.fullName}
                         </span>
                         {isCurrentUser && (
-                          <span className="rounded bg-accent/10 border border-accent/20 px-1.5 py-0.2 text-[9px] font-mono text-accent">
+                          <span className="rounded bg-accent/10 border border-white/30/20 px-1.5 py-0.2 text-[9px] font-mono text-accent">
                             Você
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-sub">
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
                         <span>{member.email}</span>
                         <span>&bull;</span>
                         <span className="font-mono text-[10px]">
@@ -396,7 +396,7 @@ export function TeamManagementModal({
                       <button
                         type="button"
                         onClick={() => handleDeleteMember(member.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded border border-glass-border bg-void text-sub hover:text-red-400 hover:border-red-500/40 transition-colors cursor-pointer"
+                        className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-black/40 text-zinc-400 hover:text-red-400 hover:border-red-500/40 transition-colors cursor-pointer"
                         title="Remover membro"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

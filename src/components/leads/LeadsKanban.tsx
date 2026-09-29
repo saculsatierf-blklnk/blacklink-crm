@@ -340,65 +340,68 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
   };
 
   return (
-    <div className="space-y-6">
-      {/* Barra Operacional do Hunter: Silo de Propriedade & Novo Lead */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-glass-border bg-carbon/80 backdrop-blur-xl px-4 py-3 shadow-lg">
-        {/* Seletor de Operador Ativo */}
-        <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-accent" />
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-platinum">
-              Operador Ativo:
+    <div className="space-y-8">
+      {/* Barra Operacional do Hunter: Silo de Propriedade & Novo Lead com Fórmula de Vidro */}
+      <div className="relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-5 lg:p-6 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.03]">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+          {/* Seletor de Operador Ativo */}
+          <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-white" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                Operador Ativo:
+              </span>
+            </div>
+
+            <select
+              value={activeOperator}
+              onChange={(e) => setActiveOperator(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-2 text-xs font-mono text-zinc-200 focus:border-white/30 focus:outline-none cursor-pointer"
+            >
+              <option value="todos">Todos os Operadores ({leadsList.length})</option>
+              {operators.map((op) => {
+                const count = leadsList.filter(
+                  (l) => (l.ownerId || operators[0]?.id) === op.id
+                ).length;
+                return (
+                  <option key={op.id} value={op.id}>
+                    {op.name} ({op.role}) — {count} contas
+                  </option>
+                );
+              })}
+            </select>
+
+            <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 border-l border-white/10 pl-3">
+              {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
             </span>
           </div>
 
-          <select
-            value={activeOperator}
-            onChange={(e) => setActiveOperator(e.target.value)}
-            className="rounded-md border border-glass-border bg-carbon-muted px-3 py-1.5 text-xs font-mono text-platinum focus:border-accent focus:outline-none cursor-pointer"
-          >
-            <option value="todos">Todos os Operadores ({leadsList.length})</option>
-            {operators.map((op) => {
-              const count = leadsList.filter(
-                (l) => (l.ownerId || operators[0]?.id) === op.id
-              ).length;
-              return (
-                <option key={op.id} value={op.id}>
-                  {op.name} ({op.role}) — {count} contas
-                </option>
-              );
-            })}
-          </select>
+          {/* Botão de Criação de Lead com Radar Anti-Colisão & Guia */}
+          <div className="flex items-center gap-3">
+            <StartTourButton
+              steps={KANBAN_TOUR_STEPS}
+              variant="secondary"
+              label="Guia da Esteira"
+            />
 
-          <span className="hidden sm:inline-block text-[11px] font-mono text-sub border-l border-glass-border pl-3">
-            {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
-          </span>
-        </div>
-
-        {/* Botão de Criação de Lead com Radar Anti-Colisão & Guia */}
-        <div className="flex items-center gap-2">
-          <StartTourButton
-            steps={KANBAN_TOUR_STEPS}
-            variant="secondary"
-            label="Guia da Esteira"
-          />
-
-          <button
-            data-tour="kanban-new-lead"
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-1.5 text-xs font-mono font-bold text-void hover:bg-platinum transition-all cursor-pointer shadow-md"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Novo Lead</span>
-          </button>
+            <button
+              data-tour="kanban-new-lead"
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Novo Lead</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Board Kanban com Drag-and-Drop Bidirecional */}
       {isMounted ? (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div data-tour="kanban-columns" className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          <div data-tour="kanban-columns" className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             {COLUMNS.map((column) => {
               const columnLeads = getLeadsByStatus(column.id);
               const ColumnIcon = column.icon;
@@ -406,19 +409,21 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
               return (
                 <div
                   key={column.id}
-                  className="flex flex-col rounded-xl border border-glass-border bg-carbon/60 backdrop-blur-xl shadow-xl overflow-hidden min-h-[520px]"
+                  className="relative overflow-hidden flex flex-col rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl min-h-[560px]"
                 >
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
                   {/* Cabeçalho da Coluna */}
-                  <div className="flex items-center justify-between border-b border-glass-border p-4 bg-carbon-muted/40">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between border-b border-white/[0.08] p-5 bg-white/[0.02]">
+                    <div className="flex items-center gap-2.5">
                       <ColumnIcon className={`h-4 w-4 ${column.accentColor}`} />
-                      <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum">
+                      <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
                         {column.title}
                       </h2>
                     </div>
 
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono ${column.badgeBg}`}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-mono ${column.badgeBg}`}
                     >
                       {columnLeads.length}
                     </span>
@@ -474,10 +479,10 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
                                     if (dragSnapshot.isDragging) return;
                                     handleOpenSheet(lead);
                                   }}
-                                  className={`rounded-lg border bg-carbon p-4 space-y-3 transition-all select-none group cursor-grab active:cursor-grabbing ${
+                                  className={`rounded-2xl border p-5 space-y-3.5 transition-all select-none group cursor-grab active:cursor-grabbing ${
                                     dragSnapshot.isDragging
-                                      ? "border-accent shadow-2xl scale-[1.02] ring-2 ring-accent/20 z-50 bg-carbon"
-                                      : "border-glass-border hover:border-glass-highlight hover:bg-carbon-muted/40 shadow-md"
+                                      ? "border-white/40 shadow-2xl scale-[1.02] ring-2 ring-white/20 z-50 bg-[#0d0d0d]"
+                                      : "border-white/10 bg-black/40 hover:border-white/25 hover:bg-black/60 shadow-lg"
                                   }`}
                                 >
                                   {/* Topo do Card: Nome, Empresa e Alça */}

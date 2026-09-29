@@ -64,26 +64,30 @@ export function AdPerformanceTable() {
   const totalConversions = adCampaigns.reduce((acc, curr) => acc + curr.conversions, 0);
 
   return (
-    <div className="rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/60 space-y-8">
-      {/* Cabeçalho da Seção de Tráfego Pago & Botão de Disparo do Robô */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-6">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black shadow-sm">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-            <h3 className="text-lg font-semibold tracking-tight text-white">
-              Agente de Tráfego Pago &amp; Otimização Autônoma
-            </h3>
-            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
-              Meta Graph v20.0
-            </span>
-            {lastOptimizationRun && (
-              <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[11px] font-mono text-emerald-300 font-semibold">
-                Último ciclo: {new Date(lastOptimizationRun).toLocaleTimeString("pt-BR")}
+    <div className="relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 lg:p-10 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.03]">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+
+      <div className="relative z-10 space-y-8">
+        {/* Cabeçalho da Seção de Tráfego Pago & Botão de Disparo do Robô */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 border-b border-white/[0.08] pb-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-black shadow-sm">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <h3 className="text-2xl font-medium tracking-tight text-white">
+                Agente de Tráfego Pago &amp; Otimização
+              </h3>
+              <span className="rounded-full bg-white/[0.08] border border-white/15 px-3.5 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
+                Meta Graph v20.0
               </span>
-            )}
-          </div>
+              {lastOptimizationRun && (
+                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[11px] font-mono text-emerald-300 font-semibold">
+                  Último ciclo: {new Date(lastOptimizationRun).toLocaleTimeString("pt-BR")}
+                </span>
+              )}
+            </div>
           <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
             Algoritmo autônomo: escala +20% do orçamento para criativos vencedores (ROAS &ge; 3.5x e CTR &ge; 2.5%) e pausa conjuntos sub-performers.
           </p>
@@ -443,5 +447,6 @@ export function AdPerformanceTable() {
         </table>
       </div>
     </div>
+  </div>
   );
 }

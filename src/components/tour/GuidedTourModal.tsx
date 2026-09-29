@@ -271,16 +271,16 @@ export function GuidedTourModal() {
       {/* Card Flutuante com as Instruções Interativas */}
       <div
         style={popoverStyle}
-        className="w-[90vw] max-w-[390px] rounded-xl border border-glass-border bg-carbon p-5 text-platinum shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
+        className="w-[90vw] max-w-[390px] rounded-xl border border-white/10 bg-[#0A0A0A] p-5 text-white shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Topo: Passo e Botão Fechar */}
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-glass-border/60">
+        <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/10/60">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 items-center rounded bg-accent/15 px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-accent border border-accent/25">
+            <span className="flex h-5 items-center rounded bg-accent/15 px-2 font-mono text-[10px] font-bold uppercase tracking-wider text-accent border border-white/30/25">
               Passo {currentStepIndex + 1} de {steps.length}
             </span>
             {currentStep.badge && (
-              <span className="text-[11px] font-mono text-sub">
+              <span className="text-[11px] font-mono text-zinc-400">
                 &bull; {currentStep.badge}
               </span>
             )}
@@ -288,7 +288,7 @@ export function GuidedTourModal() {
 
           <button
             onClick={skipTour}
-            className="flex h-6 w-6 items-center justify-center rounded-md text-sub hover:text-platinum hover:bg-carbon-muted transition-colors cursor-pointer"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
             title="Pular Tutorial"
           >
             <X className="h-3.5 w-3.5" />
@@ -297,17 +297,17 @@ export function GuidedTourModal() {
 
         {/* Corpo: Título e Descrição */}
         <div className="py-3.5 space-y-2">
-          <h3 className="text-sm font-bold tracking-tight text-platinum font-mono flex items-center gap-2">
+          <h3 className="text-sm font-bold tracking-tight text-white font-mono flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-accent shrink-0" />
             {currentStep.title}
           </h3>
-          <p className="text-xs text-sub leading-relaxed">
+          <p className="text-xs text-zinc-400 leading-relaxed">
             {currentStep.description}
           </p>
         </div>
 
         {/* Rodapé: Progresso por Pontos e Navegação */}
-        <div className="flex items-center justify-between pt-3 border-t border-glass-border/60">
+        <div className="flex items-center justify-between pt-3 border-t border-white/10/60">
           {/* Indicadores de Progresso */}
           <div className="flex items-center gap-1.5">
             {steps.map((_, idx) => (
@@ -318,7 +318,7 @@ export function GuidedTourModal() {
                     ? "w-5 bg-accent"
                     : idx < currentStepIndex
                     ? "w-2 bg-platinum/60"
-                    : "w-2 bg-carbon-muted border border-glass-border"
+                    : "w-2 bg-white/[0.04] border border-white/10"
                 }`}
               />
             ))}
@@ -330,7 +330,7 @@ export function GuidedTourModal() {
               <button
                 type="button"
                 onClick={prevStep}
-                className="flex h-8 items-center gap-1 rounded-md border border-glass-border bg-carbon px-2.5 text-xs text-sub hover:text-platinum hover:border-glass-highlight transition-all cursor-pointer font-mono"
+                className="flex h-8 items-center gap-1 rounded-md border border-white/10 bg-[#0A0A0A] px-2.5 text-xs text-zinc-400 hover:text-white hover:border-white/20 transition-all cursor-pointer font-mono"
               >
                 <ArrowLeft className="h-3 w-3" />
                 <span>Voltar</span>

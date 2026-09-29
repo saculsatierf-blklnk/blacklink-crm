@@ -25,7 +25,7 @@ export function StartTourButton({
       <button
         type="button"
         onClick={handleClick}
-        className="flex items-center gap-1.5 text-xs font-mono text-accent hover:text-platinum transition-colors cursor-pointer"
+        className="flex items-center gap-1.5 text-xs font-mono text-accent hover:text-white transition-colors cursor-pointer"
       >
         <Sparkles className="h-3.5 w-3.5" />
         <span>{label}</span>
@@ -38,7 +38,7 @@ export function StartTourButton({
       <button
         type="button"
         onClick={handleClick}
-        className="flex h-8 items-center gap-1.5 rounded-md border border-glass-border bg-carbon px-3 text-xs font-mono text-sub hover:text-platinum hover:border-accent/40 transition-all cursor-pointer shadow-sm"
+        className="flex h-8 items-center gap-1.5 rounded-md border border-white/10 bg-[#0A0A0A] px-3 text-xs font-mono text-zinc-400 hover:text-white hover:border-white/20 transition-all cursor-pointer shadow-sm"
       >
         <Compass className="h-3.5 w-3.5 text-accent" />
         <span>{label}</span>

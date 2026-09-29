@@ -221,25 +221,27 @@ export function AddLeadModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fadeIn">
       {/* Backdrop */}
       <div
         onClick={handleResetAndClose}
-        className="fixed inset-0 bg-black/85 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 transition-opacity"
       />
 
       {/* Conteúdo do Modal */}
-      <div className="relative z-50 flex flex-col w-full max-w-2xl max-h-[90vh] rounded-xl border border-glass-border bg-carbon p-6 shadow-2xl overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-50 flex flex-col w-full max-w-2xl max-h-[90vh] rounded-3xl border border-white/[0.12] bg-[#0A0A0A]/95 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl overflow-y-auto space-y-6">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-glass-border pb-4">
+        <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-5">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-accent" />
-              <h2 className="text-base font-bold text-platinum tracking-tight uppercase font-mono">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+              <h2 className="text-lg font-medium text-white tracking-tight">
                 Cadastrar Nova Conta / Lead
               </h2>
             </div>
-            <p className="text-xs text-sub">
+            <p className="text-xs text-zinc-400">
               Preencha os dados do decisor. O radar anti-colisão verifica e-mail e domínio em tempo real.
             </p>
           </div>
@@ -247,61 +249,61 @@ export function AddLeadModal({
           <button
             type="button"
             onClick={handleResetAndClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-glass-border bg-carbon-muted text-sub hover:text-platinum transition-colors cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        <form onSubmit={handleSubmit} className="relative z-10 space-y-5">
           {submitError && (
-            <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-xs font-mono text-rose-300">
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3.5 text-xs font-mono text-rose-300">
               {submitError}
             </div>
           )}
 
           {/* Linha 1: Nome do Contato e Empresa */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                 Nome do Decisor *
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-2.5 h-3.5 w-3.5 text-sub" />
+                <User className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: Roberto Silveira"
-                  className="w-full rounded-md border border-glass-border bg-carbon-muted pl-9 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
+                  className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                 Empresa / Organização *
               </label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-2.5 h-3.5 w-3.5 text-sub" />
+                <Building2 className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
                 <input
                   type="text"
                   required
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="Ex: Apex Capital Holding"
-                  className="w-full rounded-md border border-glass-border bg-carbon-muted pl-9 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
+                  className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Linha 2: E-mail Corporativo (com Radar Anti-Colisão) */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                 E-mail Corporativo *
               </label>
               <div className="flex items-center gap-1.5 text-[10px] font-mono">
@@ -325,17 +327,17 @@ export function AddLeadModal({
             </div>
 
             <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-3.5 w-3.5 text-sub" />
+              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Ex: roberto@apexcapital.io"
-                className={`w-full rounded-md border pl-9 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:outline-none ${
+                className={`w-full rounded-xl border pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none transition-colors ${
                   hasCollision
                     ? "border-rose-500/80 bg-rose-500/10 focus:border-rose-400"
-                    : "border-glass-border bg-carbon-muted focus:border-accent"
+                    : "border-white/10 bg-black/20 focus:border-white/30"
                 }`}
               />
             </div>
@@ -343,14 +345,14 @@ export function AddLeadModal({
 
           {/* CARD DE AVISO DE COLISÃO EXPANDIDO */}
           {hasCollision && collisionResult?.collidedLead && (
-            <div className="rounded-xl border border-rose-500/60 bg-rose-950/30 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-start gap-2.5">
+            <div className="rounded-2xl border border-rose-500/40 bg-rose-950/20 p-4.5 space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
                 <ShieldAlert className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <div className="text-xs font-mono font-bold uppercase tracking-wider text-rose-300">
+                  <div className="text-xs font-medium uppercase tracking-wider text-rose-300">
                     Bloqueio Anti-Colisão: Conta Já Mapeada no Sistema
                   </div>
-                  <p className="text-[11px] text-platinum/90 leading-relaxed">
+                  <p className="text-[11px] text-zinc-300 leading-relaxed">
                     Identificamos que este e-mail ou domínio corporativo (
                     <span className="font-mono text-rose-300 font-semibold">
                       @{collisionResult.domain}
@@ -362,24 +364,24 @@ export function AddLeadModal({
               </div>
 
               {/* Dossiê do Lead Conflitante */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-rose-500/30 text-[11px] font-mono">
-                <div className="rounded bg-black/40 p-2 border border-rose-500/20">
-                  <span className="text-[10px] text-sub uppercase block">Dono da Conta</span>
-                  <span className="font-bold text-platinum truncate block">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-rose-500/20 text-[11px] font-mono">
+                <div className="rounded-xl bg-black/40 p-2.5 border border-rose-500/20">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Dono da Conta</span>
+                  <span className="font-medium text-white truncate block">
                     {collisionResult.collidedLead.ownerName}
                   </span>
                 </div>
 
-                <div className="rounded bg-black/40 p-2 border border-rose-500/20">
-                  <span className="text-[10px] text-sub uppercase block">Status no Funil</span>
-                  <span className="font-bold text-amber-300 truncate block">
+                <div className="rounded-xl bg-black/40 p-2.5 border border-rose-500/20">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Status no Funil</span>
+                  <span className="font-medium text-amber-300 truncate block">
                     {getStatusLabel(collisionResult.collidedLead.status)}
                   </span>
                 </div>
 
-                <div className="rounded bg-black/40 p-2 border border-rose-500/20">
-                  <span className="text-[10px] text-sub uppercase block">Registro Existente</span>
-                  <span className="font-semibold text-platinum truncate block">
+                <div className="rounded-xl bg-black/40 p-2.5 border border-rose-500/20">
+                  <span className="text-[10px] text-zinc-500 uppercase block">Registro Existente</span>
+                  <span className="font-medium text-white truncate block">
                     {collisionResult.collidedLead.leadName}
                   </span>
                 </div>
@@ -388,21 +390,21 @@ export function AddLeadModal({
               {/* Histórico Completo de Anotações do Lead Conflitante */}
               {collisionResult.collidedLead.notes &&
                 collisionResult.collidedLead.notes.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t border-rose-500/30">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-sub block">
+                  <div className="space-y-2 pt-2.5 border-t border-rose-500/20">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
                       Histórico de Anotações da Conta ({collisionResult.collidedLead.notes.length})
                     </span>
-                    <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1">
+                    <div className="max-h-28 overflow-y-auto space-y-2 pr-1">
                       {collisionResult.collidedLead.notes.map((note: NoteEntry) => (
                         <div
                           key={note.id}
-                          className="rounded bg-black/50 p-2 text-[10px] font-mono border border-rose-500/20 text-sub"
+                          className="rounded-xl bg-black/50 p-2.5 text-[10px] font-mono border border-rose-500/20 text-zinc-400"
                         >
-                          <div className="flex items-center justify-between text-[9px] text-sub/70 pb-1">
-                            <span className="font-semibold text-platinum">{note.author}</span>
+                          <div className="flex items-center justify-between text-[9px] text-zinc-500 pb-1">
+                            <span className="font-medium text-zinc-300">{note.author}</span>
                             <span>{formatShortDate(note.createdAt)}</span>
                           </div>
-                          <div className="text-platinum whitespace-pre-wrap">{note.text}</div>
+                          <div className="text-zinc-200 whitespace-pre-wrap">{note.text}</div>
                         </div>
                       ))}
                     </div>
@@ -412,47 +414,47 @@ export function AddLeadModal({
           )}
 
           {/* Linha 3: Cargo e Telefone / WhatsApp com DDI */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                 Cargo / Função
               </label>
               <div className="relative">
-                <UserCheck className="absolute left-3 top-2.5 h-3.5 w-3.5 text-sub" />
+                <UserCheck className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
                 <input
                   type="text"
                   value={roleTitle}
                   onChange={(e) => setRoleTitle(e.target.value)}
                   placeholder="Ex: Diretor de Operações"
-                  className="w-full rounded-md border border-glass-border bg-carbon-muted pl-9 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
+                  className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
                 Telefone / WhatsApp
               </label>
-              <div className="flex rounded-md border border-glass-border bg-carbon-muted focus-within:border-accent overflow-hidden">
+              <div className="flex rounded-xl border border-white/10 bg-black/20 focus-within:border-white/30 overflow-hidden transition-colors">
                 <select
                   value={selectedDdi}
                   onChange={(e) => handleDdiChange(e.target.value)}
-                  className="bg-carbon px-2.5 py-2 text-xs font-mono text-platinum border-r border-glass-border focus:outline-none cursor-pointer"
+                  className="bg-transparent px-3 py-2.5 text-xs font-mono text-white border-r border-white/10 focus:outline-none cursor-pointer"
                 >
                   {COUNTRY_CODES.map((item) => (
-                    <option key={item.code} value={item.code} className="bg-carbon text-platinum">
+                    <option key={item.code} value={item.code} className="bg-[#0A0A0A] text-white">
                       {item.flag} {item.code}
                     </option>
                   ))}
                 </select>
                 <div className="relative flex-1 flex items-center">
-                  <Phone className="absolute left-2.5 h-3.5 w-3.5 text-sub pointer-events-none" />
+                  <Phone className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
                   <input
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     placeholder={selectedDdi === "+55" ? "(11) 9XXXX-XXXX" : "Número de telefone"}
-                    className="w-full bg-transparent pl-8 pr-3 py-2 text-xs font-mono text-platinum placeholder:text-sub/50 focus:outline-none"
+                    className="w-full bg-transparent pl-9 pr-4 py-2.5 text-xs font-mono text-white placeholder:text-zinc-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -460,17 +462,17 @@ export function AddLeadModal({
           </div>
 
           {/* Linha 4: Operador Responsável (Dono Dinâmico) */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
               Operador Responsável (Dono)
             </label>
             <select
               value={ownerId}
               onChange={(e) => setOwnerId(e.target.value)}
-              className="w-full rounded-md border border-glass-border bg-carbon-muted px-3 py-2 text-xs font-mono text-platinum focus:border-accent focus:outline-none cursor-pointer"
+              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono text-white focus:border-white/30 focus:outline-none transition-colors cursor-pointer"
             >
               {operatorsList.map((op) => (
-                <option key={op.id} value={op.id} className="bg-carbon text-platinum">
+                <option key={op.id} value={op.id} className="bg-[#0A0A0A] text-white">
                   {op.name} ({op.role})
                 </option>
               ))}
@@ -478,8 +480,8 @@ export function AddLeadModal({
           </div>
 
           {/* Linha 5: Anotação Inicial */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase tracking-wider text-sub block">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
               Anotação Inicial da Conta (Opcional)
             </label>
             <div className="relative">
@@ -488,17 +490,17 @@ export function AddLeadModal({
                 onChange={(e) => setInitialNote(e.target.value)}
                 rows={2}
                 placeholder="Contexto da prospecção, canal de abordagem ou detalhes preliminares..."
-                className="w-full rounded-md border border-glass-border bg-carbon-muted p-2.5 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
+                className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:outline-none transition-colors resize-y"
               />
             </div>
           </div>
 
           {/* Rodapé com Botões de Ação */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-glass-border">
+          <div className="flex items-center justify-end gap-3 pt-5 border-t border-white/10">
             <button
               type="button"
               onClick={handleResetAndClose}
-              className="rounded-md border border-glass-border bg-carbon px-4 py-2 text-xs font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
+              className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-2.5 text-xs text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -506,12 +508,12 @@ export function AddLeadModal({
             <button
               type="submit"
               disabled={!isFormValid || isPending}
-              className={`rounded-md px-5 py-2 text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`rounded-xl px-6 py-2.5 text-xs font-semibold tracking-tight transition-all cursor-pointer ${
                 hasCollision
                   ? "border border-rose-500/40 bg-rose-500/20 text-rose-300 opacity-60 cursor-not-allowed"
                   : isFormValid
-                  ? "bg-accent text-void hover:bg-platinum shadow-md"
-                  : "bg-carbon-muted text-sub opacity-50 cursor-not-allowed"
+                  ? "bg-white text-black hover:bg-zinc-200 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                  : "bg-white/[0.05] text-zinc-500 opacity-50 cursor-not-allowed"
               }`}
             >
               {isPending
