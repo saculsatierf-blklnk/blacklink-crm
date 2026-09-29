@@ -134,19 +134,19 @@ export function ManualAssetUploadModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-void/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-glass-border bg-carbon p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-2xl animate-fadeIn">
+      <div className="relative w-full max-w-2xl rounded-3xl border border-white/15 bg-black/90 p-8 sm:p-10 shadow-2xl shadow-black/90 space-y-6 max-h-[92vh] overflow-y-auto">
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between border-b border-glass-border/70 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-void">
+        <div className="flex items-center justify-between border-b border-white/10 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
               <UploadCloud className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold font-mono uppercase tracking-wider text-platinum">
+              <h3 className="text-base font-semibold text-white tracking-tight">
                 Upload Manual de Ativo (&quot;A Prateleira&quot;)
               </h3>
-              <p className="text-[11px] text-sub">
+              <p className="text-xs text-zinc-400 mt-0.5">
                 Hospedagem externa (Premiere, Photoshop, Figma) unificada na esteira de aprovação.
               </p>
             </div>
@@ -155,22 +155,22 @@ export function ManualAssetUploadModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-glass-border p-1.5 text-sub hover:text-platinum hover:bg-void transition-colors cursor-pointer"
+            className="rounded-xl border border-white/10 p-2 text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {errorMessage && (
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400 font-mono">
+          <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-3.5 text-xs text-red-300 font-mono">
             {errorMessage}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Dropzone de Arquivos */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Dropzone de Arquivos Apple Glass */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold tracking-tight text-zinc-300">
               Mídia Física (Arraste Imagens ou Vídeos)
             </label>
 
@@ -179,10 +179,10 @@ export function ManualAssetUploadModal({
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
+              className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer flex flex-col items-center justify-center gap-3 ${
                 isDragging
-                  ? "border-accent bg-accent/10"
-                  : "border-glass-border bg-void/40 hover:border-glass-highlight hover:bg-void/70"
+                  ? "border-white/50 bg-white/[0.08]"
+                  : "border-white/15 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
               }`}
             >
               <input
@@ -193,11 +193,11 @@ export function ManualAssetUploadModal({
                 onChange={(e) => e.target.files && handleFilesSelected(e.target.files)}
                 className="hidden"
               />
-              <UploadCloud className="h-8 w-8 text-sub group-hover:text-accent transition-colors" />
-              <div className="text-xs font-mono text-platinum">
-                <span className="font-bold text-accent">Clique para selecionar</span> ou arraste os arquivos aqui
+              <UploadCloud className="h-9 w-9 text-zinc-400 transition-colors" />
+              <div className="text-xs text-white">
+                <span className="font-semibold underline underline-offset-4 text-white">Clique para selecionar</span> ou arraste os arquivos aqui
               </div>
-              <p className="text-[10px] text-sub font-mono">
+              <p className="text-[11px] text-zinc-500">
                 Suporta PNG, JPG, WebP, MP4 e MOV. Múltiplos arquivos formam carrossel.
               </p>
             </div>
@@ -210,12 +210,12 @@ export function ManualAssetUploadModal({
                   return (
                     <div
                       key={idx}
-                      className="relative group rounded-lg border border-glass-border bg-void/80 overflow-hidden aspect-square flex items-center justify-center p-1"
+                      className="relative group rounded-2xl border border-white/15 bg-white/[0.03] overflow-hidden aspect-square flex items-center justify-center p-1 shadow-md"
                     >
                       {isVideo ? (
-                        <div className="flex flex-col items-center justify-center text-sub gap-1">
-                          <FileVideo className="h-6 w-6 text-accent" />
-                          <span className="text-[9px] font-mono truncate max-w-[80px]">
+                        <div className="flex flex-col items-center justify-center text-zinc-400 gap-1.5">
+                          <FileVideo className="h-6 w-6 text-white" />
+                          <span className="text-[10px] font-mono truncate max-w-[80px]">
                             {file.name}
                           </span>
                         </div>
@@ -224,7 +224,7 @@ export function ManualAssetUploadModal({
                         <img
                           src={previews[idx]}
                           alt={file.name}
-                          className="h-full w-full object-cover rounded"
+                          className="h-full w-full object-cover rounded-xl"
                         />
                       )}
 
@@ -234,12 +234,12 @@ export function ManualAssetUploadModal({
                           e.stopPropagation();
                           removeFile(idx);
                         }}
-                        className="absolute top-1 right-1 rounded-full bg-red-500/80 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md"
+                        className="absolute top-2 right-2 rounded-full bg-red-600/90 p-1.5 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg hover:scale-110 active:scale-95"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
 
-                      <div className="absolute bottom-1 left-1 rounded bg-void/80 px-1 py-0.2 text-[8px] font-mono text-platinum">
+                      <div className="absolute bottom-2 left-2 rounded-md bg-black/80 border border-white/10 px-1.5 py-0.2 text-[9px] font-mono text-white">
                         0{idx + 1}
                       </div>
                     </div>
@@ -250,9 +250,9 @@ export function ManualAssetUploadModal({
           </div>
 
           {/* Grid: Tema e Formato */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2 space-y-1">
-              <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2 space-y-1.5">
+              <label className="text-xs font-semibold tracking-tight text-zinc-300">
                 Tema / Título do Ativo *
               </label>
               <input
@@ -261,18 +261,18 @@ export function ManualAssetUploadModal({
                 value={theme}
                 onChange={(e) => setTheme(e.target.value)}
                 placeholder="Ex: Documentário Institucional de Expansão B2B"
-                className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold tracking-tight text-zinc-300">
                 Formato
               </label>
               <select
                 value={format}
                 onChange={(e) => setFormat(e.target.value as CreativeFormat)}
-                className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-mono text-platinum focus:border-glass-highlight focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all cursor-pointer"
               >
                 <option value="post">Post Único</option>
                 <option value="carousel">Carrossel</option>
@@ -282,8 +282,8 @@ export function ManualAssetUploadModal({
           </div>
 
           {/* Legenda (Textarea) */}
-          <div className="space-y-1">
-            <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold tracking-tight text-zinc-300">
               Legenda do Post (Copywriting)
             </label>
             <textarea
@@ -291,14 +291,14 @@ export function ManualAssetUploadModal({
               value={bodyCopy}
               onChange={(e) => setBodyCopy(e.target.value)}
               placeholder="Digite a legenda que acompanhará a mídia na publicação..."
-              className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none resize-y"
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all resize-y leading-relaxed"
             />
           </div>
 
           {/* Grid: Hashtags e Data de Agendamento */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold tracking-tight text-zinc-300">
                 Hashtags
               </label>
               <input
@@ -306,12 +306,12 @@ export function ManualAssetUploadModal({
                 value={hashtags}
                 onChange={(e) => setHashtags(e.target.value)}
                 placeholder="#VendasB2B #BlackLink"
-                className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold tracking-tight text-zinc-300">
                 Data/Hora de Agendamento
               </label>
               <input
@@ -319,18 +319,18 @@ export function ManualAssetUploadModal({
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
                 placeholder="Ex: Amanhã • 14:00"
-                className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
               />
             </div>
           </div>
 
           {/* Botões do Rodapé */}
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-glass-border/70">
+          <div className="flex items-center justify-end gap-3 pt-5 border-t border-white/10">
             <button
               type="button"
               disabled={isUploading}
               onClick={onClose}
-              className="rounded-lg border border-glass-border bg-void/50 px-4 py-2 text-xs font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
+              className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
             >
               Cancelar
             </button>
@@ -338,11 +338,11 @@ export function ManualAssetUploadModal({
             <button
               type="submit"
               disabled={isUploading || !theme.trim()}
-              className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2 text-xs font-bold font-mono text-void hover:bg-platinum transition-all cursor-pointer shadow-lg hover:shadow-accent/20 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50"
             >
               {isUploading ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-void" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
                   <span>Salvando na Prateleira...</span>
                 </>
               ) : (

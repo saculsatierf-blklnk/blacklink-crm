@@ -1,66 +1,97 @@
 @import "tailwindcss";
 
 @theme {
-  --color-void: #030303;
-  --color-carbon: #0A0A0A;
-  --color-carbon-muted: #121212;
-  --color-carbon-border: #1C1C1C;
+  --color-void: #000000;
+  --color-carbon: #0A0A0C;
+  --color-carbon-muted: #141417;
+  --color-carbon-border: rgba(255, 255, 255, 0.1);
   
-  --color-platinum: #E5E4E2;
-  --color-platinum-bright: #F5F5F3;
-  --color-sub: #71717A;
+  --color-platinum: #F5F5F7;
+  --color-platinum-bright: #FFFFFF;
+  --color-sub: #86868B;
   
   --color-accent: #FFFFFF;
-  --color-accent-hover: #E5E4E2;
+  --color-accent-hover: #E5E5EA;
   
-  --color-glass-surface: rgba(255, 255, 255, 0.02);
-  --color-glass-border: rgba(255, 255, 255, 0.08);
-  --color-glass-highlight: rgba(255, 255, 255, 0.15);
+  --color-glass-surface: rgba(255, 255, 255, 0.03);
+  --color-glass-border: rgba(255, 255, 255, 0.10);
+  --color-glass-highlight: rgba(255, 255, 255, 0.20);
 }
 
 :root {
-  --background: #030303;
-  --foreground: #E5E4E2;
+  --background: #000000;
+  --foreground: #F5F5F7;
 }
 
 html,
 body {
-  background-color: #030303 !important;
-  color: #E5E4E2;
+  background-color: #000000 !important;
+  color: #F5F5F7;
   min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
 }
 
-/* Seleção de Texto: Foco de Alta Precisão */
+/* Tipografia Monospaçada Nativa do Sistema */
+code, kbd, samp, pre, .font-mono {
+  font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* Seleção de Texto Estilo Apple */
 ::selection {
   background-color: #FFFFFF;
-  color: #030303;
+  color: #000000;
 }
 
-/* Scrollbar Corporativa Dark Industrial */
+/* Scrollbar Elegante e Minimalista MacOS */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #030303;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* Glassmorphism Utilitário */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.02);
+/* Classes Utilitárias do Padrão Apple Glassmorphism */
+.apple-glass {
+  background-color: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.apple-glass-card {
+  background-color: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.apple-glass-input {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: #F5F5F7;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-glass-input:focus {
+  background-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.30);
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.20);
 }

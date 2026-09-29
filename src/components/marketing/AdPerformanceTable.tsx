@@ -64,49 +64,49 @@ export function AdPerformanceTable() {
   const totalConversions = adCampaigns.reduce((acc, curr) => acc + curr.conversions, 0);
 
   return (
-    <div className="rounded-xl border border-glass-border bg-carbon p-6 shadow-2xl backdrop-blur-xl space-y-6">
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-7 sm:p-8 shadow-2xl shadow-black/60 space-y-7">
       {/* Cabeçalho da Seção de Tráfego Pago & Botão de Disparo do Robô */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-glass-border/70 pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-5">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-void">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
               <TrendingUp className="h-4 w-4" />
             </div>
-            <h3 className="text-sm font-bold font-mono uppercase tracking-wider text-platinum">
+            <h3 className="text-base font-semibold tracking-tight text-white">
               Agente de Tráfego Pago & Otimização Autônoma
             </h3>
-            <span className="rounded bg-accent/10 border border-accent/20 px-2 py-0.5 text-[10px] font-mono text-accent">
-              Meta Ads Graph v20.0 Ready
+            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
+              Meta Graph v20.0
             </span>
             {lastOptimizationRun && (
-              <span className="rounded bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400">
+              <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[11px] font-mono text-emerald-300 font-semibold">
                 Último ciclo: {new Date(lastOptimizationRun).toLocaleTimeString("pt-BR")}
               </span>
             )}
           </div>
-          <p className="text-xs text-sub mt-1">
+          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
             Algoritmo autônomo: escala +20% do orçamento para criativos vencedores (ROAS &ge; 3.5x e CTR &ge; 2.5%) e pausa conjuntos sub-performers.
           </p>
         </div>
 
         {/* Controles de Ação do Robô & Filtros */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Botão de Disparo do Robô */}
           <button
             type="button"
             disabled={isOptimizing}
             onClick={handleRunRobot}
-            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold font-mono text-void hover:bg-platinum transition-all cursor-pointer shadow-lg hover:shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 rounded-xl bg-white text-black px-5 py-2.5 text-xs font-semibold tracking-tight hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isOptimizing ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-void" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
                 <span>Otimizando Anúncios...</span>
               </>
             ) : (
               <>
-                <Zap className="h-3.5 w-3.5 fill-void" />
-                <span>Executar Robô de Otimização</span>
+                <Zap className="h-3.5 w-3.5 fill-black" />
+                <span>Executar Otimização</span>
               </>
             )}
           </button>
@@ -115,30 +115,30 @@ export function AdPerformanceTable() {
           <button
             type="button"
             onClick={() => setShowLogsDrawer(!showLogsDrawer)}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-mono transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-medium transition-all duration-300 cursor-pointer ${
               showLogsDrawer
-                ? "border-accent bg-carbon-muted text-platinum"
-                : "border-glass-border bg-void/50 text-sub hover:text-platinum"
+                ? "border-white/30 bg-white/[0.12] text-white shadow-sm"
+                : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white hover:bg-white/[0.06]"
             }`}
           >
             <Cpu className="h-3.5 w-3.5" />
             <span>Auditoria ({optimizationLogs.length})</span>
             {showLogsDrawer ? (
-              <ChevronUp className="h-3 w-3 ml-0.5" />
+              <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
             ) : (
-              <ChevronDown className="h-3 w-3 ml-0.5" />
+              <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
             )}
           </button>
 
           {/* Filtros de Status */}
-          <div className="flex items-center gap-1 border-l border-glass-border/70 pl-2">
+          <div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
             <button
               type="button"
               onClick={() => setFilterStatus("todos")}
-              className={`rounded-md px-2 py-1 text-xs font-mono transition-colors cursor-pointer ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "todos"
-                  ? "bg-carbon-muted border border-glass-highlight text-platinum font-bold"
-                  : "text-sub hover:text-platinum"
+                  ? "bg-white/[0.15] border border-white/20 text-white font-semibold shadow-sm"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               Todos ({adCampaigns.length})
@@ -146,10 +146,10 @@ export function AdPerformanceTable() {
             <button
               type="button"
               onClick={() => setFilterStatus("active")}
-              className={`rounded-md px-2 py-1 text-xs font-mono transition-colors cursor-pointer ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "active"
-                  ? "bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30"
-                  : "text-sub hover:text-emerald-400"
+                  ? "bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40"
+                  : "text-zinc-400 hover:text-emerald-300"
               }`}
             >
               Ativos
@@ -157,10 +157,10 @@ export function AdPerformanceTable() {
             <button
               type="button"
               onClick={() => setFilterStatus("paused")}
-              className={`rounded-md px-2 py-1 text-xs font-mono transition-colors cursor-pointer ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "paused"
-                  ? "bg-zinc-500/20 text-zinc-300 font-bold border border-zinc-500/30"
-                  : "text-sub hover:text-zinc-300"
+                  ? "bg-zinc-500/20 text-zinc-300 font-semibold border border-zinc-500/40"
+                  : "text-zinc-400 hover:text-zinc-300"
               }`}
             >
               Pausados
@@ -169,11 +169,11 @@ export function AdPerformanceTable() {
         </div>
       </div>
 
-      {/* Grid de Resumo dos Indicadores de Escala */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-lg border border-glass-border bg-void/60 p-3.5 space-y-1">
+      {/* Grid de Resumo dos Indicadores de Escala Apple Glass */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
               Investimento Diário Total
             </span>
             {optimizationSummary && (
@@ -187,50 +187,50 @@ export function AdPerformanceTable() {
               </span>
             )}
           </div>
-          <div className="text-lg font-bold font-mono text-platinum">
+          <div className="text-xl font-bold font-mono text-white">
             R$ {totalDailyBudget.toFixed(2).replace(".", ",")}
           </div>
           <span className="text-[10px] text-emerald-400 font-mono">Orçamento alocado em tempo real</span>
         </div>
 
-        <div className="rounded-lg border border-glass-border bg-void/60 p-3.5 space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-1.5">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
             CTR Médio Ponderado
           </span>
-          <div className="text-lg font-bold font-mono text-platinum">
+          <div className="text-xl font-bold font-mono text-white">
             {avgCtr}%
           </div>
           <span className="text-[10px] text-emerald-400 font-mono">Taxa de clique qualificada</span>
         </div>
 
-        <div className="rounded-lg border border-glass-border bg-void/60 p-3.5 space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-1.5">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
             ROAS Consolidado
           </span>
-          <div className="text-lg font-bold font-mono text-emerald-400">
+          <div className="text-xl font-bold font-mono text-emerald-300">
             {avgRoas}x
           </div>
-          <span className="text-[10px] text-sub font-mono">Retorno sobre gasto publicitário</span>
+          <span className="text-[10px] text-zinc-400 font-mono">Retorno sobre gasto publicitário</span>
         </div>
 
-        <div className="rounded-lg border border-glass-border bg-void/60 p-3.5 space-y-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-sub">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-1.5">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
             Conversões / Reuniões
           </span>
-          <div className="text-lg font-bold font-mono text-platinum">
+          <div className="text-xl font-bold font-mono text-white">
             {totalConversions}
           </div>
-          <span className="text-[10px] text-sub font-mono">Leads B2B qualificados injetados</span>
+          <span className="text-[10px] text-zinc-400 font-mono">Leads B2B qualificados injetados</span>
         </div>
       </div>
 
       {/* Dossiê de Auditoria do Robô (Expandível) */}
       {showLogsDrawer && (
-        <div className="rounded-xl border border-glass-border bg-void/80 p-4 space-y-3 transition-all animate-fadeIn">
-          <div className="flex items-center justify-between border-b border-glass-border pb-2.5">
-            <div className="flex items-center gap-2">
-              <Cpu className="h-4 w-4 text-accent" />
-              <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum">
+        <div className="rounded-2xl border border-white/15 bg-white/[0.04] backdrop-blur-xl p-5 space-y-4 transition-all animate-fadeIn">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2.5">
+              <Cpu className="h-4 w-4 text-white" />
+              <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
                 Relatório de Auditoria das Decisões Algorítmicas
               </h4>
             </div>
@@ -242,7 +242,7 @@ export function AdPerformanceTable() {
                 <span className="text-zinc-400">
                   {optimizationSummary.pausedCount} Pausados
                 </span>
-                <span className="text-sub">
+                <span className="text-zinc-500">
                   {optimizationSummary.maintainedCount} Mantidos
                 </span>
               </div>
@@ -250,45 +250,45 @@ export function AdPerformanceTable() {
           </div>
 
           {optimizationLogs.length === 0 ? (
-            <p className="text-xs text-sub font-mono py-2">
-              Nenhuma ação executada nesta sessão ainda. Clique no botão &quot;Executar Robô de Otimização&quot; acima para processar a telemetria.
+            <p className="text-xs text-zinc-400 font-mono py-2">
+              Nenhuma ação executada nesta sessão ainda. Clique no botão &quot;Executar Otimização&quot; acima para processar a telemetria.
             </p>
           ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
               {optimizationLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="rounded-lg border border-glass-border bg-carbon/60 p-3 text-xs font-mono space-y-1"
+                  className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs font-mono space-y-1.5"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {log.action === "scale" ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[9px] font-bold text-emerald-300">
                           <Zap className="h-3 w-3 fill-emerald-400" />
                           ESCALA +20%
                         </span>
                       ) : log.action === "pause" ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-red-500/20 border border-red-500/30 px-2 py-0.5 text-[10px] font-bold text-red-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2.5 py-0.5 text-[9px] font-bold text-red-300">
                           <Pause className="h-3 w-3" />
                           PAUSA DE PROTEÇÃO
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded bg-zinc-500/20 border border-zinc-500/30 px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 border border-zinc-700 px-2.5 py-0.5 text-[9px] font-semibold text-zinc-300">
                           MANTER
                         </span>
                       )}
-                      <span className="font-bold text-platinum truncate font-sans">
+                      <span className="font-semibold text-white tracking-tight truncate font-sans text-xs">
                         {log.adSetName}
                       </span>
                     </div>
 
-                    <span className="text-[10px] text-sub shrink-0">
+                    <span className="text-[10px] text-zinc-400 shrink-0">
                       R$ {log.previousBudget.toFixed(2)} &rarr;{" "}
-                      <span className="text-platinum font-bold">R$ {log.newBudget.toFixed(2)}</span>
+                      <span className="text-white font-bold">R$ {log.newBudget.toFixed(2)}</span>
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-sub pl-1">{log.rationale}</p>
+                  <p className="text-[11px] text-zinc-400 pl-1">{log.rationale}</p>
                 </div>
               ))}
             </div>
@@ -296,21 +296,21 @@ export function AdPerformanceTable() {
         </div>
       )}
 
-      {/* Tabela de Campanhas & Criativos */}
-      <div className="overflow-x-auto rounded-lg border border-glass-border">
+      {/* Tabela de Campanhas & Criativos Apple Glass */}
+      <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
         <table className="w-full text-left text-xs">
-          <thead className="bg-carbon-muted/70 text-[10px] font-mono uppercase tracking-wider text-sub border-b border-glass-border">
+          <thead className="bg-white/[0.03] text-[10px] font-mono uppercase tracking-widest text-zinc-400 border-b border-white/10">
             <tr>
-              <th className="py-3 px-4">Criativo & Campanha</th>
-              <th className="py-3 px-4">Formato</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Investimento Diário</th>
-              <th className="py-3 px-4">CTR</th>
-              <th className="py-3 px-4">ROAS</th>
-              <th className="py-3 px-4 text-right">Ação Algorítmica</th>
+              <th className="py-3.5 px-5">Criativo & Campanha</th>
+              <th className="py-3.5 px-5">Formato</th>
+              <th className="py-3.5 px-5">Status</th>
+              <th className="py-3.5 px-5">Investimento Diário</th>
+              <th className="py-3.5 px-5">CTR</th>
+              <th className="py-3.5 px-5">ROAS</th>
+              <th className="py-3.5 px-5 text-right">Ação Algorítmica</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-glass-border/40 font-mono">
+          <tbody className="divide-y divide-white/5 font-mono">
             {filteredCampaigns.map((ad) => {
               const isHighRoas = ad.roas >= 3.5;
               const isHighCtr = ad.ctr >= 2.5;
@@ -318,29 +318,29 @@ export function AdPerformanceTable() {
               return (
                 <tr
                   key={ad.id}
-                  className="hover:bg-carbon-muted/30 transition-colors text-platinum"
+                  className="hover:bg-white/[0.03] transition-colors text-white"
                 >
                   {/* Criativo & Campanha */}
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
+                  <td className="py-3.5 px-5">
+                    <div className="flex items-center gap-3.5">
                       <div
-                        className="h-10 w-10 shrink-0 rounded-md border border-glass-border bg-cover bg-center"
+                        className="h-10 w-10 shrink-0 rounded-xl border border-white/15 bg-cover bg-center shadow-sm"
                         style={{ backgroundImage: `url(${ad.thumbnailUrl})` }}
                       />
                       <div className="flex flex-col min-w-0 max-w-xs">
-                        <span className="font-semibold text-xs text-platinum truncate font-sans">
+                        <span className="font-semibold text-xs text-white truncate font-sans tracking-tight">
                           {ad.creativeName}
                         </span>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-sub font-mono">
+                          <span className="text-[10px] text-zinc-500 font-mono">
                             ID: {ad.id}
                           </span>
                           {ad.scaleBadge && (
                             <span
-                              className={`rounded px-1.5 py-0.2 text-[9px] font-mono font-bold ${
+                              className={`rounded-full px-2 py-0.2 text-[9px] font-mono font-bold ${
                                 ad.scaleBadge.includes("+20%") || ad.scaleBadge === "VENCEDOR"
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
+                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                  : "bg-red-500/20 text-red-300 border border-red-500/40"
                               }`}
                             >
                               {ad.scaleBadge}
@@ -352,26 +352,26 @@ export function AdPerformanceTable() {
                   </td>
 
                   {/* Formato */}
-                  <td className="py-3 px-4">
-                    <span className="rounded bg-void border border-glass-border px-2 py-0.5 text-[10px] text-sub uppercase">
+                  <td className="py-3.5 px-5">
+                    <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-[10px] text-zinc-300 uppercase tracking-wider font-semibold">
                       {ad.format}
                     </span>
                   </td>
 
                   {/* Status da Campanha */}
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-5">
                     {ad.campaignStatus === "active" ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Ativo
                       </span>
                     ) : ad.campaignStatus === "learning" ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-amber-300">
                         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                         Aprendizado
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-500/30 bg-zinc-500/10 px-2 py-0.5 text-[10px] font-semibold text-zinc-400">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-300">
                         <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
                         Pausado
                       </span>
@@ -379,15 +379,15 @@ export function AdPerformanceTable() {
                   </td>
 
                   {/* Investimento Diário */}
-                  <td className="py-3 px-4 font-semibold text-platinum">
+                  <td className="py-3.5 px-5 font-semibold text-white">
                     R$ {ad.dailyBudget.toFixed(2).replace(".", ",")}
                   </td>
 
                   {/* CTR */}
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-5">
                     <span
                       className={`font-semibold ${
-                        isHighCtr ? "text-emerald-400" : ad.ctr < 1.0 ? "text-red-400" : "text-platinum"
+                        isHighCtr ? "text-emerald-400" : ad.ctr < 1.0 ? "text-red-400" : "text-white"
                       }`}
                     >
                       {ad.ctr.toFixed(2)}%
@@ -395,10 +395,10 @@ export function AdPerformanceTable() {
                   </td>
 
                   {/* ROAS */}
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-5">
                     <span
                       className={`font-bold ${
-                        isHighRoas ? "text-emerald-400" : ad.roas < 2.0 ? "text-red-400" : "text-platinum"
+                        isHighRoas ? "text-emerald-400" : ad.roas < 2.0 ? "text-red-400" : "text-white"
                       }`}
                     >
                       {ad.roas.toFixed(1)}x
@@ -406,13 +406,13 @@ export function AdPerformanceTable() {
                   </td>
 
                   {/* Ação Algorítmica */}
-                  <td className="py-3 px-4 text-right">
-                    <div className="inline-flex items-center gap-1.5">
+                  <td className="py-3.5 px-5 text-right">
+                    <div className="inline-flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => scaleSingleCampaign(ad.id)}
                         title="Escalar orçamento em +20%"
-                        className="inline-flex items-center gap-1 rounded border border-glass-border bg-carbon px-2.5 py-1 text-[11px] text-emerald-400 hover:text-platinum hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all cursor-pointer font-mono"
+                        className="inline-flex items-center gap-1 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/60 transition-all cursor-pointer font-mono font-semibold"
                       >
                         <Zap className="h-3 w-3" />
                         <span>+20%</span>
@@ -422,10 +422,10 @@ export function AdPerformanceTable() {
                         type="button"
                         onClick={() => toggleCampaignStatus(ad.id)}
                         title={ad.campaignStatus === "paused" ? "Reativar anúncio" : "Pausar anúncio"}
-                        className={`inline-flex items-center rounded border p-1 text-[11px] transition-all cursor-pointer ${
+                        className={`inline-flex items-center rounded-xl border p-1.5 text-xs transition-all cursor-pointer ${
                           ad.campaignStatus === "paused"
-                            ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-                            : "border-glass-border text-sub hover:text-platinum hover:border-glass-highlight"
+                            ? "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                            : "border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.08]"
                         }`}
                       >
                         {ad.campaignStatus === "paused" ? (

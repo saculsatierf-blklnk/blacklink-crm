@@ -61,81 +61,81 @@ export function Step1BriefingSetup() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-300">
-      {/* Cabeçalho do Card Centralizado */}
-      <div className="rounded-xl border border-glass-border bg-carbon p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
-        <div className="border-b border-glass-border/70 pb-4">
+    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-300">
+      {/* Container Principal Apple Glassmorphism */}
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-8 sm:p-10 shadow-2xl shadow-black/60 space-y-8">
+        <div className="border-b border-white/10 pb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-void">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                 <Sparkles className="h-4 w-4" />
               </div>
-              <h2 className="text-base font-bold font-mono uppercase tracking-wider text-platinum">
-                Briefing Estratégico & Setup da Campanha
+              <h2 className="text-xl font-semibold tracking-tight text-white">
+                Briefing Estratégico & Setup
               </h2>
             </div>
-            <span className="rounded bg-accent/10 border border-accent/20 px-2 py-0.5 text-[10px] font-mono text-accent">
+            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
               Etapa 1 de 3
             </span>
           </div>
-          <p className="text-xs text-sub mt-1">
+          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
             Defina o nicho, as dores do decisor corporativo e as referências visuais para o motor de IA estruturar o criativo.
           </p>
         </div>
 
         {error && (
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-400 font-mono">
+          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-300 font-mono">
             {error}
           </div>
         )}
 
-        {/* Shimmer Effect de Carregamento Simulando Digitação da IA */}
+        {/* Shimmer Effect Apple Glass Simulando Digitação da IA */}
         {isLoading ? (
           <div className="space-y-6 py-6 animate-pulse">
-            <div className="rounded-xl border border-accent/30 bg-void/90 p-6 space-y-4 shadow-2xl">
+            <div className="rounded-2xl border border-white/20 bg-white/[0.04] backdrop-blur-xl p-8 space-y-5 shadow-2xl">
               <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-accent" />
-                <span className="text-sm font-mono font-bold text-platinum">
+                <Loader2 className="h-5 w-5 animate-spin text-white" />
+                <span className="text-sm font-semibold tracking-tight text-white">
                   {statusMessage || "O motor de IA está estruturando o criativo..."}
                 </span>
               </div>
 
               {/* Linhas de Shimmer Efeito Digitação */}
               <div className="space-y-3 pt-2">
-                <div className="h-4 bg-carbon-muted rounded w-3/4 animate-pulse" />
-                <div className="h-3 bg-carbon-muted/70 rounded w-full animate-pulse" />
-                <div className="h-3 bg-carbon-muted/50 rounded w-5/6 animate-pulse" />
-                <div className="h-3 bg-carbon-muted/40 rounded w-2/3 animate-pulse" />
+                <div className="h-4 bg-white/[0.08] rounded-full w-3/4 animate-pulse" />
+                <div className="h-3.5 bg-white/[0.05] rounded-full w-full animate-pulse" />
+                <div className="h-3.5 bg-white/[0.04] rounded-full w-5/6 animate-pulse" />
+                <div className="h-3 bg-white/[0.03] rounded-full w-2/3 animate-pulse" />
               </div>
 
-              <div className="grid grid-cols-5 gap-2 pt-4">
+              <div className="grid grid-cols-5 gap-3 pt-4">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <div
                     key={s}
-                    className="h-16 rounded border border-glass-border/40 bg-carbon/50 flex flex-col items-center justify-center gap-1"
+                    className="h-20 rounded-xl border border-white/10 bg-white/[0.03] flex flex-col items-center justify-center gap-1.5"
                   >
-                    <span className="text-[10px] font-mono text-sub">Slide 0{s}</span>
-                    <div className="h-1.5 w-6 bg-accent/40 rounded-full animate-pulse" />
+                    <span className="text-[10px] font-mono text-zinc-500">Slide 0{s}</span>
+                    <div className="h-1.5 w-7 bg-white/30 rounded-full animate-pulse" />
                   </div>
                 ))}
               </div>
 
-              <p className="text-[11px] font-mono text-sub text-center pt-2">
-                Formatando tese de conversão, diretrizes visuais Dark Industrial e chamadas para ação...
+              <p className="text-[11px] font-mono text-zinc-400 text-center pt-2">
+                Formatando tese de conversão, diretrizes visuais e chamadas para ação...
               </p>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Campo 1: Nicho & Proposta de Valor (Textarea) */}
-            <div className="space-y-1.5">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Campo 1: Nicho & Proposta de Valor */}
+            <div className="space-y-2">
               <label
                 htmlFor="nicheValueProposition"
-                className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+                className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
               >
-                <Target className="h-3.5 w-3.5 text-accent" />
+                <Target className="h-3.5 w-3.5 text-white" />
                 <span>Nicho & Proposta de Valor</span>
-                <span className="text-accent">*</span>
+                <span className="text-white">*</span>
               </label>
               <textarea
                 id="nicheValueProposition"
@@ -143,19 +143,19 @@ export function Step1BriefingSetup() {
                 value={formData.nicheValueProposition}
                 onChange={(e) => setFormData({ nicheValueProposition: e.target.value })}
                 placeholder="Ex: Plataforma de inteligência comercial para empresas B2B. Reduzimos o ciclo de vendas e eliminamos colisões de prospecção."
-                className="w-full rounded-lg border border-glass-border bg-void/70 p-3 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none focus:ring-1 focus:ring-accent/50 resize-y"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-200 resize-y"
               />
             </div>
 
-            {/* Campo 2: Tema Principal (Input) */}
-            <div className="space-y-1.5">
+            {/* Campo 2: Tema Principal */}
+            <div className="space-y-2">
               <label
                 htmlFor="theme"
-                className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+                className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
               >
-                <FileText className="h-3.5 w-3.5 text-accent" />
+                <FileText className="h-3.5 w-3.5 text-white" />
                 <span>Tema Principal do Criativo</span>
-                <span className="text-accent">*</span>
+                <span className="text-white">*</span>
               </label>
               <input
                 id="theme"
@@ -164,19 +164,19 @@ export function Step1BriefingSetup() {
                 value={formData.theme}
                 onChange={(e) => setFormData({ theme: e.target.value })}
                 placeholder="Ex: Como Escalar Vendas B2B sem Queimar Margem Operacional"
-                className="w-full rounded-lg border border-glass-border bg-void/70 p-3 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none focus:ring-1 focus:ring-accent/50"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-200"
               />
             </div>
 
             {/* Grid Duplo: Público-Alvo e Referências */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Campo 3: Público-Alvo (Input) */}
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Campo 3: Público-Alvo */}
+              <div className="space-y-2">
                 <label
                   htmlFor="targetAudience"
-                  className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+                  className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
                 >
-                  <Megaphone className="h-3.5 w-3.5 text-accent" />
+                  <Megaphone className="h-3.5 w-3.5 text-white" />
                   <span>Público-Alvo / ICP</span>
                 </label>
                 <input
@@ -185,17 +185,17 @@ export function Step1BriefingSetup() {
                   value={formData.targetAudience}
                   onChange={(e) => setFormData({ targetAudience: e.target.value })}
                   placeholder="Ex: CEOs, Diretores Comerciais, Heads de Vendas B2B"
-                  className="w-full rounded-lg border border-glass-border bg-void/70 p-3 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none focus:ring-1 focus:ring-accent/50"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-200"
                 />
               </div>
 
-              {/* Campo 4: Referências / Concorrentes (Input) */}
-              <div className="space-y-1.5">
+              {/* Campo 4: Referências / Concorrentes */}
+              <div className="space-y-2">
                 <label
                   htmlFor="competitorsReferences"
-                  className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+                  className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  <Sparkles className="h-3.5 w-3.5 text-white" />
                   <span>Referências & Tom de Voz</span>
                 </label>
                 <input
@@ -204,17 +204,17 @@ export function Step1BriefingSetup() {
                   value={formData.competitorsReferences}
                   onChange={(e) => setFormData({ competitorsReferences: e.target.value })}
                   placeholder="Ex: Visual brutalista dark, dados densos, tom executivo"
-                  className="w-full rounded-lg border border-glass-border bg-void/70 p-3 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none focus:ring-1 focus:ring-accent/50"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-200"
                 />
               </div>
             </div>
 
-            {/* Campo 5: Formato Desejado (Toggle Cards) */}
-            <div className="space-y-2 pt-1">
-              <label className="text-xs font-mono font-semibold uppercase tracking-wider text-sub">
+            {/* Campo 5: Formato Desejado (Toggle Cards Apple Squircle) */}
+            <div className="space-y-2.5 pt-2">
+              <label className="text-xs font-semibold tracking-tight text-zinc-300">
                 Formato do Ativo
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 {FORMAT_OPTIONS.map((opt) => {
                   const Icon = opt.icon;
                   const isSelected = formData.format === opt.id;
@@ -223,32 +223,32 @@ export function Step1BriefingSetup() {
                       key={opt.id}
                       type="button"
                       onClick={() => setFormat(opt.id)}
-                      className={`relative flex flex-col p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                      className={`relative flex flex-col p-4 rounded-2xl border text-left transition-all duration-300 cursor-pointer ${
                         isSelected
-                          ? "border-accent bg-accent/10 shadow-lg shadow-accent/5"
-                          : "border-glass-border bg-void/40 hover:border-glass-highlight hover:bg-void/70"
+                          ? "border-white/40 bg-white/[0.10] shadow-xl shadow-black/40 ring-1 ring-white/20"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]"
                       }`}
                     >
-                      <div className="flex items-center justify-between w-full mb-1.5">
+                      <div className="flex items-center justify-between w-full mb-2">
                         <Icon
                           className={`h-4 w-4 ${
-                            isSelected ? "text-accent" : "text-sub"
+                            isSelected ? "text-white" : "text-zinc-400"
                           }`}
                         />
                         <span
-                          className={`rounded px-1.5 py-0.2 text-[9px] font-mono ${
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-mono font-semibold uppercase tracking-wider ${
                             isSelected
-                              ? "bg-accent text-void font-bold"
-                              : "bg-carbon-muted text-sub"
+                              ? "bg-white text-black"
+                              : "bg-white/[0.06] text-zinc-400 border border-white/10"
                           }`}
                         >
                           {opt.badge}
                         </span>
                       </div>
-                      <span className="font-semibold text-xs text-platinum">
+                      <span className="font-semibold text-xs text-white tracking-tight">
                         {opt.label}
                       </span>
-                      <span className="text-[10px] text-sub mt-0.5 leading-tight">
+                      <span className="text-[11px] text-zinc-400 mt-1 leading-snug">
                         {opt.description}
                       </span>
                     </button>
@@ -258,13 +258,13 @@ export function Step1BriefingSetup() {
             </div>
 
             {/* Botão de Disparo da IA */}
-            <div className="pt-3">
+            <div className="pt-4">
               <button
                 type="submit"
                 disabled={isLoading || !formData.theme.trim()}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-3 text-xs font-bold font-mono text-void hover:bg-platinum transition-all cursor-pointer shadow-lg hover:shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-white text-black font-semibold text-xs tracking-tight hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] shadow-[0_0_25px_rgba(255,255,255,0.2)] transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Zap className="h-4 w-4 fill-void" />
+                <Zap className="h-4 w-4 fill-black" />
                 <span>Gerar Estrutura com IA</span>
               </button>
             </div>

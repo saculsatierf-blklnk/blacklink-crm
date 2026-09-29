@@ -70,29 +70,29 @@ export function Sidebar({ initialRole }: SidebarProps) {
     : navItems;
 
   return (
-    <aside className="hidden md:flex flex-col w-64 shrink-0 bg-carbon border-r border-glass-border min-h-screen text-platinum">
+    <aside className="hidden md:flex flex-col w-64 shrink-0 bg-white/[0.02] backdrop-blur-2xl border-r border-white/10 min-h-screen text-zinc-100 z-30 transition-all">
       {/* Brand Header */}
       <div
         data-tour="sidebar-brand"
-        className="flex h-16 items-center gap-3 px-6 border-b border-glass-border"
+        className="flex h-18 items-center gap-3 px-6 border-b border-white/10"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-void font-bold text-sm tracking-widest">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black font-semibold text-xs tracking-wider shadow-[0_0_15px_rgba(255,255,255,0.2)]">
           BL
         </div>
         <div className="flex flex-col">
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-platinum">
+          <span className="font-semibold text-xs tracking-tight text-white uppercase">
             Black Link
           </span>
-          <span className="text-[10px] font-mono text-sub">
-            {isCommercial ? "Operação Comercial" : "CRM • SaaS Enterprise"}
+          <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase">
+            {isCommercial ? "Comercial" : "Enterprise CRM"}
           </span>
         </div>
       </div>
 
       {/* Navigation Links */}
       <nav data-tour="sidebar-nav" className="flex-1 p-4 space-y-1.5">
-        <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-sub">
-          {isCommercial ? "Operação de Vendas" : "Navegação Principal"}
+        <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400 font-bold">
+          {isCommercial ? "Pipeline de Vendas" : "Navegação Principal"}
         </div>
 
         {visibleNavItems.map((item) => {
@@ -103,30 +103,30 @@ export function Sidebar({ initialRole }: SidebarProps) {
             <Link
               key={item.label}
               href={item.href}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all duration-300 ${
                 isActive
-                  ? "bg-carbon-muted text-accent border border-glass-border font-semibold"
-                  : "text-sub hover:text-platinum hover:bg-carbon-muted/50"
+                  ? "bg-white/[0.10] text-white border border-white/15 font-medium shadow-sm backdrop-blur-md"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.04] border border-transparent"
               }`}
             >
-              <Icon className={`h-4 w-4 ${isActive ? "text-accent" : "text-sub"}`} />
-              <span>{item.label}</span>
+              <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-zinc-400"}`} />
+              <span className="tracking-tight">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Tenant Indicator Footer */}
-      <div className="p-4 border-t border-glass-border">
-        <div className="rounded-lg border border-glass-border bg-void/50 p-3 space-y-1">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-sub">
-            <Shield className="h-3 w-3 text-platinum" />
-            <span>Perfil: {isCommercial ? "Comercial (Hunter)" : "Administrador"}</span>
+      <div className="p-4 border-t border-white/10">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md p-3.5 space-y-1.5 shadow-sm">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-zinc-400 font-semibold">
+            <Shield className="h-3 w-3 text-zinc-300" />
+            <span>Perfil: {isCommercial ? "Comercial" : "Administrador"}</span>
           </div>
-          <div className="text-xs font-semibold text-platinum truncate">
+          <div className="text-xs font-semibold text-white tracking-tight truncate">
             {isCommercial ? "Pipeline de Prospecção" : "Black Link Matriz B2B"}
           </div>
-          <div className="text-[10px] text-sub font-mono truncate">
+          <div className="text-[10px] text-zinc-400 font-mono truncate">
             ID: {user?.company_id ? user.company_id.slice(0, 16) + "..." : "c-enterprise-main"}
           </div>
         </div>

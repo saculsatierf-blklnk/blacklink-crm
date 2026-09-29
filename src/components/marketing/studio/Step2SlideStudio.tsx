@@ -7,10 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit3,
-  ExternalLink,
   Layers,
   Sparkles,
-  Zap,
 } from "lucide-react";
 import { useMarketingStore } from "@/store/useMarketingStore";
 
@@ -74,15 +72,15 @@ export function Step2SlideStudio() {
 
   if (!draftCarousel) {
     return (
-      <div className="rounded-xl border border-glass-border bg-carbon p-12 text-center space-y-4">
-        <Layers className="h-8 w-8 text-sub mx-auto" />
-        <h3 className="text-sm font-bold font-mono text-platinum">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-12 text-center space-y-4">
+        <Layers className="h-8 w-8 text-zinc-400 mx-auto" />
+        <h3 className="text-base font-semibold tracking-tight text-white">
           Nenhum rascunho em edição no momento
         </h3>
         <button
           type="button"
           onClick={() => setWizardStep(1)}
-          className="rounded-lg bg-accent px-4 py-2 text-xs font-mono font-bold text-void cursor-pointer"
+          className="rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer"
         >
           Iniciar Novo Briefing
         </button>
@@ -91,28 +89,28 @@ export function Step2SlideStudio() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-8 animate-in fade-in duration-300">
       {/* Barra de Status do Estúdio */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-glass-border/70 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-accent/10 border border-accent/20 px-2 py-0.5 text-[10px] font-mono text-accent font-bold">
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
               Etapa 2 de 3: Estúdio Slide a Slide
             </span>
-            <span className="text-xs text-sub font-mono">
+            <span className="text-xs text-zinc-400 font-medium truncate">
               &bull; {draftCarousel.theme}
             </span>
           </div>
-          <p className="text-xs text-sub mt-1">
+          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
             Edite os textos na coluna esquerda e acompanhe a renderização em tempo real na coluna direita com zero interrupção.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setWizardStep(1)}
-            className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-void/50 px-3 py-1.5 text-xs font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Editar Briefing</span>
@@ -121,29 +119,29 @@ export function Step2SlideStudio() {
           <button
             type="button"
             onClick={() => setWizardStep(3)}
-            className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold font-mono text-void hover:bg-platinum transition-all cursor-pointer shadow-lg hover:shadow-accent/20"
+            className="flex items-center gap-2 rounded-xl bg-white px-5 py-2 text-xs font-semibold text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)]"
           >
-            <span>Avançar para Revisão & Legenda</span>
+            <span>Avançar para Revisão</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
       {/* LAYOUT SPLIT VIEW: EDITOR DIRETO (ESQUERDA) vs PREVIEW VISUAL LIVE (DIREITA) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
         {/* COLUNA ESQUERDA: LISTA DE CARDS DE EDIÇÃO SLIDE A SLIDE */}
         <div className="lg:col-span-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum flex items-center gap-1.5">
-              <Edit3 className="h-3.5 w-3.5 text-accent" />
-              <span>Cards de Edição dos Slides ({slides.length})</span>
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300 flex items-center gap-2">
+              <Edit3 className="h-3.5 w-3.5 text-white" />
+              <span>Cards de Edição ({slides.length})</span>
             </h3>
-            <span className="text-[10px] font-mono text-sub">
-              Clique no card para alternar o preview
+            <span className="text-[11px] font-mono text-zinc-500">
+              Clique para focar
             </span>
           </div>
 
-          <div className="space-y-3 max-h-[700px] overflow-y-auto pr-1">
+          <div className="space-y-3.5 max-h-[720px] overflow-y-auto pr-1">
             {slides.map((slide, idx) => {
               const isActive = activeEditingSlideIndex === idx;
               const slideBadge =
@@ -157,38 +155,38 @@ export function Step2SlideStudio() {
                 <div
                   key={idx}
                   onClick={() => setActiveEditingSlideIndex(idx)}
-                  className={`rounded-xl border p-4 transition-all cursor-pointer space-y-3 ${
+                  className={`rounded-2xl border p-5 transition-all duration-300 cursor-pointer space-y-3.5 ${
                     isActive
-                      ? "border-accent bg-carbon shadow-xl shadow-accent/5 ring-1 ring-accent/30"
-                      : "border-glass-border bg-void/50 hover:border-glass-highlight hover:bg-carbon/40"
+                      ? "border-white/30 bg-white/[0.08] shadow-2xl shadow-black/50 ring-1 ring-white/20"
+                      : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <span
-                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-mono font-bold ${
+                        className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-mono font-bold transition-all ${
                           isActive
-                            ? "bg-accent text-void"
-                            : "bg-carbon-muted text-sub border border-glass-border"
+                            ? "bg-white text-black"
+                            : "bg-white/[0.06] text-zinc-400 border border-white/10"
                         }`}
                       >
                         0{idx + 1}
                       </span>
-                      <span className="text-xs font-bold text-platinum font-mono uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-white tracking-tight uppercase">
                         Slide 0{idx + 1} &bull; {slideBadge}
                       </span>
                     </div>
 
                     {isActive && (
-                      <span className="rounded bg-accent/20 border border-accent/40 px-2 py-0.2 text-[9px] font-mono font-bold text-accent">
+                      <span className="rounded-full bg-white/[0.15] border border-white/25 px-2.5 py-0.5 text-[9px] font-mono font-semibold text-white uppercase tracking-wider">
                         Foco Ativo
                       </span>
                     )}
                   </div>
 
                   {/* Input do Título / Hook do Slide */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase text-sub">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
                       Hook / Título do Slide
                     </label>
                     <input
@@ -197,13 +195,13 @@ export function Step2SlideStudio() {
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => updateDraftSlide(idx, "headline", e.target.value)}
                       placeholder="Título de alto impacto..."
-                      className="w-full rounded border border-glass-border bg-void/80 p-2 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white placeholder:text-zinc-600 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
                     />
                   </div>
 
                   {/* Textarea do Texto / BodyCopy do Slide */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase text-sub">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
                       Texto / BodyCopy do Slide
                     </label>
                     <textarea
@@ -212,7 +210,7 @@ export function Step2SlideStudio() {
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => updateDraftSlide(idx, "bodyText", e.target.value)}
                       placeholder="Texto de explicação densa..."
-                      className="w-full rounded border border-glass-border bg-void/80 p-2 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-accent focus:outline-none resize-y"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white placeholder:text-zinc-600 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all resize-y"
                     />
                   </div>
                 </div>
@@ -222,19 +220,19 @@ export function Step2SlideStudio() {
         </div>
 
         {/* COLUNA DIREITA: PREVIEW VISUAL LIVE (SEM FLICKER) */}
-        <div className="lg:col-span-6 space-y-4 sticky top-6">
+        <div className="lg:col-span-6 space-y-4 sticky top-24">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
-              <span>Preview Visual Live (Renderizador SVG)</span>
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300 flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
+              <span>Preview Live (Renderizador SVG)</span>
             </h3>
-            <span className="rounded bg-void border border-glass-border px-2 py-0.5 text-[10px] font-mono text-emerald-400">
-              Debounce 300ms Ativo
+            <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-mono font-semibold text-emerald-400">
+              Debounce 300ms
             </span>
           </div>
 
           {/* Moldura de Pré-visualização do Carrossel / Story */}
-          <div className="relative aspect-square w-full rounded-xl border border-glass-border bg-void overflow-hidden flex items-center justify-center shadow-2xl group">
+          <div className="relative aspect-square w-full rounded-3xl border border-white/15 bg-black/60 overflow-hidden flex items-center justify-center shadow-2xl shadow-black/80 backdrop-blur-2xl group">
             {/* Imagem do Slide Renderizado Server-side com transição suave de opacidade */}
             {debouncedUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -248,19 +246,19 @@ export function Step2SlideStudio() {
               />
             ) : (
               <div className="text-center p-8 space-y-2">
-                <Layers className="h-8 w-8 text-sub mx-auto animate-pulse" />
-                <p className="text-xs font-mono text-sub">Carregando lâmina...</p>
+                <Layers className="h-8 w-8 text-zinc-500 mx-auto animate-pulse" />
+                <p className="text-xs font-mono text-zinc-400">Renderizando lâmina...</p>
               </div>
             )}
 
-            {/* Setas de Navegação Sobrepostas */}
+            {/* Setas de Navegação Sobrepostas Apple Glass */}
             {totalSlides > 1 && (
               <>
                 <button
                   type="button"
                   onClick={handlePrevSlide}
                   title="Slide Anterior"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-glass-border bg-carbon/80 p-2 text-platinum hover:bg-carbon hover:text-white transition-all cursor-pointer shadow-xl backdrop-blur-sm"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-2.5 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -268,7 +266,7 @@ export function Step2SlideStudio() {
                   type="button"
                   onClick={handleNextSlide}
                   title="Próximo Slide"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-glass-border bg-carbon/80 p-2 text-platinum hover:bg-carbon hover:text-white transition-all cursor-pointer shadow-xl backdrop-blur-sm"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-2.5 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
@@ -276,7 +274,7 @@ export function Step2SlideStudio() {
             )}
 
             {/* Badge de Posição da Lâmina */}
-            <div className="absolute bottom-3 right-3 rounded-md bg-void/80 border border-glass-border px-2.5 py-1 text-[11px] font-mono text-platinum backdrop-blur-sm">
+            <div className="absolute bottom-4 right-4 rounded-xl bg-black/70 border border-white/15 px-3 py-1 text-[11px] font-mono text-white backdrop-blur-md shadow-md">
               Lâmina {activeEditingSlideIndex + 1} de {totalSlides}
             </div>
           </div>
@@ -289,10 +287,10 @@ export function Step2SlideStudio() {
                   key={idx}
                   type="button"
                   onClick={() => setActiveEditingSlideIndex(idx)}
-                  className={`h-11 flex-1 min-w-[50px] rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center ${
+                  className={`h-11 flex-1 min-w-[50px] rounded-xl border text-xs font-mono font-semibold transition-all duration-300 cursor-pointer flex items-center justify-center ${
                     activeEditingSlideIndex === idx
-                      ? "border-accent bg-accent/20 text-platinum ring-1 ring-accent"
-                      : "border-glass-border bg-void/60 text-sub hover:border-glass-highlight"
+                      ? "border-white/40 bg-white/[0.15] text-white ring-1 ring-white/30 shadow-md"
+                      : "border-white/10 bg-white/[0.02] text-zinc-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
                   0{idx + 1}

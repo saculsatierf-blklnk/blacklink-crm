@@ -31,12 +31,11 @@ export function CreativeStudioWizard() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Barra de Progresso do Wizard (Estilo CarrosseIA Dark Industrial) */}
-      <div className="rounded-xl border border-glass-border bg-carbon/80 p-3 sm:p-4 backdrop-blur-xl">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {steps.map((s, idx) => {
-            const Icon = s.icon;
+    <div className="space-y-8">
+      {/* Barra de Progresso do Wizard (Padrão Apple Glassmorphism) */}
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-2.5 sm:p-3.5 shadow-2xl shadow-black/50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          {steps.map((s) => {
             const isActive = currentWizardStep === s.step;
             const isCompleted = currentWizardStep > s.step;
             const canNavigate = s.step === 1 || Boolean(draftCarousel);
@@ -47,37 +46,37 @@ export function CreativeStudioWizard() {
                 type="button"
                 disabled={!canNavigate}
                 onClick={() => canNavigate && setWizardStep(s.step)}
-                className={`flex items-center gap-3 p-2.5 rounded-lg border text-left transition-all ${
+                className={`flex items-center gap-3.5 p-3 rounded-xl border text-left transition-all duration-300 ${
                   isActive
-                    ? "border-accent bg-accent/10 shadow-lg shadow-accent/5 ring-1 ring-accent/30"
+                    ? "border-white/30 bg-white/[0.10] shadow-lg shadow-black/40 ring-1 ring-white/20"
                     : isCompleted
-                    ? "border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50 cursor-pointer"
+                    ? "border-emerald-500/30 bg-emerald-500/10 hover:border-emerald-500/50 cursor-pointer"
                     : canNavigate
-                    ? "border-glass-border bg-void/30 hover:border-glass-highlight hover:bg-carbon cursor-pointer"
-                    : "border-glass-border/40 bg-void/20 opacity-50 cursor-not-allowed"
+                    ? "border-white/5 bg-transparent hover:border-white/15 hover:bg-white/[0.04] cursor-pointer"
+                    : "border-transparent bg-transparent opacity-40 cursor-not-allowed"
                 }`}
               >
                 <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-mono font-bold transition-all ${
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-all duration-300 ${
                     isActive
-                      ? "bg-accent text-void"
+                      ? "bg-white text-black shadow-sm"
                       : isCompleted
-                      ? "bg-emerald-500 text-void"
-                      : "bg-void border border-glass-border text-sub"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white/[0.05] border border-white/10 text-zinc-400"
                   }`}
                 >
-                  {isCompleted ? <Check className="h-4 w-4" /> : `0${s.step}`}
+                  {isCompleted ? <Check className="h-4 w-4 stroke-[2.5]" /> : `0${s.step}`}
                 </div>
 
                 <div className="flex flex-col min-w-0">
                   <span
-                    className={`text-xs font-bold font-mono truncate ${
-                      isActive ? "text-platinum" : isCompleted ? "text-emerald-400" : "text-sub"
+                    className={`text-xs font-semibold tracking-tight truncate ${
+                      isActive ? "text-white" : isCompleted ? "text-emerald-400" : "text-zinc-400"
                     }`}
                   >
                     {s.title}
                   </span>
-                  <span className="text-[10px] text-sub truncate">{s.subtitle}</span>
+                  <span className="text-[11px] text-zinc-500 truncate">{s.subtitle}</span>
                 </div>
               </button>
             );
@@ -85,7 +84,7 @@ export function CreativeStudioWizard() {
         </div>
       </div>
 
-      {/* Renderização Condicional da Etapa Atual */}
+      {/* Renderização Condicional da Etapa Atual com Respiro & Animação */}
       <div className="transition-all duration-300">
         {currentWizardStep === 1 && <Step1BriefingSetup />}
         {currentWizardStep === 2 && <Step2SlideStudio />}

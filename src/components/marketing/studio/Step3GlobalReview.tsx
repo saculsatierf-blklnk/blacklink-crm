@@ -34,15 +34,15 @@ export function Step3GlobalReview() {
 
   if (!draftCarousel) {
     return (
-      <div className="rounded-xl border border-glass-border bg-carbon p-12 text-center space-y-4">
-        <Layers className="h-8 w-8 text-sub mx-auto" />
-        <h3 className="text-sm font-bold font-mono text-platinum">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-12 text-center space-y-4">
+        <Layers className="h-8 w-8 text-zinc-400 mx-auto" />
+        <h3 className="text-base font-semibold tracking-tight text-white">
           Nenhum rascunho em edição
         </h3>
         <button
           type="button"
           onClick={() => setWizardStep(1)}
-          className="rounded-lg bg-accent px-4 py-2 text-xs font-mono font-bold text-void cursor-pointer"
+          className="rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer"
         >
           Iniciar Novo Briefing
         </button>
@@ -52,7 +52,6 @@ export function Step3GlobalReview() {
 
   const handleSaveAndRedirect = async () => {
     setIsSaving(true);
-    // Atualiza hashtags a partir do input
     const parsedHashtags = hashtagInput
       .split(" ")
       .map((h) => h.trim())
@@ -67,19 +66,19 @@ export function Step3GlobalReview() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
       {/* Cabeçalho da Etapa 3 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-glass-border/70 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-accent/10 border border-accent/20 px-2 py-0.5 text-[10px] font-mono text-accent font-bold">
+          <div className="flex items-center gap-2.5">
+            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
               Etapa 3 de 3: Revisão Global & Agendamento
             </span>
-            <span className="text-xs text-sub font-mono">
+            <span className="text-xs text-zinc-400 font-medium truncate">
               &bull; {draftCarousel.theme}
             </span>
           </div>
-          <p className="text-xs text-sub mt-1">
+          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
             Revise a legenda executiva, ajuste as hashtags e confirme a alocação no cronograma multi-tenant.
           </p>
         </div>
@@ -87,7 +86,7 @@ export function Step3GlobalReview() {
         <button
           type="button"
           onClick={() => setWizardStep(2)}
-          className="flex items-center gap-1.5 rounded-lg border border-glass-border bg-void/50 px-3 py-1.5 text-xs font-mono text-sub hover:text-platinum transition-colors cursor-pointer"
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Voltar aos Slides</span>
@@ -96,19 +95,19 @@ export function Step3GlobalReview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Coluna da Esquerda: Resumo Visual das Lâminas */}
-        <div className="lg:col-span-5 rounded-xl border border-glass-border bg-carbon p-5 space-y-4">
+        <div className="lg:col-span-5 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-platinum flex items-center gap-1.5">
-              <Layers className="h-3.5 w-3.5 text-accent" />
-              <span>Resumo do Ativo ({draftCarousel.slides?.length || 0} slides)</span>
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300 flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5 text-white" />
+              <span>Resumo ({draftCarousel.slides?.length || 0} slides)</span>
             </h3>
-            <span className="rounded bg-void border border-glass-border px-2 py-0.5 text-[10px] font-mono text-sub uppercase">
+            <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-[10px] font-mono text-zinc-400 uppercase tracking-wider font-semibold">
               {draftCarousel.format}
             </span>
           </div>
 
           {/* Lâmina de Destaque (Capa / Gancho) */}
-          <div className="relative aspect-square w-full rounded-lg border border-glass-border bg-void overflow-hidden shadow-inner">
+          <div className="relative aspect-square w-full rounded-2xl border border-white/15 bg-black/60 overflow-hidden shadow-inner">
             {draftCarousel.slides?.[0]?.imageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -117,28 +116,30 @@ export function Step3GlobalReview() {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="p-4 text-center">
-                <span className="text-xs font-mono font-bold text-platinum">
+              <div className="p-6 text-center">
+                <span className="text-xs font-semibold text-white tracking-tight">
                   {draftCarousel.hookHeadline}
                 </span>
               </div>
             )}
-            <div className="absolute bottom-2 left-2 rounded bg-void/80 border border-glass-border px-2 py-0.5 text-[10px] font-mono text-platinum">
+            <div className="absolute bottom-3 left-3 rounded-xl bg-black/70 border border-white/15 px-3 py-1 text-[10px] font-mono text-white backdrop-blur-md">
               Capa & Gancho Principal
             </div>
           </div>
 
           {/* Título de Cada Slide para Auditoria Rápida */}
-          <div className="space-y-1.5 pt-1">
-            <span className="text-[10px] font-mono uppercase text-sub">Estrutura das Lâminas:</span>
-            <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+          <div className="space-y-2 pt-1">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold">
+              Estrutura das Lâminas:
+            </span>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
               {draftCarousel.slides?.map((s, idx) => (
                 <div
                   key={idx}
-                  className="rounded border border-glass-border/60 bg-void/60 p-2 text-xs font-mono flex items-center gap-2"
+                  className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs flex items-center gap-2.5"
                 >
-                  <span className="text-accent font-bold">0{idx + 1}</span>
-                  <span className="text-platinum truncate text-[11px] font-sans">
+                  <span className="text-white font-mono font-bold text-[11px]">0{idx + 1}</span>
+                  <span className="text-zinc-300 truncate text-xs font-normal">
                     {s.headline}
                   </span>
                 </div>
@@ -148,18 +149,18 @@ export function Step3GlobalReview() {
         </div>
 
         {/* Coluna da Direita: Editor de Legenda, Hashtags & Botão Primário */}
-        <div className="lg:col-span-7 rounded-xl border border-glass-border bg-carbon p-6 space-y-5 shadow-2xl">
+        <div className="lg:col-span-7 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-8 space-y-6 shadow-2xl shadow-black/50">
           {/* Legenda do Post (Caption / BodyCopy) */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="postCaption"
-                className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+                className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
               >
-                <Edit3 className="h-3.5 w-3.5 text-accent" />
+                <Edit3 className="h-3.5 w-3.5 text-white" />
                 <span>Legenda do Post (Caption Completa)</span>
               </label>
-              <span className="text-[10px] font-mono text-emerald-400">
+              <span className="text-[10px] font-mono text-emerald-400 font-medium">
                 Ajuste fino executivo
               </span>
             </div>
@@ -169,17 +170,17 @@ export function Step3GlobalReview() {
               value={draftCarousel.bodyCopy}
               onChange={(e) => updateDraftCaption(e.target.value)}
               placeholder="Digite a legenda persuasiva para a publicação..."
-              className="w-full rounded-lg border border-glass-border bg-void/70 p-3.5 text-xs font-sans text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none focus:ring-1 focus:ring-accent/50 resize-y leading-relaxed"
+              className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all resize-y leading-relaxed"
             />
           </div>
 
           {/* Hashtags Estratégicas */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label
               htmlFor="postHashtags"
-              className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+              className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
             >
-              <Hash className="h-3.5 w-3.5 text-accent" />
+              <Hash className="h-3.5 w-3.5 text-white" />
               <span>Hashtags do Nicho</span>
             </label>
             <input
@@ -188,18 +189,18 @@ export function Step3GlobalReview() {
               value={hashtagInput}
               onChange={(e) => setHashtagInput(e.target.value)}
               placeholder="#VendasB2B #BlackLink #InteligenciaComercial"
-              className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
             />
           </div>
 
           {/* Data e Horário Sugerido */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label
               htmlFor="postDate"
-              className="text-xs font-mono font-semibold uppercase tracking-wider text-sub flex items-center gap-1.5"
+              className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
             >
-              <Clock className="h-3.5 w-3.5 text-accent" />
-              <span>Data e Horário de Alocação no Cronograma</span>
+              <Clock className="h-3.5 w-3.5 text-white" />
+              <span>Data e Horário no Cronograma</span>
             </label>
             <input
               id="postDate"
@@ -207,31 +208,31 @@ export function Step3GlobalReview() {
               value={scheduledDateInput}
               onChange={(e) => setScheduledDateInput(e.target.value)}
               placeholder="Ex: Amanhã • 10:00 ou 2026-10-02 14:00"
-              className="w-full rounded-lg border border-glass-border bg-void/70 p-2.5 text-xs font-mono text-platinum placeholder:text-sub/50 focus:border-glass-highlight focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
             />
           </div>
 
           {/* Botão Primário: Salvar e Enviar para Cronograma & Aprovação */}
-          <div className="pt-3 border-t border-glass-border/70">
+          <div className="pt-4 border-t border-white/10">
             <button
               type="button"
               disabled={isSaving}
               onClick={handleSaveAndRedirect}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent px-5 py-3.5 text-xs font-bold font-mono text-void hover:bg-platinum transition-all cursor-pointer shadow-lg hover:shadow-accent/20 disabled:opacity-50"
+              className="w-full h-12 flex items-center justify-center gap-2.5 rounded-xl bg-white text-black font-semibold text-xs tracking-tight hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_25px_rgba(255,255,255,0.2)] disabled:opacity-50"
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-void" />
+                  <Loader2 className="h-4 w-4 animate-spin text-black" />
                   <span>Salvando no Supabase & Cronograma...</span>
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 fill-void" />
+                  <Send className="h-4 w-4 fill-black" />
                   <span>Enviar para o Cronograma & Aprovar</span>
                 </>
               )}
             </button>
-            <p className="text-[10px] font-mono text-sub text-center mt-2">
+            <p className="text-[11px] text-zinc-500 text-center mt-2.5">
               O ativo será persistido no Supabase na conta do cliente e você será conduzido à mesa de aprovação.
             </p>
           </div>

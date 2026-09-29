@@ -24,29 +24,29 @@ export default async function LeadsPage() {
   ]);
 
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho do Módulo */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-10 animate-in fade-in duration-300">
+      {/* Cabeçalho do Módulo Apple Glass */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-platinum">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-white">
               Leads B2B
             </h1>
-            <span className="rounded-full border border-glass-border bg-carbon-muted px-2.5 py-0.5 text-[11px] font-mono text-platinum">
-              {leadsData.length} registros
+            <span className="rounded-full border border-white/20 bg-white/[0.08] px-3 py-0.5 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
+              {leadsData.length} contas
             </span>
           </div>
-          <p className="text-xs text-sub mt-1">
+          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
             Gestão executiva de contas e oportunidades qualificadas injetadas no ecossistema.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex h-9 items-center gap-1.5 rounded-md border border-glass-border bg-carbon px-3 text-xs text-sub hover:text-platinum transition-colors cursor-pointer">
+          <button className="flex h-9.5 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer">
             <Filter className="h-3.5 w-3.5" />
             <span>Filtros</span>
           </button>
-          <button className="flex h-9 items-center gap-1.5 rounded-md bg-accent px-4 text-xs font-semibold text-void transition-colors hover:bg-accent-hover cursor-pointer shadow-md">
+          <button className="flex h-9.5 items-center gap-2 rounded-xl bg-white px-4.5 text-xs font-semibold text-black transition-all hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.2)]">
             <Download className="h-3.5 w-3.5" />
             <span>Exportar CSV</span>
           </button>

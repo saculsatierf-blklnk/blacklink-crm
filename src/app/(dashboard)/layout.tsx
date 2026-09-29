@@ -24,19 +24,19 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-void text-platinum">
-      {/* Sidebar Fixa no Desktop com suporte a perfil SSR */}
+    <div className="flex min-h-screen bg-black text-zinc-100 selection:bg-white selection:text-black">
+      {/* Sidebar Flutuante/Translúcida Desktop */}
       <Sidebar initialRole={userRole} />
 
-      {/* Estrutura Principal com Header Superior e Área Dinâmica */}
+      {/* Estrutura Principal com Header Superior Translúcido e Área de Conteúdo Respirada */}
       <div className="flex flex-1 flex-col min-w-0">
         <Header initialRole={userRole} />
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl w-full mx-auto space-y-10">
           {children}
         </main>
       </div>
 
-      {/* Tour Guiado Interativo com Spotlight e Foco Passo a Passo */}
+      {/* Tour Guiado Interativo */}
       <GuidedTourModal />
     </div>
   );
