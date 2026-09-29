@@ -24,19 +24,19 @@ export default async function LeadsPage() {
   ]);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-300">
+    <div className="space-y-12 animate-in fade-in duration-300">
       {/* Cabeçalho do Módulo Apple Glass */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-8">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-white">
               Leads B2B
             </h1>
-            <span className="rounded-full border border-white/20 bg-white/[0.08] px-3 py-0.5 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
+            <span className="rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
               {leadsData.length} contas
             </span>
           </div>
-          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+          <p className="text-xs lg:text-sm text-zinc-400 mt-2 leading-relaxed">
             Gestão executiva de contas e oportunidades qualificadas injetadas no ecossistema.
           </p>
         </div>

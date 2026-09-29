@@ -77,12 +77,12 @@ export default async function DashboardPage() {
   const isTabulaRasa = totalLeads === 0;
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-300">
+    <div className="space-y-12 animate-in fade-in duration-300">
       {/* Cabeçalho da Página Apple Glass */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-8">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-white">
               Painel Executivo B2B
             </h1>
             {isTabulaRasa && (
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
               </span>
             )}
           </div>
-          <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
+          <p className="text-xs lg:text-sm text-zinc-400 mt-2 leading-relaxed">
             Monitoramento central de inteligência, pipeline de contas e esteira de conteúdos.
           </p>
         </div>
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
           <Link
             data-tour="dashboard-new-lead"
             href="/leads"
-            className="flex h-9.5 items-center gap-2 rounded-xl bg-white px-4 text-xs font-semibold text-black transition-all hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] shadow-[0_0_20px_rgba(255,255,255,0.2)] cursor-pointer"
+            className="flex h-10 items-center gap-2 rounded-xl bg-white px-4.5 text-xs font-semibold text-black transition-all hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] shadow-[0_0_20px_rgba(255,255,255,0.2)] cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Novo Lead</span>
@@ -110,9 +110,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Grid de Métricas Executivas Apple Glass */}
-      <section data-tour="metrics-grid" className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <section data-tour="metrics-grid" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {/* Métrica 1: Leads Ativos */}
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-6 lg:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-mono uppercase tracking-widest font-semibold">Leads Ativos</span>
             <Users className="h-4 w-4 text-white" />
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Métrica 2: Taxa de Conversão */}
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-6 lg:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-mono uppercase tracking-widest font-semibold">Taxa de Conversão</span>
             <TrendingUp className="h-4 w-4 text-white" />
@@ -154,10 +154,10 @@ export default async function DashboardPage() {
         </div>
 
         {/* Métrica 3: Conteúdos em Esteira */}
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-6 lg:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-mono uppercase tracking-widest font-semibold">
-              Conteúdos & Criativos
+              Conteúdos &amp; Criativos
             </span>
             <FileText className="h-4 w-4 text-white" />
           </div>
@@ -173,7 +173,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Métrica 4: Pipeline Financeiro */}
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-6 lg:p-7 space-y-3.5 transition-all duration-300 hover:border-white/20 shadow-2xl shadow-black/50">
           <div className="flex items-center justify-between text-zinc-400">
             <span className="text-[11px] font-mono uppercase tracking-widest font-semibold">Pipeline Estimado</span>
             <BarChart3 className="h-4 w-4 text-white" />
@@ -190,14 +190,14 @@ export default async function DashboardPage() {
       </section>
 
       {/* TUTORIAL DE USABILIDADE DA PLATAFORMA (ONBOARDING EXECUTIVO APPLE GLASS) */}
-      <section className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-8 sm:p-10 space-y-8 shadow-2xl shadow-black/60">
+      <section className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-6 lg:p-8 space-y-8 shadow-2xl shadow-black/60">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-6">
           <div className="flex items-center gap-3.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
               <Compass className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold tracking-tight text-white">
+              <h2 className="text-lg font-semibold tracking-tight text-white">
                 Tutorial de Usabilidade da Plataforma
               </h2>
               <p className="text-xs text-zinc-400 mt-1">
@@ -312,11 +312,11 @@ export default async function DashboardPage() {
       {/* Tabelas de Gestão de Dados B2B Reais Apple Glass */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Tabela de Leads Recentes */}
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-7 sm:p-8 space-y-6 shadow-2xl shadow-black/60">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <section className="rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 space-y-6 shadow-2xl shadow-black/50">
+          <div className="flex items-center justify-between border-b border-white/10 pb-5">
             <div className="flex items-center gap-2.5">
               <Users className="h-4 w-4 text-white" />
-              <h2 className="text-xs font-semibold uppercase tracking-widest font-mono text-white">
+              <h2 className="text-lg font-semibold tracking-tight text-white">
                 Leads B2B da Organização
               </h2>
             </div>
@@ -384,12 +384,12 @@ export default async function DashboardPage() {
         </section>
 
         {/* Tabela de Conteúdos e Aprovação */}
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-7 sm:p-8 space-y-6 shadow-2xl shadow-black/60">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <section className="rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 space-y-6 shadow-2xl shadow-black/50">
+          <div className="flex items-center justify-between border-b border-white/10 pb-5">
             <div className="flex items-center gap-2.5">
               <FileText className="h-4 w-4 text-white" />
-              <h2 className="text-xs font-semibold uppercase tracking-widest font-mono text-white">
-                Esteira de Conteúdos & Mídia
+              <h2 className="text-lg font-semibold tracking-tight text-white">
+                Esteira de Conteúdos &amp; Mídia
               </h2>
             </div>
             <span className="text-[10px] font-mono text-zinc-400">Moderação Editorial</span>

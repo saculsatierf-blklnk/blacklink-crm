@@ -34,7 +34,7 @@ export function Step3GlobalReview() {
 
   if (!draftCarousel) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-12 text-center space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-12 text-center space-y-4">
         <Layers className="h-8 w-8 text-zinc-400 mx-auto" />
         <h3 className="text-base font-semibold tracking-tight text-white">
           Nenhum rascunho em edição
@@ -61,48 +61,28 @@ export function Step3GlobalReview() {
       updateDraftHashtags(parsedHashtags);
     }
 
-    const success = await saveDraftToSchedule(scheduledDateInput);
+    await saveDraftToSchedule(scheduledDateInput);
     setIsSaving(false);
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
-      {/* Cabeçalho da Etapa 3 */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
-              Etapa 3 de 3: Revisão Global & Agendamento
-            </span>
-            <span className="text-xs text-zinc-400 font-medium truncate">
-              &bull; {draftCarousel.theme}
-            </span>
-          </div>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-            Revise a legenda executiva, ajuste as hashtags e confirme a alocação no cronograma multi-tenant.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setWizardStep(2)}
-          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Voltar aos Slides</span>
-        </button>
-      </div>
-
+    <div className="animate-in fade-in duration-300 mb-12">
+      {/* 12-COLUMN GRID SYSTEM: AUDITORIA DAS LÂMINAS (5 Colunas) vs LEGENDA & AGENDAMENTO (7 Colunas) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Coluna da Esquerda: Resumo Visual das Lâminas */}
-        <div className="lg:col-span-5 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/50">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-300 flex items-center gap-2">
-              <Layers className="h-3.5 w-3.5 text-white" />
-              <span>Resumo ({draftCarousel.slides?.length || 0} slides)</span>
-            </h3>
+        {/* COLUNA ESQUERDA (5 Colunas): Resumo Visual das Lâminas */}
+        <div className="col-span-12 lg:col-span-5 rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/50 space-y-6">
+          {/* Card Header Obrigatório */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black shadow-sm">
+                <Layers className="h-4 w-4" />
+              </div>
+              <h2 className="text-lg font-semibold tracking-tight text-white">
+                Dossiê das Lâminas
+              </h2>
+            </div>
             <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-[10px] font-mono text-zinc-400 uppercase tracking-wider font-semibold">
-              {draftCarousel.format}
+              {draftCarousel.format} &bull; {draftCarousel.slides?.length || 0} slides
             </span>
           </div>
 
@@ -123,22 +103,24 @@ export function Step3GlobalReview() {
               </div>
             )}
             <div className="absolute bottom-3 left-3 rounded-xl bg-black/70 border border-white/15 px-3 py-1 text-[10px] font-mono text-white backdrop-blur-md">
-              Capa & Gancho Principal
+              Capa &amp; Gancho Principal
             </div>
           </div>
 
           {/* Título de Cada Slide para Auditoria Rápida */}
-          <div className="space-y-2 pt-1">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 font-bold">
-              Estrutura das Lâminas:
+          <div className="space-y-2 pt-2">
+            <span className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">
+              Estrutura Editorial do Carrossel:
             </span>
-            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {draftCarousel.slides?.map((s, idx) => (
                 <div
                   key={idx}
-                  className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs flex items-center gap-2.5"
+                  className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs flex items-center gap-3"
                 >
-                  <span className="text-white font-mono font-bold text-[11px]">0{idx + 1}</span>
+                  <span className="text-white font-mono font-bold text-[11px] bg-white/[0.06] px-2 py-0.5 rounded-md">
+                    0{idx + 1}
+                  </span>
                   <span className="text-zinc-300 truncate text-xs font-normal">
                     {s.headline}
                   </span>
@@ -146,24 +128,45 @@ export function Step3GlobalReview() {
               ))}
             </div>
           </div>
+
+          {/* Botão para voltar à edição */}
+          <div className="pt-4 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setWizardStep(2)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Voltar e Ajustar Lâminas</span>
+            </button>
+          </div>
         </div>
 
-        {/* Coluna da Direita: Editor de Legenda, Hashtags & Botão Primário */}
-        <div className="lg:col-span-7 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-6 sm:p-8 space-y-6 shadow-2xl shadow-black/50">
+        {/* COLUNA DIREITA (7 Colunas): Editor de Legenda, Hashtags & Botão Primário */}
+        <div className="col-span-12 lg:col-span-7 rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/50 space-y-6">
+          {/* Card Header Obrigatório */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black shadow-sm">
+                <Edit3 className="h-4 w-4" />
+              </div>
+              <h2 className="text-lg font-semibold tracking-tight text-white">
+                Legenda Executiva &amp; Agendamento
+              </h2>
+            </div>
+            <span className="text-[10px] font-mono text-emerald-400 font-semibold uppercase tracking-wider">
+              Ajuste Fino Manual
+            </span>
+          </div>
+
           {/* Legenda do Post (Caption / BodyCopy) */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="postCaption"
-                className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
-              >
-                <Edit3 className="h-3.5 w-3.5 text-white" />
-                <span>Legenda do Post (Caption Completa)</span>
-              </label>
-              <span className="text-[10px] font-mono text-emerald-400 font-medium">
-                Ajuste fino executivo
-              </span>
-            </div>
+            <label
+              htmlFor="postCaption"
+              className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2"
+            >
+              Legenda do Post (Caption Completa)
+            </label>
             <textarea
               id="postCaption"
               rows={8}
@@ -178,10 +181,9 @@ export function Step3GlobalReview() {
           <div className="space-y-2">
             <label
               htmlFor="postHashtags"
-              className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
+              className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2"
             >
-              <Hash className="h-3.5 w-3.5 text-white" />
-              <span>Hashtags do Nicho</span>
+              Hashtags do Nicho
             </label>
             <input
               id="postHashtags"
@@ -189,7 +191,7 @@ export function Step3GlobalReview() {
               value={hashtagInput}
               onChange={(e) => setHashtagInput(e.target.value)}
               placeholder="#VendasB2B #BlackLink #InteligenciaComercial"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
             />
           </div>
 
@@ -197,10 +199,9 @@ export function Step3GlobalReview() {
           <div className="space-y-2">
             <label
               htmlFor="postDate"
-              className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2"
+              className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2"
             >
-              <Clock className="h-3.5 w-3.5 text-white" />
-              <span>Data e Horário no Cronograma</span>
+              Data e Horário no Cronograma
             </label>
             <input
               id="postDate"
@@ -208,12 +209,12 @@ export function Step3GlobalReview() {
               value={scheduledDateInput}
               onChange={(e) => setScheduledDateInput(e.target.value)}
               placeholder="Ex: Amanhã • 10:00 ou 2026-10-02 14:00"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs font-mono text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
             />
           </div>
 
           {/* Botão Primário: Salvar e Enviar para Cronograma & Aprovação */}
-          <div className="pt-4 border-t border-white/10">
+          <div className="pt-6 border-t border-white/10">
             <button
               type="button"
               disabled={isSaving}
@@ -223,16 +224,16 @@ export function Step3GlobalReview() {
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-black" />
-                  <span>Salvando no Supabase & Cronograma...</span>
+                  <span>Salvando no Supabase &amp; Cronograma...</span>
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 fill-black" />
-                  <span>Enviar para o Cronograma & Aprovar</span>
+                  <span>Enviar para o Cronograma &amp; Aprovar</span>
                 </>
               )}
             </button>
-            <p className="text-[11px] text-zinc-500 text-center mt-2.5">
+            <p className="text-[11px] text-zinc-400 text-center mt-3">
               O ativo será persistido no Supabase na conta do cliente e você será conduzido à mesa de aprovação.
             </p>
           </div>

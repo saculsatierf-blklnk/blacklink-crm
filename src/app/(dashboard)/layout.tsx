@@ -28,10 +28,10 @@ export default async function DashboardLayout({
       {/* Sidebar Flutuante/Translúcida Desktop */}
       <Sidebar initialRole={userRole} />
 
-      {/* Estrutura Principal com Header Superior Translúcido e Área de Conteúdo Respirada */}
-      <div className="flex flex-1 flex-col min-w-0">
+      {/* Estrutura Principal com Offset da Sidebar Fixa, Header Translúcido e Main Canvas com Respiro Extremo */}
+      <div className="flex flex-1 flex-col min-w-0 md:pl-64 min-h-screen">
         <Header initialRole={userRole} />
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 max-w-7xl w-full mx-auto space-y-10">
+        <main className="flex-1 p-8 lg:p-12 max-w-[1600px] w-full mx-auto">
           {children}
         </main>
       </div>

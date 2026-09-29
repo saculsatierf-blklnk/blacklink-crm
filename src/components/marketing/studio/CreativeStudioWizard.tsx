@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Edit3, Layers, Send, Sparkles } from "lucide-react";
+import { Check, Edit3, Send, Sparkles } from "lucide-react";
 import { useMarketingStore } from "@/store/useMarketingStore";
 import { Step1BriefingSetup } from "./Step1BriefingSetup";
 import { Step2SlideStudio } from "./Step2SlideStudio";
@@ -9,7 +9,12 @@ import { Step3GlobalReview } from "./Step3GlobalReview";
 export function CreativeStudioWizard() {
   const { currentWizardStep, setWizardStep, draftCarousel } = useMarketingStore();
 
-  const steps: { step: 1 | 2 | 3; title: string; subtitle: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  const steps: {
+    step: 1 | 2 | 3;
+    title: string;
+    subtitle: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }[] = [
     {
       step: 1,
       title: "Briefing & Setup",
@@ -31,10 +36,10 @@ export function CreativeStudioWizard() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Barra de Progresso do Wizard (Padrão Apple Glassmorphism) */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-2.5 sm:p-3.5 shadow-2xl shadow-black/50">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+    <div className="space-y-10">
+      {/* Barra de Progresso do Wizard: Card Container Apple Glassmorphism com Respiro */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-3 sm:p-4 shadow-2xl shadow-black/50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {steps.map((s) => {
             const isActive = currentWizardStep === s.step;
             const isCompleted = currentWizardStep > s.step;
@@ -46,9 +51,9 @@ export function CreativeStudioWizard() {
                 type="button"
                 disabled={!canNavigate}
                 onClick={() => canNavigate && setWizardStep(s.step)}
-                className={`flex items-center gap-3.5 p-3 rounded-xl border text-left transition-all duration-300 ${
+                className={`flex items-center gap-3.5 p-3.5 rounded-xl border text-left transition-all duration-300 ${
                   isActive
-                    ? "border-white/30 bg-white/[0.10] shadow-lg shadow-black/40 ring-1 ring-white/20"
+                    ? "border-white/30 bg-white/[0.12] shadow-lg shadow-black/40 ring-1 ring-white/20"
                     : isCompleted
                     ? "border-emerald-500/30 bg-emerald-500/10 hover:border-emerald-500/50 cursor-pointer"
                     : canNavigate
@@ -57,7 +62,7 @@ export function CreativeStudioWizard() {
                 }`}
               >
                 <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-all duration-300 ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold transition-all duration-300 ${
                     isActive
                       ? "bg-white text-black shadow-sm"
                       : isCompleted
@@ -76,7 +81,7 @@ export function CreativeStudioWizard() {
                   >
                     {s.title}
                   </span>
-                  <span className="text-[11px] text-zinc-500 truncate">{s.subtitle}</span>
+                  <span className="text-[11px] text-zinc-500 truncate mt-0.5">{s.subtitle}</span>
                 </div>
               </button>
             );
@@ -84,7 +89,7 @@ export function CreativeStudioWizard() {
         </div>
       </div>
 
-      {/* Renderização Condicional da Etapa Atual com Respiro & Animação */}
+      {/* Renderização Condicional da Etapa Atual com Respiro & Transição */}
       <div className="transition-all duration-300">
         {currentWizardStep === 1 && <Step1BriefingSetup />}
         {currentWizardStep === 2 && <Step2SlideStudio />}

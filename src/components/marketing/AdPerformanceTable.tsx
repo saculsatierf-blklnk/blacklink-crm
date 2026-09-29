@@ -64,16 +64,16 @@ export function AdPerformanceTable() {
   const totalConversions = adCampaigns.reduce((acc, curr) => acc + curr.conversions, 0);
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-7 sm:p-8 shadow-2xl shadow-black/60 space-y-7">
+    <div className="rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/60 space-y-8">
       {/* Cabeçalho da Seção de Tráfego Pago & Botão de Disparo do Robô */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-5">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-6">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black shadow-sm">
               <TrendingUp className="h-4 w-4" />
             </div>
-            <h3 className="text-base font-semibold tracking-tight text-white">
-              Agente de Tráfego Pago & Otimização Autônoma
+            <h3 className="text-lg font-semibold tracking-tight text-white">
+              Agente de Tráfego Pago &amp; Otimização Autônoma
             </h3>
             <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
               Meta Graph v20.0

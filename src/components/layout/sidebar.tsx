@@ -70,7 +70,7 @@ export function Sidebar({ initialRole }: SidebarProps) {
     : navItems;
 
   return (
-    <aside className="hidden md:flex flex-col w-64 shrink-0 bg-white/[0.02] backdrop-blur-2xl border-r border-white/10 min-h-screen text-zinc-100 z-30 transition-all">
+    <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-64 z-30 bg-white/[0.03] backdrop-blur-2xl border-r border-white/10 text-zinc-100 transition-all">
       {/* Brand Header */}
       <div
         data-tour="sidebar-brand"

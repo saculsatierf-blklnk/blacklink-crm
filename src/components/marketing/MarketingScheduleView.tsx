@@ -8,20 +8,16 @@ import {
   ChevronRight,
   Clock,
   Edit3,
-  ExternalLink,
   Layers,
   Loader2,
-  MessageSquare,
   RefreshCw,
   Send,
   Sparkles,
   UploadCloud,
-  Zap,
 } from "lucide-react";
 import {
   useMarketingStore,
   type ScheduledPost,
-  type PostApprovalStatus,
 } from "@/store/useMarketingStore";
 import { ManualAssetUploadModal } from "./ManualAssetUploadModal";
 
@@ -88,44 +84,50 @@ export function MarketingScheduleView() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Barra Superior do Cronograma & Métricas Rápidas */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-6">
-        <div>
+    <div className="space-y-10 animate-in fade-in duration-300 mb-12">
+      {/* Alerta de Feedback de Sucesso */}
+      {actionSuccessMessage && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3 text-xs font-mono text-emerald-300 flex items-center gap-2.5 animate-fadeIn backdrop-blur-xl">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{actionSuccessMessage}</span>
+        </div>
+      )}
+
+      {/* CARD CONTAINER: Barra de Controle & Filtros de Cronograma */}
+      <div className="rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/50 space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 border-b border-white/10 pb-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-black shadow-sm">
               <Calendar className="h-4 w-4" />
             </div>
-            <h2 className="text-xl font-semibold tracking-tight text-white">
-              Cronograma & Mesa de Aprovação
-            </h2>
-            <span className="rounded-full bg-white/[0.08] border border-white/15 px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
-              Meta Graph v20.0
-            </span>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-white">
+                Mesa de Aprovação &amp; Cronograma
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Revisão executiva, ajustes manuais finos e autorização de agendamento por cliente antes da ativação de verba.
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-            Revisão executiva, ajustes manuais finos e autorização de agendamento por cliente antes da ativação de verba.
-          </p>
-        </div>
 
-        {/* Controles de Visualização e Filtros */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Botão de Upload Manual ("A Prateleira") */}
           <button
             type="button"
             onClick={() => setIsManualUploadModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] hover:border-white/30 px-4 py-2 text-xs font-semibold text-white transition-all duration-300 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] hover:border-white/30 px-4 py-2 text-xs font-semibold text-white transition-all duration-300 cursor-pointer shadow-sm self-start lg:self-auto"
           >
             <UploadCloud className="h-3.5 w-3.5" />
             <span>+ Upload Manual de Ativo</span>
           </button>
+        </div>
 
+        {/* Controles de Visualização e Filtros de Status */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Switcher de Modo: Timeline ou Calendário */}
           <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.03] p-1 shadow-sm">
             <button
               type="button"
               onClick={() => setViewMode("timeline")}
-              className={`rounded-lg px-3 py-1.5 text-xs transition-all duration-300 cursor-pointer ${
+              className={`rounded-lg px-3.5 py-1.5 text-xs transition-all duration-300 cursor-pointer ${
                 viewMode === "timeline"
                   ? "bg-white/[0.12] border border-white/15 text-white font-semibold shadow-sm"
                   : "text-zinc-400 hover:text-white"
@@ -136,7 +138,7 @@ export function MarketingScheduleView() {
             <button
               type="button"
               onClick={() => setViewMode("calendar")}
-              className={`rounded-lg px-3 py-1.5 text-xs transition-all duration-300 cursor-pointer ${
+              className={`rounded-lg px-3.5 py-1.5 text-xs transition-all duration-300 cursor-pointer ${
                 viewMode === "calendar"
                   ? "bg-white/[0.12] border border-white/15 text-white font-semibold shadow-sm"
                   : "text-zinc-400 hover:text-white"
@@ -146,15 +148,15 @@ export function MarketingScheduleView() {
             </button>
           </div>
 
-          {/* Filtros de Status */}
-          <div className="flex items-center gap-1.5 border-l border-white/10 pl-3">
+          {/* Filtros de Status com Contadores */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setFilterStatus("todos")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "todos"
                   ? "bg-white/[0.15] border border-white/20 text-white font-semibold shadow-sm"
-                  : "text-zinc-400 hover:text-white"
+                  : "text-zinc-400 hover:text-white border border-transparent"
               }`}
             >
               Todos ({scheduledPosts.length})
@@ -162,10 +164,10 @@ export function MarketingScheduleView() {
             <button
               type="button"
               onClick={() => setFilterStatus("awaiting_approval")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "awaiting_approval"
                   ? "bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/40"
-                  : "text-zinc-400 hover:text-amber-300"
+                  : "text-zinc-400 hover:text-amber-300 border border-transparent"
               }`}
             >
               Aguardando ({awaitingCount})
@@ -173,10 +175,10 @@ export function MarketingScheduleView() {
             <button
               type="button"
               onClick={() => setFilterStatus("scheduled")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "scheduled"
                   ? "bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40"
-                  : "text-zinc-400 hover:text-emerald-300"
+                  : "text-zinc-400 hover:text-emerald-300 border border-transparent"
               }`}
             >
               Agendados ({scheduledCount})
@@ -184,10 +186,10 @@ export function MarketingScheduleView() {
             <button
               type="button"
               onClick={() => setFilterStatus("reformulation_requested")}
-              className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-mono transition-all duration-200 cursor-pointer ${
                 filterStatus === "reformulation_requested"
                   ? "bg-red-500/20 text-red-300 font-semibold border border-red-500/40"
-                  : "text-zinc-400 hover:text-red-300"
+                  : "text-zinc-400 hover:text-red-300 border border-transparent"
               }`}
             >
               Refações ({reformulationCount})
@@ -196,17 +198,9 @@ export function MarketingScheduleView() {
         </div>
       </div>
 
-      {/* Alerta de Feedback de Sucesso Apple Glass */}
-      {actionSuccessMessage && (
-        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3 text-xs font-mono text-emerald-300 flex items-center gap-2.5 animate-fadeIn backdrop-blur-xl">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>{actionSuccessMessage}</span>
-        </div>
-      )}
-
       {/* Grid / Timeline de Cards de Ativos */}
       {filteredPosts.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-14 text-center space-y-3">
+        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-2xl p-16 text-center space-y-4">
           <Layers className="h-8 w-8 text-zinc-500 mx-auto" />
           <h3 className="text-base font-semibold tracking-tight text-white">
             Nenhum post encontrado para este filtro
@@ -216,7 +210,7 @@ export function MarketingScheduleView() {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {filteredPosts.map((post, postIndex) => {
             const currentSlideIndex = slideIndices[post.id] || 0;
             const totalSlides = post.slides?.length || 1;
@@ -236,19 +230,20 @@ export function MarketingScheduleView() {
             const isReformulateInputOpen = reformulateOpenId === post.id;
 
             return (
+              /* CARD PATTERN OBRIGATÓRIO: rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 */
               <div
                 key={post.id}
-                className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl p-7 sm:p-8 shadow-2xl shadow-black/60 transition-all duration-300 hover:border-white/20 space-y-6"
+                className="rounded-2xl bg-white/5 border border-white/10 p-6 lg:p-8 shadow-2xl shadow-black/60 transition-all duration-300 hover:border-white/20 space-y-6"
               >
-                {/* Cabeçalho do Card de Ativo */}
+                {/* Card Header Obrigatório: Título em text-lg font-semibold tracking-tight text-white mb-6 */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-5">
                   <div className="flex items-center gap-3.5">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xs font-mono font-bold text-zinc-300">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-xs font-mono font-bold text-zinc-300">
                       0{postIndex + 1}
                     </span>
                     <div>
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <h3 className="text-base font-semibold text-white tracking-tight">
+                        <h3 className="text-lg font-semibold text-white tracking-tight">
                           {post.theme}
                         </h3>
                         <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-[10px] font-mono text-zinc-400 uppercase tracking-wider font-semibold">
@@ -257,7 +252,7 @@ export function MarketingScheduleView() {
                         {post.sourceType === "manual" ? (
                           <span className="rounded-full bg-zinc-800/80 border border-zinc-700/60 px-2.5 py-0.5 text-[10px] font-mono text-zinc-300 font-semibold flex items-center gap-1.5">
                             <UploadCloud className="h-3 w-3 text-white" />
-                            Manual • Prateleira
+                            Manual &bull; Prateleira
                           </span>
                         ) : (
                           <span className="rounded-full bg-cyan-950/60 border border-cyan-800/40 px-2.5 py-0.5 text-[10px] font-mono text-cyan-300 font-semibold flex items-center gap-1.5">
@@ -272,9 +267,9 @@ export function MarketingScheduleView() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     {/* Badge de Horário Agendado */}
-                    <div className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-mono text-zinc-200">
+                    <div className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-xs font-mono text-zinc-200">
                       <Clock className="h-3.5 w-3.5 text-white" />
                       <span>{post.scheduledDate}</span>
                     </div>
@@ -303,10 +298,10 @@ export function MarketingScheduleView() {
                   </div>
                 </div>
 
-                {/* Conteúdo do Card: Split Lâminas vs Editor de Copy */}
+                {/* 12-COLUMN GRID SISTEMA NO CORPO DO CARD */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Coluna da Esquerda: Pré-visualização do Criativo com Navegação de Slides */}
-                  <div className="lg:col-span-5 space-y-3.5">
+                  {/* Coluna da Esquerda (5 Colunas): Pré-visualização do Criativo */}
+                  <div className="col-span-12 lg:col-span-5 space-y-4">
                     <div className="relative aspect-square w-full rounded-2xl border border-white/15 bg-black/60 overflow-hidden flex items-center justify-center group shadow-inner">
                       {activeSlide.imageUrl ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
@@ -374,17 +369,16 @@ export function MarketingScheduleView() {
                     )}
                   </div>
 
-                  {/* Coluna da Direita: Textarea Editável & Controles de Ação */}
-                  <div className="lg:col-span-7 space-y-5">
+                  {/* Coluna da Direita (7 Colunas): Textarea Editável & Controles de Ação */}
+                  <div className="col-span-12 lg:col-span-7 space-y-6">
                     {/* Caixa de Texto Textarea Editável */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-semibold tracking-tight text-zinc-300 flex items-center gap-2">
-                          <Edit3 className="h-3.5 w-3.5 text-white" />
-                          <span>Legenda & Copywriting (Ajuste Fino Manual)</span>
+                        <label className="block text-xs font-bold uppercase tracking-widest text-zinc-400 mb-2">
+                          Legenda &amp; Copywriting (Ajuste Fino Manual)
                         </label>
-                        <span className="text-[10px] font-mono text-emerald-400">
-                          Edição em tempo real habilitada
+                        <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                          Edição em tempo real
                         </span>
                       </div>
 
@@ -403,7 +397,7 @@ export function MarketingScheduleView() {
                         {post.hashtags?.map((tag, tagIdx) => (
                           <span
                             key={tagIdx}
-                            className="rounded-full bg-white/[0.04] border border-white/10 px-3 py-0.5 text-[10px] font-mono text-zinc-300"
+                            className="rounded-full bg-white/[0.04] border border-white/10 px-3 py-1 text-[10px] font-mono text-zinc-300"
                           >
                             {tag}
                           </span>
@@ -414,7 +408,7 @@ export function MarketingScheduleView() {
                     {/* Exibição de Feedback de Refação Anterior se Existente */}
                     {post.reformulationFeedback && (
                       <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-1.5 text-xs">
-                        <span className="text-[10px] uppercase tracking-wider font-bold text-amber-400">
+                        <span className="block text-xs font-bold uppercase tracking-widest text-amber-400 mb-1">
                           Diretriz de Refação Solicitada:
                         </span>
                         <p className="text-zinc-200 text-xs">
@@ -425,11 +419,11 @@ export function MarketingScheduleView() {
 
                     {/* Input Retrátil de Reformulação (Ao Clicar no Botão Reformular) */}
                     {isReformulateInputOpen && (
-                      <div className="rounded-2xl border border-white/20 bg-white/[0.05] backdrop-blur-xl p-4 space-y-3.5 animate-fadeIn">
+                      <div className="rounded-2xl border border-white/20 bg-white/[0.05] backdrop-blur-xl p-5 space-y-4 animate-fadeIn">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-semibold tracking-tight text-white flex items-center gap-2">
                             <Sparkles className="h-3.5 w-3.5 text-white" />
-                            Diretriz de Ajuste para IA & n8n
+                            Diretriz de Ajuste para IA &amp; n8n
                           </span>
                           <button
                             type="button"
@@ -445,7 +439,7 @@ export function MarketingScheduleView() {
                           value={reformulateInput}
                           onChange={(e) => setReformulateInput(e.target.value)}
                           placeholder='Ex: "Troque o fundo para tom grafite escuro e deixe a copy mais assertiva"'
-                          className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
+                          className="w-full rounded-xl border border-white/10 bg-white/[0.03] p-3.5 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.07] focus:border-white/30 focus:outline-none transition-all"
                         />
 
                         <div className="flex justify-end gap-2">
@@ -453,16 +447,16 @@ export function MarketingScheduleView() {
                             type="button"
                             disabled={isReformulating || !reformulateInput.trim()}
                             onClick={() => handleSubmitReformulation(post.id)}
-                            className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50"
+                            className="flex items-center gap-2 rounded-xl bg-white px-4.5 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer disabled:opacity-50"
                           >
                             {isReformulating ? (
                               <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 <span>Processando Refação...</span>
                               </>
                             ) : (
                               <>
-                                <Send className="h-3 w-3" />
+                                <Send className="h-3.5 w-3.5" />
                                 <span>Submeter ao Pipeline</span>
                               </>
                             )}
@@ -472,7 +466,7 @@ export function MarketingScheduleView() {
                     )}
 
                     {/* Barra de Ações: Botão Primário (Aprovar) e Secundário (Reformular) */}
-                    <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-white/10">
+                    <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10">
                       <div className="text-[11px] font-mono text-zinc-400">
                         {isScheduled && post.metaPostId && (
                           <span className="text-emerald-400">
@@ -517,7 +511,7 @@ export function MarketingScheduleView() {
                           ) : isScheduled ? (
                             <>
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              <span>Aprovado & Agendado</span>
+                              <span>Aprovado &amp; Agendado</span>
                             </>
                           ) : (
                             <>
