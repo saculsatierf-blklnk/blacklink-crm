@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useMarketingStore } from "@/store/useMarketingStore";
+import { SlideArtRenderer } from "@/components/marketing/SlideArtRenderer";
 
 export function CreativeAssetViewer() {
   const { activeResult, isLoading, statusMessage } = useMarketingStore();
@@ -137,49 +138,15 @@ export function CreativeAssetViewer() {
             )}
           </div>
 
-          {/* Card Visual do Slide */}
-          <div className="relative aspect-square w-full rounded-xl border border-glass-border bg-void/90 overflow-hidden shadow-2xl flex flex-col justify-between p-6">
-            {/* Background com imagem sutil se disponível */}
-            {currentSlide?.imageUrl && (
-              <div
-                className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity pointer-events-none"
-                style={{ backgroundImage: `url(${currentSlide.imageUrl})` }}
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-void via-void/80 to-transparent pointer-events-none" />
-
-            {/* Topo do Slide */}
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex h-6 w-6 items-center justify-center rounded bg-white text-void font-bold text-[10px] tracking-wider font-mono">
-                BL
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-sub">
-                Black Link &bull; B2B Intelligence
-              </span>
-            </div>
-
-            {/* Conteúdo Central do Slide */}
-            <div className="relative z-10 space-y-2.5 my-auto">
-              <span className="inline-block text-[10px] font-mono uppercase tracking-widest text-accent bg-carbon px-2 py-0.5 rounded border border-glass-border">
-                {currentSlideIndex === 0
-                  ? "Gancho Principal"
-                  : currentSlideIndex === slides.length - 1
-                  ? "Ação Recomendada"
-                  : `Passo 0${currentSlideIndex}`}
-              </span>
-              <h4 className="text-lg md:text-xl font-bold tracking-tight text-platinum leading-snug">
-                {currentSlide?.headline || activeResult.hookHeadline}
-              </h4>
-              <p className="text-xs text-sub leading-relaxed">
-                {currentSlide?.bodyText || activeResult.bodyCopy.slice(0, 140) + "..."}
-              </p>
-            </div>
-
-            {/* Rodapé do Slide */}
-            <div className="relative z-10 flex items-center justify-between text-[10px] font-mono text-sub/70 border-t border-glass-border/40 pt-3">
-              <span>Arraste para o lado &rarr;</span>
-              <span>{currentSlideIndex + 1}/{slides.length || 1}</span>
-            </div>
+          {/* Card Visual do Slide com Motor Dark Industrial */}
+          <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl">
+            <SlideArtRenderer
+              headline={currentSlide?.headline || activeResult.hookHeadline}
+              bodyText={currentSlide?.bodyText || activeResult.bodyCopy.slice(0, 140) + "..."}
+              slideNumber={currentSlideIndex + 1}
+              totalSlides={slides.length || 1}
+              format={activeResult.format}
+            />
           </div>
 
           {/* Controles de Navegação do Carrossel */}

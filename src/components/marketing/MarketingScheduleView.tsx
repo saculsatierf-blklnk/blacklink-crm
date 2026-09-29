@@ -20,6 +20,7 @@ import {
   type ScheduledPost,
 } from "@/store/useMarketingStore";
 import { ManualAssetUploadModal } from "./ManualAssetUploadModal";
+import { SlideArtRenderer } from "@/components/marketing/SlideArtRenderer";
 
 export function MarketingScheduleView() {
   const {
@@ -313,24 +314,25 @@ export function MarketingScheduleView() {
 
                   {/* 12-COLUMN GRID SYSTEM COM GAP-10 LG:GAP-12 */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-                    {/* Coluna da Esquerda (5 Colunas): Pré-visualização do Criativo */}
+                    {/* Coluna da Esquerda (5 Colunas): Pré-visualização do Criativo com Motor Dark Industrial */}
                     <div className="col-span-12 lg:col-span-5 space-y-4">
-                      <div className="relative aspect-square w-full rounded-2xl border border-white/15 bg-black/60 overflow-hidden flex items-center justify-center group shadow-inner">
-                        {activeSlide.imageUrl ? (
+                      <div className="relative w-full rounded-2xl overflow-hidden flex items-center justify-center group shadow-2xl">
+                        {activeSlide.imageUrl && post.sourceType === "manual" ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
                             src={activeSlide.imageUrl}
                             alt={activeSlide.headline}
-                            className="h-full w-full object-cover transition-transform duration-300"
+                            className="aspect-square h-full w-full object-cover transition-transform duration-300"
                           />
                         ) : (
-                          <div className="p-8 text-center space-y-2">
-                            <Layers className="h-9 w-9 text-zinc-500 mx-auto" />
-                            <div className="text-xs font-semibold text-white">
-                              {activeSlide.headline}
-                            </div>
-                            <p className="text-[11px] text-zinc-400">{activeSlide.bodyText}</p>
-                          </div>
+                          <SlideArtRenderer
+                            headline={activeSlide.headline}
+                            bodyText={activeSlide.bodyText}
+                            slideNumber={currentSlideIndex + 1}
+                            totalSlides={totalSlides}
+                            format={post.format || "carousel"}
+                            niche={post.theme}
+                          />
                         )}
 
                         {/* Controles de Navegação de Carrossel */}
@@ -339,24 +341,19 @@ export function MarketingScheduleView() {
                             <button
                               type="button"
                               onClick={() => handlePrevSlide(post.id, totalSlides)}
-                              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-2.5 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl"
+                              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-2.5 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
                             >
                               <ChevronLeft className="h-5 w-5" />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleNextSlide(post.id, totalSlides)}
-                              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-2.5 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-2.5 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
                             >
                               <ChevronRight className="h-5 w-5" />
                             </button>
                           </>
                         )}
-
-                        {/* Contador de Lâminas */}
-                        <div className="absolute bottom-4 right-4 rounded-xl bg-black/70 border border-white/15 px-3 py-1 text-[11px] font-mono text-white backdrop-blur-md">
-                          Lâmina {currentSlideIndex + 1} de {totalSlides}
-                        </div>
                       </div>
 
                       {/* Miniaturas das Lâminas para troca rápida */}

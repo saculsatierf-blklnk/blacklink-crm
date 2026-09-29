@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Edit3,
   Layers,
   Sparkles,
 } from "lucide-react";
 import { useMarketingStore } from "@/store/useMarketingStore";
+import { SlideArtRenderer } from "@/components/marketing/SlideArtRenderer";
 
 export function Step2SlideStudio() {
   const {
@@ -21,44 +21,9 @@ export function Step2SlideStudio() {
     setWizardStep,
   } = useMarketingStore();
 
-  const [debouncedUrl, setDebouncedUrl] = useState<string>("");
-  const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
-  const [, startTransition] = useTransition();
-
   const slides = draftCarousel?.slides || [];
   const currentSlide = slides[activeEditingSlideIndex] || slides[0];
   const totalSlides = slides.length || 1;
-
-  // Debounce de 300ms para renderizar a lâmina no preview sem flicker
-  useEffect(() => {
-    if (!currentSlide || !draftCarousel) return;
-
-    const timer = setTimeout(() => {
-      const query = new URLSearchParams({
-        slide: String(currentSlide.slideNumber || activeEditingSlideIndex + 1),
-        total: String(totalSlides),
-        headline: currentSlide.headline || "",
-        body: currentSlide.bodyText || "",
-        format: draftCarousel.format || "carousel",
-        theme: draftCarousel.theme || "Estratégia B2B",
-      });
-
-      const nextUrl = `/api/marketing/render-slide?${query.toString()}`;
-      startTransition(() => {
-        setIsImageLoading(true);
-        setDebouncedUrl(nextUrl);
-      });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [
-    currentSlide?.headline,
-    currentSlide?.bodyText,
-    activeEditingSlideIndex,
-    totalSlides,
-    draftCarousel?.theme,
-    draftCarousel?.format,
-  ]);
 
   const handlePrevSlide = () => {
     const nextIdx = activeEditingSlideIndex > 0 ? activeEditingSlideIndex - 1 : totalSlides - 1;
@@ -72,13 +37,17 @@ export function Step2SlideStudio() {
 
   if (!draftCarousel) {
     return (
-      <div className="relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-12 lg:p-16 shadow-2xl backdrop-blur-2xl text-center space-y-5">
+      <div className="relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl text-center space-y-6 mb-12">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
-        <div className="relative z-10 space-y-4">
-          <Layers className="h-9 w-9 text-zinc-400 mx-auto" />
-          <h3 className="text-xl font-medium tracking-tight text-white">
+        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+        <div className="relative z-10 space-y-6">
+          <Layers className="h-10 w-10 text-zinc-400 mx-auto" />
+          <h3 className="text-2xl font-medium tracking-tight text-white">
             Nenhum rascunho em edição no momento
           </h3>
+          <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+            Inicie um novo briefing de geração autônoma para que a IA estruture as lâminas de alta retenção.
+          </p>
           <button
             type="button"
             onClick={() => setWizardStep(1)}
@@ -96,13 +65,13 @@ export function Step2SlideStudio() {
       {/* 12-COLUMN GRID SYSTEM COM GAP-10 LG:GAP-12 (CONTROLES: 5 Colunas vs PREVIEW: 7 Colunas) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
         {/* COLUNA ESQUERDA (5 Colunas): LISTA DE CARDS DE EDIÇÃO COM FÓRMULA EXATA DE VIDRO APPLE */}
-        <div className="col-span-12 lg:col-span-5 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 lg:p-10 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.03]">
+        <div className="col-span-12 lg:col-span-5 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
 
-          <div className="relative z-10 space-y-8">
-            {/* Título de Seção (Padrão Apple) */}
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-8">
+          <div className="relative z-10 space-y-6">
+            {/* Título de Seção (Padrão Apple: tracking-tight font-medium) */}
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-6">
               <div>
                 <h2 className="text-2xl font-medium tracking-tight text-white">
                   Lâminas Editoriais
@@ -111,7 +80,7 @@ export function Step2SlideStudio() {
                   Selecione a lâmina para editar o texto e ver a prévia ao vivo.
                 </p>
               </div>
-              <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 font-semibold bg-white/[0.04] border border-white/10 px-3 py-1 rounded-full">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400 font-bold bg-white/[0.04] border border-white/10 px-3 py-1 rounded-full">
                 {slides.length} slides
               </span>
             </div>
@@ -162,7 +131,7 @@ export function Step2SlideStudio() {
 
                     {/* Input do Título / Hook do Slide */}
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-3">
+                      <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
                         Hook / Título do Slide
                       </label>
                       <input
@@ -177,7 +146,7 @@ export function Step2SlideStudio() {
 
                     {/* Textarea do Texto / BodyCopy do Slide */}
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-3">
+                      <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
                         Texto Explicativo / BodyCopy
                       </label>
                       <textarea
@@ -196,20 +165,20 @@ export function Step2SlideStudio() {
           </div>
         </div>
 
-        {/* COLUNA DIREITA (7 Colunas): PREVIEW VISUAL LIVE COM FÓRMULA EXATA DE VIDRO APPLE */}
-        <div className="col-span-12 lg:col-span-7 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 lg:p-10 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.03] sticky top-24">
+        {/* COLUNA DIREITA (7 Colunas): PREVIEW VISUAL LIVE COM MOTOR DE RENDERIZAÇÃO DARK INDUSTRIAL */}
+        <div className="col-span-12 lg:col-span-7 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl sticky top-24">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
 
-          <div className="relative z-10 space-y-8">
+          <div className="relative z-10 space-y-6">
             {/* Título de Seção (Padrão Apple) */}
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-8">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-6">
               <div>
                 <h3 className="text-2xl font-medium tracking-tight text-white">
                   Preview em Tempo Real
                 </h3>
                 <p className="text-xs text-zinc-400 mt-1">
-                  Renderização vetorial SVG com debounce de 300ms.
+                  Design de alta densidade B2B (Dark Industrial). Atualização instantânea.
                 </p>
               </div>
               <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono text-emerald-300 font-semibold">
@@ -217,24 +186,16 @@ export function Step2SlideStudio() {
               </span>
             </div>
 
-            {/* Moldura de Pré-visualização do Carrossel / Story */}
-            <div className="relative aspect-square w-full rounded-2xl border border-white/15 bg-black/60 overflow-hidden flex items-center justify-center shadow-2xl shadow-black/80 backdrop-blur-2xl group">
-              {debouncedUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={debouncedUrl}
-                  alt={currentSlide?.headline || "Preview do slide"}
-                  onLoad={() => setIsImageLoading(false)}
-                  className={`h-full w-full object-cover transition-opacity duration-300 ${
-                    isImageLoading ? "opacity-75" : "opacity-100"
-                  }`}
-                />
-              ) : (
-                <div className="text-center p-8 space-y-2">
-                  <Layers className="h-8 w-8 text-zinc-500 mx-auto animate-pulse" />
-                  <p className="text-xs font-mono text-zinc-400">Renderizando lâmina...</p>
-                </div>
-              )}
+            {/* Canvas do Motor de Renderização Gráfica B2B */}
+            <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl group flex items-center justify-center">
+              <SlideArtRenderer
+                headline={currentSlide?.headline || ""}
+                bodyText={currentSlide?.bodyText || ""}
+                slideNumber={activeEditingSlideIndex + 1}
+                totalSlides={totalSlides}
+                format={draftCarousel?.format || "carousel"}
+                niche={draftCarousel?.nicheValueProposition || draftCarousel?.theme}
+              />
 
               {/* Setas de Navegação Sobrepostas Apple Glass */}
               {totalSlides > 1 && (
@@ -243,7 +204,7 @@ export function Step2SlideStudio() {
                     type="button"
                     onClick={handlePrevSlide}
                     title="Slide Anterior"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
                   >
                     <ChevronLeft className="h-5 w-5" />
                   </button>
@@ -251,22 +212,17 @@ export function Step2SlideStudio() {
                     type="button"
                     onClick={handleNextSlide}
                     title="Próximo Slide"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
                   >
                     <ChevronRight className="h-5 w-5" />
                   </button>
                 </>
               )}
-
-              {/* Badge de Posição da Lâmina */}
-              <div className="absolute bottom-4 right-4 rounded-xl bg-black/70 border border-white/15 px-3 py-1 text-[11px] font-mono text-white backdrop-blur-md shadow-md">
-                Lâmina {activeEditingSlideIndex + 1} de {totalSlides}
-              </div>
             </div>
 
             {/* Grade de Miniaturas Rápidas */}
             {totalSlides > 1 && (
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-1 pt-2">
                 {slides.map((_, idx) => (
                   <button
                     key={idx}

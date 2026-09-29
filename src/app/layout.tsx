@@ -13,12 +13,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="dark scroll-smooth">
-      <body className="min-h-screen bg-black text-zinc-100 font-sans antialiased flex flex-col selection:bg-white selection:text-black">
-        {/* Camada de Iluminação Ambiente Sutil Apple Dark */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-white/[0.04] to-transparent rounded-full blur-3xl opacity-70" />
-          <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-b from-indigo-500/[0.02] to-transparent rounded-full blur-3xl" />
+      <body className="min-h-screen bg-[#050505] text-zinc-200 antialiased font-sans selection:bg-white/30 flex flex-col">
+        {/* Luzes radiais para refração no vidro Apple Glassmorphism */}
+        <div className="fixed inset-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
+          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-zinc-800/30 blur-[150px]" />
+          <div className="absolute top-[70%] -right-[10%] w-[40%] h-[50%] rounded-full bg-zinc-700/20 blur-[150px]" />
         </div>
+
         <div className="relative z-10 flex-1 flex flex-col">
           {children}
         </div>

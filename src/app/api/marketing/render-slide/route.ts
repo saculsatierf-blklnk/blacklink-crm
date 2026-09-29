@@ -8,31 +8,38 @@ interface SlideRenderPayload {
   headline: string;
   bodyText: string;
   theme?: string;
+  niche?: string;
   format?: "carousel" | "story" | "post";
 }
 
 /**
- * Gera o SVG estruturado no padrão Dark Industrial do Black Link
+ * Gera o SVG estruturado no padrão Dark Industrial do Black Link CRM
+ * Proporções: 1080x1080 (carrossel) e 1080x1920 (story)
+ * Fundo: Radial gradient from-zinc-800 via-black to-black
  */
 function generateSlideSvg({
   slideNumber = 1,
   totalSlides = 5,
-  headline = "Diagnóstico Estratégico",
-  bodyText = "Alinhamento executivo de prospecção corporativa.",
-  theme = "Estratégia B2B",
+  headline = "Diagnóstico Estratégico B2B",
+  bodyText = "Alinhamento executivo de prospecção, qualificação de demanda e esteira comercial blindada.",
+  theme,
+  niche,
   format = "carousel",
 }: SlideRenderPayload): string {
   const isStory = format === "story";
-  const width = isStory ? 1080 : 1080;
+  const width = 1080;
   const height = isStory ? 1920 : 1080;
 
-  // Quebra títulos longos em linhas para o SVG
-  const words = headline.split(" ");
+  const slideIndexStr = String(slideNumber).padStart(2, "0");
+  const totalSlidesStr = String(totalSlides).padStart(2, "0");
+
+  // Quebra títulos em linhas para SVG (máx ~26 caracteres por linha para manter colossal)
+  const words = (headline || "Diagnóstico Estratégico B2B").split(" ");
   const lines: string[] = [];
   let currentLine = "";
 
   for (const word of words) {
-    if ((currentLine + " " + word).trim().length > 28) {
+    if ((currentLine + " " + word).trim().length > 24) {
       if (currentLine) lines.push(currentLine.trim());
       currentLine = word;
     } else {
@@ -41,8 +48,8 @@ function generateSlideSvg({
   }
   if (currentLine) lines.push(currentLine.trim());
 
-  // Quebra corpo do texto em linhas
-  const bodyWords = bodyText.split(" ");
+  // Quebra corpo do texto em linhas (máx ~48 caracteres por linha)
+  const bodyWords = (bodyText || "").split(" ");
   const bodyLines: string[] = [];
   let currentBodyLine = "";
 
@@ -56,104 +63,90 @@ function generateSlideSvg({
   }
   if (currentBodyLine) bodyLines.push(currentBodyLine.trim());
 
-  const badgeText =
-    slideNumber === 1
-      ? "GANCHO PRINCIPAL"
-      : slideNumber === totalSlides
-      ? "AÇÃO RECOMENDADA"
-      : `PASSO 0${slideNumber}`;
+  const footerSignature = (niche || theme || "B2B GROWTH & DEMAND GEN").toUpperCase();
+
+  // Posicionamento dinâmico
+  const contentStartY = isStory ? 700 : 420;
+  const headlineLineHeight = 72;
+  const headlineEndY = contentStartY + lines.length * headlineLineHeight;
+  const bodyStartY = headlineEndY + 40;
+  const bodyLineHeight = 38;
 
   return `
-  <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <svg width="${width}" height="${height}" viewBox="0 0 1080 ${height}" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <!-- Gradientes Dark Industrial -->
-      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#030303" />
-        <stop offset="50%" stop-color="#0A0A0A" />
-        <stop offset="100%" stop-color="#030303" />
+      <!-- Gradiente Radial Premium: from-zinc-800 via-black to-black -->
+      <radialGradient id="slideRadial" cx="85%" cy="15%" r="80%" fx="85%" fy="15%">
+        <stop offset="0%" stop-color="#27272a" />
+        <stop offset="55%" stop-color="#09090b" />
+        <stop offset="100%" stop-color="#000000" />
+      </radialGradient>
+
+      <!-- Linha de Brilho de Topo -->
+      <linearGradient id="topGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0" />
+        <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.25" />
+        <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
       </linearGradient>
 
-      <linearGradient id="titaniumGlow" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.12" />
-        <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.02" />
-      </linearGradient>
-
-      <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#E5E4E2" />
-        <stop offset="100%" stop-color="#71717A" />
-      </linearGradient>
-
-      <!-- Grade Geométrica Minimalista -->
-      <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
-        <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="1"/>
+      <!-- Grade Geométrica Sutil -->
+      <pattern id="industrialGrid" width="90" height="90" patternUnits="userSpaceOnUse">
+        <path d="M 90 0 L 0 0 0 90" fill="none" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="1"/>
       </pattern>
     </defs>
 
-    <!-- Fundo Principal -->
-    <rect width="${width}" height="${height}" fill="url(#bgGrad)" />
-    <rect width="${width}" height="${height}" fill="url(#grid)" />
+    <!-- Fundo Principal com Gradiente Radial -->
+    <rect width="${width}" height="${height}" fill="url(#slideRadial)" />
+    <rect width="${width}" height="${height}" fill="url(#industrialGrid)" />
 
-    <!-- Círculo de Difusão de Luz Suave -->
-    <circle cx="${width / 2}" cy="${height / 2}" r="400" fill="#FFFFFF" fill-opacity="0.02" filter="blur(80px)" />
+    <!-- Moldura Sutil de Contorno -->
+    <rect x="30" y="30" width="${width - 60}" height="${height - 60}" rx="24" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5" />
+    <line x1="120" y1="30" x2="${width - 120}" y2="30" stroke="url(#topGlow)" stroke-width="2" />
 
-    <!-- Moldura de Blindagem com Cantos Cortados -->
-    <rect x="40" y="40" width="${width - 80}" height="${height - 80}" rx="24" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2" />
-
-    <!-- Topo: Marca Black Link -->
-    <g transform="translate(80, 90)">
-      <rect x="0" y="0" width="48" height="48" rx="8" fill="#FFFFFF" />
-      <text x="24" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="900" fill="#030303" text-anchor="middle" letter-spacing="2">BL</text>
-
-      <text x="68" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="800" fill="#FFFFFF" letter-spacing="3">BLACK LINK</text>
-      <text x="68" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="600" fill="#71717A" letter-spacing="1">B2B MARKETING INTELLIGENCE</text>
+    <!-- 1. TOP (Header): Tenant/Marca à esquerda, Contador à direita (p-12: margem de 90px) -->
+    <g transform="translate(90, 110)">
+      <circle cx="8" cy="8" r="5" fill="#FFFFFF" />
+      <text x="24" y="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="700" fill="#A1A1AA" letter-spacing="4">BLACK LINK</text>
     </g>
 
-    <!-- Indicador de Slide no Topo Direito -->
-    <g transform="translate(${width - 200}, 90)">
-      <rect x="0" y="0" width="120" height="40" rx="8" fill="#1C1C1E" stroke="#FFFFFF" stroke-opacity="0.1" />
-      <text x="60" y="25" font-family="monospace" font-size="14" font-weight="700" fill="#E5E4E2" text-anchor="middle" letter-spacing="2">${slideNumber} / ${totalSlides}</text>
+    <g transform="translate(${width - 200}, 110)">
+      <rect x="0" y="-8" width="110" height="36" rx="8" fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="1" />
+      <text x="55" y="16" font-family="monospace" font-size="18" font-weight="700" fill="#E4E4E7" text-anchor="middle" letter-spacing="2">${slideIndexStr}/${totalSlidesStr}</text>
     </g>
 
-    <!-- Badge da Etapa Estratégica -->
-    <g transform="translate(80, ${isStory ? 380 : 260})">
-      <rect x="0" y="0" width="${badgeText.length * 11 + 24}" height="32" rx="6" fill="#1C1C1E" stroke="#FFFFFF" stroke-opacity="0.15" />
-      <text x="12" y="21" font-family="monospace" font-size="12" font-weight="800" fill="#E5E4E2" letter-spacing="2">${badgeText}</text>
-    </g>
+    <!-- Linha divisória de cabeçalho -->
+    <line x1="90" y1="160" x2="${width - 90}" y2="160" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="1" />
 
-    <!-- Headline Principal (Título em Alto Contraste) -->
-    <g transform="translate(80, ${isStory ? 460 : 340})">
+    <!-- 2. MIDDLE (Conteúdo): Headline colossal e bodyText -->
+    <g transform="translate(90, ${contentStartY})">
       ${lines
         .map(
           (line, idx) =>
-            `<text x="0" y="${idx * 68}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="52" font-weight="800" fill="#FFFFFF" letter-spacing="-1">${line}</text>`
+            `<text x="0" y="${idx * headlineLineHeight}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="56" font-weight="800" fill="#FFFFFF" letter-spacing="-2">${line}</text>`
         )
         .join("")}
     </g>
 
-    <!-- Linha Divisória de Carbono -->
-    <line x1="80" y1="${isStory ? 760 : 640}" x2="400" y2="${isStory ? 760 : 640}" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="2" />
-
-    <!-- Corpo do Texto (Copywriting da Lâmina) -->
-    <g transform="translate(80, ${isStory ? 820 : 700})">
+    <g transform="translate(90, ${bodyStartY})">
       ${bodyLines
         .slice(0, 6)
         .map(
           (bLine, bIdx) =>
-            `<text x="0" y="${bIdx * 38}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="400" fill="#A1A1AA" letter-spacing="0">${bLine}</text>`
+            `<text x="0" y="${bIdx * bodyLineHeight}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="400" fill="#A1A1AA" letter-spacing="0">${bLine}</text>`
         )
         .join("")}
     </g>
 
-    <!-- Rodapé: Call to Action e Indicador de Navegação -->
-    <g transform="translate(80, ${height - 110})">
-      <text x="0" y="24" font-family="monospace" font-size="14" font-weight="700" fill="#E5E4E2" letter-spacing="1">
-        ${slideNumber < totalSlides ? "ARRASTE PARA O PRÓXIMO PASSO →" : "SALVE ESTE CONTEÚDO PARA CONSULTAR"}
-      </text>
+    <!-- 3. BOTTOM (Footer): Linha divisória sutil com assinatura B2B -->
+    <line x1="90" y1="${height - 130}" x2="${width - 90}" y2="${height - 130}" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="1.5" />
+
+    <g transform="translate(90, ${height - 85})">
+      <text x="0" y="0" font-family="monospace" font-size="16" font-weight="600" fill="#71717A" letter-spacing="3">${footerSignature}</text>
     </g>
 
-    <g transform="translate(${width - 240}, ${height - 110})">
-      <text x="0" y="24" font-family="monospace" font-size="12" font-weight="600" fill="#52525B" letter-spacing="2">
-        BLACK LINK ECOSYSTEM
+    <g transform="translate(${width - 280}, ${height - 85})">
+      <text x="0" y="0" font-family="monospace" font-size="16" font-weight="600" fill="#A1A1AA" letter-spacing="1">
+        ${slideNumber < totalSlides ? "ARRASTE →" : "SALVE ESTE POST"}
       </text>
     </g>
   </svg>
@@ -176,7 +169,7 @@ export async function POST(request: NextRequest) {
       slideNumber: body.slideNumber || 1,
       totalSlides: body.totalSlides || 5,
       dataUrl,
-      width: body.format === "story" ? 1080 : 1080,
+      width: 1080,
       height: body.format === "story" ? 1920 : 1080,
     });
   } catch (err: unknown) {
@@ -200,7 +193,9 @@ export async function GET(request: NextRequest) {
   const headline = searchParams.get("headline") || "Diagnóstico Estratégico B2B";
   const bodyText =
     searchParams.get("body") ||
-    "Alinhamento executivo de prospecção e esteira comercial blindada.";
+    "Alinhamento executivo de prospecção, qualificação de demanda e esteira comercial blindada.";
+  const theme = searchParams.get("theme") || undefined;
+  const niche = searchParams.get("niche") || undefined;
   const format = (searchParams.get("format") as "carousel" | "story" | "post") || "carousel";
 
   const svg = generateSlideSvg({
@@ -208,6 +203,8 @@ export async function GET(request: NextRequest) {
     totalSlides,
     headline,
     bodyText,
+    theme,
+    niche,
     format,
   });
 
