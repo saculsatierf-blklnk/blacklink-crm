@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   ArrowLeft,
   Check,
@@ -8,18 +8,33 @@ import {
   ChevronRight,
   Copy,
   Download,
+  FileText,
+  Image as ImageIcon,
   Layers,
+  LayoutGrid,
   Loader2,
+  Palette,
+  RotateCcw,
+  Sliders,
   Sparkles,
+  Type,
+  Upload,
+  User,
   Wand2,
+  X,
 } from "lucide-react";
 import { toPng } from "html-to-image";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { jsPDF } from "jspdf";
 import { GlassCard } from "@/components/ui/GlassCard";
 import {
   BlackLinkSlidePreview,
   type SlideTheme,
+  type SlideLayout,
+  type SlideFont,
+  type AspectRatio,
+  type SlideDesignConfig,
 } from "./BlackLinkSlidePreview";
 
 interface SlideData {
@@ -35,6 +50,25 @@ export function BlackLinkCarouselStudio() {
   // Motor de Temas
   const [selectedTheme, setSelectedTheme] = useState("dark-industrial");
 
+  // Abas do Painel de Edição (Coluna Esquerda)
+  const [activeEditorTab, setActiveEditorTab] = useState<"conteudo" | "design">(
+    "conteudo"
+  );
+
+  // Painel de Design Paramétrico (O "Canva Killer")
+  const [designConfig, setDesignConfig] = useState<SlideDesignConfig>({
+    layout: "brutalista",
+    font: "space-grotesk",
+    aspectRatio: "1:1",
+    bgColor: "#050505",
+    accentColor: "#10b981",
+    authorName: "Lucas Satierf",
+    authorHandle: "@lucasblacklink",
+    authorAvatar: "",
+    bgImage: "",
+    bgOpacity: 25,
+  });
+
   // Form states (Etapa 1: Briefing Direto)
   const [theme, setTheme] = useState("");
   const [copyAngle, setCopyAngle] = useState("");
@@ -46,9 +80,72 @@ export function BlackLinkCarouselStudio() {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [hasCopied, setHasCopied] = useState(false);
 
-  // Estado de exportação física em ZIP
-  const [isExporting, setIsExporting] = useState(false);
+  // Estados de exportação
+  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
+
+  // Referências para inputs de arquivos ocultos
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bgImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Alternância sincronizada de tema
+  const handleThemeChange = (themeId: string) => {
+    setSelectedTheme(themeId);
+    if (themeId === "dark-industrial") {
+      setDesignConfig((prev) => ({
+        ...prev,
+        bgColor: "#050505",
+        accentColor: "#10b981",
+      }));
+    } else if (themeId === "light-minimal") {
+      setDesignConfig((prev) => ({
+        ...prev,
+        bgColor: "#fafafa",
+        accentColor: "#09090b",
+      }));
+    } else if (themeId === "neon-accent") {
+      setDesignConfig((prev) => ({
+        ...prev,
+        bgColor: "#000000",
+        accentColor: "#34d399",
+      }));
+    }
+  };
+
+  // Upload e conversão em base64 da foto do autor
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setDesignConfig((prev) => ({
+            ...prev,
+            authorAvatar: event.target!.result as string,
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload e conversão em base64 da imagem de fundo
+  const handleBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setDesignConfig((prev) => ({
+            ...prev,
+            bgImage: event.target!.result as string,
+          }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Disparo de geração (conecta com a API /api/marketing/generate)
   const handleGenerate = async (e: React.FormEvent) => {
@@ -83,33 +180,33 @@ export function BlackLinkCarouselStudio() {
         setSlides([
           {
             slideNumber: 1,
-            headline: data.hookHeadline || `O Diagnóstico Real de ${theme}`,
+            headline: data.hookHeadline || `Como Dominar **${theme}** sem Perder Margem`,
             bodyText:
-              "Por que 80% das empresas continuam utilizando métodos obsoletos de prospecção e como virar o jogo.",
+              "Por que operações corporativas travam nos gargalos de esteira e como a **blindagem de pipeline** reduz o ciclo médio pela metade.",
           },
           {
             slideNumber: 2,
-            headline: "O Gargalo Oculto da Esteira",
+            headline: "O Gargalo Oculto da **Esteira B2B**",
             bodyText:
-              "Sem radar anti-colisão e telemetria única, seus hunters abordam os mesmos decisores e queimam margem.",
+              "Sem radar de proteção territorial e inteligência preditiva, os hunters canibalizam contas e degradam o ticket médio.",
           },
           {
             slideNumber: 3,
-            headline: "A Regra de Ouro da Cadência",
+            headline: "A Regra de Ouro da **Cadência**",
             bodyText:
-              "Follow-ups espaçados e orquestrados para manter presença executiva contínua sem gerar atrito com o cliente.",
+              "Follow-ups orquestrados mantêm **presença executiva** sem criar fricção com o decisor de compra.",
           },
           {
             slideNumber: 4,
-            headline: "Passagem de Bastão Blindada",
+            headline: "Passagem de Bastão **Blindada**",
             bodyText:
-              "A transição entre o pré-vendas e o Closer não pode perder notas, dores ou histórico de interações.",
+              "A transição entre pré-vendas e Closer deve preservar 100% das notas e o histórico de interações do lead.",
           },
           {
             slideNumber: 5,
-            headline: "Ação Imediata de Escala",
+            headline: "Escala Imediata com **Black Link CRM**",
             bodyText:
-              "Implemente a infraestrutura do Black Link CRM e consolide seu domínio em contas enterprise.",
+              "Unifique telemetria, enriquecimento de dados e aceleração de receita em uma infraestrutura enterprise.",
           },
         ]);
       }
@@ -146,6 +243,7 @@ export function BlackLinkCarouselStudio() {
         theme,
         copyAngle,
         selectedTheme,
+        designConfig,
         slides,
       },
       null,
@@ -156,28 +254,30 @@ export function BlackLinkCarouselStudio() {
     setTimeout(() => setHasCopied(false), 2500);
   };
 
-  // Exportação física em alta resolução (1080x1080) compactada em ZIP
+  // Exportação física em ZIP (Imagens em 1080x1080 ou 1080x1350)
   const handleDownloadZip = async () => {
-    if (slides.length === 0 || isExporting) return;
+    if (slides.length === 0 || isExportingZip || isExportingPdf) return;
 
-    setIsExporting(true);
-    setExportFeedback("Capturando lâminas em 1080x1080...");
+    setIsExportingZip(true);
+    setExportFeedback("Capturando lâminas em alta resolução...");
 
     try {
+      const isPortrait = designConfig.aspectRatio === "4:5";
+      const slideWidth = 1080;
+      const slideHeight = isPortrait ? 1350 : 1080;
       const zip = new JSZip();
 
-      // Itera por cada lâmina montada no nó DOM invisível de alta resolução
       for (let i = 0; i < slides.length; i++) {
+        setExportFeedback(`Capturando lâmina ${i + 1} de ${slides.length}...`);
         const element = document.getElementById(`export-slide-node-${i}`);
         if (element) {
           const dataUrl = await toPng(element, {
-            width: 1080,
-            height: 1080,
+            width: slideWidth,
+            height: slideHeight,
             pixelRatio: 1,
             cacheBust: true,
           });
 
-          // Remove o cabeçalho dataUrl para obter o base64 puro
           const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
           const slideNumberStr = String(i + 1).padStart(2, "0");
           zip.file(`slide-${slideNumberStr}.png`, base64Data, { base64: true });
@@ -195,26 +295,83 @@ export function BlackLinkCarouselStudio() {
         : "blacklink";
 
       saveAs(zipBlob, `carrossel-${safeThemeName}.zip`);
-      setExportFeedback("Download concluído com sucesso!");
+      setExportFeedback("Download ZIP concluído com sucesso!");
       setTimeout(() => setExportFeedback(null), 3000);
     } catch (err: unknown) {
       console.error("Falha ao exportar carrossel em ZIP:", err);
-      setExportFeedback("Erro ao exportar. Tente novamente.");
+      setExportFeedback("Erro ao exportar ZIP. Tente novamente.");
       setTimeout(() => setExportFeedback(null), 4000);
     } finally {
-      setIsExporting(false);
+      setIsExportingZip(false);
+    }
+  };
+
+  // Exportação nativa para LinkedIn (Documento PDF Multi-Páginas)
+  const handleDownloadPdf = async () => {
+    if (slides.length === 0 || isExportingZip || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    setExportFeedback("Iniciando conversão para LinkedIn (PDF)...");
+
+    try {
+      const isPortrait = designConfig.aspectRatio === "4:5";
+      const slideWidth = 1080;
+      const slideHeight = isPortrait ? 1350 : 1080;
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [slideWidth, slideHeight],
+        hotfixes: ["px_scaling"],
+      });
+
+      for (let i = 0; i < slides.length; i++) {
+        setExportFeedback(`Renderizando lâmina ${i + 1} de ${slides.length} no PDF...`);
+        const element = document.getElementById(`export-slide-node-${i}`);
+        if (element) {
+          const dataUrl = await toPng(element, {
+            width: slideWidth,
+            height: slideHeight,
+            pixelRatio: 1,
+            cacheBust: true,
+          });
+
+          if (i > 0) {
+            pdf.addPage([slideWidth, slideHeight], "portrait");
+          }
+          pdf.addImage(dataUrl, "PNG", 0, 0, slideWidth, slideHeight, undefined, "FAST");
+        }
+      }
+
+      setExportFeedback("Finalizando documento PDF do LinkedIn...");
+      const safeThemeName = theme
+        ? theme
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "-")
+            .slice(0, 30)
+        : "blacklink";
+
+      pdf.save(`carrossel-${safeThemeName}-linkedin.pdf`);
+      setExportFeedback("PDF para LinkedIn baixado com sucesso!");
+      setTimeout(() => setExportFeedback(null), 3000);
+    } catch (err: unknown) {
+      console.error("Falha ao exportar PDF para LinkedIn:", err);
+      setExportFeedback("Erro ao exportar PDF. Tente novamente.");
+      setTimeout(() => setExportFeedback(null), 4000);
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
   const currentSlideData = slides[activeSlideIndex] || {
     slideNumber: 1,
-    headline: theme || "Como Dominar Contas Enterprise",
+    headline: theme ? `Como Dominar **${theme}**` : "Como Dominar **Contas Enterprise**",
     bodyText: copyAngle || "A estrutura executiva de alta densidade B2B.",
   };
 
   return (
     <div className="space-y-12 animate-in fade-in duration-300">
-      {/* NÓS DOM ESCONDIDOS PARA CAPTURA EM 1080x1080 VIA HTML-TO-IMAGE */}
+      {/* NÓS DOM ESCONDIDOS PARA CAPTURA EM ALTA RESOLUÇÃO (ZIP & PDF LINKEDIN) */}
       <div
         className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 overflow-hidden"
         aria-hidden="true"
@@ -223,7 +380,13 @@ export function BlackLinkCarouselStudio() {
           <div
             key={idx}
             id={`export-slide-node-${idx}`}
-            className="w-[1080px] h-[1080px] min-w-[1080px] min-h-[1080px] bg-black"
+            style={{
+              width: "1080px",
+              height: designConfig.aspectRatio === "4:5" ? "1350px" : "1080px",
+              minWidth: "1080px",
+              minHeight: designConfig.aspectRatio === "4:5" ? "1350px" : "1080px",
+            }}
+            className="bg-black"
           >
             <BlackLinkSlidePreview
               headline={s.headline}
@@ -231,6 +394,7 @@ export function BlackLinkCarouselStudio() {
               currentSlide={idx + 1}
               totalSlides={slides.length}
               theme={selectedTheme}
+              designConfig={designConfig}
               isExportMode={true}
             />
           </div>
@@ -245,11 +409,11 @@ export function BlackLinkCarouselStudio() {
               Estúdio Black Link
             </h1>
             <span className="rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-1 text-[10px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
-              Sandbox Isolado • 1:1
+              Canva-Killer • B2B Engine
             </span>
           </div>
           <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-2xl">
-            Laboratório brutalista de alta fidelidade para criação de carrosséis institucionais, alternância de temas estéticos e download em ZIP de alta resolução.
+            Laboratório brutalista de alta fidelidade para criação viral de carrosséis, alternância de layouts, motor tipográfico e exportação nativa para LinkedIn (PDF).
           </p>
         </div>
 
@@ -274,7 +438,7 @@ export function BlackLinkCarouselStudio() {
                 : "border-white/10 bg-black/20 text-zinc-400"
             }`}
           >
-            <span>02. Split-View Live</span>
+            <span>02. Split-View Studio</span>
           </div>
         </div>
       </div>
@@ -364,147 +528,590 @@ export function BlackLinkCarouselStudio() {
         </div>
       )}
 
-      {/* ETAPA 2: O ESTÚDIO SPLIT-VIEW (EDIÇÃO AO VIVO COM MOTOR DE TEMAS E EXPORTAÇÃO) */}
+      {/* ETAPA 2: O ESTÚDIO SPLIT-VIEW (PAINEL DE DESIGN PARAMÉTRICO & LINKEDIN PDF) */}
       {currentStep === 2 && (
         <div className="space-y-6">
           {/* GRID SPLIT-VIEW (12 COLUNAS) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start mb-12">
-            {/* COLUNA ESQUERDA (5 Colunas): CONTROLES DE EDIÇÃO DIRETA & DOWNLOAD */}
+            {/* COLUNA ESQUERDA (5 Colunas): PAINEL PARAMÉTRICO [ CONTEÚDO ] & [ DESIGN & ESTILO ] */}
             <div className="col-span-12 lg:col-span-5 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl space-y-6">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
               <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
 
               <div className="relative z-10 space-y-6">
-                {/* Header da Coluna de Edição */}
+                {/* Header da Coluna */}
                 <div className="flex items-center justify-between border-b border-white/[0.08] pb-5">
                   <div>
                     <h2 className="text-2xl font-medium tracking-tight text-white">
-                      Edição Direta
+                      Estúdio de Criação
                     </h2>
                     <p className="text-xs text-zinc-400 mt-1">
-                      Lâmina {activeSlideIndex + 1} de {slides.length} selecionada.
+                      Ajuste copy, tipografia, dimensões e templates em tempo real.
                     </p>
                   </div>
 
+                  <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono text-emerald-300 font-semibold">
+                    Canva Killer
+                  </span>
+                </div>
+
+                {/* ABAS VISUAIS: [ CONTEÚDO ] & [ DESIGN & ESTILO ] */}
+                <div className="grid grid-cols-2 p-1 rounded-2xl bg-black/40 border border-white/10">
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(1)}
-                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+                    onClick={() => setActiveEditorTab("conteudo")}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                      activeEditorTab === "conteudo"
+                        ? "bg-white/15 text-white shadow-lg border border-white/10"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                    }`}
                   >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    <span>Novo Briefing</span>
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Conteúdo</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveEditorTab("design")}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                      activeEditorTab === "design"
+                        ? "bg-white/15 text-white shadow-lg border border-white/10"
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                    }`}
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    <span>Design & Estilo</span>
                   </button>
                 </div>
 
-                {/* Seletor Rápido de Lâminas (Pills) */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  {slides.map((_, idx) => (
+                {/* ======================================================== */}
+                {/* ABA 1: CONTEÚDO (SLIDE A SLIDE) */}
+                {/* ======================================================== */}
+                {activeEditorTab === "conteudo" && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    {/* Seletor de Lâminas (Pills) */}
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
+                        Lâmina Selecionada
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {slides.map((_, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setActiveSlideIndex(idx)}
+                            className={`flex items-center justify-center h-10 px-4 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
+                              activeSlideIndex === idx
+                                ? "border-white bg-white text-black font-bold shadow-lg"
+                                : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/30 hover:text-white"
+                            }`}
+                          >
+                            Lâmina {String(idx + 1).padStart(2, "0")}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Headline do Slide */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label
+                          htmlFor="slideHeadlineInput"
+                          className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500"
+                        >
+                          Headline da Lâmina
+                        </label>
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          Use <code className="text-emerald-400">**palavra**</code> para destacar
+                        </span>
+                      </div>
+                      <input
+                        id="slideHeadlineInput"
+                        type="text"
+                        value={currentSlideData.headline}
+                        onChange={(e) => updateActiveSlide("headline", e.target.value)}
+                        placeholder="Ex: Como Dominar **Contas Enterprise** sem Perder Margem"
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    {/* Body Text do Slide */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label
+                          htmlFor="slideBodyTextInput"
+                          className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500"
+                        >
+                          Texto Explicativo / BodyText
+                        </label>
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          Destaque com <code className="text-emerald-400">**texto**</code>
+                        </span>
+                      </div>
+                      <textarea
+                        id="slideBodyTextInput"
+                        rows={4}
+                        value={currentSlideData.bodyText}
+                        onChange={(e) => updateActiveSlide("bodyText", e.target.value)}
+                        placeholder="Desenvolva o raciocínio estratégico da lâmina..."
+                        className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:outline-none transition-colors resize-y leading-relaxed font-sans"
+                      />
+                    </div>
+
+                    {/* Navegação entre Lâminas */}
+                    <div className="flex items-center justify-between pt-2">
+                      <button
+                        type="button"
+                        onClick={handlePrevSlide}
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Anterior</span>
+                      </button>
+
+                      <span className="text-xs font-mono text-zinc-400">
+                        {activeSlideIndex + 1} de {slides.length}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleNextSlide}
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+                      >
+                        <span>Próximo</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Botões Auxiliares */}
+                    <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(1)}
+                        className="flex items-center gap-2 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5" />
+                        <span>Novo Briefing</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyJson}
+                        className="flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {hasCopied ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copiar JSON</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ======================================================== */}
+                {/* ABA 2: DESIGN & ESTILO (PAINEL PARAMÉTRICO COMPLETO) */}
+                {/* ======================================================== */}
+                {activeEditorTab === "design" && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    {/* 1. Dimensão da Lâmina (1:1 vs 4:5) */}
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
+                        Proporção &amp; Dimensão
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDesignConfig((prev) => ({
+                              ...prev,
+                              aspectRatio: "1:1",
+                            }))
+                          }
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
+                            designConfig.aspectRatio === "1:1"
+                              ? "border-white bg-white/10 text-white font-bold shadow-md"
+                              : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-sm font-semibold">1:1 Quadrado</span>
+                          <span className="text-[10px] text-zinc-500 mt-0.5">1080 × 1080 px</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDesignConfig((prev) => ({
+                              ...prev,
+                              aspectRatio: "4:5",
+                            }))
+                          }
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
+                            designConfig.aspectRatio === "4:5"
+                              ? "border-white bg-white/10 text-white font-bold shadow-md"
+                              : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
+                          }`}
+                        >
+                          <span className="text-sm font-semibold">4:5 Retrato</span>
+                          <span className="text-[10px] text-zinc-500 mt-0.5">LinkedIn / IG (1080 × 1350)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. Biblioteca de Templates Virais */}
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
+                        Biblioteca de Templates Virais
+                      </label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {[
+                          {
+                            id: "brutalista" as SlideLayout,
+                            title: "Brutalista",
+                            desc: "Fontes colossais B2B",
+                            icon: "🏛️",
+                          },
+                          {
+                            id: "minimal" as SlideLayout,
+                            title: "Minimalista",
+                            desc: "Centralizado & Luxo",
+                            icon: "✨",
+                          },
+                          {
+                            id: "tweet" as SlideLayout,
+                            title: "Thread / 𝕏",
+                            desc: "Simulação do Twitter",
+                            icon: "💬",
+                          },
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                layout: item.id,
+                              }))
+                            }
+                            className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer ${
+                              designConfig.layout === item.id
+                                ? "border-white bg-white/10 text-white font-bold shadow-lg"
+                                : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
+                            }`}
+                          >
+                            <span className="text-base mb-1">{item.icon}</span>
+                            <span className="text-xs font-semibold">{item.title}</span>
+                            <span className="text-[9px] text-zinc-500 mt-0.5">{item.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 3. Motor Tipográfico (Next.js Fonts) */}
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
+                        Motor Tipográfico (Fontes)
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {[
+                          {
+                            id: "space-grotesk" as SlideFont,
+                            name: "Space Grotesk",
+                            desc: "Brutalista / Tech",
+                            fontClass: "font-space-grotesk",
+                          },
+                          {
+                            id: "playfair" as SlideFont,
+                            name: "Playfair Display",
+                            desc: "Editorial / Luxo B2B",
+                            fontClass: "font-playfair",
+                          },
+                          {
+                            id: "jakarta" as SlideFont,
+                            name: "Plus Jakarta",
+                            desc: "Startup Moderna",
+                            fontClass: "font-jakarta",
+                          },
+                          {
+                            id: "inter" as SlideFont,
+                            name: "Inter",
+                            desc: "UI / Tweet Social",
+                            fontClass: "font-inter",
+                          },
+                        ].map((f) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                font: f.id,
+                              }))
+                            }
+                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                              designConfig.font === f.id
+                                ? "border-white bg-white/10 text-white font-semibold shadow-md"
+                                : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
+                            }`}
+                          >
+                            <div className={`text-xs ${f.fontClass}`}>{f.name}</div>
+                            <div className="text-[9px] text-zinc-500 mt-0.5">{f.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 4. Controle de Cores (Background & Accent Color) */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Background Color */}
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-2">
+                          Cor de Fundo
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={designConfig.bgColor || "#050505"}
+                            onChange={(e) =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                bgColor: e.target.value,
+                              }))
+                            }
+                            className="w-9 h-9 rounded-lg border border-white/20 bg-transparent cursor-pointer p-0.5"
+                          />
+                          <input
+                            type="text"
+                            value={designConfig.bgColor || "#050505"}
+                            onChange={(e) =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                bgColor: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Accent Color (Cor de Destaque) */}
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-2">
+                          Cor de Destaque
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={designConfig.accentColor || "#10b981"}
+                            onChange={(e) =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                accentColor: e.target.value,
+                              }))
+                            }
+                            className="w-9 h-9 rounded-lg border border-white/20 bg-transparent cursor-pointer p-0.5"
+                          />
+                          <input
+                            type="text"
+                            value={designConfig.accentColor || "#10b981"}
+                            onChange={(e) =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                accentColor: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-black/20 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 5. Upload de Assets (Foto do Autor & Imagem de Fundo) */}
+                    <div className="space-y-4 pt-2 border-t border-white/[0.08]">
+                      {/* Foto e Dados do Autor (Para Layout Tweet) */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500">
+                            Autor da Thread (Layout Tweet)
+                          </label>
+                          {designConfig.authorAvatar && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDesignConfig((prev) => ({
+                                  ...prev,
+                                  authorAvatar: "",
+                                }))
+                              }
+                              className="text-[10px] text-rose-400 hover:underline cursor-pointer"
+                            >
+                              Remover Foto
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => avatarInputRef.current?.click()}
+                            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/[0.08] cursor-pointer"
+                          >
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>{designConfig.authorAvatar ? "Trocar Foto" : "Upload Foto"}</span>
+                          </button>
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                            className="hidden"
+                          />
+
+                          <input
+                            type="text"
+                            value={designConfig.authorName || ""}
+                            onChange={(e) =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                authorName: e.target.value,
+                              }))
+                            }
+                            placeholder="Nome (Ex: Lucas Satierf)"
+                            className="w-1/2 bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                          />
+
+                          <input
+                            type="text"
+                            value={designConfig.authorHandle || ""}
+                            onChange={(e) =>
+                              setDesignConfig((prev) => ({
+                                ...prev,
+                                authorHandle: e.target.value,
+                              }))
+                            }
+                            placeholder="@arroba"
+                            className="w-1/2 bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Imagem de Fundo & Opacidade */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500">
+                            Imagem de Fundo &amp; Opacidade
+                          </label>
+                          {designConfig.bgImage && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDesignConfig((prev) => ({
+                                  ...prev,
+                                  bgImage: "",
+                                }))
+                              }
+                              className="text-[10px] text-rose-400 hover:underline cursor-pointer"
+                            >
+                              Remover Fundo
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => bgImageInputRef.current?.click()}
+                            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs text-zinc-300 hover:text-white hover:bg-white/[0.08] cursor-pointer shrink-0"
+                          >
+                            <ImageIcon className="h-3.5 w-3.5" />
+                            <span>{designConfig.bgImage ? "Alterar Fundo" : "Upload Imagem"}</span>
+                          </button>
+                          <input
+                            ref={bgImageInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleBgImageUpload}
+                            className="hidden"
+                          />
+
+                          {/* Slider de Opacidade */}
+                          <div className="flex-1 flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-zinc-500 shrink-0">Opacidade:</span>
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={designConfig.bgOpacity}
+                              onChange={(e) =>
+                                setDesignConfig((prev) => ({
+                                  ...prev,
+                                  bgOpacity: Number(e.target.value),
+                                }))
+                              }
+                              className="w-full accent-emerald-400 cursor-pointer"
+                            />
+                            <span className="text-[10px] font-mono text-zinc-400 shrink-0 w-8 text-right">
+                              {designConfig.bgOpacity}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* BOTÕES DE EXPORTAÇÃO B2B (ZIP & LINKEDIN PDF) */}
+                <div className="pt-6 border-t border-white/[0.08] space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Botão 1: Baixar ZIP */}
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => setActiveSlideIndex(idx)}
-                      className={`h-10 flex-1 min-w-[48px] rounded-xl border text-xs font-mono font-semibold transition-all cursor-pointer flex items-center justify-center ${
-                        activeSlideIndex === idx
-                          ? "border-white/40 bg-white/[0.15] text-white ring-1 ring-white/30 shadow-md"
-                          : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
-                      }`}
+                      disabled={isExportingZip || isExportingPdf}
+                      onClick={handleDownloadZip}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.05] px-4 py-3.5 text-xs font-semibold text-white hover:bg-white/10 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
                     >
-                      0{idx + 1}
+                      {isExportingZip ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-white" />
+                          <span>Gerando ZIP...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 text-white" />
+                          <span>Baixar (ZIP)</span>
+                        </>
+                      )}
                     </button>
-                  ))}
-                </div>
 
-                {/* Edição da Headline */}
-                <div>
-                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
-                    Headline da Lâmina {activeSlideIndex + 1}
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={currentSlideData.headline}
-                    onChange={(e) => updateActiveSlide("headline", e.target.value)}
-                    placeholder="Título colossal da lâmina..."
-                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors leading-relaxed font-sans resize-y"
-                  />
-                </div>
-
-                {/* Edição do BodyText */}
-                <div>
-                  <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
-                    Texto Explicativo / BodyText
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={currentSlideData.bodyText}
-                    onChange={(e) => updateActiveSlide("bodyText", e.target.value)}
-                    placeholder="Texto explicativo denso..."
-                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors leading-relaxed font-sans resize-y"
-                  />
-                </div>
-
-                {/* Controles de Navegação Entre Lâminas */}
-                <div className="flex items-center justify-between gap-3 pt-4 border-t border-white/[0.08]">
-                  <button
-                    type="button"
-                    onClick={handlePrevSlide}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span>Anterior</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleCopyJson}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
-                    title="Copiar JSON com os textos das lâminas"
-                  >
-                    {hasCopied ? (
-                      <>
-                        <Check className="h-4 w-4 text-emerald-400" />
-                        <span className="text-emerald-400 font-mono">Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-4 w-4" />
-                        <span>Copiar JSON</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleNextSlide}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
-                  >
-                    <span>Próximo</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* BOTÃO PRIMÁRIO DE EXPORTAÇÃO FÍSICA (ZIP) */}
-                <div className="pt-4 border-t border-white/[0.08] space-y-2">
-                  <button
-                    type="button"
-                    disabled={isExporting}
-                    onClick={handleDownloadZip}
-                    className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-white px-6 py-4 text-xs font-semibold text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-[0_0_30px_rgba(255,255,255,0.25)] disabled:opacity-50"
-                  >
-                    {isExporting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin text-black" />
-                        <span>Processando 1080x1080...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 text-black" />
-                        <span>⬇️ Baixar Carrossel (ZIP)</span>
-                      </>
-                    )}
-                  </button>
+                    {/* Botão 2: Baixar para LinkedIn (PDF) */}
+                    <button
+                      type="button"
+                      disabled={isExportingZip || isExportingPdf}
+                      onClick={handleDownloadPdf}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3.5 text-xs font-semibold text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_25px_rgba(255,255,255,0.25)]"
+                    >
+                      {isExportingPdf ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-black" />
+                          <span>Criando PDF...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 text-black" />
+                          <span>📄 Baixar para LinkedIn (PDF)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
 
                   {exportFeedback && (
-                    <div className="text-center text-[11px] font-mono text-emerald-400 animate-fadeIn">
+                    <div className="text-center text-[11px] font-mono text-emerald-400 animate-fadeIn pt-1">
                       {exportFeedback}
                     </div>
                   )}
@@ -512,7 +1119,7 @@ export function BlackLinkCarouselStudio() {
               </div>
             </div>
 
-            {/* COLUNA DIREITA (7 Colunas): LÂMINA EM TEMPO REAL COM O TEMA APLICADO */}
+            {/* COLUNA DIREITA (7 Colunas): LÂMINA EM TEMPO REAL COM O MOTOR ATIVO */}
             <div className="col-span-12 lg:col-span-7 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl sticky top-24 space-y-6">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
               <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
@@ -525,33 +1132,29 @@ export function BlackLinkCarouselStudio() {
                       Lâmina em Tempo Real
                     </h3>
                     <p className="text-xs text-zinc-400 mt-1">
-                      Renderizador oficial Black Link (1:1). Tema ativo:{" "}
-                      <span className="text-zinc-200 capitalize font-mono">
-                        {selectedTheme.replace("-", " ")}
-                      </span>
-                      .
+                      Template: <span className="text-zinc-200 font-mono capitalize">{designConfig.layout}</span> • Proporção: <span className="text-zinc-200 font-mono">{designConfig.aspectRatio}</span>.
                     </p>
                   </div>
 
                   <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono text-emerald-300 font-semibold">
-                    1080x1080 Ready
+                    {designConfig.aspectRatio === "4:5" ? "1080x1350 Ready" : "1080x1080 Ready"}
                   </span>
                 </div>
 
                 {/* SELETOR DE TEMAS (THEME ENGINE) */}
                 <div className="flex items-center justify-between mb-6 bg-black/40 p-2 rounded-2xl border border-white/10 w-fit">
                   {[
-                    { id: 'dark-industrial', label: 'Dark Industrial' },
-                    { id: 'light-minimal', label: 'Light Minimal' },
-                    { id: 'neon-accent', label: 'Neon Accent' }
+                    { id: "dark-industrial", label: "Dark Industrial" },
+                    { id: "light-minimal", label: "Light Minimal" },
+                    { id: "neon-accent", label: "Neon Accent" },
                   ].map((t) => (
                     <button
                       key={t.id}
-                      onClick={() => setSelectedTheme(t.id)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                        selectedTheme === t.id 
-                          ? 'bg-white/10 text-white shadow-lg border border-white/10' 
-                          : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                      onClick={() => handleThemeChange(t.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        selectedTheme === t.id
+                          ? "bg-white/10 text-white shadow-lg border border-white/10"
+                          : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
                       }`}
                     >
                       {t.label}
@@ -559,7 +1162,7 @@ export function BlackLinkCarouselStudio() {
                   ))}
                 </div>
 
-                {/* Renderizador Oficial Black Link 1:1 */}
+                {/* Renderizador Oficial Black Link (Canvas Adaptativo) */}
                 <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl group flex items-center justify-center">
                   <BlackLinkSlidePreview
                     headline={currentSlideData.headline}
@@ -567,6 +1170,7 @@ export function BlackLinkCarouselStudio() {
                     currentSlide={activeSlideIndex + 1}
                     totalSlides={slides.length || 5}
                     theme={selectedTheme}
+                    designConfig={designConfig}
                   />
 
                   {/* Setas de Navegação Sobrepostas */}
@@ -576,7 +1180,7 @@ export function BlackLinkCarouselStudio() {
                         type="button"
                         onClick={handlePrevSlide}
                         title="Lâmina Anterior"
-                        className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-30"
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
@@ -584,7 +1188,7 @@ export function BlackLinkCarouselStudio() {
                         type="button"
                         onClick={handleNextSlide}
                         title="Próxima Lâmina"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-30"
                       >
                         <ChevronRight className="h-5 w-5" />
                       </button>
@@ -592,21 +1196,35 @@ export function BlackLinkCarouselStudio() {
                   )}
                 </div>
 
-                {/* Botão Secundário de Download no Rodapé do Preview */}
+                {/* Ações de Download no Rodapé do Preview */}
                 <div className="flex items-center justify-between pt-2">
                   <span className="text-[11px] font-mono text-zinc-500">
-                    Resolução de saída: 1080x1080 px (.PNG)
+                    Resolução: {designConfig.aspectRatio === "4:5" ? "1080 × 1350 px" : "1080 × 1080 px"}
                   </span>
 
-                  <button
-                    type="button"
-                    disabled={isExporting}
-                    onClick={handleDownloadZip}
-                    className="flex items-center gap-2 text-xs font-mono text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Download Direto (ZIP)</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={isExportingZip || isExportingPdf}
+                      onClick={handleDownloadPdf}
+                      className="flex items-center gap-1.5 text-xs font-mono text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>LinkedIn (PDF)</span>
+                    </button>
+
+                    <span className="text-zinc-700">•</span>
+
+                    <button
+                      type="button"
+                      disabled={isExportingZip || isExportingPdf}
+                      onClick={handleDownloadZip}
+                      className="flex items-center gap-1.5 text-xs font-mono text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>ZIP</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
