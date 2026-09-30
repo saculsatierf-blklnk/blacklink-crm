@@ -10,7 +10,6 @@ import {
   Download,
   Layers,
   Loader2,
-  Palette,
   Sparkles,
   Wand2,
 } from "lucide-react";
@@ -29,38 +28,12 @@ interface SlideData {
   bodyText: string;
 }
 
-const THEME_OPTIONS: {
-  id: SlideTheme;
-  label: string;
-  badge: string;
-  previewClass: string;
-}[] = [
-  {
-    id: "dark-industrial",
-    label: "Dark Industrial",
-    badge: "Oficial",
-    previewClass: "bg-black border-white/20 text-white",
-  },
-  {
-    id: "light-minimal",
-    label: "Light Minimal",
-    badge: "Clean B2B",
-    previewClass: "bg-zinc-100 border-zinc-300 text-zinc-900",
-  },
-  {
-    id: "neon-accent",
-    label: "Neon Accent",
-    badge: "Gradiente",
-    previewClass: "bg-black border-emerald-500/40 text-emerald-400",
-  },
-];
-
 export function BlackLinkCarouselStudio() {
   // Wizard de 2 etapas isoladas
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   // Motor de Temas
-  const [selectedTheme, setSelectedTheme] = useState<SlideTheme>("dark-industrial");
+  const [selectedTheme, setSelectedTheme] = useState("dark-industrial");
 
   // Form states (Etapa 1: Briefing Direto)
   const [theme, setTheme] = useState("");
@@ -394,44 +367,6 @@ export function BlackLinkCarouselStudio() {
       {/* ETAPA 2: O ESTÚDIO SPLIT-VIEW (EDIÇÃO AO VIVO COM MOTOR DE TEMAS E EXPORTAÇÃO) */}
       {currentStep === 2 && (
         <div className="space-y-6">
-          {/* BARRA SUPERIOR: MOTOR DE TEMAS (THEME ENGINE) */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl p-4">
-            <div className="flex items-center gap-3">
-              <Palette className="h-4 w-4 text-zinc-400" />
-              <span className="text-xs font-medium text-white tracking-tight">
-                Design System da Lâmina:
-              </span>
-            </div>
-
-            {/* Seletor de Temas (Pills) */}
-            <div className="flex flex-wrap items-center gap-2">
-              {THEME_OPTIONS.map((t) => {
-                const isActive = selectedTheme === t.id;
-
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setSelectedTheme(t.id)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs transition-all duration-200 cursor-pointer ${
-                      isActive
-                        ? "border-white/40 bg-white/[0.15] text-white font-semibold shadow-sm"
-                        : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
-                    }`}
-                  >
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full border ${t.previewClass}`}
-                    />
-                    <span>{t.label}</span>
-                    <span className="text-[9px] font-mono uppercase text-zinc-500">
-                      {t.badge}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* GRID SPLIT-VIEW (12 COLUNAS) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start mb-12">
             {/* COLUNA ESQUERDA (5 Colunas): CONTROLES DE EDIÇÃO DIRETA & DOWNLOAD */}
@@ -601,6 +536,27 @@ export function BlackLinkCarouselStudio() {
                   <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono text-emerald-300 font-semibold">
                     1080x1080 Ready
                   </span>
+                </div>
+
+                {/* SELETOR DE TEMAS (THEME ENGINE) */}
+                <div className="flex items-center justify-between mb-6 bg-black/40 p-2 rounded-2xl border border-white/10 w-fit">
+                  {[
+                    { id: 'dark-industrial', label: 'Dark Industrial' },
+                    { id: 'light-minimal', label: 'Light Minimal' },
+                    { id: 'neon-accent', label: 'Neon Accent' }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTheme(t.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                        selectedTheme === t.id 
+                          ? 'bg-white/10 text-white shadow-lg border border-white/10' 
+                          : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
 
                 {/* Renderizador Oficial Black Link 1:1 */}

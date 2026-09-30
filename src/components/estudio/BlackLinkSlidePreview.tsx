@@ -9,7 +9,7 @@ interface BlackLinkSlidePreviewProps {
   bodyText: string;
   currentSlide?: number;
   totalSlides?: number;
-  theme?: SlideTheme;
+  theme?: SlideTheme | string;
   isExportMode?: boolean;
   className?: string;
   id?: string;
@@ -45,6 +45,11 @@ export const BlackLinkSlidePreview = forwardRef<
     "A maioria das operações corporativas trava por falta de clareza nos gargalos de esteira. Quando alinhamos inteligência de dados e blindagem de território, o ciclo médio cai pela metade.";
 
   // Configurações e mapeamento estético por tema
+  const activeTheme =
+    theme === "light-minimal" || theme === "neon-accent"
+      ? theme
+      : "dark-industrial";
+
   const themeStyles = {
     "dark-industrial": {
       container:
@@ -75,13 +80,13 @@ export const BlackLinkSlidePreview = forwardRef<
       brand: "text-emerald-400",
       counter: "text-cyan-300",
       headline:
-        "bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent",
+        "bg-gradient-to-r from-emerald-400 to-cyan-400 text-transparent bg-clip-text",
       body: "text-zinc-300",
       footerBorder: "border-emerald-500/20",
       footerText: "text-zinc-300",
       footerSubtle: "text-emerald-400/60",
     },
-  }[theme];
+  }[activeTheme];
 
   return (
     <div
