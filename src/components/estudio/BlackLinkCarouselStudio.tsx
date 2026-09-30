@@ -1,0 +1,452 @@
+"use client";
+
+import { useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Layers,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { BlackLinkSlidePreview } from "./BlackLinkSlidePreview";
+
+interface SlideData {
+  slideNumber: number;
+  headline: string;
+  bodyText: string;
+}
+
+export function BlackLinkCarouselStudio() {
+  // Wizard de 2 etapas isoladas
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+
+  // Form states (Etapa 1: Briefing Direto)
+  const [theme, setTheme] = useState("");
+  const [copyAngle, setCopyAngle] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  // Slides gerados (Etapa 2: Split-View)
+  const [slides, setSlides] = useState<SlideData[]>([]);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [hasCopied, setHasCopied] = useState(false);
+
+  // Disparo de geração (conecta com a API /api/marketing/generate ou n8n)
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!theme.trim()) return;
+
+    setIsGenerating(true);
+    setGenerationError(null);
+
+    try {
+      const res = await fetch("/api/marketing/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme: theme.trim(),
+          nicheValueProposition: copyAngle.trim() || "Inteligência comercial e conversão B2B",
+          format: "carousel",
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Falha ao se comunicar com o motor de geração de criativos.");
+      }
+
+      const data = await res.json();
+
+      if (data.slides && Array.isArray(data.slides) && data.slides.length > 0) {
+        setSlides(data.slides);
+      } else {
+        // Fallback robusto se o webhook retornar cópia simples
+        setSlides([
+          {
+            slideNumber: 1,
+            headline: data.hookHeadline || `O Diagnóstico Real de ${theme}`,
+            bodyText: "Por que 80% das empresas continuam utilizando métodos obsoletos de prospecção e como virar o jogo.",
+          },
+          {
+            slideNumber: 2,
+            headline: "O Gargalo Oculto da Esteira",
+            bodyText: "Sem radar anti-colisão e telemetria única, seus hunters abordam os mesmos decisores e queimam margem.",
+          },
+          {
+            slideNumber: 3,
+            headline: "A Regra de Ouro da Cadência",
+            bodyText: "Follow-ups espaçados e orquestrados para manter presença executiva contínua sem gerar atrito com o cliente.",
+          },
+          {
+            slideNumber: 4,
+            headline: "Passagem de Bastão Blindada",
+            bodyText: "A transição entre o pré-vendas e o Closer não pode perder notas, dores ou histórico de interações.",
+          },
+          {
+            slideNumber: 5,
+            headline: "Ação Imediata de Escala",
+            bodyText: "Implemente a infraestrutura do Black Link CRM e consolide seu domínio em contas enterprise.",
+          },
+        ]);
+      }
+
+      setActiveSlideIndex(0);
+      setCurrentStep(2);
+    } catch (err: unknown) {
+      console.error("Erro na geração do carrossel Black Link:", err);
+      setGenerationError(
+        "Não foi possível processar a geração no momento. Tente novamente em instantes."
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const updateActiveSlide = (field: "headline" | "bodyText", value: string) => {
+    setSlides((prev) =>
+      prev.map((s, idx) => (idx === activeSlideIndex ? { ...s, [field]: value } : s))
+    );
+  };
+
+  const handlePrevSlide = () => {
+    setActiveSlideIndex((prev) => (prev > 0 ? prev - 1 : slides.length - 1));
+  };
+
+  const handleNextSlide = () => {
+    setActiveSlideIndex((prev) => (prev < slides.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleCopyJson = () => {
+    const payload = JSON.stringify(
+      {
+        theme,
+        copyAngle,
+        slides,
+      },
+      null,
+      2
+    );
+    navigator.clipboard.writeText(payload);
+    setHasCopied(true);
+    setTimeout(() => setHasCopied(false), 2500);
+  };
+
+  const currentSlideData = slides[activeSlideIndex] || {
+    slideNumber: 1,
+    headline: theme || "Como Dominar Contas Enterprise",
+    bodyText: copyAngle || "A estrutura executiva de alta densidade B2B.",
+  };
+
+  return (
+    <div className="space-y-12 animate-in fade-in duration-300">
+      {/* Top Banner de Identificação do Sandbox */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b border-white/[0.08] pb-8">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-medium tracking-tight text-white">
+              Estúdio Black Link
+            </h1>
+            <span className="rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-1 text-[10px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
+              Sandbox Isolado • 1:1
+            </span>
+          </div>
+          <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-2xl">
+            Laboratório brutalista e de alta fidelidade dedicado exclusivamente à confecção de carrosséis institucionais da marca Black Link.
+          </p>
+        </div>
+
+        {/* Indicador de Etapa Atual */}
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono transition-all ${
+              currentStep === 1
+                ? "border-white/30 bg-white/[0.1] text-white font-semibold"
+                : "border-white/10 bg-black/20 text-zinc-400"
+            }`}
+          >
+            <span>01. Briefing Direto</span>
+          </div>
+
+          <span className="text-zinc-600 font-mono">→</span>
+
+          <div
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono transition-all ${
+              currentStep === 2
+                ? "border-white/30 bg-white/[0.1] text-white font-semibold"
+                : "border-white/10 bg-black/20 text-zinc-400"
+            }`}
+          >
+            <span>02. Split-View Live</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ETAPA 1: O BRIEFING DIRETO (2 CAMPOS APENAS) */}
+      {currentStep === 1 && (
+        <div className="max-w-3xl mx-auto">
+          <GlassCard className="p-8 lg:p-10">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-6">
+              <div>
+                <h2 className="text-2xl font-medium tracking-tight text-white">
+                  Briefing Direto
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Defina o tema e a diretriz central. A IA estruturará as 5 lâminas no formato institucional.
+                </p>
+              </div>
+              <Wand2 className="h-5 w-5 text-zinc-400" />
+            </div>
+
+            {generationError && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-xs text-red-300 font-mono">
+                {generationError}
+              </div>
+            )}
+
+            <form onSubmit={handleGenerate} className="space-y-6">
+              {/* Campo 1: Tema Principal */}
+              <div>
+                <label
+                  htmlFor="studioTheme"
+                  className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3"
+                >
+                  Tema Principal <span className="text-white">*</span>
+                </label>
+                <input
+                  id="studioTheme"
+                  type="text"
+                  required
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  placeholder="Ex: Como Dominar Contas Enterprise sem Perder Margem Operacional"
+                  className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors"
+                />
+              </div>
+
+              {/* Campo 2: Diretriz de Copy / Ângulo */}
+              <div>
+                <label
+                  htmlFor="studioCopyAngle"
+                  className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3"
+                >
+                  Diretriz de Copy / Ângulo <span className="text-zinc-600">(Opcional)</span>
+                </label>
+                <textarea
+                  id="studioCopyAngle"
+                  rows={4}
+                  value={copyAngle}
+                  onChange={(e) => setCopyAngle(e.target.value)}
+                  placeholder="Ex: Focar na dor do diretor comercial que perde contas por falta de cadência estruturada e colisões internas entre vendedores..."
+                  className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors resize-y leading-relaxed font-sans"
+                />
+              </div>
+
+              {/* Botão Primário de Disparo */}
+              <div className="pt-4 border-t border-white/[0.08] flex items-center justify-end">
+                <button
+                  type="submit"
+                  disabled={isGenerating || !theme.trim()}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2.5 rounded-xl bg-white px-8 py-3.5 text-xs font-semibold text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50 shadow-[0_0_25px_rgba(255,255,255,0.25)]"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-black" />
+                      <span>Gerando Carrossel Black Link...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 text-black" />
+                      <span>Gerar Carrossel Black Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* ETAPA 2: O ESTÚDIO SPLIT-VIEW (EDIÇÃO AO VIVO) */}
+      {currentStep === 2 && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start mb-12">
+          {/* COLUNA ESQUERDA (5 Colunas): CONTROLES DE EDIÇÃO DIRETA */}
+          <div className="col-span-12 lg:col-span-5 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              {/* Header da Coluna de Edição */}
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-6">
+                <div>
+                  <h2 className="text-2xl font-medium tracking-tight text-white">
+                    Edição Direta
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Lâmina {activeSlideIndex + 1} de {slides.length} selecionada.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Novo Briefing</span>
+                </button>
+              </div>
+
+              {/* Seletor Rápido de Lâminas (Pills) */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                {slides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveSlideIndex(idx)}
+                    className={`h-10 flex-1 min-w-[48px] rounded-xl border text-xs font-mono font-semibold transition-all cursor-pointer flex items-center justify-center ${
+                      activeSlideIndex === idx
+                        ? "border-white/40 bg-white/[0.15] text-white ring-1 ring-white/30 shadow-md"
+                        : "border-white/10 bg-black/20 text-zinc-400 hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    0{idx + 1}
+                  </button>
+                ))}
+              </div>
+
+              {/* Edição da Headline */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
+                  Headline da Lâmina {activeSlideIndex + 1}
+                </label>
+                <textarea
+                  rows={3}
+                  value={currentSlideData.headline}
+                  onChange={(e) => updateActiveSlide("headline", e.target.value)}
+                  placeholder="Título colossal da lâmina..."
+                  className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors leading-relaxed font-sans resize-y"
+                />
+              </div>
+
+              {/* Edição do BodyText */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-500 mb-3">
+                  Texto Explicativo / BodyText
+                </label>
+                <textarea
+                  rows={4}
+                  value={currentSlideData.bodyText}
+                  onChange={(e) => updateActiveSlide("bodyText", e.target.value)}
+                  placeholder="Texto explicativo denso..."
+                  className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white placeholder:text-zinc-600 focus:border-white/30 focus:ring-0 focus:outline-none transition-colors leading-relaxed font-sans resize-y"
+                />
+              </div>
+
+              {/* Controles de Navegação Entre Lâminas */}
+              <div className="flex items-center justify-between gap-3 pt-6 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={handlePrevSlide}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Anterior</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyJson}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+                  title="Copiar JSON com os textos das lâminas"
+                >
+                  {hasCopied ? (
+                    <>
+                      <Check className="h-4 w-4 text-emerald-400" />
+                      <span className="text-emerald-400 font-mono">Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copiar JSON</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNextSlide}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+                >
+                  <span>Próximo</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* COLUNA DIREITA (7 Colunas): LÂMINA EM TEMPO REAL (PADRÃO OURO) */}
+          <div className="col-span-12 lg:col-span-7 relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-8 shadow-2xl backdrop-blur-2xl sticky top-24">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              {/* Header do Preview */}
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-6 mb-6">
+                <div>
+                  <h3 className="text-2xl font-medium tracking-tight text-white">
+                    Lâmina em Tempo Real
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Visualização 1:1 com renderizador hardcoded Black Link.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono text-emerald-300 font-semibold">
+                  Padrão Ouro
+                </span>
+              </div>
+
+              {/* Renderizador Oficial Black Link 1:1 */}
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl group flex items-center justify-center">
+                <BlackLinkSlidePreview
+                  headline={currentSlideData.headline}
+                  bodyText={currentSlideData.bodyText}
+                  currentSlide={activeSlideIndex + 1}
+                  totalSlides={slides.length || 5}
+                />
+
+                {/* Setas de Navegação Sobrepostas */}
+                {slides.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrevSlide}
+                      title="Lâmina Anterior"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextSlide}
+                      title="Próxima Lâmina"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-black/80 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl backdrop-blur-xl z-20"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

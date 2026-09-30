@@ -11,6 +11,7 @@ import {
   Shield,
   Sparkles,
   Users,
+  Wand2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -18,6 +19,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -35,6 +37,12 @@ const navItems: NavItem[] = [
     label: "Marketing",
     href: "/marketing",
     icon: Sparkles,
+  },
+  {
+    label: "Estúdio Black Link",
+    href: "/estudio-blacklink",
+    icon: Wand2,
+    adminOnly: true,
   },
   {
     label: "Operação & Prazos",
@@ -64,10 +72,11 @@ export function Sidebar({ initialRole }: SidebarProps) {
   const activeRole = user?.role || initialRole || "admin";
   const isCommercial = activeRole === "commercial";
 
-  // Perfil comercial visualiza exclusivamente a aba Leads B2B
+  // Perfil comercial visualiza exclusivamente a aba Leads B2B.
+  // Itens restritos como Estúdio Black Link aparecem apenas para Administrador.
   const visibleNavItems = isCommercial
     ? navItems.filter((item) => item.href === "/leads")
-    : navItems;
+    : navItems.filter((item) => !item.adminOnly || activeRole === "admin");
 
   return (
     <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-64 z-30 bg-white/[0.03] backdrop-blur-2xl border-r border-white/10 text-zinc-100 transition-all">
