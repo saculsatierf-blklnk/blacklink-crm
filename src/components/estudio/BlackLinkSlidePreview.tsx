@@ -32,7 +32,7 @@ export interface SlideDesignConfig {
   font: SlideFont;
   aspectRatio: AspectRatio;
   pattern: SlidePattern;
-  fontSizeScale: number; // 0.8 a 1.5 (default 1.0)
+  fontSizeScale: number; // 0.8 a 1.5 (padrão 1.0)
   bgColor: string;
   accentColor: string;
   authorName: string;
@@ -52,7 +52,7 @@ export interface BlackLinkSlidePreviewProps {
 
 /**
  * Calculador de contraste matemático YIQ
- * Determina se a cor de fundo é clara ou escura para garantir legibilidade absoluta.
+ * Calcula se a cor de fundo é clara ou escura para alternar o texto entre text-zinc-900 e text-white.
  */
 export function isLightColor(colorHex: string): boolean {
   if (!colorHex || typeof colorHex !== "string") return false;
@@ -73,12 +73,9 @@ export function isLightColor(colorHex: string): boolean {
 }
 
 /**
- * Parser de destaque tipográfico (**termo**) com a cor de destaque (accentColor)
+ * Parser de destaque tipográfico (**termo**) aplicando a cor de destaque (accentColor)
  */
-function renderHighlightedText(
-  text: string,
-  accentColor: string
-) {
+function renderHighlightedText(text: string, accentColor: string) {
   if (!text) return null;
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, index) => {
@@ -109,17 +106,14 @@ export function BlackLinkSlidePreview({
   const scale = config.fontSizeScale || 1.0;
   const isCta = currentSlide === totalSlides && totalSlides > 1;
 
-  // Tokens de cor baseados estritamente na fórmula de contraste YIQ
-  const textPrimary = isLight ? "#09090b" : "#ffffff";
-  const textSecondary = isLight ? "#27272a" : "#d4d4d8";
-  const textMuted = isLight ? "#71717a" : "#a1a1aa";
-  const borderColor = isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)";
-  const cardBg = isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)";
-  const glassBg = isLight ? "rgba(255, 255, 255, 0.85)" : "rgba(10, 10, 12, 0.75)";
-  const glassBorder = isLight ? "rgba(0, 0, 0, 0.10)" : "rgba(255, 255, 255, 0.14)";
-  const progressInactive = isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.20)";
+  // Classes de texto e contraste obrigatórias
+  const textPrimaryClass = isLight ? "text-zinc-900" : "text-white";
+  const textSecondaryClass = isLight ? "text-zinc-700" : "text-zinc-300";
+  const textMutedClass = isLight ? "text-zinc-500" : "text-zinc-400";
+  const borderClass = isLight ? "border-black/10" : "border-white/10";
+  const cardBgClass = isLight ? "bg-black/5" : "bg-white/5";
 
-  // Mapeamento de classes de fonte do Next.js
+  // Mapeamento tipográfico de fontes do Next.js
   const fontClass =
     config.font === "space-grotesk"
       ? "font-space-grotesk"
@@ -129,53 +123,20 @@ export function BlackLinkSlidePreview({
       ? "font-jakarta"
       : "font-inter";
 
-  // Estilização de Textura de Fundo (Pattern Engine)
-  const renderPatternStyle = (): React.CSSProperties => {
-    switch (config.pattern) {
-      case "dots": {
-        const dotColor = isLight ? "rgba(0, 0, 0, 0.18)" : "rgba(255, 255, 255, 0.22)";
-        return {
-          backgroundImage: `radial-gradient(${dotColor} 1.5px, transparent 1.5px)`,
-          backgroundSize: "24px 24px",
-        };
-      }
-      case "grid": {
-        const gridColor = isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.09)";
-        return {
-          backgroundImage: `linear-gradient(to right, ${gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)`,
-          backgroundSize: "32px 32px",
-        };
-      }
-      case "noise": {
-        const noiseOpacity = isLight ? "0.08" : "0.06";
-        const svgNoise = `data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='${noiseOpacity}'/%3E%3C/svg%3E`;
-        return {
-          backgroundImage: `url("${svgNoise}")`,
-          backgroundRepeat: "repeat",
-        };
-      }
-      case "solid-mesh":
-      default: {
-        return {
-          backgroundImage: `radial-gradient(circle at 85% 15%, ${config.accentColor}25 0%, transparent 50%), radial-gradient(circle at 15% 85%, ${config.accentColor}18 0%, transparent 60%)`,
-        };
-      }
-    }
-  };
-
   return (
     <div
       id={canvasId}
       data-slide-index={currentSlide}
-      className={`relative w-full overflow-hidden select-none transition-all duration-300 shadow-2xl flex flex-col justify-between ${fontClass} ${
+      className={`relative w-full overflow-hidden select-none transition-all duration-300 shadow-2xl flex flex-col justify-between ${fontClass} ${textPrimaryClass} ${
         config.aspectRatio === "4:5" ? "aspect-[4/5]" : "aspect-square"
       }`}
       style={{
         backgroundColor: config.bgColor,
-        color: textPrimary,
       }}
     >
-      {/* Camada de Imagem de Fundo (se configurada) */}
+      {/* ==================================================================== */}
+      {/* 1. CAMADA DE IMAGEM DE FUNDO (SE CONFIGURADA)                       */}
+      {/* ==================================================================== */}
       {config.bgImage && (
         <div
           className="absolute inset-0 pointer-events-none bg-cover bg-center z-0 transition-opacity duration-300"
@@ -186,14 +147,63 @@ export function BlackLinkSlidePreview({
         />
       )}
 
-      {/* Camada de Textura Paramétrica (CSS Pattern Engine) */}
-      <div
-        className="absolute inset-0 pointer-events-none z-0"
-        style={renderPatternStyle()}
-      />
+      {/* ==================================================================== */}
+      {/* 2. CAMADAS DE TEXTURA (PATTERN ENGINE CONDICIONAL CSS)               */}
+      {/* ==================================================================== */}
+
+      {/* Textura Dots (Pontilhado Dinâmico) */}
+      {config.pattern === "dots" && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `radial-gradient(${
+              isLight ? "rgba(0,0,0,0.18)" : "rgba(255,255,255,0.22)"
+            } 1.5px, transparent 1.5px)`,
+            backgroundSize: "24px 24px",
+          }}
+        />
+      )}
+
+      {/* Textura Grid (Grade Técnica Industrial) */}
+      {config.pattern === "grid" && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `linear-gradient(to right, ${
+              isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.09)"
+            } 1px, transparent 1px), linear-gradient(to bottom, ${
+              isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.09)"
+            } 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
+          }}
+        />
+      )}
+
+      {/* Textura Noise (Granulado Fractal Inline SVG) */}
+      {config.pattern === "noise" && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='${
+              isLight ? "0.08" : "0.06"
+            }'/%3E%3C/svg%3E")`,
+            backgroundRepeat: "repeat",
+          }}
+        />
+      )}
+
+      {/* Textura Solid Mesh (Refração Radial Difusa) */}
+      {config.pattern === "solid-mesh" && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `radial-gradient(circle at 85% 15%, ${config.accentColor}25 0%, transparent 50%), radial-gradient(circle at 15% 85%, ${config.accentColor}18 0%, transparent 60%)`,
+          }}
+        />
+      )}
 
       {/* ==================================================================== */}
-      {/* CABEÇALHO DO SLIDE: Barra de Progresso + Identificação do Autor     */}
+      {/* 3. CABEÇALHO DO SLIDE: Barra de Progresso + Identificação do Autor   */}
       {/* ==================================================================== */}
       <div className="relative z-10 p-6 md:p-8 pb-2 flex flex-col gap-3">
         {/* Barra de Progresso Segmentada */}
@@ -205,7 +215,11 @@ export function BlackLinkSlidePreview({
                 key={idx}
                 className="h-1.5 rounded-full flex-1 transition-all duration-300"
                 style={{
-                  backgroundColor: isActive ? config.accentColor : progressInactive,
+                  backgroundColor: isActive
+                    ? config.accentColor
+                    : isLight
+                    ? "rgba(0, 0, 0, 0.12)"
+                    : "rgba(255, 255, 255, 0.20)",
                   boxShadow: isActive ? `0 0 8px ${config.accentColor}60` : "none",
                 }}
               />
@@ -213,7 +227,7 @@ export function BlackLinkSlidePreview({
           })}
         </div>
 
-        {/* Linha de Identificação: Miniatura do Autor + Marca Oficial Black Link */}
+        {/* Linha de Identificação: Miniatura do Autor + Marca Oficial */}
         <div className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-2.5">
             {config.authorAvatar ? (
@@ -221,43 +235,31 @@ export function BlackLinkSlidePreview({
               <img
                 src={config.authorAvatar}
                 alt={config.authorName}
-                className="w-7 h-7 rounded-full object-cover border"
-                style={{ borderColor }}
+                className={`w-7 h-7 rounded-full object-cover border ${borderClass}`}
               />
             ) : (
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs"
                 style={{
                   backgroundColor: config.accentColor,
-                  color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                  color: isLightColor(config.accentColor) ? "#09090b" : "#ffffff",
                 }}
               >
                 {config.authorName.charAt(0) || "B"}
               </div>
             )}
             <div className="flex flex-col text-left leading-none">
-              <span
-                className="text-xs font-bold tracking-tight truncate max-w-[140px]"
-                style={{ color: textPrimary }}
-              >
+              <span className={`text-xs font-bold tracking-tight truncate max-w-[140px] ${textPrimaryClass}`}>
                 {config.authorName}
               </span>
-              <span
-                className="text-[10px] font-mono tracking-tight"
-                style={{ color: textMuted }}
-              >
+              <span className={`text-[10px] font-mono tracking-tight ${textMutedClass}`}>
                 {config.authorHandle}
               </span>
             </div>
           </div>
 
           <div
-            className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border flex items-center gap-1.5"
-            style={{
-              backgroundColor: cardBg,
-              borderColor,
-              color: textMuted,
-            }}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border flex items-center gap-1.5 ${cardBgClass} ${borderClass} ${textMutedClass}`}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
@@ -269,12 +271,12 @@ export function BlackLinkSlidePreview({
       </div>
 
       {/* ==================================================================== */}
-      {/* CORPO DO SLIDE: Layout Selecionado OU Slide de CTA (Lâmina Final)    */}
+      {/* 4. CORPO DO SLIDE: Layout Selecionado OU Slide de CTA                */}
       {/* ==================================================================== */}
       <div className="relative z-10 px-6 md:px-8 py-4 flex-1 flex flex-col justify-center">
         {isCta ? (
           /* ================================================================ */
-          /* LAYOUT EXCLUSIVO DE CTA (LÂMINA FINAL - CONVERSÃO B2B)            */
+          /* LAYOUT EXCLUSIVO DE CTA (LÂMINA FINAL DE CONVERSÃO B2B)          */
           /* ================================================================ */
           <div className="flex flex-col items-center text-center justify-center h-full gap-4 max-w-lg mx-auto py-2">
             {/* Foto Grande do Autor com Anel de Destaque */}
@@ -295,7 +297,7 @@ export function BlackLinkSlidePreview({
                   className="w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center font-black text-3xl shadow-2xl border-4"
                   style={{
                     backgroundColor: config.accentColor,
-                    color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                    color: isLightColor(config.accentColor) ? "#09090b" : "#ffffff",
                     borderColor: config.accentColor,
                   }}
                 >
@@ -309,13 +311,10 @@ export function BlackLinkSlidePreview({
                 style={{
                   backgroundColor: config.accentColor,
                   borderColor: config.bgColor,
-                  color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                  color: isLightColor(config.accentColor) ? "#09090b" : "#ffffff",
                 }}
               >
-                <svg
-                  className="w-4 h-4 fill-current"
-                  viewBox="0 0 20 20"
-                >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -328,10 +327,9 @@ export function BlackLinkSlidePreview({
             {/* Headline de Ação */}
             <div className="space-y-2">
               <h2
-                className="font-black tracking-tight leading-tight"
+                className={`font-black tracking-tight leading-tight ${textPrimaryClass}`}
                 style={{
                   fontSize: `clamp(1.5rem, calc(2.1rem * ${scale}), 3.2rem)`,
-                  color: textPrimary,
                 }}
               >
                 {renderHighlightedText(
@@ -340,10 +338,9 @@ export function BlackLinkSlidePreview({
                 )}
               </h2>
               <p
-                className="font-normal leading-relaxed max-w-md mx-auto"
+                className={`font-normal leading-relaxed max-w-md mx-auto ${textSecondaryClass}`}
                 style={{
                   fontSize: `clamp(0.9rem, calc(1.05rem * ${scale}), 1.4rem)`,
-                  color: textSecondary,
                 }}
               >
                 {renderHighlightedText(
@@ -354,21 +351,17 @@ export function BlackLinkSlidePreview({
               </p>
             </div>
 
-            {/* Barra de Engajamento Social Simulada (Salvar, Curtir, Comentar) */}
+            {/* Barra de Engajamento Social Simulada */}
             <div
-              className="flex items-center justify-center gap-6 px-6 py-3 rounded-2xl border shadow-lg backdrop-blur-md mt-1"
-              style={{
-                backgroundColor: cardBg,
-                borderColor,
-              }}
+              className={`flex items-center justify-center gap-6 px-6 py-3 rounded-2xl border shadow-lg backdrop-blur-md mt-1 ${cardBgClass} ${borderClass}`}
             >
-              <div className="flex items-center gap-1.5" style={{ color: textSecondary }}>
+              <div className={`flex items-center gap-1.5 ${textSecondaryClass}`}>
                 <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
                 <span className="text-xs font-bold font-mono">Gostei</span>
               </div>
-              <div className="flex items-center gap-1.5" style={{ color: textSecondary }}>
+              <div className={`flex items-center gap-1.5 ${textSecondaryClass}`}>
                 <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
@@ -390,7 +383,7 @@ export function BlackLinkSlidePreview({
           </div>
         ) : (
           /* ================================================================ */
-          /* RENDERIZADOR DOS 6 LAYOUTS PARAMÉTRICOS FIGMA-LIKE                */
+          /* RENDERIZADOR DOS 6 LAYOUTS MODULARES PARAMÉTRICOS                */
           /* ================================================================ */
           <>
             {/* 1. LAYOUT BRUTALISTA TECH */}
@@ -408,10 +401,9 @@ export function BlackLinkSlidePreview({
                   </span>
                 )}
                 <h1
-                  className="font-black uppercase tracking-tight leading-[1.08]"
+                  className={`font-black uppercase tracking-tight leading-[1.08] ${textPrimaryClass}`}
                   style={{
                     fontSize: `clamp(1.75rem, calc(2.35rem * ${scale}), 3.8rem)`,
-                    color: textPrimary,
                   }}
                 >
                   {renderHighlightedText(slide.headline, config.accentColor)}
@@ -421,10 +413,9 @@ export function BlackLinkSlidePreview({
                   style={{ backgroundColor: config.accentColor }}
                 />
                 <p
-                  className="font-normal leading-relaxed max-w-xl"
+                  className={`font-normal leading-relaxed max-w-xl ${textSecondaryClass}`}
                   style={{
                     fontSize: `clamp(0.95rem, calc(1.15rem * ${scale}), 1.6rem)`,
-                    color: textSecondary,
                   }}
                 >
                   {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -440,19 +431,17 @@ export function BlackLinkSlidePreview({
                   style={{ backgroundColor: config.accentColor }}
                 />
                 <h1
-                  className="font-bold tracking-tight leading-snug"
+                  className={`font-bold tracking-tight leading-snug ${textPrimaryClass}`}
                   style={{
                     fontSize: `clamp(1.6rem, calc(2.2rem * ${scale}), 3.5rem)`,
-                    color: textPrimary,
                   }}
                 >
                   {renderHighlightedText(slide.headline, config.accentColor)}
                 </h1>
                 <p
-                  className="font-normal leading-relaxed max-w-md"
+                  className={`font-normal leading-relaxed max-w-md ${textSecondaryClass}`}
                   style={{
                     fontSize: `clamp(0.95rem, calc(1.1rem * ${scale}), 1.5rem)`,
-                    color: textSecondary,
                   }}
                 >
                   {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -463,11 +452,7 @@ export function BlackLinkSlidePreview({
             {/* 3. LAYOUT TWEET / SOCIAL THREAD */}
             {config.layout === "tweet" && (
               <div
-                className="flex flex-col justify-between p-6 md:p-7 rounded-2xl border shadow-xl backdrop-blur-md"
-                style={{
-                  backgroundColor: cardBg,
-                  borderColor,
-                }}
+                className={`flex flex-col justify-between p-6 md:p-7 rounded-2xl border shadow-xl backdrop-blur-md ${cardBgClass} ${borderClass}`}
               >
                 {/* Cabeçalho do Post Social */}
                 <div className="flex items-center justify-between mb-4">
@@ -477,15 +462,14 @@ export function BlackLinkSlidePreview({
                       <img
                         src={config.authorAvatar}
                         alt={config.authorName}
-                        className="w-12 h-12 rounded-full object-cover border"
-                        style={{ borderColor }}
+                        className={`w-12 h-12 rounded-full object-cover border ${borderClass}`}
                       />
                     ) : (
                       <div
                         className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-base"
                         style={{
                           backgroundColor: config.accentColor,
-                          color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                          color: isLightColor(config.accentColor) ? "#09090b" : "#ffffff",
                         }}
                       >
                         {config.authorName.charAt(0) || "B"}
@@ -493,10 +477,7 @@ export function BlackLinkSlidePreview({
                     )}
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span
-                          className="font-bold text-sm tracking-tight"
-                          style={{ color: textPrimary }}
-                        >
+                        <span className={`font-bold text-sm tracking-tight ${textPrimaryClass}`}>
                           {config.authorName}
                         </span>
                         <svg
@@ -511,12 +492,12 @@ export function BlackLinkSlidePreview({
                           />
                         </svg>
                       </div>
-                      <span className="text-xs font-mono" style={{ color: textMuted }}>
+                      <span className={`text-xs font-mono ${textMutedClass}`}>
                         {config.authorHandle} · 1h
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs font-mono font-bold" style={{ color: textMuted }}>
+                  <span className={`text-xs font-mono font-bold ${textMutedClass}`}>
                     𝕏
                   </span>
                 </div>
@@ -524,19 +505,17 @@ export function BlackLinkSlidePreview({
                 {/* Conteúdo do Tweet */}
                 <div className="space-y-3 mb-6 text-left">
                   <h2
-                    className="font-bold tracking-tight leading-snug"
+                    className={`font-bold tracking-tight leading-snug ${textPrimaryClass}`}
                     style={{
                       fontSize: `clamp(1.25rem, calc(1.5rem * ${scale}), 2.2rem)`,
-                      color: textPrimary,
                     }}
                   >
                     {renderHighlightedText(slide.headline, config.accentColor)}
                   </h2>
                   <p
-                    className="font-normal leading-relaxed whitespace-pre-line"
+                    className={`font-normal leading-relaxed whitespace-pre-line ${textSecondaryClass}`}
                     style={{
                       fontSize: `clamp(0.9rem, calc(1.05rem * ${scale}), 1.4rem)`,
-                      color: textSecondary,
                     }}
                   >
                     {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -545,11 +524,7 @@ export function BlackLinkSlidePreview({
 
                 {/* Métricas Simuladas de Engajamento */}
                 <div
-                  className="flex items-center justify-between pt-4 border-t font-mono text-xs"
-                  style={{
-                    borderColor,
-                    color: textMuted,
-                  }}
+                  className={`flex items-center justify-between pt-4 border-t font-mono text-xs ${borderClass} ${textMutedClass}`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>💬</span>
@@ -583,19 +558,17 @@ export function BlackLinkSlidePreview({
                     {slide.tag || "DESTAQUE B2B"}
                   </span>
                   <h1
-                    className="font-black tracking-tight leading-tight"
+                    className={`font-black tracking-tight leading-tight ${textPrimaryClass}`}
                     style={{
                       fontSize: `clamp(1.4rem, calc(1.85rem * ${scale}), 2.9rem)`,
-                      color: textPrimary,
                     }}
                   >
                     {renderHighlightedText(slide.headline, config.accentColor)}
                   </h1>
                   <p
-                    className="font-normal leading-relaxed"
+                    className={`font-normal leading-relaxed ${textSecondaryClass}`}
                     style={{
                       fontSize: `clamp(0.85rem, calc(1rem * ${scale}), 1.35rem)`,
-                      color: textSecondary,
                     }}
                   >
                     {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -605,18 +578,14 @@ export function BlackLinkSlidePreview({
                 {/* Lado Direito: Card Visual ou Gráfico */}
                 <div className="md:col-span-5 h-full flex items-center justify-center">
                   <div
-                    className="w-full h-full min-h-[160px] p-5 rounded-2xl border flex flex-col justify-between shadow-lg relative overflow-hidden"
-                    style={{
-                      backgroundColor: cardBg,
-                      borderColor,
-                    }}
+                    className={`w-full h-full min-h-[160px] p-5 rounded-2xl border flex flex-col justify-between shadow-lg relative overflow-hidden ${cardBgClass} ${borderClass}`}
                   >
                     <div
                       className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl pointer-events-none"
                       style={{ backgroundColor: `${config.accentColor}30` }}
                     />
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono uppercase" style={{ color: textMuted }}>
+                      <span className={`text-[10px] font-mono uppercase ${textMutedClass}`}>
                         MÉTRICA DE IMPACTO
                       </span>
                       <div
@@ -631,11 +600,11 @@ export function BlackLinkSlidePreview({
                       >
                         +340%
                       </span>
-                      <p className="text-xs font-semibold mt-1" style={{ color: textPrimary }}>
+                      <p className={`text-xs font-semibold mt-1 ${textPrimaryClass}`}>
                         Retenção de Audiência B2B
                       </p>
                     </div>
-                    <span className="text-[10px] font-mono" style={{ color: textMuted }}>
+                    <span className={`text-[10px] font-mono ${textMutedClass}`}>
                       Black Link Analytics
                     </span>
                   </div>
@@ -646,18 +615,16 @@ export function BlackLinkSlidePreview({
             {/* 5. LAYOUT TERMINAL INDUSTRIAL */}
             {config.layout === "terminal" && (
               <div
-                className="w-full rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-md text-left"
+                className={`w-full rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-md text-left ${borderClass}`}
                 style={{
                   backgroundColor: isLight ? "#ffffff" : "#0d0e12",
-                  borderColor,
                 }}
               >
                 {/* Barra Superior do macOS Terminal */}
                 <div
-                  className="flex items-center justify-between px-4 py-2.5 border-b"
+                  className={`flex items-center justify-between px-4 py-2.5 border-b ${borderClass}`}
                   style={{
                     backgroundColor: isLight ? "#f4f4f5" : "#16171d",
-                    borderColor,
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -665,10 +632,7 @@ export function BlackLinkSlidePreview({
                     <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
                     <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
                   </div>
-                  <span
-                    className="text-[11px] font-mono font-medium tracking-tight"
-                    style={{ color: textMuted }}
-                  >
+                  <span className={`text-[11px] font-mono font-medium tracking-tight ${textMutedClass}`}>
                     bash ~ blacklink-b2b
                   </span>
                   <div className="w-12" />
@@ -678,29 +642,26 @@ export function BlackLinkSlidePreview({
                 <div className="p-6 font-mono space-y-4">
                   <div className="flex items-center gap-2 text-xs">
                     <span style={{ color: config.accentColor }}>❯</span>
-                    <span style={{ color: textMuted }}>exec blacklink-insight --strict</span>
+                    <span className={textMutedClass}>exec blacklink-insight --strict</span>
                   </div>
 
                   <h2
-                    className="font-bold tracking-tight leading-snug"
+                    className={`font-bold tracking-tight leading-snug ${textPrimaryClass}`}
                     style={{
                       fontSize: `clamp(1.3rem, calc(1.75rem * ${scale}), 2.6rem)`,
-                      color: textPrimary,
                     }}
                   >
                     {renderHighlightedText(slide.headline, config.accentColor)}
                   </h2>
 
                   <div
-                    className="p-3.5 rounded-lg border-l-2 space-y-2"
+                    className={`p-3.5 rounded-lg border-l-2 space-y-2 ${cardBgClass}`}
                     style={{
-                      backgroundColor: cardBg,
                       borderLeftColor: config.accentColor,
                     }}
                   >
                     <p
-                      className="font-normal leading-relaxed text-xs md:text-sm"
-                      style={{ color: textSecondary }}
+                      className={`font-normal leading-relaxed text-xs md:text-sm ${textSecondaryClass}`}
                     >
                       {renderHighlightedText(slide.bodyText, config.accentColor)}
                     </p>
@@ -718,10 +679,9 @@ export function BlackLinkSlidePreview({
             {config.layout === "glass-floating" && (
               <div className="flex items-center justify-center h-full p-2">
                 <div
-                  className="w-full max-w-xl p-8 rounded-3xl border shadow-2xl backdrop-blur-2xl text-left relative overflow-hidden"
+                  className={`w-full max-w-xl p-8 rounded-3xl border shadow-2xl backdrop-blur-2xl text-left relative overflow-hidden ${borderClass}`}
                   style={{
-                    backgroundColor: glassBg,
-                    borderColor: glassBorder,
+                    backgroundColor: isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(10, 10, 12, 0.78)",
                     boxShadow: isLight
                       ? "0 25px 50px -12px rgba(0, 0, 0, 0.15)"
                       : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
@@ -744,19 +704,17 @@ export function BlackLinkSlidePreview({
                       </span>
                     )}
                     <h1
-                      className="font-extrabold tracking-tight leading-tight"
+                      className={`font-extrabold tracking-tight leading-tight ${textPrimaryClass}`}
                       style={{
                         fontSize: `clamp(1.45rem, calc(2rem * ${scale}), 3.2rem)`,
-                        color: textPrimary,
                       }}
                     >
                       {renderHighlightedText(slide.headline, config.accentColor)}
                     </h1>
                     <p
-                      className="font-normal leading-relaxed"
+                      className={`font-normal leading-relaxed ${textSecondaryClass}`}
                       style={{
                         fontSize: `clamp(0.95rem, calc(1.1rem * ${scale}), 1.5rem)`,
-                        color: textSecondary,
                       }}
                     >
                       {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -770,29 +728,21 @@ export function BlackLinkSlidePreview({
       </div>
 
       {/* ==================================================================== */}
-      {/* RODAPÉ DO SLIDE: Numeração / Posição + Pista Visual de Deslize      */}
+      {/* 5. RODAPÉ DO SLIDE: Numeração / Posição + Pista Visual de Deslize    */}
       {/* ==================================================================== */}
       <div className="relative z-10 p-6 md:p-8 pt-2 flex items-center justify-between">
         <div
-          className="text-xs font-mono font-bold tracking-widest px-3 py-1 rounded-full border"
-          style={{
-            backgroundColor: cardBg,
-            borderColor,
-            color: textMuted,
-          }}
+          className={`text-xs font-mono font-bold tracking-widest px-3 py-1 rounded-full border ${cardBgClass} ${borderClass} ${textMutedClass}`}
         >
           {isCta ? "CTA FINAL" : `${String(currentSlide).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`}
         </div>
 
         <div
           className="flex items-center gap-1.5 text-xs font-semibold tracking-tight transition-transform duration-200"
-          style={{ color: isCta ? config.accentColor : textSecondary }}
+          style={{ color: isCta ? config.accentColor : isLight ? "#27272a" : "#d4d4d8" }}
         >
           <span>{isCta ? "Siga para mais" : "Arraste"}</span>
-          <svg
-            className="w-4 h-4 fill-none stroke-current stroke-2"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </div>
