@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
   Check,
@@ -43,6 +43,8 @@ interface SlideData {
   bodyText: string;
 }
 
+const BRAND_STORAGE_KEY = "blacklink_studio_brand_memory";
+
 export function BlackLinkCarouselStudio() {
   // Wizard de 2 etapas isoladas
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -68,6 +70,54 @@ export function BlackLinkCarouselStudio() {
     bgImage: "",
     bgOpacity: 25,
   });
+
+  // Persistência de Marca (Brand Memory via LocalStorage): Hidratação Inicial no Mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem(BRAND_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setDesignConfig((prev) => ({
+          ...prev,
+          bgColor: parsed.bgColor !== undefined ? parsed.bgColor : prev.bgColor,
+          accentColor:
+            parsed.accentColor !== undefined ? parsed.accentColor : prev.accentColor,
+          authorAvatar:
+            parsed.authorAvatar !== undefined ? parsed.authorAvatar : prev.authorAvatar,
+          authorName:
+            parsed.authorName !== undefined ? parsed.authorName : prev.authorName,
+          authorHandle:
+            parsed.authorHandle !== undefined ? parsed.authorHandle : prev.authorHandle,
+        }));
+      }
+    } catch (err) {
+      console.error("Falha ao recuperar memória de marca do localStorage:", err);
+    }
+  }, []);
+
+  // Persistência Imediata de Marca no LocalStorage sempre que houver alteração
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const memory = {
+        bgColor: designConfig.bgColor,
+        accentColor: designConfig.accentColor,
+        authorAvatar: designConfig.authorAvatar,
+        authorName: designConfig.authorName,
+        authorHandle: designConfig.authorHandle,
+      };
+      localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify(memory));
+    } catch (err) {
+      console.error("Falha ao salvar memória de marca no localStorage:", err);
+    }
+  }, [
+    designConfig.bgColor,
+    designConfig.accentColor,
+    designConfig.authorAvatar,
+    designConfig.authorName,
+    designConfig.authorHandle,
+  ]);
 
   // Form states (Etapa 1: Briefing Direto)
   const [theme, setTheme] = useState("");
@@ -204,9 +254,9 @@ export function BlackLinkCarouselStudio() {
           },
           {
             slideNumber: 5,
-            headline: "Escala Imediata com **Black Link CRM**",
+            headline: "Pronto para Escalar sua **Operação B2B**?",
             bodyText:
-              "Unifique telemetria, enriquecimento de dados e aceleração de receita em uma infraestrutura enterprise.",
+              "Salve este conteúdo para consultar nos próximos fechamentos e compartilhe com sua diretoria comercial para blindar a esteira.",
           },
         ]);
       }
