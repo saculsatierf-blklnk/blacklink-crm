@@ -1,8 +1,9 @@
 "use client";
 
-import React, { forwardRef } from "react";
+import React from "react";
 
 export type SlideTheme = "dark-industrial" | "light-minimal" | "neon-accent";
+
 export type SlideLayout =
   | "brutalista"
   | "minimal"
@@ -10,925 +11,792 @@ export type SlideLayout =
   | "split"
   | "terminal"
   | "glass-floating";
+
 export type SlideFont = "space-grotesk" | "playfair" | "jakarta" | "inter";
+
 export type AspectRatio = "1:1" | "4:5";
+
 export type SlidePattern = "solid-mesh" | "dots" | "grid" | "noise";
 
+export interface SlideData {
+  id?: string;
+  headline: string;
+  bodyText: string;
+  category?: string;
+  tag?: string;
+}
+
 export interface SlideDesignConfig {
+  theme: SlideTheme;
   layout: SlideLayout;
   font: SlideFont;
   aspectRatio: AspectRatio;
-  pattern?: SlidePattern;
-  fontSizeScale?: number; // 80 to 150
-  bgColor?: string;
-  accentColor?: string;
-  authorName?: string;
-  authorHandle?: string;
-  authorAvatar?: string;
+  pattern: SlidePattern;
+  fontSizeScale: number; // 0.8 a 1.5 (default 1.0)
+  bgColor: string;
+  accentColor: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatar: string;
   bgImage?: string;
   bgOpacity?: number;
 }
 
 export interface BlackLinkSlidePreviewProps {
-  headline: string;
-  bodyText: string;
-  currentSlide?: number;
-  totalSlides?: number;
-  theme?: SlideTheme | string;
-  designConfig?: SlideDesignConfig;
-  isExportMode?: boolean;
-  className?: string;
-  id?: string;
+  slide: SlideData;
+  currentSlide: number;
+  totalSlides: number;
+  config: SlideDesignConfig;
+  canvasId?: string;
 }
 
 /**
- * Função utilitária para cálculo matemático de contraste YIQ:
- * Determina com precisão se a cor de fundo é clara ou escura,
- * garantindo que textos nunca sumam (fim do branco-no-branco).
+ * Calculador de contraste matemático YIQ
+ * Determina se a cor de fundo é clara ou escura para garantir legibilidade absoluta.
  */
-export function isLightColor(colorStr?: string): boolean {
-  if (!colorStr) return false;
-  let hex = colorStr.trim().toLowerCase();
-  if (hex === "white" || hex === "#fff" || hex === "#ffffff" || hex === "#fafafa" || hex === "#f8f9fa") {
-    return true;
+export function isLightColor(colorHex: string): boolean {
+  if (!colorHex || typeof colorHex !== "string") return false;
+  let hex = colorHex.replace("#", "").trim();
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
   }
-  if (hex === "black" || hex === "#000" || hex === "#000000" || hex === "#050505" || hex === "#0a1128" || hex === "#061a14" || hex === "#18080a") {
-    return false;
-  }
-  if (hex.startsWith("#")) hex = hex.slice(1);
-  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
   if (hex.length !== 6) return false;
-
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
-
   if (isNaN(r) || isNaN(g) || isNaN(b)) return false;
   const yiq = (r * 299 + g * 587 + b * 114) / 1000;
   return yiq >= 128;
 }
 
 /**
- * Função de destaque dinâmico:
- * Converte palavras envolvidas em asteriscos duplos (**palavra**)
- * na cor de destaque (accentColor) configurada.
+ * Parser de destaque tipográfico (**termo**) com a cor de destaque (accentColor)
  */
 function renderHighlightedText(
   text: string,
-  accentColor: string,
-  fallbackHighlightClass: string = "font-bold"
-): React.ReactNode {
+  accentColor: string
+) {
   if (!text) return null;
-  const parts = text.split(/(\*\*.*?\*\*)/g);
-
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      const content = part.slice(2, -2);
+      const cleanText = part.slice(2, -2);
       return (
         <span
           key={index}
-          style={accentColor ? { color: accentColor } : undefined}
-          className={`font-bold drop-shadow-sm transition-colors ${
-            !accentColor ? fallbackHighlightClass : ""
-          }`}
+          style={{ color: accentColor }}
+          className="font-black drop-shadow-sm transition-colors duration-150 inline"
         >
-          {content}
+          {cleanText}
         </span>
       );
     }
-    return part;
+    return <span key={index}>{part}</span>;
   });
 }
 
-/**
- * Renderizador Oficial Black Link (Padrão Ouro & Nível Figma/Taplio)
- * Recursos de Alta Precisão:
- * 1. Texturas paramétricas (Solid/Mesh, Dots, Grid, Noise/Grain)
- * 2. Contraste inteligente matemático YIQ (Auto light/dark)
- * 3. Layouts de alta variabilidade: Brutalista, Minimal, Tweet, Split 50/50, Terminal Tech, Glass Floating
- * 4. Slide de CTA na lâmina final com avatar ampliado e setas de conversão
- * 5. Barra de progresso e Swipe Cue
- */
-export const BlackLinkSlidePreview = forwardRef<
-  HTMLDivElement,
-  BlackLinkSlidePreviewProps
->(function BlackLinkSlidePreview(
-  {
-    headline,
-    bodyText,
-    currentSlide = 1,
-    totalSlides = 5,
-    theme = "dark-industrial",
-    designConfig,
-    isExportMode = false,
-    className = "",
-    id,
-  },
-  ref
-) {
-  const formattedSlide = String(currentSlide).padStart(2, "0");
-  const formattedTotal = String(totalSlides).padStart(2, "0");
+export function BlackLinkSlidePreview({
+  slide,
+  currentSlide,
+  totalSlides,
+  config,
+  canvasId = "blacklink-slide-canvas",
+}: BlackLinkSlidePreviewProps) {
+  const isLight = isLightColor(config.bgColor);
+  const scale = config.fontSizeScale || 1.0;
+  const isCta = currentSlide === totalSlides && totalSlides > 1;
 
-  // Regra de Conversão: A lâmina final assume o Layout Exclusivo de CTA
-  const isFinalSlide = currentSlide === totalSlides;
+  // Tokens de cor baseados estritamente na fórmula de contraste YIQ
+  const textPrimary = isLight ? "#09090b" : "#ffffff";
+  const textSecondary = isLight ? "#27272a" : "#d4d4d8";
+  const textMuted = isLight ? "#71717a" : "#a1a1aa";
+  const borderColor = isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)";
+  const cardBg = isLight ? "rgba(0, 0, 0, 0.04)" : "rgba(255, 255, 255, 0.04)";
+  const glassBg = isLight ? "rgba(255, 255, 255, 0.85)" : "rgba(10, 10, 12, 0.75)";
+  const glassBorder = isLight ? "rgba(0, 0, 0, 0.10)" : "rgba(255, 255, 255, 0.14)";
+  const progressInactive = isLight ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.20)";
 
-  const cleanHeadline =
-    headline?.trim() ||
-    (isFinalSlide
-      ? "Pronto para Escalar sua **Operação B2B**?"
-      : "Como Dominar Contas Enterprise sem Perder Margem");
+  // Mapeamento de classes de fonte do Next.js
+  const fontClass =
+    config.font === "space-grotesk"
+      ? "font-space-grotesk"
+      : config.font === "playfair"
+      ? "font-playfair"
+      : config.font === "jakarta"
+      ? "font-jakarta"
+      : "font-inter";
 
-  const cleanBodyText =
-    bodyText?.trim() ||
-    (isFinalSlide
-      ? "Salve este conteúdo para consultar nos próximos fechamentos e compartilhe com sua diretoria comercial para blindar a esteira."
-      : "A maioria das operações corporativas trava por falta de clareza nos gargalos de esteira. Quando alinhamos inteligência de dados e blindagem de território, o ciclo médio cai pela metade.");
-
-  // Configurações do Design Paramétrico
-  const activeLayout: SlideLayout = designConfig?.layout || "brutalista";
-  const activeFont: SlideFont = designConfig?.font || "space-grotesk";
-  const activeAspectRatio: AspectRatio = designConfig?.aspectRatio || "1:1";
-  const activePattern: SlidePattern = designConfig?.pattern || "solid-mesh";
-  const fontScale = (designConfig?.fontSizeScale || 100) / 100;
-  const customBgColor = designConfig?.bgColor;
-  const customAccentColor = designConfig?.accentColor || "";
-  const authorName = designConfig?.authorName || "Lucas Satierf";
-  const authorHandle = designConfig?.authorHandle || "@lucasblacklink";
-  const authorAvatar = designConfig?.authorAvatar || "";
-  const bgImage = designConfig?.bgImage || "";
-  const bgOpacity = designConfig?.bgOpacity ?? 25;
-
-  // Mapeamento de famílias tipográficas
-  const fontClasses: Record<SlideFont, string> = {
-    "space-grotesk": "font-space-grotesk",
-    playfair: "font-playfair",
-    jakarta: "font-jakarta",
-    inter: "font-inter",
+  // Estilização de Textura de Fundo (Pattern Engine)
+  const renderPatternStyle = (): React.CSSProperties => {
+    switch (config.pattern) {
+      case "dots": {
+        const dotColor = isLight ? "rgba(0, 0, 0, 0.18)" : "rgba(255, 255, 255, 0.22)";
+        return {
+          backgroundImage: `radial-gradient(${dotColor} 1.5px, transparent 1.5px)`,
+          backgroundSize: "24px 24px",
+        };
+      }
+      case "grid": {
+        const gridColor = isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.09)";
+        return {
+          backgroundImage: `linear-gradient(to right, ${gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)`,
+          backgroundSize: "32px 32px",
+        };
+      }
+      case "noise": {
+        const noiseOpacity = isLight ? "0.08" : "0.06";
+        const svgNoise = `data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='${noiseOpacity}'/%3E%3C/svg%3E`;
+        return {
+          backgroundImage: `url("${svgNoise}")`,
+          backgroundRepeat: "repeat",
+        };
+      }
+      case "solid-mesh":
+      default: {
+        return {
+          backgroundImage: `radial-gradient(circle at 85% 15%, ${config.accentColor}25 0%, transparent 50%), radial-gradient(circle at 15% 85%, ${config.accentColor}18 0%, transparent 60%)`,
+        };
+      }
+    }
   };
-
-  // Mapeamento estético por tema
-  const activeTheme =
-    theme === "light-minimal" || theme === "neon-accent"
-      ? theme
-      : "dark-industrial";
-
-  const themeDefaults = {
-    "dark-industrial": {
-      bgColor: "#050505",
-      accent: "#10b981",
-    },
-    "light-minimal": {
-      bgColor: "#fafafa",
-      accent: "#09090b",
-    },
-    "neon-accent": {
-      bgColor: "#000000",
-      accent: "#34d399",
-    },
-  }[activeTheme];
-
-  const resolvedBgColor = customBgColor || themeDefaults.bgColor;
-  const resolvedAccentColor = customAccentColor || themeDefaults.accent;
-
-  // 2. Sistema Inteligente de Contraste (YIQ)
-  const isLight = isLightColor(resolvedBgColor);
-
-  const colors = {
-    headline: isLight ? "text-zinc-950 font-bold" : "text-white font-bold",
-    body: isLight ? "text-zinc-700" : "text-zinc-300",
-    muted: isLight ? "text-zinc-600" : "text-zinc-400",
-    subtle: isLight ? "text-zinc-400" : "text-zinc-500",
-    border: isLight ? "border-zinc-300/80" : "border-white/10",
-    divider: isLight ? "border-zinc-300/70" : "border-white/[0.08]",
-    card: isLight ? "bg-white/80 border-zinc-200 shadow-xl" : "bg-black/40 border-white/10 shadow-2xl",
-    glow: isLight ? "via-black/10" : "via-white/20",
-    brand: isLight ? "text-zinc-600" : "text-zinc-500",
-  };
-
-  // Dimensões do Canvas
-  const containerDimensions = isExportMode
-    ? activeAspectRatio === "4:5"
-      ? "w-[1080px] h-[1350px] min-w-[1080px] min-h-[1350px] rounded-none border-0"
-      : "w-[1080px] h-[1080px] min-w-[1080px] min-h-[1080px] rounded-none border-0"
-    : activeAspectRatio === "4:5"
-    ? "aspect-[4/5] w-full max-w-[480px] mx-auto rounded-3xl border shadow-2xl"
-    : "aspect-square w-full rounded-3xl border shadow-2xl";
-
-  const progressPercentage = (currentSlide / totalSlides) * 100;
 
   return (
     <div
-      ref={ref}
-      id={id}
+      id={canvasId}
+      data-slide-index={currentSlide}
+      className={`relative w-full overflow-hidden select-none transition-all duration-300 shadow-2xl flex flex-col justify-between ${fontClass} ${
+        config.aspectRatio === "4:5" ? "aspect-[4/5]" : "aspect-square"
+      }`}
       style={{
-        backgroundColor: resolvedBgColor,
+        backgroundColor: config.bgColor,
+        color: textPrimary,
       }}
-      className={`relative select-none overflow-hidden transition-colors ${containerDimensions} ${colors.border} ${fontClasses[activeFont]} ${className}`}
     >
-      {/* 1. MOTOR DE TEXTURAS DE FUNDO (PATTERNS & NOISE) */}
-      {activePattern === "dots" && (
+      {/* Camada de Imagem de Fundo (se configurada) */}
+      {config.bgImage && (
         <div
-          className="absolute inset-0 pointer-events-none z-0"
+          className="absolute inset-0 pointer-events-none bg-cover bg-center z-0 transition-opacity duration-300"
           style={{
-            backgroundImage: isLight
-              ? "radial-gradient(#00000018 1.2px, transparent 1.2px)"
-              : "radial-gradient(#ffffff18 1.2px, transparent 1.2px)",
-            backgroundSize: "22px 22px",
+            backgroundImage: `url(${config.bgImage})`,
+            opacity: typeof config.bgOpacity === "number" ? config.bgOpacity / 100 : 0.25,
           }}
         />
       )}
 
-      {activePattern === "grid" && (
-        <div
-          className="absolute inset-0 pointer-events-none z-0"
-          style={{
-            backgroundImage: isLight
-              ? "linear-gradient(to right, #00000010 1px, transparent 1px), linear-gradient(to bottom, #00000010 1px, transparent 1px)"
-              : "linear-gradient(to right, #ffffff10 1px, transparent 1px), linear-gradient(to bottom, #ffffff10 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-      )}
-
-      {activePattern === "noise" && (
-        <div
-          className="absolute inset-0 pointer-events-none z-0 opacity-30 mix-blend-overlay"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.7'/%3E%3C/svg%3E")`,
-          }}
-        />
-      )}
-
-      {activePattern === "solid-mesh" && (
-        <div
-          className={`absolute inset-0 pointer-events-none z-0 ${
-            isLight
-              ? "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-300/30 via-transparent to-transparent"
-              : "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-zinc-700/20 via-transparent to-transparent"
-          }`}
-        />
-      )}
-
-      {/* Imagem de Fundo Opcional */}
-      {bgImage && activeLayout !== "split" && (
-        <div
-          className={`absolute inset-0 bg-cover bg-center pointer-events-none transition-opacity duration-300 z-0 ${
-            activeLayout === "glass-floating" ? "blur-xl scale-110" : ""
-          }`}
-          style={{
-            backgroundImage: `url(${bgImage})`,
-            opacity: bgOpacity / 100,
-          }}
-        />
-      )}
-
-      {/* Linha sutil de refração superior */}
+      {/* Camada de Textura Paramétrica (CSS Pattern Engine) */}
       <div
-        className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent ${colors.glow} to-transparent pointer-events-none z-20`}
+        className="absolute inset-0 pointer-events-none z-0"
+        style={renderPatternStyle()}
       />
 
-      {/* Barra de Progresso no Topo de Todas as Lâminas */}
-      <div
-        className={`absolute top-0 inset-x-0 bg-white/[0.08] z-30 overflow-hidden ${
-          isExportMode ? "h-3" : "h-1 sm:h-1.5"
-        }`}
-      >
-        <div
-          className="h-full transition-all duration-300"
-          style={{
-            width: `${progressPercentage}%`,
-            backgroundColor: resolvedAccentColor,
-          }}
-        />
-      </div>
-
-      {/* ========================================================= */}
-      {/* LÂMINA FINAL: SLIDE EXCLUSIVO DE CTA */}
-      {/* ========================================================= */}
-      {isFinalSlide ? (
-        <div
-          className={`flex flex-col justify-between items-center text-center h-full relative z-10 ${
-            isExportMode
-              ? activeAspectRatio === "4:5"
-                ? "p-24"
-                : "p-20"
-              : "p-8 sm:p-10 lg:p-12"
-          }`}
-        >
-          {/* Topo do CTA */}
-          <div className={`flex items-center justify-between w-full border-b ${colors.divider} pb-4`}>
-            <span
-              className={`font-bold uppercase tracking-[0.3em] font-sans ${
-                isExportMode ? "text-base" : "text-[10px]"
-              } ${colors.brand}`}
-            >
-              BLACK LINK • CONVERSÃO
-            </span>
-
-            <span
-              className={`font-mono tracking-wider font-semibold ${
-                isExportMode ? "text-lg" : "text-xs"
-              }`}
-              style={{ color: resolvedAccentColor }}
-            >
-              [ AÇÃO FINAL ]
-            </span>
-          </div>
-
-          {/* Centro: Avatar Grande + Headline + Copy */}
-          <div className="flex-1 flex flex-col justify-center items-center my-auto max-w-xl mx-auto py-4">
-            <div
-              className={`rounded-full overflow-hidden border-2 shadow-2xl shrink-0 flex items-center justify-center font-bold text-white relative transition-transform ${
-                isExportMode
-                  ? "w-60 h-60 text-4xl border-4 mb-8"
-                  : "w-28 h-28 sm:w-36 sm:h-36 text-2xl mb-4"
-              }`}
-              style={{
-                borderColor: resolvedAccentColor,
-                boxShadow: `0 0 35px ${resolvedAccentColor}40`,
-              }}
-            >
-              {authorAvatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={authorAvatar}
-                  alt={authorName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-zinc-900 via-zinc-800 to-zinc-700 flex items-center justify-center">
-                  <span>{authorName.slice(0, 2).toUpperCase()}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center gap-1 mb-4">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`font-bold tracking-tight ${colors.headline} ${
-                    isExportMode ? "text-2xl" : "text-base sm:text-lg"
-                  }`}
-                >
-                  {authorName}
-                </span>
-                <svg
-                  className={`text-sky-400 fill-current shrink-0 ${
-                    isExportMode ? "w-6 h-6" : "w-4 h-4"
-                  }`}
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.79-4-4-4-.495 0-.965.084-1.4.238C14.55 2.475 13.18 1.6 11.6 1.6c-1.58 0-2.95.875-3.6 2.148-.435-.154-.905-.238-1.4-.238-2.21 0-4 1.79-4 4 0 .495.084.965.238 1.4C1.575 9.55.7 10.92.7 12.5c0 1.58.875 2.95 2.148 3.6-.154.435-.238.905-.238 1.4 0 2.21 1.79 4 4 4 .495 0 .965-.084 1.4-.238 1.05 1.273 2.42 2.148 4 2.148 1.58 0 2.95-.875 3.6-2.148.435.154.905.238 1.4.238 2.21 0 4-1.79 4-4 0-.495-.084-.965-.238-1.4 1.273-1.05 2.148-2.42 2.148-4zm-12.8 4.2l-3.9-3.9 1.4-1.4 2.5 2.5 6.7-6.7 1.4 1.4-8.1 8.1z" />
-                </svg>
-              </div>
-              <span
-                className={`font-mono ${colors.muted} ${
-                  isExportMode ? "text-lg" : "text-xs"
-                }`}
-              >
-                {authorHandle}
-              </span>
-            </div>
-
-            <h2
-              style={{
-                fontSize: isExportMode
-                  ? `${Math.round((activeAspectRatio === "4:5" ? 58 : 50) * fontScale)}px`
-                  : `calc(1.875rem * ${fontScale})`,
-                lineHeight: 1.15,
-              }}
-              className={`tracking-tight ${colors.headline} mb-3`}
-            >
-              {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
-            </h2>
-
-            <p
-              style={{
-                fontSize: isExportMode
-                  ? `${Math.round(26 * fontScale)}px`
-                  : `calc(0.95rem * ${fontScale})`,
-                lineHeight: 1.5,
-              }}
-              className={`${colors.body} max-w-lg mb-6`}
-            >
-              {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
-            </p>
-          </div>
-
-          {/* Rodapé: Ícones e Setas de Conversão */}
-          <div className={`w-full flex flex-col items-center gap-3 pt-3 border-t ${colors.divider}`}>
-            <div className="flex items-center justify-between w-full max-w-md px-4">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`font-mono uppercase font-bold tracking-wider ${
-                    isExportMode ? "text-lg" : "text-[10px]"
-                  }`}
-                  style={{ color: resolvedAccentColor }}
-                >
-                  Compartilhe
-                </span>
-                <svg
-                  className={`fill-none stroke-current animate-bounce ${
-                    isExportMode ? "w-6 h-6" : "w-3.5 h-3.5"
-                  }`}
-                  style={{ color: resolvedAccentColor }}
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.5"
-                >
-                  <path d="M12 5v14M19 12l-7 7-7-7" />
-                </svg>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <svg
-                  className={`fill-none stroke-current animate-bounce ${
-                    isExportMode ? "w-6 h-6" : "w-3.5 h-3.5"
-                  }`}
-                  style={{ color: resolvedAccentColor }}
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.5"
-                >
-                  <path d="M12 5v14M19 12l-7 7-7-7" />
-                </svg>
-                <span
-                  className={`font-mono uppercase font-bold tracking-wider ${
-                    isExportMode ? "text-lg" : "text-[10px]"
-                  }`}
-                  style={{ color: resolvedAccentColor }}
-                >
-                  Salve o Post
-                </span>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center justify-between w-full max-w-md rounded-2xl border backdrop-blur-xl ${
-                isLight ? "bg-black/[0.04] border-black/10" : "bg-white/[0.04] border-white/10"
-              } ${isExportMode ? "p-6" : "px-6 py-3"}`}
-            >
-              <div className={`flex items-center gap-2 ${colors.muted}`}>
-                <svg className={`fill-none stroke-current ${isExportMode ? "w-8 h-8" : "w-5 h-5"}`} viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                <span className={isExportMode ? "text-base font-mono" : "text-[11px] font-mono"}>Curtir</span>
-              </div>
-
-              <div className={`flex items-center gap-2 ${colors.muted}`}>
-                <svg className={`fill-none stroke-current ${isExportMode ? "w-8 h-8" : "w-5 h-5"}`} viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                </svg>
-                <span className={isExportMode ? "text-base font-mono" : "text-[11px] font-mono"}>Comentar</span>
-              </div>
-
-              <div className="flex items-center gap-2 font-semibold" style={{ color: resolvedAccentColor }}>
-                <svg className={`fill-none stroke-current ${isExportMode ? "w-8 h-8" : "w-5 h-5"}`} viewBox="0 0 24 24" strokeWidth="2">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-                <span className={isExportMode ? "text-base font-mono" : "text-[11px] font-mono"}>Enviar</span>
-              </div>
-
-              <div className="flex items-center gap-2 font-semibold" style={{ color: resolvedAccentColor }}>
-                <svg className={`fill-none stroke-current ${isExportMode ? "w-8 h-8" : "w-5 h-5"}`} viewBox="0 0 24 24" strokeWidth="2">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                <span className={isExportMode ? "text-base font-mono" : "text-[11px] font-mono"}>Salvar</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* ========================================================= */
-        /* LÂMINAS 1 A 4: BIBLIOTECA DE LAYOUTS PARAMÉTRICOS */
-        /* ========================================================= */
-        <>
-          {/* LAYOUT 1: BRUTALISTA */}
-          {activeLayout === "brutalista" && (
-            <div
-              className={`flex flex-col justify-between h-full relative z-10 ${
-                isExportMode
-                  ? activeAspectRatio === "4:5"
-                    ? "p-24"
-                    : "p-20"
-                  : "p-8 sm:p-10 lg:p-12"
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <span className={`font-bold uppercase tracking-[0.3em] font-sans ${isExportMode ? "text-base" : "text-[10px]"} ${colors.brand}`}>
-                  BLACK LINK • CRM
-                </span>
-                <span className={`font-mono tracking-wider font-medium ${isExportMode ? "text-lg" : "text-xs sm:text-sm"} ${colors.muted}`}>
-                  [ {formattedSlide} / {formattedTotal} ]
-                </span>
-              </div>
-
-              <div className={`flex-1 flex flex-col justify-center text-left my-auto ${isExportMode ? "py-10" : "py-6"}`}>
-                <h2
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round((activeAspectRatio === "4:5" ? 72 : 64) * fontScale)}px`
-                      : `calc(2.25rem * ${fontScale})`,
-                    lineHeight: 1.08,
-                  }}
-                  className={`tracking-tighter ${colors.headline} mb-6 line-clamp-4`}
-                >
-                  {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
-                </h2>
-
-                <p
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round(28 * fontScale)}px`
-                      : `calc(1.1rem * ${fontScale})`,
-                    lineHeight: 1.5,
-                  }}
-                  className={`leading-relaxed font-normal ${colors.body} max-w-[90%] line-clamp-6`}
-                >
-                  {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
-                </p>
-              </div>
-
-              <div className={`border-t ${colors.divider} flex items-center justify-between ${isExportMode ? "pt-8" : "pt-6"}`}>
-                <span className={`font-sans tracking-wide font-normal ${isExportMode ? "text-lg" : "text-xs sm:text-sm"} ${colors.muted}`}>
-                  Inteligência B2B &amp; Automação
-                </span>
-                <div className={`flex items-center gap-1.5 uppercase tracking-widest text-[10px] font-mono select-none ${colors.subtle}`}>
-                  <span>Arraste</span>
-                  <span className="inline-block animate-pulse">➔</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* LAYOUT 2: MINIMALISTA */}
-          {activeLayout === "minimal" && (
-            <div
-              className={`flex flex-col justify-between items-center text-center h-full relative z-10 ${
-                isExportMode
-                  ? activeAspectRatio === "4:5"
-                    ? "p-28"
-                    : "p-24"
-                  : "p-10 sm:p-12 lg:p-14"
-              }`}
-            >
-              <div className="flex flex-col items-center gap-2">
-                <span className={`font-medium uppercase tracking-[0.4em] font-sans ${isExportMode ? "text-sm" : "text-[9px]"} ${colors.brand} opacity-80`}>
-                  {authorName.toUpperCase()}
-                </span>
-                <span className={`font-mono tracking-widest ${isExportMode ? "text-sm" : "text-[11px]"} ${colors.muted}`}>
-                  — {formattedSlide} / {formattedTotal} —
-                </span>
-              </div>
-
-              <div className={`flex-1 flex flex-col justify-center items-center text-center max-w-2xl mx-auto my-auto ${isExportMode ? "py-12" : "py-8"}`}>
-                <h2
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round((activeAspectRatio === "4:5" ? 68 : 58) * fontScale)}px`
-                      : `calc(2rem * ${fontScale})`,
-                    lineHeight: 1.18,
-                  }}
-                  className={`tracking-tight ${colors.headline} mb-6 line-clamp-4`}
-                >
-                  {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
-                </h2>
-
-                <div
-                  style={{ backgroundColor: resolvedAccentColor }}
-                  className="w-12 h-0.5 my-6 opacity-40 rounded-full"
-                />
-
-                <p
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round(26 * fontScale)}px`
-                      : `calc(1rem * ${fontScale})`,
-                    lineHeight: 1.5,
-                  }}
-                  className={`leading-relaxed font-normal ${colors.body} max-w-[85%] line-clamp-6`}
-                >
-                  {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
-                </p>
-              </div>
-
-              <div className={`flex items-center justify-between w-full pt-4 border-t ${colors.divider}`}>
-                <span className={`font-mono text-[9px] ${colors.subtle}`}>
-                  Black Link Editorial
-                </span>
-                <div className={`flex items-center gap-1.5 uppercase tracking-widest text-[10px] font-mono select-none ${colors.subtle}`}>
-                  <span>Arraste</span>
-                  <span className="inline-block animate-pulse">➔</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* LAYOUT 3: THREAD / TWEET */}
-          {activeLayout === "tweet" && (
-            <div
-              className={`flex flex-col justify-between h-full relative z-10 ${
-                isExportMode
-                  ? activeAspectRatio === "4:5"
-                    ? "p-24"
-                    : "p-20"
-                  : "p-8 sm:p-10 lg:p-12"
-              }`}
-            >
-              <div className={`flex items-center justify-between border-b ${colors.divider} pb-5`}>
-                <div className="flex items-center gap-3.5 sm:gap-4">
-                  <div
-                    className={`rounded-full overflow-hidden border shrink-0 flex items-center justify-center font-bold text-white shadow-md ${colors.border} ${
-                      isExportMode ? "w-20 h-20 text-2xl" : "w-11 h-11 text-sm"
-                    }`}
-                  >
-                    {authorAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={authorAvatar} alt={authorName} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-tr from-zinc-800 to-zinc-600 flex items-center justify-center">
-                        <span>{authorName.slice(0, 2).toUpperCase()}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col text-left">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`font-bold tracking-tight leading-tight ${colors.headline} ${isExportMode ? "text-2xl" : "text-sm sm:text-base"}`}>
-                        {authorName}
-                      </span>
-                      <svg className={`text-sky-400 fill-current shrink-0 ${isExportMode ? "w-6 h-6" : "w-4 h-4"}`} viewBox="0 0 24 24">
-                        <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.79-4-4-4-.495 0-.965.084-1.4.238C14.55 2.475 13.18 1.6 11.6 1.6c-1.58 0-2.95.875-3.6 2.148-.435-.154-.905-.238-1.4-.238-2.21 0-4 1.79-4 4 0 .495.084.965.238 1.4C1.575 9.55.7 10.92.7 12.5c0 1.58.875 2.95 2.148 3.6-.154.435-.238.905-.238 1.4 0 2.21 1.79 4 4 4 .495 0 .965-.084 1.4-.238 1.05 1.273 2.42 2.148 4 2.148 1.58 0 2.95-.875 3.6-2.148.435.154.905.238 1.4.238 2.21 0 4-1.79 4-4 0-.495-.084-.965-.238-1.4 1.273-1.05 2.148-2.42 2.148-4zm-12.8 4.2l-3.9-3.9 1.4-1.4 2.5 2.5 6.7-6.7 1.4 1.4-8.1 8.1z" />
-                      </svg>
-                    </div>
-                    <div className={`flex items-center gap-1.5 font-mono ${colors.muted}`}>
-                      <span className={isExportMode ? "text-lg" : "text-xs"}>{authorHandle}</span>
-                      <span>·</span>
-                      <span className={isExportMode ? "text-lg" : "text-xs"}>{currentSlide}h</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`font-black tracking-tighter opacity-80 ${colors.headline} ${isExportMode ? "text-3xl" : "text-lg"}`}>
-                  𝕏
-                </div>
-              </div>
-
-              <div className={`flex-1 flex flex-col justify-center text-left my-auto ${isExportMode ? "py-8" : "py-5"}`}>
-                <h2
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round((activeAspectRatio === "4:5" ? 54 : 46) * fontScale)}px`
-                      : `calc(1.5rem * ${fontScale})`,
-                    lineHeight: 1.25,
-                  }}
-                  className={`tracking-tight ${colors.headline} mb-4 line-clamp-3`}
-                >
-                  {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
-                </h2>
-
-                <p
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round(28 * fontScale)}px`
-                      : `calc(0.95rem * ${fontScale})`,
-                    lineHeight: 1.5,
-                  }}
-                  className={`leading-relaxed font-normal whitespace-pre-line ${colors.body} max-w-[95%] line-clamp-6`}
-                >
-                  {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
-                </p>
-              </div>
-
-              <div className={`border-t ${colors.divider} pt-4 space-y-3`}>
-                <div className={`flex items-center justify-between font-mono ${colors.muted} ${isExportMode ? "text-lg" : "text-xs"}`}>
-                  <span>💬 48</span>
-                  <span>🔁 128</span>
-                  <span className="text-rose-400">❤️ 1.4k</span>
-                  <span>🔖 342</span>
-                  <span>📊 94k</span>
-                </div>
-
-                <div className={`flex items-center justify-between text-[11px] font-mono ${colors.subtle} pt-1`}>
-                  <span>🧵 Thread [{formattedSlide}/{formattedTotal}]</span>
-                  <div className="flex items-center gap-1.5 select-none">
-                    <span>Arraste</span>
-                    <span className="inline-block animate-pulse">➔</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* LAYOUT 4: SPLIT (50/50) */}
-          {activeLayout === "split" && (
-            <div className="grid grid-cols-2 h-full w-full relative z-10">
-              {/* Lado Esquerdo: Conteúdo Editorial */}
+      {/* ==================================================================== */}
+      {/* CABEÇALHO DO SLIDE: Barra de Progresso + Identificação do Autor     */}
+      {/* ==================================================================== */}
+      <div className="relative z-10 p-6 md:p-8 pb-2 flex flex-col gap-3">
+        {/* Barra de Progresso Segmentada */}
+        <div className="flex items-center gap-1.5 w-full">
+          {Array.from({ length: totalSlides }).map((_, idx) => {
+            const isActive = idx + 1 <= currentSlide;
+            return (
               <div
-                className={`flex flex-col justify-between h-full border-r ${colors.divider} ${
-                  isExportMode ? "p-16" : "p-6 sm:p-8"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`font-bold uppercase tracking-[0.25em] font-sans ${isExportMode ? "text-sm" : "text-[9px]"} ${colors.brand}`}>
-                    BLACK LINK
-                  </span>
-                  <span className={`font-mono text-xs ${colors.muted}`}>
-                    [{formattedSlide}/{formattedTotal}]
-                  </span>
-                </div>
-
-                <div className="my-auto py-4">
-                  <h2
-                    style={{
-                      fontSize: isExportMode
-                        ? `${Math.round(48 * fontScale)}px`
-                        : `calc(1.4rem * ${fontScale})`,
-                      lineHeight: 1.15,
-                    }}
-                    className={`tracking-tighter ${colors.headline} mb-4 line-clamp-4`}
-                  >
-                    {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
-                  </h2>
-
-                  <p
-                    style={{
-                      fontSize: isExportMode
-                        ? `${Math.round(24 * fontScale)}px`
-                        : `calc(0.85rem * ${fontScale})`,
-                      lineHeight: 1.45,
-                    }}
-                    className={`${colors.body} line-clamp-5`}
-                  >
-                    {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-mono ${colors.subtle}`}>
-                    {authorHandle}
-                  </span>
-                  <span className={`text-[10px] font-mono ${colors.subtle}`}>
-                    Arraste ➔
-                  </span>
-                </div>
-              </div>
-
-              {/* Lado Direito: Imagem 100% ou Gráfico B2B */}
-              <div className="relative h-full w-full overflow-hidden bg-zinc-900">
-                {bgImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={bgImage} alt="Visual" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full relative flex flex-col items-center justify-center p-8 bg-gradient-to-br from-zinc-900 via-black to-zinc-950">
-                    <div
-                      className="absolute inset-0 opacity-20"
-                      style={{
-                        backgroundImage: "radial-gradient(#ffffff22 1px, transparent 1px)",
-                        backgroundSize: "16px 16px",
-                      }}
-                    />
-                    <div
-                      className="w-24 h-24 rounded-3xl border border-white/20 flex items-center justify-center shadow-2xl relative z-10"
-                      style={{
-                        background: `radial-gradient(circle, ${resolvedAccentColor}33 0%, transparent 70%)`,
-                      }}
-                    >
-                      <span className="text-3xl font-mono" style={{ color: resolvedAccentColor }}>
-                        {formattedSlide}
-                      </span>
-                    </div>
-                    <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest mt-4">
-                      Asset Visual B2B
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* LAYOUT 5: TERMINAL / TECH */}
-          {activeLayout === "terminal" && (
-            <div
-              className={`flex flex-col justify-between h-full relative z-10 font-mono ${
-                isExportMode ? "p-20" : "p-6 sm:p-8"
-              }`}
-            >
-              {/* Janela macOS: 3 Botões Coloridos */}
-              <div className={`flex items-center justify-between pb-4 border-b ${colors.divider}`}>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#ff5f56] shadow-sm" />
-                  <div className="w-3 h-3 rounded-full bg-[#ffbd2e] shadow-sm" />
-                  <div className="w-3 h-3 rounded-full bg-[#27c93f] shadow-sm" />
-                </div>
-                <span className={`text-[11px] ${colors.muted}`}>
-                  ~/blacklink/insight_{formattedSlide}.sh
-                </span>
-                <span className="text-[10px] text-emerald-400 font-bold">
-                  EXEC: OK
-                </span>
-              </div>
-
-              {/* Corpo do Terminal */}
-              <div className="my-auto py-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-emerald-400 font-bold">❯</span>
-                  <span className={`text-xs ${colors.subtle}`}>blacklink-cli --inspect</span>
-                </div>
-
-                <h2
-                  style={{
-                    fontSize: isExportMode
-                      ? `${Math.round(54 * fontScale)}px`
-                      : `calc(1.75rem * ${fontScale})`,
-                    lineHeight: 1.15,
-                  }}
-                  className={`tracking-tight ${colors.headline} mb-4 line-clamp-3`}
-                >
-                  {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
-                </h2>
-
-                <div className={`p-4 rounded-xl border ${colors.card} my-4`}>
-                  <p
-                    style={{
-                      fontSize: isExportMode
-                        ? `${Math.round(26 * fontScale)}px`
-                        : `calc(0.9rem * ${fontScale})`,
-                      lineHeight: 1.5,
-                    }}
-                    className={`${colors.body} line-clamp-5`}
-                  >
-                    <span className="text-zinc-500 mr-2">&gt;</span>
-                    {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Bar do Terminal */}
-              <div className={`flex items-center justify-between pt-3 border-t ${colors.divider} text-[10px] ${colors.subtle}`}>
-                <span>[UTF-8] LN {currentSlide}, COL 1</span>
-                <span>DESLIZE PARA EXECUTAR ➔</span>
-              </div>
-            </div>
-          )}
-
-          {/* LAYOUT 6: GLASS FLOATING */}
-          {activeLayout === "glass-floating" && (
-            <div className="h-full w-full p-6 sm:p-8 flex items-center justify-center relative z-10">
-              <div
-                className={`w-full h-full rounded-3xl border flex flex-col justify-between ${colors.card} ${
-                  isExportMode ? "p-20" : "p-8 sm:p-10"
-                }`}
+                key={idx}
+                className="h-1.5 rounded-full flex-1 transition-all duration-300"
                 style={{
-                  boxShadow: `0 30px 60px -15px ${resolvedAccentColor}18, 0 10px 30px -10px rgba(0,0,0,0.5)`,
+                  backgroundColor: isActive ? config.accentColor : progressInactive,
+                  boxShadow: isActive ? `0 0 8px ${config.accentColor}60` : "none",
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Linha de Identificação: Miniatura do Autor + Marca Oficial Black Link */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-2.5">
+            {config.authorAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={config.authorAvatar}
+                alt={config.authorName}
+                className="w-7 h-7 rounded-full object-cover border"
+                style={{ borderColor }}
+              />
+            ) : (
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs"
+                style={{
+                  backgroundColor: config.accentColor,
+                  color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
                 }}
               >
-                <div className="flex items-center justify-between">
-                  <span className={`font-bold uppercase tracking-[0.3em] font-sans ${isExportMode ? "text-base" : "text-[10px]"} ${colors.brand}`}>
-                    BLACK LINK • 3D GLASS
+                {config.authorName.charAt(0) || "B"}
+              </div>
+            )}
+            <div className="flex flex-col text-left leading-none">
+              <span
+                className="text-xs font-bold tracking-tight truncate max-w-[140px]"
+                style={{ color: textPrimary }}
+              >
+                {config.authorName}
+              </span>
+              <span
+                className="text-[10px] font-mono tracking-tight"
+                style={{ color: textMuted }}
+              >
+                {config.authorHandle}
+              </span>
+            </div>
+          </div>
+
+          <div
+            className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border flex items-center gap-1.5"
+            style={{
+              backgroundColor: cardBg,
+              borderColor,
+              color: textMuted,
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: config.accentColor }}
+            />
+            BLACK LINK
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================================== */}
+      {/* CORPO DO SLIDE: Layout Selecionado OU Slide de CTA (Lâmina Final)    */}
+      {/* ==================================================================== */}
+      <div className="relative z-10 px-6 md:px-8 py-4 flex-1 flex flex-col justify-center">
+        {isCta ? (
+          /* ================================================================ */
+          /* LAYOUT EXCLUSIVO DE CTA (LÂMINA FINAL - CONVERSÃO B2B)            */
+          /* ================================================================ */
+          <div className="flex flex-col items-center text-center justify-center h-full gap-4 max-w-lg mx-auto py-2">
+            {/* Foto Grande do Autor com Anel de Destaque */}
+            <div className="relative">
+              {config.authorAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={config.authorAvatar}
+                  alt={config.authorName}
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover shadow-2xl border-4"
+                  style={{
+                    borderColor: config.accentColor,
+                    boxShadow: `0 10px 30px ${config.accentColor}35`,
+                  }}
+                />
+              ) : (
+                <div
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center font-black text-3xl shadow-2xl border-4"
+                  style={{
+                    backgroundColor: config.accentColor,
+                    color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                    borderColor: config.accentColor,
+                  }}
+                >
+                  {config.authorName.charAt(0) || "B"}
+                </div>
+              )}
+
+              {/* Selo Verificado B2B */}
+              <div
+                className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center shadow-lg border-2"
+                style={{
+                  backgroundColor: config.accentColor,
+                  borderColor: config.bgColor,
+                  color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                }}
+              >
+                <svg
+                  className="w-4 h-4 fill-current"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Headline de Ação */}
+            <div className="space-y-2">
+              <h2
+                className="font-black tracking-tight leading-tight"
+                style={{
+                  fontSize: `clamp(1.5rem, calc(2.1rem * ${scale}), 3.2rem)`,
+                  color: textPrimary,
+                }}
+              >
+                {renderHighlightedText(
+                  slide.headline || "Gostou deste conteúdo?",
+                  config.accentColor
+                )}
+              </h2>
+              <p
+                className="font-normal leading-relaxed max-w-md mx-auto"
+                style={{
+                  fontSize: `clamp(0.9rem, calc(1.05rem * ${scale}), 1.4rem)`,
+                  color: textSecondary,
+                }}
+              >
+                {renderHighlightedText(
+                  slide.bodyText ||
+                    "Salve para consultar mais tarde e compartilhe este insight com líderes da sua rede.",
+                  config.accentColor
+                )}
+              </p>
+            </div>
+
+            {/* Barra de Engajamento Social Simulada (Salvar, Curtir, Comentar) */}
+            <div
+              className="flex items-center justify-center gap-6 px-6 py-3 rounded-2xl border shadow-lg backdrop-blur-md mt-1"
+              style={{
+                backgroundColor: cardBg,
+                borderColor,
+              }}
+            >
+              <div className="flex items-center gap-1.5" style={{ color: textSecondary }}>
+                <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                <span className="text-xs font-bold font-mono">Gostei</span>
+              </div>
+              <div className="flex items-center gap-1.5" style={{ color: textSecondary }}>
+                <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                <span className="text-xs font-bold font-mono">Comentar</span>
+              </div>
+              <div
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl"
+                style={{
+                  backgroundColor: `${config.accentColor}25`,
+                  color: config.accentColor,
+                }}
+              >
+                <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <span className="text-xs font-black font-mono">Salvar</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ================================================================ */
+          /* RENDERIZADOR DOS 6 LAYOUTS PARAMÉTRICOS FIGMA-LIKE                */
+          /* ================================================================ */
+          <>
+            {/* 1. LAYOUT BRUTALISTA TECH */}
+            {config.layout === "brutalista" && (
+              <div className="flex flex-col justify-center h-full gap-4 text-left">
+                {slide.tag && (
+                  <span
+                    className="w-fit px-3 py-1 rounded font-mono text-xs font-bold uppercase tracking-wider"
+                    style={{
+                      backgroundColor: `${config.accentColor}22`,
+                      color: config.accentColor,
+                    }}
+                  >
+                    {slide.tag}
                   </span>
-                  <span className={`font-mono text-xs font-semibold ${colors.muted}`}>
-                    [ {formattedSlide} / {formattedTotal} ]
+                )}
+                <h1
+                  className="font-black uppercase tracking-tight leading-[1.08]"
+                  style={{
+                    fontSize: `clamp(1.75rem, calc(2.35rem * ${scale}), 3.8rem)`,
+                    color: textPrimary,
+                  }}
+                >
+                  {renderHighlightedText(slide.headline, config.accentColor)}
+                </h1>
+                <div
+                  className="h-1.5 w-16 rounded-full"
+                  style={{ backgroundColor: config.accentColor }}
+                />
+                <p
+                  className="font-normal leading-relaxed max-w-xl"
+                  style={{
+                    fontSize: `clamp(0.95rem, calc(1.15rem * ${scale}), 1.6rem)`,
+                    color: textSecondary,
+                  }}
+                >
+                  {renderHighlightedText(slide.bodyText, config.accentColor)}
+                </p>
+              </div>
+            )}
+
+            {/* 2. LAYOUT MINIMAL EDITORIAL */}
+            {config.layout === "minimal" && (
+              <div className="flex flex-col justify-center items-center h-full gap-5 text-center max-w-lg mx-auto">
+                <div
+                  className="w-8 h-1 rounded-full"
+                  style={{ backgroundColor: config.accentColor }}
+                />
+                <h1
+                  className="font-bold tracking-tight leading-snug"
+                  style={{
+                    fontSize: `clamp(1.6rem, calc(2.2rem * ${scale}), 3.5rem)`,
+                    color: textPrimary,
+                  }}
+                >
+                  {renderHighlightedText(slide.headline, config.accentColor)}
+                </h1>
+                <p
+                  className="font-normal leading-relaxed max-w-md"
+                  style={{
+                    fontSize: `clamp(0.95rem, calc(1.1rem * ${scale}), 1.5rem)`,
+                    color: textSecondary,
+                  }}
+                >
+                  {renderHighlightedText(slide.bodyText, config.accentColor)}
+                </p>
+              </div>
+            )}
+
+            {/* 3. LAYOUT TWEET / SOCIAL THREAD */}
+            {config.layout === "tweet" && (
+              <div
+                className="flex flex-col justify-between p-6 md:p-7 rounded-2xl border shadow-xl backdrop-blur-md"
+                style={{
+                  backgroundColor: cardBg,
+                  borderColor,
+                }}
+              >
+                {/* Cabeçalho do Post Social */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    {config.authorAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={config.authorAvatar}
+                        alt={config.authorName}
+                        className="w-12 h-12 rounded-full object-cover border"
+                        style={{ borderColor }}
+                      />
+                    ) : (
+                      <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-base"
+                        style={{
+                          backgroundColor: config.accentColor,
+                          color: isLightColor(config.accentColor) ? "#000000" : "#ffffff",
+                        }}
+                      >
+                        {config.authorName.charAt(0) || "B"}
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="font-bold text-sm tracking-tight"
+                          style={{ color: textPrimary }}
+                        >
+                          {config.authorName}
+                        </span>
+                        <svg
+                          className="w-4 h-4 fill-current"
+                          style={{ color: config.accentColor }}
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                      <span className="text-xs font-mono" style={{ color: textMuted }}>
+                        {config.authorHandle} · 1h
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold" style={{ color: textMuted }}>
+                    𝕏
                   </span>
                 </div>
 
-                <div className="my-auto py-4 text-center max-w-lg mx-auto">
+                {/* Conteúdo do Tweet */}
+                <div className="space-y-3 mb-6 text-left">
                   <h2
+                    className="font-bold tracking-tight leading-snug"
                     style={{
-                      fontSize: isExportMode
-                        ? `${Math.round(58 * fontScale)}px`
-                        : `calc(1.85rem * ${fontScale})`,
-                      lineHeight: 1.15,
+                      fontSize: `clamp(1.25rem, calc(1.5rem * ${scale}), 2.2rem)`,
+                      color: textPrimary,
                     }}
-                    className={`tracking-tight ${colors.headline} mb-4 line-clamp-3`}
                   >
-                    {renderHighlightedText(cleanHeadline, resolvedAccentColor)}
+                    {renderHighlightedText(slide.headline, config.accentColor)}
                   </h2>
-
                   <p
+                    className="font-normal leading-relaxed whitespace-pre-line"
                     style={{
-                      fontSize: isExportMode
-                        ? `${Math.round(26 * fontScale)}px`
-                        : `calc(0.95rem * ${fontScale})`,
-                      lineHeight: 1.5,
+                      fontSize: `clamp(0.9rem, calc(1.05rem * ${scale}), 1.4rem)`,
+                      color: textSecondary,
                     }}
-                    className={`${colors.body} line-clamp-5`}
                   >
-                    {renderHighlightedText(cleanBodyText, resolvedAccentColor)}
+                    {renderHighlightedText(slide.bodyText, config.accentColor)}
                   </p>
                 </div>
 
-                <div className={`flex items-center justify-between pt-4 border-t ${colors.divider}`}>
-                  <span className={`text-[10px] font-mono ${colors.subtle}`}>
-                    {authorName}
-                  </span>
-                  <span className={`text-[10px] font-mono ${colors.subtle}`}>
-                    Arraste ➔
-                  </span>
+                {/* Métricas Simuladas de Engajamento */}
+                <div
+                  className="flex items-center justify-between pt-4 border-t font-mono text-xs"
+                  style={{
+                    borderColor,
+                    color: textMuted,
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>💬</span>
+                    <span>42</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span>🔁</span>
+                    <span>128</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span style={{ color: config.accentColor }}>❤️</span>
+                    <span>1.4K</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span>🔖</span>
+                    <span>350</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
+            )}
+
+            {/* 4. LAYOUT SPLIT 50/50 */}
+            {config.layout === "split" && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 h-full items-center">
+                {/* Lado Esquerdo: Conteúdo Escrito */}
+                <div className="md:col-span-7 flex flex-col justify-center gap-3 text-left">
+                  <span
+                    className="text-xs font-mono font-bold tracking-widest uppercase"
+                    style={{ color: config.accentColor }}
+                  >
+                    {slide.tag || "DESTAQUE B2B"}
+                  </span>
+                  <h1
+                    className="font-black tracking-tight leading-tight"
+                    style={{
+                      fontSize: `clamp(1.4rem, calc(1.85rem * ${scale}), 2.9rem)`,
+                      color: textPrimary,
+                    }}
+                  >
+                    {renderHighlightedText(slide.headline, config.accentColor)}
+                  </h1>
+                  <p
+                    className="font-normal leading-relaxed"
+                    style={{
+                      fontSize: `clamp(0.85rem, calc(1rem * ${scale}), 1.35rem)`,
+                      color: textSecondary,
+                    }}
+                  >
+                    {renderHighlightedText(slide.bodyText, config.accentColor)}
+                  </p>
+                </div>
+
+                {/* Lado Direito: Card Visual ou Gráfico */}
+                <div className="md:col-span-5 h-full flex items-center justify-center">
+                  <div
+                    className="w-full h-full min-h-[160px] p-5 rounded-2xl border flex flex-col justify-between shadow-lg relative overflow-hidden"
+                    style={{
+                      backgroundColor: cardBg,
+                      borderColor,
+                    }}
+                  >
+                    <div
+                      className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl pointer-events-none"
+                      style={{ backgroundColor: `${config.accentColor}30` }}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase" style={{ color: textMuted }}>
+                        MÉTRICA DE IMPACTO
+                      </span>
+                      <div
+                        className="w-2 h-2 rounded-full animate-ping"
+                        style={{ backgroundColor: config.accentColor }}
+                      />
+                    </div>
+                    <div className="my-auto py-2">
+                      <span
+                        className="text-3xl md:text-4xl font-black font-mono tracking-tight"
+                        style={{ color: config.accentColor }}
+                      >
+                        +340%
+                      </span>
+                      <p className="text-xs font-semibold mt-1" style={{ color: textPrimary }}>
+                        Retenção de Audiência B2B
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono" style={{ color: textMuted }}>
+                      Black Link Analytics
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. LAYOUT TERMINAL INDUSTRIAL */}
+            {config.layout === "terminal" && (
+              <div
+                className="w-full rounded-2xl border shadow-2xl overflow-hidden backdrop-blur-md text-left"
+                style={{
+                  backgroundColor: isLight ? "#ffffff" : "#0d0e12",
+                  borderColor,
+                }}
+              >
+                {/* Barra Superior do macOS Terminal */}
+                <div
+                  className="flex items-center justify-between px-4 py-2.5 border-b"
+                  style={{
+                    backgroundColor: isLight ? "#f4f4f5" : "#16171d",
+                    borderColor,
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+                    <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+                    <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+                  </div>
+                  <span
+                    className="text-[11px] font-mono font-medium tracking-tight"
+                    style={{ color: textMuted }}
+                  >
+                    bash ~ blacklink-b2b
+                  </span>
+                  <div className="w-12" />
+                </div>
+
+                {/* Conteúdo do Terminal */}
+                <div className="p-6 font-mono space-y-4">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span style={{ color: config.accentColor }}>❯</span>
+                    <span style={{ color: textMuted }}>exec blacklink-insight --strict</span>
+                  </div>
+
+                  <h2
+                    className="font-bold tracking-tight leading-snug"
+                    style={{
+                      fontSize: `clamp(1.3rem, calc(1.75rem * ${scale}), 2.6rem)`,
+                      color: textPrimary,
+                    }}
+                  >
+                    {renderHighlightedText(slide.headline, config.accentColor)}
+                  </h2>
+
+                  <div
+                    className="p-3.5 rounded-lg border-l-2 space-y-2"
+                    style={{
+                      backgroundColor: cardBg,
+                      borderLeftColor: config.accentColor,
+                    }}
+                  >
+                    <p
+                      className="font-normal leading-relaxed text-xs md:text-sm"
+                      style={{ color: textSecondary }}
+                    >
+                      {renderHighlightedText(slide.bodyText, config.accentColor)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs" style={{ color: config.accentColor }}>
+                    <span>[STATUS: 200 OK]</span>
+                    <span className="w-2 h-4 bg-current animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 6. LAYOUT GLASS-FLOATING 3D */}
+            {config.layout === "glass-floating" && (
+              <div className="flex items-center justify-center h-full p-2">
+                <div
+                  className="w-full max-w-xl p-8 rounded-3xl border shadow-2xl backdrop-blur-2xl text-left relative overflow-hidden"
+                  style={{
+                    backgroundColor: glassBg,
+                    borderColor: glassBorder,
+                    boxShadow: isLight
+                      ? "0 25px 50px -12px rgba(0, 0, 0, 0.15)"
+                      : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+                  }}
+                >
+                  <div
+                    className="absolute -top-12 -left-12 w-40 h-40 rounded-full blur-3xl pointer-events-none"
+                    style={{ backgroundColor: `${config.accentColor}30` }}
+                  />
+                  <div className="relative z-10 space-y-4">
+                    {slide.tag && (
+                      <span
+                        className="inline-block px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider"
+                        style={{
+                          backgroundColor: `${config.accentColor}25`,
+                          color: config.accentColor,
+                        }}
+                      >
+                        {slide.tag}
+                      </span>
+                    )}
+                    <h1
+                      className="font-extrabold tracking-tight leading-tight"
+                      style={{
+                        fontSize: `clamp(1.45rem, calc(2rem * ${scale}), 3.2rem)`,
+                        color: textPrimary,
+                      }}
+                    >
+                      {renderHighlightedText(slide.headline, config.accentColor)}
+                    </h1>
+                    <p
+                      className="font-normal leading-relaxed"
+                      style={{
+                        fontSize: `clamp(0.95rem, calc(1.1rem * ${scale}), 1.5rem)`,
+                        color: textSecondary,
+                      }}
+                    >
+                      {renderHighlightedText(slide.bodyText, config.accentColor)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ==================================================================== */}
+      {/* RODAPÉ DO SLIDE: Numeração / Posição + Pista Visual de Deslize      */}
+      {/* ==================================================================== */}
+      <div className="relative z-10 p-6 md:p-8 pt-2 flex items-center justify-between">
+        <div
+          className="text-xs font-mono font-bold tracking-widest px-3 py-1 rounded-full border"
+          style={{
+            backgroundColor: cardBg,
+            borderColor,
+            color: textMuted,
+          }}
+        >
+          {isCta ? "CTA FINAL" : `${String(currentSlide).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`}
+        </div>
+
+        <div
+          className="flex items-center gap-1.5 text-xs font-semibold tracking-tight transition-transform duration-200"
+          style={{ color: isCta ? config.accentColor : textSecondary }}
+        >
+          <span>{isCta ? "Siga para mais" : "Arraste"}</span>
+          <svg
+            className="w-4 h-4 fill-none stroke-current stroke-2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
     </div>
   );
-});
+}
