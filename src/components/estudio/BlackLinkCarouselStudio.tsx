@@ -122,6 +122,12 @@ export function BlackLinkCarouselStudio() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string>("");
 
+  // Estado do Modal de IA e Webhook
+  const [showAIModal, setShowAIModal] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>("");
+  const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
+  const [aiErrorNotice, setAiErrorNotice] = useState<string>("");
+
   // Referência para o container de exportação offscreen
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
 
@@ -137,7 +143,7 @@ export function BlackLinkCarouselStudio() {
         }));
       }
     } catch {
-      // Ignora erro em ambientes restritos
+      // Ignora leitura em ambientes restritos
     }
   }, []);
 
@@ -221,6 +227,107 @@ export function BlackLinkCarouselStudio() {
     });
   };
 
+  // ==========================================================================
+  // BLINDAGEM CONTRA FALHAS DE API / WEBHOOK (ANTI-QUEBRA DE TELA)
+  // ==========================================================================
+  const handleGenerateWithAI = async () => {
+    if (!aiPrompt.trim()) return;
+
+    setIsGeneratingAI(true);
+    setAiErrorNotice("");
+
+    try {
+      const response = await fetch("/api/marketing/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          theme: aiPrompt.trim(),
+          format: "carousel",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Falha na resposta HTTP: código ${response.status}`);
+      }
+
+      // Leitura bruta do texto para proteção contra quebra de JSON
+      const rawText = await response.text();
+      let parsedData: any = null;
+
+      try {
+        parsedData = JSON.parse(rawText);
+      } catch (jsonErr) {
+        console.warn("Retorno da IA não é um JSON válido. Injetando fallback anti-quebra de tela:", jsonErr);
+        // INJEÇÃO OBRIGATÓRIA DE FALLBACK ELEGANTE
+        setSlides([
+          {
+            tag: "AJUSTE MANUAL",
+            headline: "Ajuste Manual Necessário",
+            bodyText: "O motor de IA retornou o texto fora da estrutura. Edite as lâminas livremente aqui.",
+          },
+          {
+            tag: "DIRETRIZ B2B",
+            headline: "Desenvolva o seu **insight principal**",
+            bodyText: "A resposta do webhook não retornou uma lista formatada de lâminas. Ajuste seus tópicos livremente neste editor.",
+          },
+          {
+            tag: "CALL TO ACTION",
+            headline: "Pronto para acelerar seus **resultados corporativos**?",
+            bodyText: "Salve este carrossel e compartilhe com sua rede para gerar discussões de alto nível.",
+          },
+        ]);
+        setCurrentSlideIndex(0);
+        setShowAIModal(false);
+        setAiErrorNotice("A IA retornou texto não formatado. O estado de fallback foi aplicado com segurança.");
+        return;
+      }
+
+      // Validação da lista de slides recebida
+      const incomingSlides =
+        parsedData?.carouselSlides ||
+        parsedData?.slides ||
+        parsedData?.data?.slides;
+
+      if (Array.isArray(incomingSlides) && incomingSlides.length > 0) {
+        const formatted: SlideData[] = incomingSlides.map((s: any, idx: number) => ({
+          tag: s.tag || `LÂMINA ${idx + 1}`,
+          headline: s.headline || s.title || `Insight ${idx + 1}`,
+          bodyText: s.bodyText || s.body || s.content || "",
+        }));
+        setSlides(formatted);
+        setCurrentSlideIndex(0);
+        setShowAIModal(false);
+      } else {
+        throw new Error("Estrutura de slides ausente na resposta da IA.");
+      }
+    } catch (err: any) {
+      console.error("Erro capturado na integração de IA:", err);
+      // Fallback seguro: A tela NUNCA fica branca!
+      setSlides([
+        {
+          tag: "AJUSTE MANUAL",
+          headline: "Ajuste Manual Necessário",
+          bodyText: "O motor de IA retornou o texto fora da estrutura. Edite as lâminas livremente aqui.",
+        },
+        {
+          tag: "ESTRUTURA B2B",
+          headline: "Estruture o seu **conteúdo de valor**",
+          bodyText: "Houve uma instabilidade na comunicação com o webhook. Os campos continuam 100% editáveis.",
+        },
+        {
+          tag: "CHAMADA FINAL",
+          headline: "Gostou deste conteúdo de **alta precisão**?",
+          bodyText: "Finalize chamando sua audiência para interagir e salvar este post.",
+        },
+      ]);
+      setCurrentSlideIndex(0);
+      setShowAIModal(false);
+      setAiErrorNotice("Instabilidade no webhook. Lâminas de fallback foram injetadas para edição manual.");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   // Upload Local de Avatar
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -247,11 +354,15 @@ export function BlackLinkCarouselStudio() {
     }
   };
 
-  // Exportação Gráfica: Download de Slide Único (.PNG)
+  // ==========================================================================
+  // MOTORES DE EXPORTAÇÃO GRÁFICA (DOWNLOAD UNITÁRIO, ZIP, PDF LINKEDIN)
+  // ==========================================================================
+
+  // 1. Download Unitário de Lâmina Atual (Single Slide Export)
   const handleDownloadSinglePng = async () => {
     try {
       setIsExporting(true);
-      setExportMessage("Capturando slide em alta fidelidade...");
+      setExportMessage("Capturando lâmina atual em alta resolução...");
       const node = document.getElementById("blacklink-slide-canvas");
       if (!node) throw new Error("Elemento do slide não encontrado no DOM.");
 
@@ -260,17 +371,21 @@ export function BlackLinkCarouselStudio() {
         cacheBust: true,
       });
 
-      saveAs(dataUrl, `blacklink-slide-${currentSlideIndex + 1}.png`);
+      // Nome do arquivo: blacklink-slide-0X.png
+      const slideNumberStr = String(currentSlideIndex + 1).padStart(2, "0");
+      const filename = `blacklink-slide-${slideNumberStr}.png`;
+
+      saveAs(dataUrl, filename);
     } catch (err) {
-      console.error("Falha ao exportar imagem PNG:", err);
-      alert("Erro ao exportar o slide em PNG.");
+      console.error("Falha ao exportar imagem PNG da lâmina atual:", err);
+      alert("Erro ao exportar a lâmina atual em PNG.");
     } finally {
       setIsExporting(false);
       setExportMessage("");
     }
   };
 
-  // Exportação Gráfica: Pacote (.ZIP)
+  // 2. Exportação Completa em Pacote (.ZIP)
   const handleDownloadZip = async () => {
     try {
       setIsExporting(true);
@@ -292,7 +407,7 @@ export function BlackLinkCarouselStudio() {
         }
       }
 
-      setExportMessage("Gerando pacote ZIP...");
+      setExportMessage("Compactando arquivo ZIP corporativo...");
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "blacklink-carrossel-b2b.zip");
     } catch (err) {
@@ -304,7 +419,7 @@ export function BlackLinkCarouselStudio() {
     }
   };
 
-  // Exportação Gráfica: Documento PDF LinkedIn via jsPDF
+  // 3. Exportação Gráfica: Documento PDF LinkedIn via jsPDF
   const handleDownloadPdf = async () => {
     try {
       setIsExporting(true);
@@ -335,11 +450,11 @@ export function BlackLinkCarouselStudio() {
         }
       }
 
-      setExportMessage("Finalizando PDF para o LinkedIn...");
+      setExportMessage("Finalizando documento PDF para o LinkedIn...");
       pdf.save("blacklink-carrossel-linkedin.pdf");
     } catch (err) {
       console.error("Falha ao exportar PDF:", err);
-      alert("Erro ao gerar documento PDF.");
+      alert("Erro ao gerar o documento PDF.");
     } finally {
       setIsExporting(false);
       setExportMessage("");
@@ -369,12 +484,35 @@ export function BlackLinkCarouselStudio() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAIModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-blue-500/20"
+          >
+            <span>🪄 Gerar com IA</span>
+          </button>
+
           <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
             <span className="text-xs font-mono text-zinc-400">Total de Lâminas:</span>
             <span className="text-sm font-bold text-white font-mono">{slides.length}</span>
           </div>
         </div>
       </div>
+
+      {/* Aviso de Fallback de IA caso ativado */}
+      {aiErrorNotice && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between text-amber-200 text-xs font-mono">
+          <div className="flex items-center gap-2.5">
+            <span>⚠️</span>
+            <span>{aiErrorNotice}</span>
+          </div>
+          <button
+            onClick={() => setAiErrorNotice("")}
+            className="text-amber-400 hover:text-white font-bold ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ==================================================================== */}
       {/* ÁREA DE TRABALHO: SPLIT VIEW (INSPETOR ESQUERDO & CANVAS DIREITO)    */}
@@ -388,7 +526,7 @@ export function BlackLinkCarouselStudio() {
           <div className="grid grid-cols-2 p-1 rounded-2xl bg-black/50 border border-white/10">
             <button
               onClick={() => setActiveTab("design")}
-              className={`py-2.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all ${
+              className={`py-2.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === "design"
                   ? "bg-white text-black shadow-lg"
                   : "text-zinc-400 hover:text-white"
@@ -398,7 +536,7 @@ export function BlackLinkCarouselStudio() {
             </button>
             <button
               onClick={() => setActiveTab("conteudo")}
-              className={`py-2.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all ${
+              className={`py-2.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 activeTab === "conteudo"
                   ? "bg-white text-black shadow-lg"
                   : "text-zinc-400 hover:text-white"
@@ -413,17 +551,17 @@ export function BlackLinkCarouselStudio() {
           {/* ---------------------------------------------------------------- */}
           {activeTab === "design" && (
             <div className="space-y-6">
-              {/* 1. SELETOR DE LAYOUTS MODULARES */}
+              {/* 1. SELETOR DE LAYOUTS MODULARES (EXPANDIDO COM NOTION & PODCAST) */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-                    Motor de Layout
+                    Motor de Layout (8 Modelos)
                   </label>
                   <span className="text-[11px] font-mono text-zinc-400 capitalize">
                     {designConfig.layout}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(
                     [
                       { id: "brutalista", label: "Brutalista", desc: "Tipografia Colossal" },
@@ -432,21 +570,23 @@ export function BlackLinkCarouselStudio() {
                       { id: "split", label: "Split 50/50", desc: "Texto + Métrica" },
                       { id: "terminal", label: "Terminal", desc: "macOS Shell" },
                       { id: "glass-floating", label: "Glass 3D", desc: "Card Flutuante" },
+                      { id: "notion-doc", label: "Notion Doc", desc: "Documento Limpo" },
+                      { id: "podcast-quote", label: "Podcast Quote", desc: "Citação Impacto" },
                     ] as const
                   ).map((item) => (
                     <button
                       key={item.id}
                       onClick={() => updateDesignConfig({ layout: item.id as SlideLayout })}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
+                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
                         designConfig.layout === item.id
                           ? "bg-white/15 border-white text-white shadow-md scale-[1.02]"
                           : "bg-black/30 border-white/10 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
                       }`}
                     >
-                      <span className="block text-xs font-bold leading-tight">
+                      <span className="block text-xs font-bold leading-tight truncate">
                         {item.label}
                       </span>
-                      <span className="block text-[10px] text-zinc-400 mt-0.5 truncate">
+                      <span className="block text-[9px] text-zinc-500 mt-0.5 truncate">
                         {item.desc}
                       </span>
                     </button>
@@ -476,7 +616,7 @@ export function BlackLinkCarouselStudio() {
                     <button
                       key={p.id}
                       onClick={() => updateDesignConfig({ pattern: p.id as SlidePattern })}
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         designConfig.pattern === p.id
                           ? "bg-white/20 border-white text-white shadow-sm"
                           : "bg-black/30 border-white/10 text-zinc-400 hover:text-white hover:border-white/20"
@@ -508,7 +648,7 @@ export function BlackLinkCarouselStudio() {
                   onChange={(e) =>
                     updateDesignConfig({ fontSizeScale: parseFloat(e.target.value) })
                   }
-                  className="w-full accent-white"
+                  className="w-full accent-white cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] font-mono text-zinc-500">
                   <span>80% (Condensado)</span>
@@ -537,7 +677,7 @@ export function BlackLinkCarouselStudio() {
                           accentColor: pal.accentColor,
                         })
                       }
-                      className="p-2.5 rounded-xl border border-white/10 bg-black/40 hover:border-white/30 text-left transition-all flex items-center gap-2.5"
+                      className="p-2.5 rounded-xl border border-white/10 bg-black/40 hover:border-white/30 text-left transition-all flex items-center gap-2.5 cursor-pointer"
                     >
                       <div className="flex -space-x-1 shrink-0">
                         <span
@@ -622,7 +762,7 @@ export function BlackLinkCarouselStudio() {
                     <button
                       key={font.id}
                       onClick={() => updateDesignConfig({ font: font.id as SlideFont })}
-                      className={`p-3 rounded-2xl border text-left transition-all ${
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                         designConfig.font === font.id
                           ? "bg-white/15 border-white text-white shadow-md"
                           : "bg-black/30 border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20"
@@ -727,7 +867,7 @@ export function BlackLinkCarouselStudio() {
                           onChange={(e) =>
                             updateDesignConfig({ bgOpacity: Number(e.target.value) })
                           }
-                          className="w-full accent-white"
+                          className="w-full accent-white cursor-pointer"
                         />
                       </div>
                     )}
@@ -770,7 +910,7 @@ export function BlackLinkCarouselStudio() {
                     <button
                       key={idx}
                       onClick={() => setCurrentSlideIndex(idx)}
-                      className={`px-3 py-2 rounded-xl text-xs font-mono font-bold shrink-0 transition-all border ${
+                      className={`px-3 py-2 rounded-xl text-xs font-mono font-bold shrink-0 transition-all border cursor-pointer ${
                         currentSlideIndex === idx
                           ? "bg-white text-black border-white shadow-md"
                           : "bg-black/40 text-zinc-400 border-white/10 hover:border-white/20 hover:text-white"
@@ -953,7 +1093,7 @@ export function BlackLinkCarouselStudio() {
             </div>
           </div>
 
-          {/* BARRA DE EXPORTAÇÃO CORPORATIVA */}
+          {/* BARRA DE EXPORTAÇÃO CORPORATIVA (COM DOWNLOAD UNITÁRIO) */}
           <div className="w-full mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-left">
               <span className="text-xs font-mono uppercase text-zinc-400 block">
@@ -965,20 +1105,21 @@ export function BlackLinkCarouselStudio() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* BOTÃO SECUNDÁRIO E ELEGANTE: DOWNLOAD UNITÁRIO DA LÂMINA ATUAL */}
               <button
                 onClick={handleDownloadSinglePng}
                 disabled={isExporting}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
               >
-                Baixar Slide (.PNG)
+                <span>⬇ Baixar Lâmina Atual</span>
               </button>
 
               <button
                 onClick={handleDownloadZip}
                 disabled={isExporting}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
-                Exportar Pacote (.ZIP)
+                <span>Exportar Pacote (.ZIP)</span>
               </button>
 
               <button
@@ -1003,6 +1144,71 @@ export function BlackLinkCarouselStudio() {
           )}
         </div>
       </div>
+
+      {/* ==================================================================== */}
+      {/* MODAL DE GERAÇÃO INTELIGENTE DE IA / WEBHOOK COM PROTEÇÃO TOTAL     */}
+      {/* ==================================================================== */}
+      {showAIModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="w-full max-w-lg bg-[#0d0e12] border border-white/15 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl relative">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">🪄</span>
+                <h3 className="text-lg font-bold text-white tracking-tight">
+                  Gerador de Carrosséis com IA
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAIModal(false)}
+                className="text-zinc-400 hover:text-white text-sm font-mono"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Informe a tese central ou o tema corporativo para despachar a requisição ao webhook autônomo. O sistema possui blindagem anti-quebra de tela em caso de resposta fora do padrão.
+            </p>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 block">
+                Tema / Objetivo B2B
+              </label>
+              <textarea
+                rows={3}
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Ex: Como reduzir o ciclo de vendas corporativas de 90 para 25 dias com inteligência preditiva..."
+                className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-sm focus:outline-none focus:border-white/30 leading-relaxed"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowAIModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-mono font-bold transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={handleGenerateWithAI}
+                disabled={isGeneratingAI || !aiPrompt.trim()}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
+              >
+                {isGeneratingAI ? (
+                  <>
+                    <span className="w-3 h-3 rounded-full border-2 border-black border-t-transparent animate-spin" />
+                    <span>Processando IA...</span>
+                  </>
+                ) : (
+                  <span>Disparar Geração</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ==================================================================== */}
       {/* CONTAINER OFFSCREEN DE ALTA RESOLUÇÃO (PARA ZIP & PDF NATIVO)        */}

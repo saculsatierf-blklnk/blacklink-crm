@@ -10,7 +10,9 @@ export type SlideLayout =
   | "tweet"
   | "split"
   | "terminal"
-  | "glass-floating";
+  | "glass-floating"
+  | "notion-doc"
+  | "podcast-quote";
 
 export type SlideFont = "space-grotesk" | "playfair" | "jakarta" | "inter";
 
@@ -131,13 +133,13 @@ export function BlackLinkSlidePreview({
         config.aspectRatio === "4:5" ? "aspect-[4/5]" : "aspect-square"
       }`}
       style={{
-        backgroundColor: config.bgColor,
+        backgroundColor: config.layout === "notion-doc" ? "#fafafa" : config.bgColor,
       }}
     >
       {/* ==================================================================== */}
       {/* 1. CAMADA DE IMAGEM DE FUNDO (SE CONFIGURADA)                       */}
       {/* ==================================================================== */}
-      {config.bgImage && (
+      {config.bgImage && config.layout !== "notion-doc" && (
         <div
           className="absolute inset-0 pointer-events-none bg-cover bg-center z-0 transition-opacity duration-300"
           style={{
@@ -152,7 +154,7 @@ export function BlackLinkSlidePreview({
       {/* ==================================================================== */}
 
       {/* Textura Dots (Pontilhado Dinâmico) */}
-      {config.pattern === "dots" && (
+      {config.pattern === "dots" && config.layout !== "notion-doc" && (
         <div
           className="absolute inset-0 pointer-events-none z-0"
           style={{
@@ -165,7 +167,7 @@ export function BlackLinkSlidePreview({
       )}
 
       {/* Textura Grid (Grade Técnica Industrial) */}
-      {config.pattern === "grid" && (
+      {config.pattern === "grid" && config.layout !== "notion-doc" && (
         <div
           className="absolute inset-0 pointer-events-none z-0"
           style={{
@@ -180,7 +182,7 @@ export function BlackLinkSlidePreview({
       )}
 
       {/* Textura Noise (Granulado Fractal Inline SVG) */}
-      {config.pattern === "noise" && (
+      {config.pattern === "noise" && config.layout !== "notion-doc" && (
         <div
           className="absolute inset-0 pointer-events-none z-0"
           style={{
@@ -193,7 +195,7 @@ export function BlackLinkSlidePreview({
       )}
 
       {/* Textura Solid Mesh (Refração Radial Difusa) */}
-      {config.pattern === "solid-mesh" && (
+      {config.pattern === "solid-mesh" && config.layout !== "notion-doc" && (
         <div
           className="absolute inset-0 pointer-events-none z-0"
           style={{
@@ -210,6 +212,7 @@ export function BlackLinkSlidePreview({
         <div className="flex items-center gap-1.5 w-full">
           {Array.from({ length: totalSlides }).map((_, idx) => {
             const isActive = idx + 1 <= currentSlide;
+            const progressLight = config.layout === "notion-doc" || isLight;
             return (
               <div
                 key={idx}
@@ -217,7 +220,7 @@ export function BlackLinkSlidePreview({
                 style={{
                   backgroundColor: isActive
                     ? config.accentColor
-                    : isLight
+                    : progressLight
                     ? "rgba(0, 0, 0, 0.12)"
                     : "rgba(255, 255, 255, 0.20)",
                   boxShadow: isActive ? `0 0 8px ${config.accentColor}60` : "none",
@@ -235,7 +238,9 @@ export function BlackLinkSlidePreview({
               <img
                 src={config.authorAvatar}
                 alt={config.authorName}
-                className={`w-7 h-7 rounded-full object-cover border ${borderClass}`}
+                className={`w-7 h-7 rounded-full object-cover border ${
+                  config.layout === "notion-doc" ? "border-zinc-300" : borderClass
+                }`}
               />
             ) : (
               <div
@@ -249,17 +254,29 @@ export function BlackLinkSlidePreview({
               </div>
             )}
             <div className="flex flex-col text-left leading-none">
-              <span className={`text-xs font-bold tracking-tight truncate max-w-[140px] ${textPrimaryClass}`}>
+              <span
+                className={`text-xs font-bold tracking-tight truncate max-w-[140px] ${
+                  config.layout === "notion-doc" ? "text-zinc-900" : textPrimaryClass
+                }`}
+              >
                 {config.authorName}
               </span>
-              <span className={`text-[10px] font-mono tracking-tight ${textMutedClass}`}>
+              <span
+                className={`text-[10px] font-mono tracking-tight ${
+                  config.layout === "notion-doc" ? "text-zinc-500" : textMutedClass
+                }`}
+              >
                 {config.authorHandle}
               </span>
             </div>
           </div>
 
           <div
-            className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border flex items-center gap-1.5 ${cardBgClass} ${borderClass} ${textMutedClass}`}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border flex items-center gap-1.5 ${
+              config.layout === "notion-doc"
+                ? "bg-zinc-100 border-zinc-200 text-zinc-600"
+                : `${cardBgClass} ${borderClass} ${textMutedClass}`
+            }`}
           >
             <span
               className="w-1.5 h-1.5 rounded-full"
@@ -383,7 +400,7 @@ export function BlackLinkSlidePreview({
           </div>
         ) : (
           /* ================================================================ */
-          /* RENDERIZADOR DOS 6 LAYOUTS MODULARES PARAMÉTRICOS                */
+          /* RENDERIZADOR DOS 8 LAYOUTS MODULARES PARAMÉTRICOS                */
           /* ================================================================ */
           <>
             {/* 1. LAYOUT BRUTALISTA TECH */}
@@ -723,6 +740,146 @@ export function BlackLinkSlidePreview({
                 </div>
               </div>
             )}
+
+            {/* 7. LAYOUT NOTION DOC (DOCUMENTO LIMPO / EDITORIAL) */}
+            {config.layout === "notion-doc" && (
+              <div className="w-full h-full flex flex-col justify-between p-6 md:p-8 rounded-2xl bg-[#fafafa] text-zinc-900 border border-zinc-200/80 shadow-xl text-left relative overflow-hidden">
+                {/* Notion Doc Breadcrumbs & Icon */}
+                <div className="flex items-center gap-2 mb-4 text-xs text-zinc-500 font-sans border-b border-zinc-200/70 pb-3">
+                  <span className="text-base select-none">📄</span>
+                  <span className="font-medium text-zinc-700">Black Link</span>
+                  <span>/</span>
+                  <span className="text-zinc-600">Estratégia B2B</span>
+                  <span>/</span>
+                  <span className="text-zinc-900 font-semibold truncate">
+                    {slide.tag || "Insight"}
+                  </span>
+                </div>
+
+                {/* Notion Doc Serif Title */}
+                <div className="my-auto space-y-4">
+                  <h1
+                    className="font-playfair font-black text-zinc-950 tracking-tight leading-snug"
+                    style={{
+                      fontSize: `clamp(1.5rem, calc(2.1rem * ${scale}), 3.4rem)`,
+                    }}
+                  >
+                    {renderHighlightedText(slide.headline, config.accentColor)}
+                  </h1>
+
+                  {/* Callout Box com Destaque Notion */}
+                  <div className="p-4 rounded-xl bg-zinc-100/90 border-l-4 border-zinc-500 space-y-2">
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-sm select-none">💡</span>
+                      <p
+                        className="text-zinc-700 leading-relaxed font-sans text-xs md:text-sm"
+                        style={{
+                          fontSize: `clamp(0.85rem, calc(1rem * ${scale}), 1.4rem)`,
+                        }}
+                      >
+                        {renderHighlightedText(slide.bodyText, config.accentColor)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Propriedades do Documento Notion */}
+                <div className="flex items-center gap-4 text-[11px] text-zinc-400 font-mono pt-3 border-t border-zinc-200/70 mt-2">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Status: Concluído
+                  </span>
+                  <span>•</span>
+                  <span>Autor: {config.authorName}</span>
+                </div>
+              </div>
+            )}
+
+            {/* 8. LAYOUT PODCAST QUOTE (CITAÇÃO DE IMPACTO) */}
+            {config.layout === "podcast-quote" && (
+              <div
+                className={`relative w-full h-full flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl border shadow-xl backdrop-blur-md text-center overflow-hidden ${cardBgClass} ${borderClass}`}
+              >
+                {/* Marca d'água de aspas gigantes (opacity-5) */}
+                <span
+                  className="absolute -bottom-10 -right-4 text-[13rem] md:text-[17rem] font-serif leading-none select-none pointer-events-none opacity-5"
+                  style={{
+                    color: isLight ? "#000000" : "#ffffff",
+                  }}
+                >
+                  “
+                </span>
+
+                {/* Avatar centralizado no topo cortando a margem */}
+                <div className="relative -mt-4 md:-mt-6 mb-4 z-10">
+                  {config.authorAvatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={config.authorAvatar}
+                      alt={config.authorName}
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 shadow-xl ring-2"
+                      style={{
+                        borderColor: config.bgColor,
+                        outlineColor: config.accentColor,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center font-black text-2xl shadow-xl border-4"
+                      style={{
+                        backgroundColor: config.accentColor,
+                        color: isLightColor(config.accentColor) ? "#09090b" : "#ffffff",
+                        borderColor: config.bgColor,
+                      }}
+                    >
+                      {config.authorName.charAt(0) || "B"}
+                    </div>
+                  )}
+                  <div
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 text-white shadow-md text-[10px]"
+                    style={{
+                      backgroundColor: config.accentColor,
+                      borderColor: config.bgColor,
+                    }}
+                  >
+                    🎙️
+                  </div>
+                </div>
+
+                {/* Texto da citação em itálico */}
+                <div className="relative z-10 max-w-lg mx-auto space-y-3">
+                  <h2
+                    className={`italic font-medium tracking-tight leading-snug ${textPrimaryClass}`}
+                    style={{
+                      fontSize: `clamp(1.35rem, calc(1.9rem * ${scale}), 3rem)`,
+                    }}
+                  >
+                    “{renderHighlightedText(slide.headline, config.accentColor)}”
+                  </h2>
+
+                  {slide.bodyText && (
+                    <p
+                      className={`font-normal leading-relaxed text-xs md:text-sm max-w-md mx-auto ${textSecondaryClass}`}
+                      style={{
+                        fontSize: `clamp(0.85rem, calc(1rem * ${scale}), 1.35rem)`,
+                      }}
+                    >
+                      {renderHighlightedText(slide.bodyText, config.accentColor)}
+                    </p>
+                  )}
+
+                  {/* Assinatura do Autor */}
+                  <div className="pt-2">
+                    <p className={`font-bold text-sm tracking-tight ${textPrimaryClass}`}>
+                      — {config.authorName}
+                    </p>
+                    <p className={`text-xs font-mono ${textMutedClass}`}>
+                      {config.authorHandle}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -732,14 +889,26 @@ export function BlackLinkSlidePreview({
       {/* ==================================================================== */}
       <div className="relative z-10 p-6 md:p-8 pt-2 flex items-center justify-between">
         <div
-          className={`text-xs font-mono font-bold tracking-widest px-3 py-1 rounded-full border ${cardBgClass} ${borderClass} ${textMutedClass}`}
+          className={`text-xs font-mono font-bold tracking-widest px-3 py-1 rounded-full border ${
+            config.layout === "notion-doc"
+              ? "bg-zinc-100 border-zinc-200 text-zinc-600"
+              : `${cardBgClass} ${borderClass} ${textMutedClass}`
+          }`}
         >
           {isCta ? "CTA FINAL" : `${String(currentSlide).padStart(2, "0")} / ${String(totalSlides).padStart(2, "0")}`}
         </div>
 
         <div
           className="flex items-center gap-1.5 text-xs font-semibold tracking-tight transition-transform duration-200"
-          style={{ color: isCta ? config.accentColor : isLight ? "#27272a" : "#d4d4d8" }}
+          style={{
+            color: isCta
+              ? config.accentColor
+              : config.layout === "notion-doc"
+              ? "#52525b"
+              : isLight
+              ? "#27272a"
+              : "#d4d4d8",
+          }}
         >
           <span>{isCta ? "Siga para mais" : "Arraste"}</span>
           <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
