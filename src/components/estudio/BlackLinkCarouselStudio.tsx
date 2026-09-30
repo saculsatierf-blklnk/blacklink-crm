@@ -74,6 +74,77 @@ const B2B_PALETTES = [
   },
 ];
 
+// Definição dos 20 Modelos de Layout com Categorias e Ícones
+const LAYOUT_DEFINITIONS: Array<{
+  id: SlideLayout;
+  label: string;
+  desc: string;
+  category: "tech" | "editorial" | "social" | "saas";
+  icon: string;
+}> = [
+  // Tech & Dev (5)
+  { id: "brutalista", label: "Brutalista", desc: "Tipografia Colossal", category: "tech", icon: "⚡" },
+  { id: "terminal", label: "Terminal", desc: "macOS Dev Shell", category: "tech", icon: "❯" },
+  { id: "wireframe-blueprint", label: "Blueprint", desc: "Esquema Técnico", category: "tech", icon: "📐" },
+  { id: "system-error", label: "System Error", desc: "Alerta Crítico / Dor", category: "tech", icon: "⚠️" },
+  { id: "glossy-y2k", label: "Glossy Y2K", desc: "Futurismo Metálico", category: "tech", icon: "✦" },
+
+  // Editorial & Mídia (4)
+  { id: "minimal", label: "Minimalista", desc: "Editorial Luxo B2B", category: "editorial", icon: "▫️" },
+  { id: "notion-doc", label: "Notion Doc", desc: "Documento Limpo", category: "editorial", icon: "📄" },
+  { id: "magazine-cover", label: "Magazine", desc: "Capa Estilo Forbes", category: "editorial", icon: "📰" },
+  { id: "newspaper-broadsheet", label: "Broadsheet", desc: "Jornal Financeiro", category: "editorial", icon: "🗞️" },
+
+  // Social & Viral (5)
+  { id: "tweet", label: "Tweet Social", desc: "Thread Viral 𝕏", category: "social", icon: "💬" },
+  { id: "split", label: "Split 50/50", desc: "Texto + Métrica", category: "social", icon: "⚖️" },
+  { id: "podcast-quote", label: "Podcast Quote", desc: "Citação de Impacto", category: "social", icon: "🎙️" },
+  { id: "testimonial-review", label: "Testimonial", desc: "Prova Social 5★", category: "social", icon: "★" },
+  { id: "polaroid-retro", label: "Polaroid", desc: "Snapshot Retrô B2B", category: "social", icon: "📷" },
+
+  // SaaS & Dados (6)
+  { id: "glass-floating", label: "Glass 3D", desc: "Card Flutuante", category: "saas", icon: "💎" },
+  { id: "dashboard-analytics", label: "Analytics BI", desc: "Métricas & Neon", category: "saas", icon: "📊" },
+  { id: "checklist-kanban", label: "Kanban Sprint", desc: "Guia Passo-a-Passo", category: "saas", icon: "☑️" },
+  { id: "macbook-mockup", label: "MacBook", desc: "Navegador Flutuante", category: "saas", icon: "💻" },
+  { id: "sticky-note", label: "Sticky Note", desc: "Memo Post-It Amarelo", category: "saas", icon: "📌" },
+  { id: "aura-gradient", label: "Aura Keynote", desc: "Apple Event Glow", category: "saas", icon: "🔮" },
+];
+
+// Definição das 20 Famílias Tipográficas
+const FONT_DEFINITIONS: Array<{
+  id: SlideFont;
+  label: string;
+  style: string;
+  category: "tech" | "modern" | "editorial";
+}> = [
+  // Tech / Código (5)
+  { id: "space-grotesk", label: "Space Grotesk", style: "Brutalista Tech", category: "tech" },
+  { id: "fira-code", label: "Fira Code", style: "Mono Ligaduras", category: "tech" },
+  { id: "jetbrains-mono", label: "JetBrains Mono", style: "Developer Sans", category: "tech" },
+  { id: "ibm-plex-mono", label: "IBM Plex Mono", style: "Industrial Tech", category: "tech" },
+  { id: "roboto-mono", label: "Roboto Mono", style: "Geométrico Mono", category: "tech" },
+
+  // SaaS / Modernas (9)
+  { id: "jakarta", label: "Plus Jakarta", style: "Startup Moderna", category: "modern" },
+  { id: "inter", label: "Inter UI", style: "Interface Limpa", category: "modern" },
+  { id: "syne", label: "Syne", style: "High-Fashion Tech", category: "modern" },
+  { id: "dm-sans", label: "DM Sans", style: "Corporativo B2B", category: "modern" },
+  { id: "montserrat", label: "Montserrat", style: "Geometria Pura", category: "modern" },
+  { id: "poppins", label: "Poppins", style: "Amigável & Moderno", category: "modern" },
+  { id: "outfit", label: "Outfit", style: "SaaS Enterprise", category: "modern" },
+  { id: "bebas-neue", label: "Bebas Neue", style: "Condensado Colossal", category: "modern" },
+  { id: "oswald", label: "Oswald", style: "Título de Impacto", category: "modern" },
+
+  // Editorial / Luxo (6)
+  { id: "playfair", label: "Playfair Display", style: "Editorial Luxo", category: "editorial" },
+  { id: "merriweather", label: "Merriweather", style: "Leitura Longa", category: "editorial" },
+  { id: "lora", label: "Lora", style: "Caligráfico Moderno", category: "editorial" },
+  { id: "eb-garamond", label: "EB Garamond", style: "Herança Clássica", category: "editorial" },
+  { id: "cinzel", label: "Cinzel", style: "Monumental Romano", category: "editorial" },
+  { id: "crimson-pro", label: "Crimson Pro", style: "Publicação Literária", category: "editorial" },
+];
+
 const INITIAL_SLIDES: SlideData[] = [
   {
     tag: "DIAGNÓSTICO B2B",
@@ -117,6 +188,10 @@ export function BlackLinkCarouselStudio() {
 
   // Estado Raiz: Aba Ativa do Inspetor ('design' aberta por padrão)
   const [activeTab, setActiveTab] = useState<"design" | "conteudo">("design");
+
+  // Filtros de Categoria da UI
+  const [layoutCategoryFilter, setLayoutCategoryFilter] = useState<"all" | "tech" | "editorial" | "social" | "saas">("all");
+  const [fontCategoryFilter, setFontCategoryFilter] = useState<"tech" | "modern" | "editorial">("modern");
 
   // Estado Raiz: Exportação Gráfica
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -461,6 +536,17 @@ export function BlackLinkCarouselStudio() {
     }
   };
 
+  // Filtragem dos 20 Layouts
+  const filteredLayouts =
+    layoutCategoryFilter === "all"
+      ? LAYOUT_DEFINITIONS
+      : LAYOUT_DEFINITIONS.filter((l) => l.category === layoutCategoryFilter);
+
+  // Filtragem das 20 Fontes
+  const filteredFonts = FONT_DEFINITIONS.filter(
+    (f) => f.category === fontCategoryFilter
+  );
+
   return (
     <div className="w-full flex-1 flex flex-col p-4 md:p-8 lg:p-10 max-w-[1720px] mx-auto">
       {/* ==================================================================== */}
@@ -473,13 +559,15 @@ export function BlackLinkCarouselStudio() {
               Estúdio Isolado • Black Link
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-mono text-zinc-400">Motor Paramétrico Figma-Like</span>
+            <span className="text-xs font-mono text-zinc-400">
+              Motor Gráfico v3.0 • 20 Layouts & 20 Fontes
+            </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
             Black Link Carousel Studio
           </h1>
           <p className="text-sm text-zinc-400">
-            Design paramétrico de alta fidelidade para carrosséis corporativos B2B.
+            Arsenal paramétrico de alta fidelidade para carrosséis corporativos B2B virais.
           </p>
         </div>
 
@@ -492,7 +580,7 @@ export function BlackLinkCarouselStudio() {
           </button>
 
           <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
-            <span className="text-xs font-mono text-zinc-400">Total de Lâminas:</span>
+            <span className="text-xs font-mono text-zinc-400">Lâminas Ativas:</span>
             <span className="text-sm font-bold text-white font-mono">{slides.length}</span>
           </div>
         </div>
@@ -507,7 +595,7 @@ export function BlackLinkCarouselStudio() {
           </div>
           <button
             onClick={() => setAiErrorNotice("")}
-            className="text-amber-400 hover:text-white font-bold ml-4"
+            className="text-amber-400 hover:text-white font-bold ml-4 cursor-pointer"
           >
             ✕
           </button>
@@ -551,44 +639,66 @@ export function BlackLinkCarouselStudio() {
           {/* ---------------------------------------------------------------- */}
           {activeTab === "design" && (
             <div className="space-y-6">
-              {/* 1. SELETOR DE LAYOUTS MODULARES (EXPANDIDO COM NOTION & PODCAST) */}
+              {/* 1. SELETOR DE LAYOUTS MODULARES (20 MODELOS VIRAIS) */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-                    Motor de Layout (8 Modelos)
+                    Biblioteca de Templates (20 Modelos)
                   </label>
-                  <span className="text-[11px] font-mono text-zinc-400 capitalize">
+                  <span className="text-[11px] font-mono text-cyan-400 font-semibold capitalize">
                     {designConfig.layout}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {(
-                    [
-                      { id: "brutalista", label: "Brutalista", desc: "Tipografia Colossal" },
-                      { id: "minimal", label: "Minimalista", desc: "Editorial Luxo" },
-                      { id: "tweet", label: "Tweet Social", desc: "Thread Viral" },
-                      { id: "split", label: "Split 50/50", desc: "Texto + Métrica" },
-                      { id: "terminal", label: "Terminal", desc: "macOS Shell" },
-                      { id: "glass-floating", label: "Glass 3D", desc: "Card Flutuante" },
-                      { id: "notion-doc", label: "Notion Doc", desc: "Documento Limpo" },
-                      { id: "podcast-quote", label: "Podcast Quote", desc: "Citação Impacto" },
-                    ] as const
-                  ).map((item) => (
+
+                {/* Categorias dos Layouts (Filtros Rápidos) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-thin">
+                  {[
+                    { id: "all", label: "Todos (20)" },
+                    { id: "tech", label: "Tech (5)" },
+                    { id: "editorial", label: "Editorial (4)" },
+                    { id: "social", label: "Social (5)" },
+                    { id: "saas", label: "SaaS & BI (6)" },
+                  ].map((cat) => (
                     <button
-                      key={item.id}
-                      onClick={() => updateDesignConfig({ layout: item.id as SlideLayout })}
-                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                        designConfig.layout === item.id
-                          ? "bg-white/15 border-white text-white shadow-md scale-[1.02]"
-                          : "bg-black/30 border-white/10 text-zinc-400 hover:border-white/20 hover:text-zinc-200"
+                      key={cat.id}
+                      onClick={() => setLayoutCategoryFilter(cat.id as any)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase shrink-0 transition-all cursor-pointer border ${
+                        layoutCategoryFilter === cat.id
+                          ? "bg-white text-black border-white shadow-sm"
+                          : "bg-black/30 text-zinc-400 border-white/10 hover:text-white"
                       }`}
                     >
-                      <span className="block text-xs font-bold leading-tight truncate">
-                        {item.label}
-                      </span>
-                      <span className="block text-[9px] text-zinc-500 mt-0.5 truncate">
-                        {item.desc}
-                      </span>
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Grid Rolável de 20 Layouts com Prévia Visual */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[310px] overflow-y-auto pr-1 scrollbar-thin">
+                  {filteredLayouts.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => updateDesignConfig({ layout: item.id })}
+                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between min-h-[70px] ${
+                        designConfig.layout === item.id
+                          ? "bg-white/20 border-white text-white shadow-md scale-[1.02]"
+                          : "bg-black/30 border-white/10 text-zinc-400 hover:border-white/25 hover:text-zinc-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1">
+                        <span className="text-base select-none">{item.icon}</span>
+                        {designConfig.layout === item.id && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400" />
+                        )}
+                      </div>
+                      <div>
+                        <span className="block text-xs font-bold leading-tight truncate">
+                          {item.label}
+                        </span>
+                        <span className="block text-[9px] text-zinc-500 truncate">
+                          {item.desc}
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -657,7 +767,62 @@ export function BlackLinkCarouselStudio() {
                 </div>
               </div>
 
-              {/* 4. PALETAS B2B PRONTAS + CONTRASTE YIQ */}
+              {/* 4. ARSENAL TIPOGRÁFICO DE 20 FONTES COM ABAS */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                    Arsenal Tipográfico (20 Fontes)
+                  </label>
+                  <span className="text-[11px] font-mono text-cyan-400 capitalize">
+                    {designConfig.font}
+                  </span>
+                </div>
+
+                {/* Abas das Fontes */}
+                <div className="grid grid-cols-3 p-1 rounded-xl bg-black/50 border border-white/10 mb-2.5">
+                  {[
+                    { id: "modern", label: "SaaS (9)" },
+                    { id: "tech", label: "Tech (5)" },
+                    { id: "editorial", label: "Editorial (6)" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setFontCategoryFilter(tab.id as any)}
+                      className={`py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        fontCategoryFilter === tab.id
+                          ? "bg-white text-black shadow-sm"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Grid das Fontes Filtradas */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {filteredFonts.map((font) => (
+                    <button
+                      key={font.id}
+                      onClick={() => updateDesignConfig({ font: font.id })}
+                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                        designConfig.font === font.id
+                          ? "bg-white/20 border-white text-white shadow-md scale-[1.02]"
+                          : "bg-black/30 border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20"
+                      }`}
+                    >
+                      <span className="block text-xs font-bold truncate leading-tight">
+                        {font.label}
+                      </span>
+                      <span className="block text-[9px] text-zinc-500 truncate mt-0.5">
+                        {font.style}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 5. PALETAS B2B PRONTAS + CONTRASTE YIQ */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
@@ -702,7 +867,7 @@ export function BlackLinkCarouselStudio() {
                 </div>
               </div>
 
-              {/* 5. CONTROLES PERSONALIZADOS DE COR */}
+              {/* 6. CONTROLES PERSONALIZADOS DE COR */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-2xl bg-black/30 border border-white/10 space-y-2">
                   <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
@@ -742,36 +907,6 @@ export function BlackLinkCarouselStudio() {
                       className="flex-1 px-2 py-1 rounded bg-black/50 border border-white/10 text-xs font-mono text-white focus:outline-none"
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* 6. FAMÍLIA TIPOGRÁFICA NEXT.JS */}
-              <div>
-                <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold block mb-3">
-                  Família Tipográfica
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(
-                    [
-                      { id: "space-grotesk", label: "Space Grotesk", style: "Brutalista Tech" },
-                      { id: "playfair", label: "Playfair Display", style: "Editorial Luxo" },
-                      { id: "jakarta", label: "Plus Jakarta", style: "Startup Moderna" },
-                      { id: "inter", label: "Inter UI", style: "Clássico B2B" },
-                    ] as const
-                  ).map((font) => (
-                    <button
-                      key={font.id}
-                      onClick={() => updateDesignConfig({ font: font.id as SlideFont })}
-                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                        designConfig.font === font.id
-                          ? "bg-white/15 border-white text-white shadow-md"
-                          : "bg-black/30 border-white/10 text-zinc-400 hover:text-zinc-200 hover:border-white/20"
-                      }`}
-                    >
-                      <span className="block text-xs font-bold">{font.label}</span>
-                      <span className="block text-[10px] text-zinc-500">{font.style}</span>
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -1160,14 +1295,14 @@ export function BlackLinkCarouselStudio() {
               </div>
               <button
                 onClick={() => setShowAIModal(false)}
-                className="text-zinc-400 hover:text-white text-sm font-mono"
+                className="text-zinc-400 hover:text-white text-sm font-mono cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Informe a tese central ou o tema corporativo para despachar a requisição ao webhook autônomo. O sistema possui blindagem anti-quebra de tela em caso de resposta fora do padrão.
+              Informe a tese central ou o tema corporativo para despachar a requisição ao webhook autônomo. O sistema possui blindagem anti-quebra de tela em caso de resposta fora do formato esperado.
             </p>
 
             <div className="space-y-2">
