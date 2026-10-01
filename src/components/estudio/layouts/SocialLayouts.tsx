@@ -16,21 +16,21 @@ export function TweetLayout({
 }: LayoutProps) {
   return (
     <div
-      className={`flex flex-col justify-between p-6 md:p-7 rounded-2xl border shadow-xl backdrop-blur-md ${cardBgClass} ${borderClass}`}
+      className={`w-full h-full flex-grow flex flex-col justify-between p-10 rounded-3xl border shadow-xl backdrop-blur-md ${cardBgClass} ${borderClass}`}
     >
       {/* Cabeçalho do Post Social */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
           {config.authorAvatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={config.authorAvatar}
               alt={config.authorName}
-              className={`w-12 h-12 rounded-full object-cover border ${borderClass}`}
+              className={`w-16 h-16 rounded-full object-cover border-2 ${borderClass}`}
             />
           ) : (
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-base"
+              className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl"
               style={{
                 backgroundColor: config.accentColor,
                 color: isLight ? "#09090b" : "#ffffff",
@@ -40,12 +40,12 @@ export function TweetLayout({
             </div>
           )}
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className={`font-bold text-sm tracking-tight ${textPrimaryClass}`}>
+            <div className="flex items-center gap-2">
+              <span className={`font-bold text-lg tracking-tight ${textPrimaryClass}`}>
                 {config.authorName}
               </span>
               <svg
-                className="w-4 h-4 fill-current"
+                className="w-5 h-5 fill-current"
                 style={{ color: config.accentColor }}
                 viewBox="0 0 20 20"
               >
@@ -56,22 +56,22 @@ export function TweetLayout({
                 />
               </svg>
             </div>
-            <span className={`text-xs font-mono ${textMutedClass}`}>
+            <span className={`text-sm font-mono ${textMutedClass}`}>
               {config.authorHandle} · 1h
             </span>
           </div>
         </div>
-        <span className={`text-xs font-mono font-bold ${textMutedClass}`}>
+        <span className={`text-base font-mono font-bold ${textMutedClass}`}>
           𝕏
         </span>
       </div>
 
       {/* Conteúdo do Tweet */}
-      <div className="space-y-3 mb-6 text-left">
+      <div className="space-y-4 mb-8 text-left my-auto">
         <h2
           className={`font-bold tracking-tight leading-snug ${textPrimaryClass}`}
           style={{
-            fontSize: `clamp(1.25rem, calc(1.5rem * ${scale}), 2.2rem)`,
+            fontSize: `clamp(1.8rem, calc(2.3rem * ${scale}), 3.8rem)`,
           }}
         >
           {renderHighlightedText(slide.headline, config.accentColor)}
@@ -79,7 +79,7 @@ export function TweetLayout({
         <p
           className={`font-normal leading-relaxed whitespace-pre-line ${textSecondaryClass}`}
           style={{
-            fontSize: `clamp(0.9rem, calc(1.05rem * ${scale}), 1.4rem)`,
+            fontSize: `clamp(1.1rem, calc(1.35rem * ${scale}), 2rem)`,
           }}
         >
           {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -88,21 +88,21 @@ export function TweetLayout({
 
       {/* Métricas Simuladas de Engajamento */}
       <div
-        className={`flex items-center justify-between pt-4 border-t font-mono text-xs ${borderClass} ${textMutedClass}`}
+        className={`flex items-center justify-between pt-6 border-t font-mono text-sm ${borderClass} ${textMutedClass}`}
       >
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <span>💬</span>
           <span>42</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <span>🔁</span>
           <span>128</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <span style={{ color: config.accentColor }}>❤️</span>
           <span>1.4K</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <span>🔖</span>
           <span>350</span>
         </div>
@@ -129,14 +129,14 @@ export function SplitLayout({
     <div
       className={
         is916
-          ? "flex flex-col justify-around gap-6 h-full py-2"
-          : "grid grid-cols-1 md:grid-cols-12 gap-5 h-full items-center"
+          ? "w-full h-full flex-grow flex flex-col justify-around gap-8 py-4"
+          : "w-full h-full flex-grow grid grid-cols-1 md:grid-cols-12 gap-8 items-center"
       }
     >
       {/* Lado Esquerdo / Superior: Conteúdo Escrito */}
-      <div className={`${is916 ? "w-full" : "md:col-span-7"} flex flex-col justify-center gap-3 text-left`}>
+      <div className={`${is916 ? "w-full" : "md:col-span-7"} flex flex-col justify-center gap-4 text-left`}>
         <span
-          className="text-xs font-mono font-bold tracking-widest uppercase"
+          className="text-sm font-mono font-bold tracking-widest uppercase"
           style={{ color: config.accentColor }}
         >
           {slide.tag || "DESTAQUE B2B"}
@@ -145,8 +145,8 @@ export function SplitLayout({
           className={`font-black tracking-tight leading-tight ${textPrimaryClass}`}
           style={{
             fontSize: is916
-              ? `clamp(1.5rem, calc(2.1rem * ${scale}), 3.2rem)`
-              : `clamp(1.4rem, calc(1.85rem * ${scale}), 2.9rem)`,
+              ? `clamp(2rem, calc(2.75rem * ${scale}), 4.5rem)`
+              : `clamp(1.8rem, calc(2.5rem * ${scale}), 4rem)`,
           }}
         >
           {renderHighlightedText(slide.headline, config.accentColor)}
@@ -154,7 +154,7 @@ export function SplitLayout({
         <p
           className={`font-normal leading-relaxed ${textSecondaryClass}`}
           style={{
-            fontSize: `clamp(0.85rem, calc(1rem * ${scale}), 1.35rem)`,
+            fontSize: `clamp(1.05rem, calc(1.3rem * ${scale}), 1.9rem)`,
           }}
         >
           {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -164,33 +164,33 @@ export function SplitLayout({
       {/* Lado Direito / Inferior: Card Visual ou Gráfico */}
       <div className={`${is916 ? "w-full" : "md:col-span-5 h-full"} flex items-center justify-center`}>
         <div
-          className={`w-full h-full min-h-[160px] p-5 rounded-2xl border flex flex-col justify-between shadow-lg relative overflow-hidden ${cardBgClass} ${borderClass}`}
+          className={`w-full h-full min-h-[220px] p-8 rounded-3xl border flex flex-col justify-between shadow-lg relative overflow-hidden ${cardBgClass} ${borderClass}`}
         >
           <div
-            className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl pointer-events-none"
+            className="absolute -top-12 -right-12 w-44 h-44 rounded-full blur-2xl pointer-events-none"
             style={{ backgroundColor: `${config.accentColor}30` }}
           />
           <div className="flex items-center justify-between">
-            <span className={`text-[10px] font-mono uppercase ${textMutedClass}`}>
+            <span className={`text-xs font-mono uppercase ${textMutedClass}`}>
               MÉTRICA DE IMPACTO
             </span>
             <div
-              className="w-2 h-2 rounded-full animate-ping"
+              className="w-3 h-3 rounded-full animate-ping"
               style={{ backgroundColor: config.accentColor }}
             />
           </div>
-          <div className="my-auto py-2">
+          <div className="my-auto py-4">
             <span
-              className="text-3xl md:text-4xl font-black font-mono tracking-tight"
+              className="text-5xl font-black font-mono tracking-tight"
               style={{ color: config.accentColor }}
             >
               +340%
             </span>
-            <p className={`text-xs font-semibold mt-1 ${textPrimaryClass}`}>
+            <p className={`text-sm font-semibold mt-2 ${textPrimaryClass}`}>
               Retenção de Audiência B2B
             </p>
           </div>
-          <span className={`text-[10px] font-mono ${textMutedClass}`}>
+          <span className={`text-xs font-mono ${textMutedClass}`}>
             Black Link Analytics
           </span>
         </div>
@@ -214,11 +214,11 @@ export function PodcastQuoteLayout({
 }: LayoutProps) {
   return (
     <div
-      className={`relative w-full h-full flex flex-col items-center justify-center p-6 md:p-8 rounded-3xl border shadow-xl backdrop-blur-md text-center overflow-hidden ${cardBgClass} ${borderClass}`}
+      className={`relative w-full h-full flex-grow flex flex-col items-center justify-center p-10 rounded-3xl border shadow-xl backdrop-blur-md text-center overflow-hidden ${cardBgClass} ${borderClass}`}
     >
       {/* Marca d'água de aspas gigantes */}
       <span
-        className="absolute -bottom-10 -right-4 text-[13rem] md:text-[17rem] font-serif leading-none select-none pointer-events-none opacity-5"
+        className="absolute -bottom-16 -right-6 text-[18rem] md:text-[22rem] font-serif leading-none select-none pointer-events-none opacity-5"
         style={{
           color: isLight ? "#000000" : "#ffffff",
         }}
@@ -226,14 +226,14 @@ export function PodcastQuoteLayout({
         “
       </span>
 
-      {/* Avatar centralizado no topo cortando a margem */}
-      <div className="relative -mt-4 md:-mt-6 mb-4 z-10">
+      {/* Avatar centralizado no topo */}
+      <div className="relative mb-6 z-10">
         {config.authorAvatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={config.authorAvatar}
             alt={config.authorName}
-            className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-4 shadow-xl ring-2"
+            className="w-24 h-24 rounded-full object-cover border-4 shadow-xl ring-2"
             style={{
               borderColor: config.bgColor,
               outlineColor: config.accentColor,
@@ -241,7 +241,7 @@ export function PodcastQuoteLayout({
           />
         ) : (
           <div
-            className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center font-black text-2xl shadow-xl border-4"
+            className="w-24 h-24 rounded-full flex items-center justify-center font-black text-3xl shadow-xl border-4"
             style={{
               backgroundColor: config.accentColor,
               color: isLight ? "#09090b" : "#ffffff",
@@ -252,7 +252,7 @@ export function PodcastQuoteLayout({
           </div>
         )}
         <div
-          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border-2 text-white shadow-md text-[10px]"
+          className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center border-2 text-white shadow-md text-xs"
           style={{
             backgroundColor: config.accentColor,
             borderColor: config.bgColor,
@@ -263,11 +263,11 @@ export function PodcastQuoteLayout({
       </div>
 
       {/* Texto da citação em itálico */}
-      <div className="relative z-10 max-w-lg mx-auto space-y-3">
+      <div className="relative z-10 max-w-xl mx-auto space-y-4">
         <h2
           className={`italic font-medium tracking-tight leading-snug ${textPrimaryClass}`}
           style={{
-            fontSize: `clamp(1.35rem, calc(1.9rem * ${scale}), 3rem)`,
+            fontSize: `clamp(1.8rem, calc(2.5rem * ${scale}), 4.2rem)`,
           }}
         >
           “{renderHighlightedText(slide.headline, config.accentColor)}”
@@ -275,9 +275,9 @@ export function PodcastQuoteLayout({
 
         {slide.bodyText && (
           <p
-            className={`font-normal leading-relaxed text-xs md:text-sm max-w-md mx-auto ${textSecondaryClass}`}
+            className={`font-normal leading-relaxed text-sm md:text-base max-w-lg mx-auto ${textSecondaryClass}`}
             style={{
-              fontSize: `clamp(0.85rem, calc(1rem * ${scale}), 1.35rem)`,
+              fontSize: `clamp(1.05rem, calc(1.3rem * ${scale}), 2rem)`,
             }}
           >
             {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -285,8 +285,8 @@ export function PodcastQuoteLayout({
         )}
 
         {/* Assinatura do Autor */}
-        <div className="pt-2">
-          <p className={`font-bold text-sm tracking-tight ${textPrimaryClass}`}>
+        <div className="pt-4">
+          <p className={`font-bold text-base tracking-tight ${textPrimaryClass}`}>
             — {config.authorName}
           </p>
           <p className={`text-xs font-mono ${textMutedClass}`}>
@@ -312,10 +312,10 @@ export function TestimonialReviewLayout({
 }: LayoutProps) {
   return (
     <div
-      className={`w-full h-full flex flex-col justify-center items-center text-center p-6 md:p-8 rounded-3xl border shadow-2xl backdrop-blur-xl ${cardBgClass} ${borderClass}`}
+      className={`w-full h-full flex-grow flex flex-col justify-center items-center text-center p-10 rounded-3xl border shadow-2xl backdrop-blur-xl ${cardBgClass} ${borderClass}`}
     >
       {/* 5 Estrelas Douradas Gigantes */}
-      <div className="flex items-center gap-1.5 text-amber-400 text-2xl md:text-3xl mb-4 drop-shadow">
+      <div className="flex items-center gap-2 text-amber-400 text-3xl md:text-4xl mb-6 drop-shadow">
         <span>★</span>
         <span>★</span>
         <span>★</span>
@@ -325,7 +325,7 @@ export function TestimonialReviewLayout({
 
       {slide.tag && (
         <span
-          className="text-xs font-mono uppercase tracking-widest font-bold px-3 py-1 rounded-full mb-3"
+          className="text-xs font-mono uppercase tracking-widest font-bold px-4 py-1.5 rounded-full mb-4"
           style={{
             backgroundColor: `${config.accentColor}20`,
             color: config.accentColor,
@@ -336,46 +336,46 @@ export function TestimonialReviewLayout({
       )}
 
       {/* Review Text */}
-      <blockquote className="my-auto max-w-lg space-y-3">
+      <blockquote className="my-auto max-w-2xl space-y-4">
         <h2
           className={`italic font-medium leading-relaxed ${textPrimaryClass}`}
           style={{
-            fontSize: `clamp(1.25rem, calc(1.75rem * ${scale}), 2.8rem)`,
+            fontSize: `clamp(1.8rem, calc(2.4rem * ${scale}), 4rem)`,
           }}
         >
           &ldquo;{renderHighlightedText(slide.headline, config.accentColor)}&rdquo;
         </h2>
 
         <p
-          className={`text-xs md:text-sm leading-relaxed max-w-md mx-auto ${textSecondaryClass}`}
+          className={`text-sm md:text-base leading-relaxed max-w-xl mx-auto ${textSecondaryClass}`}
         >
           {renderHighlightedText(slide.bodyText, config.accentColor)}
         </p>
       </blockquote>
 
       {/* Reviewer Bio & Verified Badge */}
-      <div className="flex items-center gap-3 pt-4 border-t border-current/10 mt-3">
+      <div className="flex items-center gap-4 pt-6 border-t border-current/10 mt-4">
         {config.authorAvatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={config.authorAvatar}
             alt={config.authorName}
-            className="w-10 h-10 rounded-full object-cover border border-white/20"
+            className="w-14 h-14 rounded-full object-cover border-2 border-white/20"
           />
         ) : (
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs"
+            className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-base"
             style={{ backgroundColor: config.accentColor, color: isLight ? "#000" : "#fff" }}
           >
             {config.authorName.charAt(0) || "B"}
           </div>
         )}
         <div className="text-left leading-tight">
-          <div className="flex items-center gap-1">
-            <span className={`font-bold text-xs ${textPrimaryClass}`}>{config.authorName}</span>
-            <span className="text-emerald-400 text-[11px]">✓</span>
+          <div className="flex items-center gap-1.5">
+            <span className={`font-bold text-sm ${textPrimaryClass}`}>{config.authorName}</span>
+            <span className="text-emerald-400 text-xs">✓</span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-400">Cliente Corporativo Verificado</span>
+          <span className="text-xs font-mono text-zinc-400">Cliente Corporativo Verificado</span>
         </div>
       </div>
     </div>
@@ -390,38 +390,38 @@ export function PolaroidRetroLayout({
   renderHighlightedText,
 }: LayoutProps) {
   return (
-    <div className="w-full h-full flex items-center justify-center p-3 md:p-6">
-      <div className="w-full max-w-md bg-white text-zinc-950 p-6 md:p-7 rounded-sm shadow-2xl border border-zinc-300 transform -rotate-1 hover:rotate-0 transition-transform duration-300 text-left">
+    <div className="w-full h-full flex-grow flex items-center justify-center p-6">
+      <div className="w-full max-w-lg bg-white text-zinc-950 p-8 md:p-10 rounded-sm shadow-2xl border border-zinc-300 transform -rotate-1 hover:rotate-0 transition-transform duration-300 text-left">
         {/* Photo Box Area */}
-        <div className="w-full aspect-[4/3] bg-zinc-900 rounded-sm p-4 flex flex-col justify-between mb-5 relative overflow-hidden text-white shadow-inner">
-          <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+        <div className="w-full aspect-[4/3] bg-zinc-900 rounded-sm p-6 flex flex-col justify-between mb-6 relative overflow-hidden text-white shadow-inner">
+          <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
             <span>BLACK LINK POLAROID</span>
             <span>EXP. 2026</span>
           </div>
           <h2
             className="font-black tracking-tight leading-snug my-auto"
             style={{
-              fontSize: `clamp(1.2rem, calc(1.6rem * ${scale}), 2.4rem)`,
+              fontSize: `clamp(1.6rem, calc(2.2rem * ${scale}), 3.5rem)`,
             }}
           >
             {renderHighlightedText(slide.headline, config.accentColor)}
           </h2>
-          <span className="text-[9px] font-mono text-zinc-500">
+          <span className="text-xs font-mono text-zinc-500">
             {slide.tag || "SNAPSHOT EXECUTIVO"}
           </span>
         </div>
 
-        {/* Polaroid Bottom Caption (Handwritten feel or clean font) */}
-        <div className="space-y-1">
+        {/* Polaroid Bottom Caption */}
+        <div className="space-y-2">
           <p
-            className="font-serif italic text-zinc-800 text-xs md:text-sm leading-relaxed"
+            className="font-serif italic text-zinc-800 text-sm md:text-base leading-relaxed"
             style={{
-              fontSize: `clamp(0.85rem, calc(0.95rem * ${scale}), 1.25rem)`,
+              fontSize: `clamp(1rem, calc(1.2rem * ${scale}), 1.8rem)`,
             }}
           >
             {renderHighlightedText(slide.bodyText, config.accentColor)}
           </p>
-          <div className="pt-3 border-t border-zinc-200 flex items-center justify-between text-[10px] font-mono text-zinc-400">
+          <div className="pt-4 border-t border-zinc-200 flex items-center justify-between text-xs font-mono text-zinc-400">
             <span>{config.authorName}</span>
             <span>{config.authorHandle}</span>
           </div>

@@ -670,6 +670,11 @@ export function BlackLinkCarouselStudio() {
         width: targetWidth,
         height: targetHeight,
         cacheBust: true,
+        style: {
+          transform: "none",
+          transformOrigin: "top left",
+          position: "static",
+        },
       });
 
       // Nome do arquivo: blacklink-slide-0X.png
@@ -707,6 +712,11 @@ export function BlackLinkCarouselStudio() {
             width: targetWidth,
             height: targetHeight,
             cacheBust: true,
+            style: {
+              transform: "none",
+              transformOrigin: "top left",
+              position: "static",
+            },
           });
           const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
           folder.file(`slide-${String(i + 1).padStart(2, "0")}.png`, base64Data, {
@@ -751,6 +761,11 @@ export function BlackLinkCarouselStudio() {
             width: pdfWidth,
             height: pdfHeight,
             cacheBust: true,
+            style: {
+              transform: "none",
+              transformOrigin: "top left",
+              position: "static",
+            },
           });
 
           if (i > 0) {
@@ -1835,16 +1850,8 @@ export function BlackLinkCarouselStudio() {
           </div>
 
           {/* CANVAS CONTAINER DE VISUALIZAÇÃO INTERATIVA */}
-          <div className="w-full flex items-center justify-center p-3 md:p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl relative">
-            <div
-              className={`w-full transition-all duration-300 ${
-                designConfig.aspectRatio === "9:16"
-                  ? "max-w-[340px] md:max-w-[380px]"
-                  : designConfig.aspectRatio === "4:5"
-                  ? "max-w-[440px]"
-                  : "max-w-[490px]"
-              }`}
-            >
+          <div className="w-full flex items-center justify-center p-3 md:p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl relative overflow-hidden">
+            <div className="w-full flex items-center justify-center transition-all duration-300">
               <BlackLinkSlidePreview
                 slide={slides[currentSlideIndex]}
                 currentSlide={currentSlideIndex + 1}
@@ -2202,6 +2209,7 @@ export function BlackLinkCarouselStudio() {
               totalSlides={slides.length}
               config={designConfig}
               canvasId={`offscreen-slide-${idx}`}
+              scaleMode="export"
             />
           </div>
         ))}
