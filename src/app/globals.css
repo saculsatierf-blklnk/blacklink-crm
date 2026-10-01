@@ -114,6 +114,7 @@ code, kbd, samp, pre, .font-mono {
 .font-outfit { font-family: var(--font-outfit), -apple-system, sans-serif; }
 .font-bebas-neue { font-family: var(--font-bebas-neue), sans-serif; letter-spacing: 0.05em; }
 .font-oswald { font-family: var(--font-oswald), sans-serif; }
+.font-bricolage { font-family: var(--font-bricolage), sans-serif; }
 
 /* Editorial / Luxo */
 .font-playfair { font-family: var(--font-playfair), Georgia, serif; }

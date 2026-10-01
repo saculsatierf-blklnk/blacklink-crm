@@ -18,6 +18,7 @@ import {
   Outfit,
   Bebas_Neue,
   Oswald,
+  Bricolage_Grotesque,
   // 16-20: Editorial / Luxo
   Merriweather,
   Lora,
@@ -123,6 +124,12 @@ const oswald = Oswald({
   display: "swap",
 });
 
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
+
 // 16-20: Editorial / Luxo
 const merriweather = Merriweather({
   subsets: ["latin"],
@@ -175,6 +182,7 @@ const fontVariables = [
   outfit.variable,
   bebasNeue.variable,
   oswald.variable,
+  bricolage.variable,
   merriweather.variable,
   lora.variable,
   ebGaramond.variable,

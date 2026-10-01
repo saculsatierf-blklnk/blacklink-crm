@@ -96,6 +96,7 @@ const FONT_CLASS_MAP: Record<SlideFont, string> = {
   outfit: "font-outfit",
   "bebas-neue": "font-bebas-neue",
   oswald: "font-oswald",
+  bricolage: "font-bricolage",
 
   // Editorial / Luxo
   playfair: "font-playfair",
@@ -141,6 +142,7 @@ export function BlackLinkSlidePreview({
     borderClass,
     cardBgClass,
     renderHighlightedText,
+    currentSlide,
   };
 
   const isLightLayout = config.layout === "notion-doc" || config.layout === "sticky-note" || isLight;

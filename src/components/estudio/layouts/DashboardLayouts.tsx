@@ -393,3 +393,102 @@ export function AuraGradientLayout({
     </div>
   );
 }
+
+// 21. Bento Grid (Trend Hunter B2B - Bento Box com 3 Quadrantes Táteis)
+export function BentoGridLayout({
+  slide,
+  config,
+  scale,
+  isLight,
+  renderHighlightedText,
+  currentSlide,
+}: LayoutProps) {
+  return (
+    <div className="w-full h-full flex flex-col gap-4 font-bricolage select-none text-left">
+      {/* Quadrante Superior: Headline */}
+      <div
+        className={`flex-[1.2] backdrop-blur-xl rounded-[2rem] p-6 md:p-8 border flex flex-col justify-center relative overflow-hidden transition-colors duration-200 ${
+          isLight
+            ? "bg-white/60 border-black/10 text-zinc-950"
+            : "bg-black/30 border-white/15 text-white"
+        }`}
+      >
+        <div
+          className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl pointer-events-none"
+          style={{ backgroundColor: `${config.accentColor}30` }}
+        />
+        <span
+          className="text-xs font-mono mb-2 uppercase tracking-widest font-bold"
+          style={{ color: config.accentColor }}
+        >
+          {slide.tag || "INSIGHT"}
+        </span>
+        <h2
+          className={`font-black leading-tight tracking-tight ${
+            isLight ? "text-zinc-950" : "text-white"
+          }`}
+          style={{
+            fontSize: `clamp(1.35rem, calc(1.85rem * ${scale}), 3rem)`,
+          }}
+        >
+          {renderHighlightedText(slide.headline, config.accentColor)}
+        </h2>
+      </div>
+
+      {/* Quadrantes Inferiores em Grid */}
+      <div className="flex-1 grid grid-cols-3 gap-4">
+        {/* Box 1 (2/3 da largura): Body Copy com Marca d'Água do Slide */}
+        <div
+          className={`col-span-2 backdrop-blur-xl rounded-[2rem] p-6 border flex flex-col justify-center relative overflow-hidden transition-colors duration-200 ${
+            isLight
+              ? "bg-white/60 border-black/10"
+              : "bg-black/30 border-white/15"
+          }`}
+        >
+          <span
+            className={`absolute -bottom-4 -right-2 text-7xl font-black select-none pointer-events-none font-mono ${
+              isLight ? "text-black/5" : "text-white/5"
+            }`}
+          >
+            {String(currentSlide || 1).padStart(2, "0")}
+          </span>
+          <p
+            className={`relative z-10 leading-relaxed font-normal ${
+              isLight ? "text-zinc-800" : "text-zinc-200"
+            }`}
+            style={{
+              fontSize: `clamp(0.85rem, calc(1.05rem * ${scale}), 1.35rem)`,
+            }}
+          >
+            {renderHighlightedText(slide.bodyText, config.accentColor)}
+          </p>
+        </div>
+
+        {/* Box 2 (1/3 da largura): Elemento Visual/Ação Dinâmica */}
+        <div
+          className={`backdrop-blur-xl rounded-[2rem] p-4 border flex flex-col items-center justify-center text-center transition-colors duration-200 ${
+            isLight
+              ? "bg-white/60 border-black/10"
+              : "bg-black/30 border-white/15"
+          }`}
+        >
+          <div
+            className="w-12 h-12 rounded-full border flex items-center justify-center mb-2 animate-[spin_4s_linear_infinite]"
+            style={{ borderColor: `${config.accentColor}60` }}
+          >
+            <span className="text-lg" style={{ color: config.accentColor }}>
+              ✦
+            </span>
+          </div>
+          <span
+            className={`text-[10px] font-mono uppercase tracking-widest font-semibold ${
+              isLight ? "text-zinc-600" : "text-zinc-400"
+            }`}
+          >
+            Takeaway
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}

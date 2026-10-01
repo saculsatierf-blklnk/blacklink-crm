@@ -20,13 +20,14 @@ export type SlideLayout =
   | "podcast-quote"
   | "testimonial-review"
   | "polaroid-retro"
-  // 15-20: SaaS & Dados
+  // 15-21: SaaS & Dados
   | "glass-floating"
   | "dashboard-analytics"
   | "checklist-kanban"
   | "macbook-mockup"
   | "sticky-note"
-  | "aura-gradient";
+  | "aura-gradient"
+  | "bento-grid";
 
 export type SlideFont =
   // Tech / Código
@@ -45,6 +46,7 @@ export type SlideFont =
   | "outfit"
   | "bebas-neue"
   | "oswald"
+  | "bricolage"
   // Editorial / Luxo
   | "playfair"
   | "merriweather"
@@ -92,4 +94,5 @@ export interface LayoutProps {
   borderClass: string;
   cardBgClass: string;
   renderHighlightedText: (text: string, accentColor: string) => React.ReactNode;
+  currentSlide?: number;
 }

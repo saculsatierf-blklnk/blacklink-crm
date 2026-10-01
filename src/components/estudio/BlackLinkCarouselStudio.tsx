@@ -102,13 +102,14 @@ const LAYOUT_DEFINITIONS: Array<{
   { id: "testimonial-review", label: "Testimonial", desc: "Prova Social 5★", category: "social", icon: "★" },
   { id: "polaroid-retro", label: "Polaroid", desc: "Snapshot Retrô B2B", category: "social", icon: "📷" },
 
-  // SaaS & Dados (6)
+  // SaaS & Dados (7)
   { id: "glass-floating", label: "Glass 3D", desc: "Card Flutuante", category: "saas", icon: "💎" },
   { id: "dashboard-analytics", label: "Analytics BI", desc: "Métricas & Neon", category: "saas", icon: "📊" },
   { id: "checklist-kanban", label: "Kanban Sprint", desc: "Guia Passo-a-Passo", category: "saas", icon: "☑️" },
   { id: "macbook-mockup", label: "MacBook", desc: "Navegador Flutuante", category: "saas", icon: "💻" },
   { id: "sticky-note", label: "Sticky Note", desc: "Memo Post-It Amarelo", category: "saas", icon: "📌" },
   { id: "aura-gradient", label: "Aura Keynote", desc: "Apple Event Glow", category: "saas", icon: "🔮" },
+  { id: "bento-grid", label: "Bento Grid", desc: "Trend Hunter B2B", category: "saas", icon: "🍱" },
 ];
 
 // Definição das 20 Famílias Tipográficas
@@ -125,7 +126,7 @@ const FONT_DEFINITIONS: Array<{
   { id: "ibm-plex-mono", label: "IBM Plex Mono", style: "Industrial Tech", category: "tech" },
   { id: "roboto-mono", label: "Roboto Mono", style: "Geométrico Mono", category: "tech" },
 
-  // SaaS / Modernas (9)
+  // SaaS / Modernas (10)
   { id: "jakarta", label: "Plus Jakarta", style: "Startup Moderna", category: "modern" },
   { id: "inter", label: "Inter UI", style: "Interface Limpa", category: "modern" },
   { id: "syne", label: "Syne", style: "High-Fashion Tech", category: "modern" },
@@ -135,6 +136,7 @@ const FONT_DEFINITIONS: Array<{
   { id: "outfit", label: "Outfit", style: "SaaS Enterprise", category: "modern" },
   { id: "bebas-neue", label: "Bebas Neue", style: "Condensado Colossal", category: "modern" },
   { id: "oswald", label: "Oswald", style: "Título de Impacto", category: "modern" },
+  { id: "bricolage", label: "Bricolage", style: "Elite Grotesque", category: "modern" },
 
   // Editorial / Luxo (6)
   { id: "playfair", label: "Playfair Display", style: "Editorial Luxo", category: "editorial" },
@@ -560,7 +562,7 @@ export function BlackLinkCarouselStudio() {
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-mono text-zinc-400">
-              Motor Gráfico v3.0 • 20 Layouts & 20 Fontes
+              Motor Gráfico v3.0 • 21 Layouts & 21 Fontes
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
@@ -643,7 +645,7 @@ export function BlackLinkCarouselStudio() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-                    Biblioteca de Templates (20 Modelos)
+                    Biblioteca de Templates (21 Modelos)
                   </label>
                   <span className="text-[11px] font-mono text-cyan-400 font-semibold capitalize">
                     {designConfig.layout}
@@ -653,11 +655,11 @@ export function BlackLinkCarouselStudio() {
                 {/* Categorias dos Layouts (Filtros Rápidos) */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-thin">
                   {[
-                    { id: "all", label: "Todos (20)" },
+                    { id: "all", label: "Todos (21)" },
                     { id: "tech", label: "Tech (5)" },
                     { id: "editorial", label: "Editorial (4)" },
                     { id: "social", label: "Social (5)" },
-                    { id: "saas", label: "SaaS & BI (6)" },
+                    { id: "saas", label: "SaaS & BI (7)" },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -771,7 +773,7 @@ export function BlackLinkCarouselStudio() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-                    Arsenal Tipográfico (20 Fontes)
+                    Arsenal Tipográfico (21 Fontes)
                   </label>
                   <span className="text-[11px] font-mono text-cyan-400 capitalize">
                     {designConfig.font}
@@ -781,7 +783,7 @@ export function BlackLinkCarouselStudio() {
                 {/* Abas das Fontes */}
                 <div className="grid grid-cols-3 p-1 rounded-xl bg-black/50 border border-white/10 mb-2.5">
                   {[
-                    { id: "modern", label: "SaaS (9)" },
+                    { id: "modern", label: "SaaS (10)" },
                     { id: "tech", label: "Tech (5)" },
                     { id: "editorial", label: "Editorial (6)" },
                   ].map((tab) => (
