@@ -20,14 +20,15 @@ export type SlideLayout =
   | "podcast-quote"
   | "testimonial-review"
   | "polaroid-retro"
-  // 15-21: SaaS & Dados
+  // 15-22: SaaS & Dados
   | "glass-floating"
   | "dashboard-analytics"
   | "checklist-kanban"
   | "macbook-mockup"
   | "sticky-note"
   | "aura-gradient"
-  | "bento-grid";
+  | "bento-grid"
+  | "apple-mockup";
 
 export type SlideFont =
   // Tech / Código
@@ -65,6 +66,8 @@ export interface SlideData {
   bodyText: string;
   category?: string;
   tag?: string;
+  chartData?: { label: string; value: number }[];
+  kpiHighlight?: string;
 }
 
 export interface SlideDesignConfig {
@@ -81,6 +84,7 @@ export interface SlideDesignConfig {
   authorAvatar: string;
   bgImage?: string;
   bgOpacity?: number;
+  screenshotImage?: string;
 }
 
 export interface LayoutProps {
@@ -95,4 +99,5 @@ export interface LayoutProps {
   cardBgClass: string;
   renderHighlightedText: (text: string, accentColor: string) => React.ReactNode;
   currentSlide?: number;
+  isLoadingAI?: boolean;
 }

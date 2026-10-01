@@ -102,7 +102,7 @@ const LAYOUT_DEFINITIONS: Array<{
   { id: "testimonial-review", label: "Testimonial", desc: "Prova Social 5★", category: "social", icon: "★" },
   { id: "polaroid-retro", label: "Polaroid", desc: "Snapshot Retrô B2B", category: "social", icon: "📷" },
 
-  // SaaS & Dados (7)
+  // SaaS & Dados (8)
   { id: "glass-floating", label: "Glass 3D", desc: "Card Flutuante", category: "saas", icon: "💎" },
   { id: "dashboard-analytics", label: "Analytics BI", desc: "Métricas & Neon", category: "saas", icon: "📊" },
   { id: "checklist-kanban", label: "Kanban Sprint", desc: "Guia Passo-a-Passo", category: "saas", icon: "☑️" },
@@ -110,6 +110,7 @@ const LAYOUT_DEFINITIONS: Array<{
   { id: "sticky-note", label: "Sticky Note", desc: "Memo Post-It Amarelo", category: "saas", icon: "📌" },
   { id: "aura-gradient", label: "Aura Keynote", desc: "Apple Event Glow", category: "saas", icon: "🔮" },
   { id: "bento-grid", label: "Bento Grid", desc: "Trend Hunter B2B", category: "saas", icon: "🍱" },
+  { id: "apple-mockup", label: "Apple Mockup", desc: "Device Enveloping", category: "saas", icon: "🖥️" },
 ];
 
 // Definição das 20 Famílias Tipográficas
@@ -199,17 +200,25 @@ export function BlackLinkCarouselStudio() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [exportMessage, setExportMessage] = useState<string>("");
 
-  // Estado do Modal de IA e Webhook
+  // Contexto Multi-Tenant do Banco de Dados
+  const [tenantName, setTenantName] = useState<string>("Black Link Enterprise");
+  const [tenantId, setTenantId] = useState<string>("");
+
+  // Estado do Modal de IA e Geração Fluida
   const [showAIModal, setShowAIModal] = useState<boolean>(false);
-  const [aiPrompt, setAiPrompt] = useState<string>("");
+  const [aiTheme, setAiTheme] = useState<string>("");
+  const [aiAudience, setAiAudience] = useState<string>("");
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [aiErrorNotice, setAiErrorNotice] = useState<string>("");
 
   // Referência para o container de exportação offscreen
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
 
-  // Hidratação da Memória de Marca via LocalStorage
+  // Hidratação Multi-Tenant (Supabase DB com fallback para LocalStorage)
   useEffect(() => {
+    let isMounted = true;
+
+    // 1. Carrega rascunho salvo no localStorage primeiro
     try {
       const saved = localStorage.getItem(BRAND_STORAGE_KEY);
       if (saved) {
@@ -222,6 +231,35 @@ export function BlackLinkCarouselStudio() {
     } catch {
       // Ignora leitura em ambientes restritos
     }
+
+    // 2. Hidrata dados oficiais do Tenant via banco de dados (/api/tenant/brand-profile)
+    async function hydrateTenantBrand() {
+      try {
+        const res = await fetch("/api/tenant/brand-profile");
+        if (res.ok) {
+          const data = await res.json();
+          if (!isMounted) return;
+          if (data.companyName) setTenantName(data.companyName);
+          if (data.companyId) setTenantId(data.companyId);
+          setDesignConfig((prev) => ({
+            ...prev,
+            authorName: data.authorName || data.companyName || prev.authorName,
+            authorHandle: data.authorHandle || prev.authorHandle,
+            authorAvatar: data.authorAvatar || prev.authorAvatar,
+            accentColor: data.accentColor || prev.accentColor,
+            bgColor: data.bgColor || prev.bgColor,
+          }));
+        }
+      } catch (err) {
+        console.warn("Tenant brand hydration fallback:", err);
+      }
+    }
+
+    hydrateTenantBrand();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Atualização sincronizada do Design com persistência
@@ -305,20 +343,27 @@ export function BlackLinkCarouselStudio() {
   };
 
   // ==========================================================================
-  // BLINDAGEM CONTRA FALHAS DE API / WEBHOOK (ANTI-QUEBRA DE TELA)
+  // PIPELINE DE GERAÇÃO INTELIGENTE DE IA & SKELETON ENGINE
   // ==========================================================================
   const handleGenerateWithAI = async () => {
-    if (!aiPrompt.trim()) return;
+    if (!aiTheme.trim()) return;
 
+    // Fecha o modal na hora e aciona o Skeleton Loader cinza no canvas
     setIsGeneratingAI(true);
+    setShowAIModal(false);
     setAiErrorNotice("");
 
     try {
+      const fullPrompt = aiAudience.trim()
+        ? `${aiTheme.trim()} (Público-Alvo: ${aiAudience.trim()})`
+        : aiTheme.trim();
+
       const response = await fetch("/api/marketing/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          theme: aiPrompt.trim(),
+          theme: fullPrompt,
+          audience: aiAudience.trim(),
           format: "carousel",
         }),
       });
@@ -335,7 +380,7 @@ export function BlackLinkCarouselStudio() {
         parsedData = JSON.parse(rawText);
       } catch (jsonErr) {
         console.warn("Retorno da IA não é um JSON válido. Injetando fallback anti-quebra de tela:", jsonErr);
-        // INJEÇÃO OBRIGATÓRIA DE FALLBACK ELEGANTE
+        // INJEÇÃO OBRIGATÓRIA DE FALLBACK ELEGANTE (ZERO TELAS BRANCAS)
         setSlides([
           {
             tag: "AJUSTE MANUAL",
@@ -354,7 +399,6 @@ export function BlackLinkCarouselStudio() {
           },
         ]);
         setCurrentSlideIndex(0);
-        setShowAIModal(false);
         setAiErrorNotice("A IA retornou texto não formatado. O estado de fallback foi aplicado com segurança.");
         return;
       }
@@ -373,7 +417,6 @@ export function BlackLinkCarouselStudio() {
         }));
         setSlides(formatted);
         setCurrentSlideIndex(0);
-        setShowAIModal(false);
       } else {
         throw new Error("Estrutura de slides ausente na resposta da IA.");
       }
@@ -398,10 +441,70 @@ export function BlackLinkCarouselStudio() {
         },
       ]);
       setCurrentSlideIndex(0);
-      setShowAIModal(false);
       setAiErrorNotice("Instabilidade no webhook. Lâminas de fallback foram injetadas para edição manual.");
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  // Gerenciador de Métricas e Curvas Bézier (B2B Chart Engine)
+  const setSlideChartPreset = (preset: "mrr" | "cac" | "velocity" | "none") => {
+    setSlides((prev) => {
+      const copy = [...prev];
+      if (preset === "mrr") {
+        copy[currentSlideIndex] = {
+          ...copy[currentSlideIndex],
+          kpiHighlight: "+340% MRR",
+          chartData: [
+            { label: "Q1", value: 120 },
+            { label: "Q2", value: 180 },
+            { label: "Q3", value: 290 },
+            { label: "Q4", value: 410 },
+          ],
+        };
+      } else if (preset === "cac") {
+        copy[currentSlideIndex] = {
+          ...copy[currentSlideIndex],
+          kpiHighlight: "-52% CAC",
+          chartData: [
+            { label: "Jan", value: 450 },
+            { label: "Fev", value: 380 },
+            { label: "Mar", value: 280 },
+            { label: "Abr", value: 216 },
+          ],
+        };
+      } else if (preset === "velocity") {
+        copy[currentSlideIndex] = {
+          ...copy[currentSlideIndex],
+          kpiHighlight: "3.4x Velocidade",
+          chartData: [
+            { label: "W1", value: 15 },
+            { label: "W2", value: 35 },
+            { label: "W3", value: 65 },
+            { label: "W4", value: 95 },
+          ],
+        };
+      } else {
+        copy[currentSlideIndex] = {
+          ...copy[currentSlideIndex],
+          kpiHighlight: undefined,
+          chartData: undefined,
+        };
+      }
+      return copy;
+    });
+  };
+
+  // Upload Local de Screenshot para Mockups Apple
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const base64 = uploadEvent.target?.result as string;
+        updateDesignConfig({ screenshotImage: base64 });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -577,12 +680,12 @@ export function BlackLinkCarouselStudio() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-8 border-b border-white/10">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <span className="px-3 py-1 text-xs font-mono font-bold uppercase rounded-full bg-white/10 border border-white/15 text-zinc-300">
-              Estúdio Isolado • Black Link
+            <span className="px-3 py-1 text-xs font-mono font-bold uppercase rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
+              Tenant: {tenantName}
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-mono text-zinc-400">
-              Motor Gráfico v3.0 • 21 Layouts & 21 Fontes
+              Motor Gráfico v3.0 • 22 Layouts &amp; 21 Fontes
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
@@ -665,7 +768,7 @@ export function BlackLinkCarouselStudio() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
-                    Biblioteca de Templates (21 Modelos)
+                    Biblioteca de Templates (22 Modelos)
                   </label>
                   <span className="text-[11px] font-mono text-cyan-400 font-semibold capitalize">
                     {designConfig.layout}
@@ -675,11 +778,11 @@ export function BlackLinkCarouselStudio() {
                 {/* Categorias dos Layouts (Filtros Rápidos) */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-thin">
                   {[
-                    { id: "all", label: "Todos (21)" },
+                    { id: "all", label: "Todos (22)" },
                     { id: "tech", label: "Tech (5)" },
                     { id: "editorial", label: "Editorial (4)" },
                     { id: "social", label: "Social (5)" },
-                    { id: "saas", label: "SaaS & BI (7)" },
+                    { id: "saas", label: "SaaS & BI (8)" },
                   ].map((cat) => (
                     <button
                       key={cat.id}
@@ -1071,6 +1174,36 @@ export function BlackLinkCarouselStudio() {
                     )}
                   </div>
                 </div>
+
+                {/* 8. SCREENSHOT DE SISTEMA (MOCKUP APPLE MACBOOK / IPHONE) */}
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-mono uppercase text-zinc-300 font-bold block">
+                      Screenshot de Sistema (Apple Mockup)
+                    </label>
+                    {designConfig.screenshotImage && (
+                      <button
+                        type="button"
+                        onClick={() => updateDesignConfig({ screenshotImage: undefined })}
+                        className="text-[10px] font-mono text-rose-400 hover:text-rose-300 cursor-pointer"
+                      >
+                        ✕ Remover
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-zinc-400 leading-normal">
+                    Envelopa sua interface ou dashboard dentro de uma moldura de MacBook (Feed) ou iPhone (Stories) com reflexo de vidro realista.
+                  </p>
+                  <label className="block w-full py-2 px-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs text-white text-center cursor-pointer font-mono transition-all">
+                    <span>{designConfig.screenshotImage ? "✓ Substituir Screenshot de Sistema" : "Carregar Imagem de Sistema (.png / .jpg)"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScreenshotUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           )}
@@ -1166,6 +1299,73 @@ export function BlackLinkCarouselStudio() {
                     placeholder="Insira o texto explicativo deste slide..."
                     className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none leading-relaxed"
                   />
+                </div>
+
+                {/* DADOS VISUAIS (B2B CHART ENGINE MVP) */}
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono uppercase text-zinc-300 font-bold flex items-center gap-1.5">
+                      <span>📊 Gráfico B2B (Data Curve)</span>
+                    </label>
+                    {slides[currentSlideIndex]?.kpiHighlight && (
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {slides[currentSlideIndex].kpiHighlight}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-zinc-400">
+                    Injeta curvas de crescimento e métricas de impacto no quadrante do slide.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSlideChartPreset("mrr")}
+                      className={`p-2 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer ${
+                        slides[currentSlideIndex]?.kpiHighlight === "+340% MRR"
+                          ? "bg-white/20 border-white text-white shadow-sm"
+                          : "bg-black/50 border-white/10 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="block font-bold text-white">+340% MRR</span>
+                      <span className="block text-[9px] text-zinc-400">Tração B2B</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSlideChartPreset("cac")}
+                      className={`p-2 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer ${
+                        slides[currentSlideIndex]?.kpiHighlight === "-52% CAC"
+                          ? "bg-white/20 border-white text-white shadow-sm"
+                          : "bg-black/50 border-white/10 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="block font-bold text-white">-52% CAC</span>
+                      <span className="block text-[9px] text-zinc-400">Eficiência Unit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSlideChartPreset("velocity")}
+                      className={`p-2 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer ${
+                        slides[currentSlideIndex]?.kpiHighlight === "3.4x Velocidade"
+                          ? "bg-white/20 border-white text-white shadow-sm"
+                          : "bg-black/50 border-white/10 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="block font-bold text-white">3.4x Velocidade</span>
+                      <span className="block text-[9px] text-zinc-400">Pipeline Deal</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSlideChartPreset("none")}
+                      className={`p-2 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer ${
+                        !slides[currentSlideIndex]?.chartData
+                          ? "bg-white/20 border-white text-white shadow-sm"
+                          : "bg-black/50 border-white/10 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <span className="block font-bold text-zinc-300">Sem Gráfico</span>
+                      <span className="block text-[9px] text-zinc-500">Apenas Conteúdo</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1299,6 +1499,7 @@ export function BlackLinkCarouselStudio() {
                 totalSlides={slides.length}
                 config={designConfig}
                 canvasId="blacklink-slide-canvas"
+                isLoadingAI={isGeneratingAI}
               />
             </div>
           </div>
@@ -1356,7 +1557,7 @@ export function BlackLinkCarouselStudio() {
       </div>
 
       {/* ==================================================================== */}
-      {/* MODAL DE GERAÇÃO INTELIGENTE DE IA / WEBHOOK COM PROTEÇÃO TOTAL     */}
+      {/* MODAL DE GERAÇÃO INTELIGENTE DE IA / ZERO ATRITO & PIPELINE B2B       */}
       {/* ==================================================================== */}
       {showAIModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
@@ -1365,7 +1566,7 @@ export function BlackLinkCarouselStudio() {
               <div className="flex items-center gap-2.5">
                 <span className="text-xl">🪄</span>
                 <h3 className="text-lg font-bold text-white tracking-tight">
-                  Gerador de Carrosséis com IA
+                  Gerador de Carrosséis Estratégicos
                 </h3>
               </div>
               <button
@@ -1377,20 +1578,61 @@ export function BlackLinkCarouselStudio() {
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Informe a tese central ou o tema corporativo para despachar a requisição ao webhook autônomo. O sistema possui blindagem anti-quebra de tela em caso de resposta fora do formato esperado.
+              Eliminamos o atrito técnico: defina o Tema e o Público-Alvo. O pipeline corporativo processa o conteúdo em segundo plano e renderiza skeletons em tempo real na tela.
             </p>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 block">
-                Tema / Objetivo B2B
-              </label>
-              <textarea
-                rows={3}
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Ex: Como reduzir o ciclo de vendas corporativas de 90 para 25 dias com inteligência preditiva..."
-                className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-sm focus:outline-none focus:border-white/30 leading-relaxed"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 block mb-1.5 font-bold">
+                  1. Tema Central ou Tese B2B
+                </label>
+                <input
+                  type="text"
+                  value={aiTheme}
+                  onChange={(e) => setAiTheme(e.target.value)}
+                  placeholder="Ex: Playbook para encurtar o ciclo de vendas corporativas..."
+                  className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-sm focus:outline-none focus:border-white/30"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                    2. Público-Alvo / ICP
+                  </label>
+                  <span className="text-[10px] font-mono text-zinc-500">Chips Rápidos</span>
+                </div>
+                <input
+                  type="text"
+                  value={aiAudience}
+                  onChange={(e) => setAiAudience(e.target.value)}
+                  placeholder="Ex: Fundadores de SaaS, Diretores de Vendas (CRO)..."
+                  className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-sm focus:outline-none focus:border-white/30"
+                />
+
+                {/* Quick Chips para ICP */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    "Fundadores de SaaS",
+                    "Diretores Comerciais (CRO)",
+                    "Agências & Consultorias",
+                    "FinTechs & Enterprise",
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setAiAudience(chip)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                        aiAudience === chip
+                          ? "bg-white text-black border-white font-bold"
+                          : "bg-white/5 text-zinc-400 border-white/10 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -1403,17 +1645,10 @@ export function BlackLinkCarouselStudio() {
 
               <button
                 onClick={handleGenerateWithAI}
-                disabled={isGeneratingAI || !aiPrompt.trim()}
-                className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2"
+                disabled={!aiTheme.trim()}
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2 shadow-lg hover:shadow-xl"
               >
-                {isGeneratingAI ? (
-                  <>
-                    <span className="w-3 h-3 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                    <span>Processando IA...</span>
-                  </>
-                ) : (
-                  <span>Disparar Geração</span>
-                )}
+                <span>⚡ Disparar em Background</span>
               </button>
             </div>
           </div>

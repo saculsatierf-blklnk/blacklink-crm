@@ -28,6 +28,7 @@ import {
   StickyNoteLayout,
   AuraGradientLayout,
   BentoGridLayout,
+  AppleMockupLayout,
 } from "./DashboardLayouts";
 
 export * from "./layoutTypes";
@@ -54,7 +55,7 @@ export const LAYOUT_REGISTRY: Record<SlideLayout, React.FC<LayoutProps>> = {
   "testimonial-review": TestimonialReviewLayout,
   "polaroid-retro": PolaroidRetroLayout,
 
-  // 15-21: SaaS & Dados
+  // 15-22: SaaS & Dados
   "glass-floating": GlassFloatingLayout,
   "dashboard-analytics": DashboardAnalyticsLayout,
   "checklist-kanban": ChecklistKanbanLayout,
@@ -62,4 +63,5 @@ export const LAYOUT_REGISTRY: Record<SlideLayout, React.FC<LayoutProps>> = {
   "sticky-note": StickyNoteLayout,
   "aura-gradient": AuraGradientLayout,
   "bento-grid": BentoGridLayout,
+  "apple-mockup": AppleMockupLayout,
 };

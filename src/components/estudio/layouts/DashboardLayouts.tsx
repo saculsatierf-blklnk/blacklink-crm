@@ -1,5 +1,6 @@
 import React from "react";
 import { LayoutProps } from "./layoutTypes";
+import { B2BChart } from "../B2BChart";
 
 // 15. Glass Floating 3D (Card Flutuante em Vidro)
 export function GlassFloatingLayout({
@@ -402,8 +403,32 @@ export function BentoGridLayout({
   isLight,
   renderHighlightedText,
   currentSlide,
+  isLoadingAI,
 }: LayoutProps) {
   const is916 = config.aspectRatio === "9:16";
+
+  // Skeletons de carregamento da IA
+  if (isLoadingAI) {
+    return (
+      <div className="w-full h-full flex flex-col gap-4 font-bricolage animate-pulse">
+        <div className="flex-[1.2] bg-white/10 rounded-[2rem] p-8 border border-white/10 flex flex-col justify-center space-y-3">
+          <div className="w-24 h-4 bg-white/20 rounded-full" />
+          <div className="w-3/4 h-8 bg-white/20 rounded-xl" />
+          <div className="w-1/2 h-8 bg-white/20 rounded-xl" />
+        </div>
+        <div className="flex-1 grid grid-cols-3 gap-4">
+          <div className="col-span-2 bg-white/10 rounded-[2rem] p-6 border border-white/10 space-y-3">
+            <div className="w-full h-4 bg-white/20 rounded-full" />
+            <div className="w-5/6 h-4 bg-white/20 rounded-full" />
+            <div className="w-4/6 h-4 bg-white/20 rounded-full" />
+          </div>
+          <div className="bg-white/10 rounded-[2rem] p-4 border border-white/10 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-white/20" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col gap-4 font-bricolage select-none text-left">
@@ -441,7 +466,7 @@ export function BentoGridLayout({
 
       {/* Quadrantes Inferiores: Grid (1:1 / 4:5) ou Stack Vertical Elegante (9:16) */}
       <div className={`flex-1 ${is916 ? "flex flex-col gap-4" : "grid grid-cols-3 gap-4"}`}>
-        {/* Box 1: Body Copy com Marca d'Água do Slide */}
+        {/* Box 1: Body Copy com Marca d'Água do Slide + B2B Chart opcional */}
         <div
           className={`${
             is916 ? "flex-1" : "col-span-2"
@@ -458,16 +483,38 @@ export function BentoGridLayout({
           >
             {String(currentSlide || 1).padStart(2, "0")}
           </span>
-          <p
-            className={`relative z-10 leading-relaxed font-normal ${
-              isLight ? "text-zinc-800" : "text-zinc-200"
-            }`}
-            style={{
-              fontSize: `clamp(0.85rem, calc(1.05rem * ${scale}), 1.35rem)`,
-            }}
-          >
-            {renderHighlightedText(slide.bodyText, config.accentColor)}
-          </p>
+
+          {slide.chartData && slide.chartData.length > 0 ? (
+            <div className="relative z-10 w-full my-auto space-y-2">
+              <p
+                className={`font-normal leading-relaxed ${
+                  isLight ? "text-zinc-800" : "text-zinc-200"
+                }`}
+                style={{
+                  fontSize: `clamp(0.8rem, calc(0.95rem * ${scale}), 1.2rem)`,
+                }}
+              >
+                {renderHighlightedText(slide.bodyText, config.accentColor)}
+              </p>
+              <B2BChart
+                data={slide.chartData}
+                accentColor={config.accentColor}
+                isLight={isLight}
+                kpiHighlight={slide.kpiHighlight}
+              />
+            </div>
+          ) : (
+            <p
+              className={`relative z-10 leading-relaxed font-normal ${
+                isLight ? "text-zinc-800" : "text-zinc-200"
+              }`}
+              style={{
+                fontSize: `clamp(0.85rem, calc(1.05rem * ${scale}), 1.35rem)`,
+              }}
+            >
+              {renderHighlightedText(slide.bodyText, config.accentColor)}
+            </p>
+          )}
         </div>
 
         {/* Box 2: Elemento Visual/Ação Dinâmica (Stack em 9:16) */}
@@ -507,6 +554,189 @@ export function BentoGridLayout({
             {is916 ? "Deslize para ver mais" : "Takeaway"}
           </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// 22. Apple Mockup (Device Enveloping - MacBook / iPhone com Glare de Vidro)
+export function AppleMockupLayout({
+  slide,
+  config,
+  scale,
+  isLight,
+  textPrimaryClass,
+  textSecondaryClass,
+  renderHighlightedText,
+  isLoadingAI,
+}: LayoutProps) {
+  const is916 = config.aspectRatio === "9:16";
+
+  if (isLoadingAI) {
+    return (
+      <div className="w-full h-full flex flex-col justify-center gap-6 p-4 animate-pulse">
+        <div className="h-6 w-32 bg-white/10 rounded-full" />
+        <div className="h-10 w-3/4 bg-white/10 rounded-2xl" />
+        <div className="flex-1 bg-white/5 rounded-3xl border border-white/10" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex flex-col justify-between items-center text-center p-2 md:p-4 relative">
+      {/* Top Headline & Tag */}
+      <div className="space-y-2 max-w-xl mx-auto z-10 mb-2">
+        {slide.tag && (
+          <span
+            className="inline-block px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border shadow-sm"
+            style={{
+              backgroundColor: `${config.accentColor}20`,
+              borderColor: `${config.accentColor}40`,
+              color: config.accentColor,
+            }}
+          >
+            {slide.tag}
+          </span>
+        )}
+        <h1
+          className={`font-black tracking-tight leading-tight ${textPrimaryClass}`}
+          style={{
+            fontSize: `clamp(1.25rem, calc(1.75rem * ${scale}), 2.8rem)`,
+          }}
+        >
+          {renderHighlightedText(slide.headline, config.accentColor)}
+        </h1>
+        <p
+          className={`text-xs md:text-sm font-normal leading-relaxed line-clamp-2 ${textSecondaryClass}`}
+          style={{
+            fontSize: `clamp(0.8rem, calc(0.95rem * ${scale}), 1.25rem)`,
+          }}
+        >
+          {renderHighlightedText(slide.bodyText, config.accentColor)}
+        </p>
+      </div>
+
+      {/* Floating Apple Device Mockup */}
+      <div className="w-full flex-1 flex items-center justify-center my-auto relative z-10 max-h-[75%]">
+        {is916 ? (
+          /* iPhone 16 Pro Vector Mockup Frame */
+          <div className="relative w-full max-w-[280px] aspect-[9/18] rounded-[2.8rem] p-3 bg-gradient-to-b from-zinc-700 via-zinc-900 to-black border-4 border-zinc-600/60 shadow-[0_30px_70px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col">
+            {/* Dynamic Island */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-5 rounded-full bg-black z-30 flex items-center justify-end px-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500/80 animate-pulse" />
+            </div>
+
+            {/* Screen Glass Glare Sheen */}
+            <div
+              className="absolute inset-0 pointer-events-none z-20"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 40%, transparent 60%)",
+              }}
+            />
+
+            {/* Device Screen Content */}
+            <div className="w-full h-full rounded-[2.2rem] bg-zinc-950 overflow-hidden flex items-center justify-center relative">
+              {config.screenshotImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={config.screenshotImage}
+                  alt="Screenshot do Sistema"
+                  className="w-full h-full object-cover object-top"
+                />
+              ) : (
+                /* Fallback SaaS Dashboard UI Vector */
+                <div className="w-full h-full p-4 flex flex-col justify-between text-left font-sans bg-gradient-to-b from-zinc-900 to-black text-white">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2 pt-6">
+                    <span className="text-[10px] font-bold font-mono text-zinc-300">BLACK LINK OS</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  </div>
+                  <div className="space-y-2 py-4">
+                    <span className="text-[9px] font-mono text-zinc-400">MRR ATIVO</span>
+                    <span className="text-xl font-black block" style={{ color: config.accentColor }}>
+                      R$ 348.900
+                    </span>
+                    <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: "78%", backgroundColor: config.accentColor }}
+                      />
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[9px] font-mono text-zinc-300">
+                    STATUS: 99.8% DISPONIBILIDADE
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* MacBook Pro Vector Mockup Frame */
+          <div className="relative w-full max-w-lg rounded-2xl p-2 bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-950 border border-white/20 shadow-[0_30px_70px_rgba(0,0,0,0.6)] overflow-hidden">
+            {/* Screen Glass Glare Sheen */}
+            <div
+              className="absolute inset-0 pointer-events-none z-20"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.02) 40%, transparent 60%)",
+              }}
+            />
+
+            {/* macOS Chrome Header Bar */}
+            <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800 rounded-t-xl z-10 relative">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-0.5 rounded-md bg-zinc-800 text-[10px] font-mono text-zinc-400">
+                <span>🔒</span>
+                <span>app.blacklink.com.br/telemetria</span>
+              </div>
+              <div className="w-8" />
+            </div>
+
+            {/* MacBook Screen Display */}
+            <div className="w-full aspect-[16/10] bg-zinc-950 rounded-b-xl overflow-hidden relative flex items-center justify-center">
+              {config.screenshotImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={config.screenshotImage}
+                  alt="Screenshot do Sistema"
+                  className="w-full h-full object-cover object-top"
+                />
+              ) : (
+                /* Fallback SaaS Dashboard UI Vector */
+                <div className="w-full h-full p-6 flex flex-col justify-between text-left font-sans bg-zinc-950 text-white">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <span className="text-xs font-bold font-mono text-zinc-200">BLACK LINK ANALYTICS</span>
+                    <span className="text-[10px] font-mono text-emerald-400">● LIVE PIPELINE</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 my-auto">
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[9px] text-zinc-400 block font-mono">RETENÇÃO</span>
+                      <span className="text-lg font-black" style={{ color: config.accentColor }}>
+                        98.4%
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[9px] text-zinc-400 block font-mono">CONVERSÃO</span>
+                      <span className="text-lg font-black text-emerald-400">+342%</span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                      <span className="text-[9px] text-zinc-400 block font-mono">DEAL SIZE</span>
+                      <span className="text-lg font-black text-white">R$ 140K</span>
+                    </div>
+                  </div>
+                  <div className="h-10 w-full bg-white/5 rounded-xl border border-white/10 flex items-center px-3 justify-between text-[10px] font-mono text-zinc-400">
+                    <span>TELEMETRIA SINCRONIZADA</span>
+                    <span style={{ color: config.accentColor }}>LATÊNCIA: 14ms</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

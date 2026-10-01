@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, CheckCircle2, Sparkles, UploadCloud } from "lucide-react";
+import { Calendar, CheckCircle2, Layers, Sparkles, UploadCloud } from "lucide-react";
 import { useMarketingStore } from "@/store/useMarketingStore";
 import { CreativeStudioWizard } from "@/components/marketing/studio/CreativeStudioWizard";
 import { AdPerformanceTable } from "@/components/marketing/AdPerformanceTable";
 import { MarketingScheduleView } from "@/components/marketing/MarketingScheduleView";
+import { BlackLinkCarouselStudio } from "@/components/estudio/BlackLinkCarouselStudio";
 import { ManualAssetUploadModal } from "./ManualAssetUploadModal";
 
 export function MarketingTabsWrapper() {
@@ -80,6 +81,19 @@ export function MarketingTabsWrapper() {
 
           <button
             type="button"
+            onClick={() => setActiveMarketingTab("carousel-studio")}
+            className={`flex items-center gap-2.5 rounded-xl px-6 py-3 text-xs transition-all duration-300 cursor-pointer ${
+              activeMarketingTab === "carousel-studio"
+                ? "bg-white/[0.12] border border-white/20 text-white font-semibold shadow-sm tracking-tight"
+                : "border border-transparent text-zinc-400 hover:text-white hover:bg-white/[0.05]"
+            }`}
+          >
+            <Layers className="h-4 w-4 text-white" />
+            <span>Estúdio de Carrosséis B2B</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveMarketingTab("schedule")}
             className={`flex items-center gap-2.5 rounded-xl px-6 py-3 text-xs transition-all duration-300 cursor-pointer ${
               activeMarketingTab === "schedule"
@@ -108,6 +122,10 @@ export function MarketingTabsWrapper() {
           <div className="pt-8 border-t border-white/[0.08]">
             <AdPerformanceTable />
           </div>
+        </div>
+      ) : activeMarketingTab === "carousel-studio" ? (
+        <div className="animate-in fade-in duration-300">
+          <BlackLinkCarouselStudio />
         </div>
       ) : (
         <div className="animate-in fade-in duration-300">

@@ -30,6 +30,7 @@ export interface BlackLinkSlidePreviewProps {
   totalSlides: number;
   config: SlideDesignConfig;
   canvasId?: string;
+  isLoadingAI?: boolean;
 }
 
 /**
@@ -113,6 +114,7 @@ export function BlackLinkSlidePreview({
   totalSlides,
   config,
   canvasId = "blacklink-slide-canvas",
+  isLoadingAI = false,
 }: BlackLinkSlidePreviewProps) {
   const isLight = isLightColor(config.bgColor);
   const scale = config.fontSizeScale || 1.0;
@@ -143,6 +145,7 @@ export function BlackLinkSlidePreview({
     cardBgClass,
     renderHighlightedText,
     currentSlide,
+    isLoadingAI,
   };
 
   const is916 = config.aspectRatio === "9:16";

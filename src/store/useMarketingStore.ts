@@ -110,8 +110,8 @@ export interface MarketingFormData {
 
 interface MarketingState {
   // Navegação Interna da Rota /marketing
-  activeMarketingTab: "studio" | "schedule";
-  setActiveMarketingTab: (tab: "studio" | "schedule") => void;
+  activeMarketingTab: "studio" | "schedule" | "carousel-studio";
+  setActiveMarketingTab: (tab: "studio" | "schedule" | "carousel-studio") => void;
 
   // Wizard de Co-criação Estilo CarrosseIA (3 Etapas)
   currentWizardStep: 1 | 2 | 3;
