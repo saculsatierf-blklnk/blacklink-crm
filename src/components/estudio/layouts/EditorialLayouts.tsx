@@ -221,8 +221,14 @@ export function NewspaperBroadsheetLayout({
         {/* Double divider */}
         <div className="border-t border-b border-black py-0.5" />
 
-        {/* 2-Column Newspaper Article with Drop Cap */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-stone-800 font-serif">
+        {/* 2-Column Newspaper Article with Drop Cap (Stack em 9:16) */}
+        <div
+          className={`${
+            config.aspectRatio === "9:16"
+              ? "flex flex-col gap-4"
+              : "grid grid-cols-1 md:grid-cols-2 gap-4"
+          } text-xs leading-relaxed text-stone-800 font-serif`}
+        >
           <div>
             <span className="float-left text-4xl md:text-5xl font-serif font-black leading-none mr-2 text-stone-950 uppercase">
               {firstLetter}

@@ -145,6 +145,8 @@ export function BlackLinkSlidePreview({
     currentSlide,
   };
 
+  const is916 = config.aspectRatio === "9:16";
+  const is45 = config.aspectRatio === "4:5";
   const isLightLayout = config.layout === "notion-doc" || config.layout === "sticky-note" || isLight;
 
   return (
@@ -152,7 +154,7 @@ export function BlackLinkSlidePreview({
       id={canvasId}
       data-slide-index={currentSlide}
       className={`relative w-full overflow-hidden select-none transition-all duration-300 shadow-2xl flex flex-col justify-between ${fontClass} ${textPrimaryClass} ${
-        config.aspectRatio === "4:5" ? "aspect-[4/5]" : "aspect-square"
+        is916 ? "aspect-[9/16]" : is45 ? "aspect-[4/5]" : "aspect-square"
       }`}
       style={{
         backgroundColor:
@@ -242,7 +244,7 @@ export function BlackLinkSlidePreview({
       {/* ==================================================================== */}
       {/* 3. CABEÇALHO DO SLIDE: Barra de Progresso + Identificação do Autor   */}
       {/* ==================================================================== */}
-      <div className="relative z-10 p-6 md:p-8 pb-2 flex flex-col gap-3">
+      <div className={`relative z-10 ${is916 ? "pt-28 px-6 md:px-8" : "p-6 md:p-8"} pb-2 flex flex-col gap-3`}>
         {/* Barra de Progresso Segmentada */}
         <div className="flex items-center gap-1.5 w-full">
           {Array.from({ length: totalSlides }).map((_, idx) => {
@@ -331,7 +333,7 @@ export function BlackLinkSlidePreview({
       {/* ==================================================================== */}
       {/* 5. RODAPÉ DO SLIDE: Numeração / Posição + Pista Visual de Deslize    */}
       {/* ==================================================================== */}
-      <div className="relative z-10 p-6 md:p-8 pt-2 flex items-center justify-between">
+      <div className={`relative z-10 ${is916 ? "pb-32 px-6 md:px-8" : "p-6 md:p-8"} pt-2 flex items-center justify-between`}>
         <div
           className={`text-xs font-mono font-bold tracking-widest px-3 py-1 rounded-full border ${
             isLightLayout

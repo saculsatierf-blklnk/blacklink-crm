@@ -439,12 +439,22 @@ export function BlackLinkCarouselStudio() {
   const handleDownloadSinglePng = async () => {
     try {
       setIsExporting(true);
-      setExportMessage("Capturando lâmina atual em alta resolução...");
-      const node = document.getElementById("blacklink-slide-canvas");
+      setExportMessage("Capturando lâmina atual em alta resolução (1080px)...");
+
+      const is916 = designConfig.aspectRatio === "9:16";
+      const is45 = designConfig.aspectRatio === "4:5";
+      const targetWidth = 1080;
+      const targetHeight = is916 ? 1920 : is45 ? 1350 : 1080;
+
+      // Prioriza o container offscreen que já está em escala exata 1080px
+      const offscreenNode = document.getElementById(`offscreen-slide-${currentSlideIndex}`);
+      const node = offscreenNode || document.getElementById("blacklink-slide-canvas");
       if (!node) throw new Error("Elemento do slide não encontrado no DOM.");
 
       const dataUrl = await htmlToImage.toPng(node, {
-        pixelRatio: 2.5,
+        pixelRatio: 1.0,
+        width: targetWidth,
+        height: targetHeight,
         cacheBust: true,
       });
 
@@ -469,12 +479,19 @@ export function BlackLinkCarouselStudio() {
       const zip = new JSZip();
       const folder = zip.folder("blacklink-carrossel") || zip;
 
+      const is916 = designConfig.aspectRatio === "9:16";
+      const is45 = designConfig.aspectRatio === "4:5";
+      const targetWidth = 1080;
+      const targetHeight = is916 ? 1920 : is45 ? 1350 : 1080;
+
       for (let i = 0; i < slides.length; i++) {
-        setExportMessage(`Renderizando slide ${i + 1} de ${slides.length}...`);
+        setExportMessage(`Renderizando slide ${i + 1} de ${slides.length} (${targetWidth}x${targetHeight}px)...`);
         const slideNode = document.getElementById(`offscreen-slide-${i}`);
         if (slideNode) {
           const dataUrl = await htmlToImage.toPng(slideNode, {
-            pixelRatio: 2.0,
+            pixelRatio: 1.0,
+            width: targetWidth,
+            height: targetHeight,
             cacheBust: true,
           });
           const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
@@ -500,9 +517,10 @@ export function BlackLinkCarouselStudio() {
   const handleDownloadPdf = async () => {
     try {
       setIsExporting(true);
+      const is916 = designConfig.aspectRatio === "9:16";
       const isPortrait = designConfig.aspectRatio === "4:5";
       const pdfWidth = 1080;
-      const pdfHeight = isPortrait ? 1350 : 1080;
+      const pdfHeight = is916 ? 1920 : isPortrait ? 1350 : 1080;
 
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -515,7 +533,9 @@ export function BlackLinkCarouselStudio() {
         const slideNode = document.getElementById(`offscreen-slide-${i}`);
         if (slideNode) {
           const dataUrl = await htmlToImage.toPng(slideNode, {
-            pixelRatio: 2.0,
+            pixelRatio: 1.0,
+            width: pdfWidth,
+            height: pdfHeight,
             cacheBust: true,
           });
 
@@ -527,8 +547,8 @@ export function BlackLinkCarouselStudio() {
         }
       }
 
-      setExportMessage("Finalizando documento PDF para o LinkedIn...");
-      pdf.save("blacklink-carrossel-linkedin.pdf");
+      setExportMessage("Finalizando documento PDF corporativo...");
+      pdf.save("blacklink-carrossel-documento.pdf");
     } catch (err) {
       console.error("Falha ao exportar PDF:", err);
       alert("Erro ao gerar o documento PDF.");
@@ -706,7 +726,48 @@ export function BlackLinkCarouselStudio() {
                 </div>
               </div>
 
-              {/* 2. TEXTURAS DE FUNDO (PATTERN ENGINE CONDICIONAL) */}
+              {/* 2. DIMENSÃO DA LÂMINA (PROPORÇÃO / FORMATO B2B) */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                    Dimensão da Lâmina
+                  </label>
+                  <span className="text-[11px] font-mono text-cyan-400 font-semibold">
+                    {designConfig.aspectRatio === "9:16"
+                      ? "9:16 (Stories/Reels 1080x1920)"
+                      : designConfig.aspectRatio === "4:5"
+                      ? "4:5 (Feed Retrato 1080x1350)"
+                      : "1:1 (Feed Quadrado 1080x1080)"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "1:1", label: "1:1 Feed", sub: "1080×1080", icon: "⏹️" },
+                    { id: "4:5", label: "4:5 Retrato", sub: "1080×1350", icon: "📱" },
+                    { id: "9:16", label: "9:16 Stories", sub: "1080×1920", icon: "🎬" },
+                  ].map((dim) => (
+                    <button
+                      key={dim.id}
+                      onClick={() => updateDesignConfig({ aspectRatio: dim.id as AspectRatio })}
+                      className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                        designConfig.aspectRatio === dim.id
+                          ? "bg-white/20 border-white text-white shadow-md scale-[1.02]"
+                          : "bg-black/30 border-white/10 text-zinc-400 hover:text-white hover:border-white/20"
+                      }`}
+                    >
+                      <span className="text-base block mb-0.5">{dim.icon}</span>
+                      <span className="block text-xs font-bold leading-tight truncate">
+                        {dim.label}
+                      </span>
+                      <span className="block text-[9px] font-mono text-zinc-500 mt-0.5">
+                        {dim.sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. TEXTURAS DE FUNDO (PATTERN ENGINE CONDICIONAL) */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-bold">
@@ -1185,6 +1246,16 @@ export function BlackLinkCarouselStudio() {
               >
                 4:5 Retrato
               </button>
+              <button
+                onClick={() => updateDesignConfig({ aspectRatio: "9:16" })}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  designConfig.aspectRatio === "9:16"
+                    ? "bg-white text-black shadow-md"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                9:16 Stories
+              </button>
             </div>
 
             {/* CONTROLES RÁPIDOS DE NAVEGAÇÃO */}
@@ -1215,7 +1286,9 @@ export function BlackLinkCarouselStudio() {
           <div className="w-full flex items-center justify-center p-3 md:p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl relative">
             <div
               className={`w-full transition-all duration-300 ${
-                designConfig.aspectRatio === "4:5"
+                designConfig.aspectRatio === "9:16"
+                  ? "max-w-[340px] md:max-w-[380px]"
+                  : designConfig.aspectRatio === "4:5"
                   ? "max-w-[440px]"
                   : "max-w-[490px]"
               }`}
@@ -1359,7 +1432,12 @@ export function BlackLinkCarouselStudio() {
             key={idx}
             style={{
               width: "1080px",
-              height: designConfig.aspectRatio === "4:5" ? "1350px" : "1080px",
+              height:
+                designConfig.aspectRatio === "9:16"
+                  ? "1920px"
+                  : designConfig.aspectRatio === "4:5"
+                  ? "1350px"
+                  : "1080px",
             }}
           >
             <BlackLinkSlidePreview

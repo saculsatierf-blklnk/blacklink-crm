@@ -55,7 +55,7 @@ export type SlideFont =
   | "cinzel"
   | "crimson-pro";
 
-export type AspectRatio = "1:1" | "4:5";
+export type AspectRatio = "1:1" | "4:5" | "9:16";
 
 export type SlidePattern = "solid-mesh" | "dots" | "grid" | "noise";
 

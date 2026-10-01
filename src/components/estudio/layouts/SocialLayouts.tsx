@@ -123,10 +123,18 @@ export function SplitLayout({
   cardBgClass,
   renderHighlightedText,
 }: LayoutProps) {
+  const is916 = config.aspectRatio === "9:16";
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 h-full items-center">
-      {/* Lado Esquerdo: Conteúdo Escrito */}
-      <div className="md:col-span-7 flex flex-col justify-center gap-3 text-left">
+    <div
+      className={
+        is916
+          ? "flex flex-col justify-around gap-6 h-full py-2"
+          : "grid grid-cols-1 md:grid-cols-12 gap-5 h-full items-center"
+      }
+    >
+      {/* Lado Esquerdo / Superior: Conteúdo Escrito */}
+      <div className={`${is916 ? "w-full" : "md:col-span-7"} flex flex-col justify-center gap-3 text-left`}>
         <span
           className="text-xs font-mono font-bold tracking-widest uppercase"
           style={{ color: config.accentColor }}
@@ -136,7 +144,9 @@ export function SplitLayout({
         <h1
           className={`font-black tracking-tight leading-tight ${textPrimaryClass}`}
           style={{
-            fontSize: `clamp(1.4rem, calc(1.85rem * ${scale}), 2.9rem)`,
+            fontSize: is916
+              ? `clamp(1.5rem, calc(2.1rem * ${scale}), 3.2rem)`
+              : `clamp(1.4rem, calc(1.85rem * ${scale}), 2.9rem)`,
           }}
         >
           {renderHighlightedText(slide.headline, config.accentColor)}
@@ -151,8 +161,8 @@ export function SplitLayout({
         </p>
       </div>
 
-      {/* Lado Direito: Card Visual ou Gráfico */}
-      <div className="md:col-span-5 h-full flex items-center justify-center">
+      {/* Lado Direito / Inferior: Card Visual ou Gráfico */}
+      <div className={`${is916 ? "w-full" : "md:col-span-5 h-full"} flex items-center justify-center`}>
         <div
           className={`w-full h-full min-h-[160px] p-5 rounded-2xl border flex flex-col justify-between shadow-lg relative overflow-hidden ${cardBgClass} ${borderClass}`}
         >

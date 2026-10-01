@@ -403,11 +403,15 @@ export function BentoGridLayout({
   renderHighlightedText,
   currentSlide,
 }: LayoutProps) {
+  const is916 = config.aspectRatio === "9:16";
+
   return (
     <div className="w-full h-full flex flex-col gap-4 font-bricolage select-none text-left">
       {/* Quadrante Superior: Headline */}
       <div
-        className={`flex-[1.2] backdrop-blur-xl rounded-[2rem] p-6 md:p-8 border flex flex-col justify-center relative overflow-hidden transition-colors duration-200 ${
+        className={`${
+          is916 ? "flex-[1.1] md:flex-[1.2]" : "flex-[1.2]"
+        } backdrop-blur-xl rounded-[2rem] p-6 md:p-8 border flex flex-col justify-center relative overflow-hidden transition-colors duration-200 ${
           isLight
             ? "bg-white/60 border-black/10 text-zinc-950"
             : "bg-black/30 border-white/15 text-white"
@@ -435,18 +439,20 @@ export function BentoGridLayout({
         </h2>
       </div>
 
-      {/* Quadrantes Inferiores em Grid */}
-      <div className="flex-1 grid grid-cols-3 gap-4">
-        {/* Box 1 (2/3 da largura): Body Copy com Marca d'Água do Slide */}
+      {/* Quadrantes Inferiores: Grid (1:1 / 4:5) ou Stack Vertical Elegante (9:16) */}
+      <div className={`flex-1 ${is916 ? "flex flex-col gap-4" : "grid grid-cols-3 gap-4"}`}>
+        {/* Box 1: Body Copy com Marca d'Água do Slide */}
         <div
-          className={`col-span-2 backdrop-blur-xl rounded-[2rem] p-6 border flex flex-col justify-center relative overflow-hidden transition-colors duration-200 ${
+          className={`${
+            is916 ? "flex-1" : "col-span-2"
+          } backdrop-blur-xl rounded-[2rem] p-6 md:p-8 border flex flex-col justify-center relative overflow-hidden transition-colors duration-200 ${
             isLight
               ? "bg-white/60 border-black/10"
               : "bg-black/30 border-white/15"
           }`}
         >
           <span
-            className={`absolute -bottom-4 -right-2 text-7xl font-black select-none pointer-events-none font-mono ${
+            className={`absolute -bottom-4 -right-2 text-7xl md:text-8xl font-black select-none pointer-events-none font-mono ${
               isLight ? "text-black/5" : "text-white/5"
             }`}
           >
@@ -464,28 +470,41 @@ export function BentoGridLayout({
           </p>
         </div>
 
-        {/* Box 2 (1/3 da largura): Elemento Visual/Ação Dinâmica */}
+        {/* Box 2: Elemento Visual/Ação Dinâmica (Stack em 9:16) */}
         <div
-          className={`backdrop-blur-xl rounded-[2rem] p-4 border flex flex-col items-center justify-center text-center transition-colors duration-200 ${
+          className={`${
+            is916 ? "py-4 px-6 flex-row justify-between" : "p-4 flex-col justify-center"
+          } backdrop-blur-xl rounded-[2rem] border flex items-center text-center transition-colors duration-200 ${
             isLight
               ? "bg-white/60 border-black/10"
               : "bg-black/30 border-white/15"
           }`}
         >
-          <div
-            className="w-12 h-12 rounded-full border flex items-center justify-center mb-2 animate-[spin_4s_linear_infinite]"
-            style={{ borderColor: `${config.accentColor}60` }}
-          >
-            <span className="text-lg" style={{ color: config.accentColor }}>
-              ✦
-            </span>
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full border flex items-center justify-center animate-[spin_4s_linear_infinite]"
+              style={{ borderColor: `${config.accentColor}60` }}
+            >
+              <span className="text-lg" style={{ color: config.accentColor }}>
+                ✦
+              </span>
+            </div>
+            {is916 && (
+              <span
+                className={`text-xs font-mono font-bold text-left uppercase tracking-wider ${
+                  isLight ? "text-zinc-900" : "text-white"
+                }`}
+              >
+                Key Takeaway B2B
+              </span>
+            )}
           </div>
           <span
             className={`text-[10px] font-mono uppercase tracking-widest font-semibold ${
               isLight ? "text-zinc-600" : "text-zinc-400"
             }`}
           >
-            Takeaway
+            {is916 ? "Deslize para ver mais" : "Takeaway"}
           </span>
         </div>
       </div>
