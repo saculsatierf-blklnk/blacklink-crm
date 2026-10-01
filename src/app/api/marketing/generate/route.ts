@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Roteamento Estrito para Produção (n8n Webhook)
-    // Força a alteração de rota de teste (/webhook-test/) para a rota oficial de produção (/webhook/)
+    // 1. Roteamento Estrito para a Rota de Webhook n8n
+    // Preserva a base da URL (localhost ou remota) e assegura o path /webhook/
     const rawWebhookUrl =
       process.env.N8N_WEBHOOK_URL ||
-      "https://n8n.blacklink.com.br/webhook/blacklink-marketing-generate";
+      "http://localhost:5678/webhook/blacklink-marketing-generate";
     const n8nWebhookUrl = rawWebhookUrl.replace("/webhook-test/", "/webhook/");
 
     // 2. Injeção de Contexto (Evitar Amnésia da IA)

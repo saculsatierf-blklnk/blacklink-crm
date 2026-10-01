@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const rawWebhookUrl =
       process.env.N8N_WEBHOOK_URL ||
-      "https://n8n.blacklink.com.br/webhook/blacklink-marketing-generate";
+      "http://localhost:5678/webhook/blacklink-marketing-generate";
     const n8nWebhookUrl = rawWebhookUrl.replace("/webhook-test/", "/webhook/");
 
     // 1. Se o Webhook do n8n estiver configurado, despacha a solicitação de refação
