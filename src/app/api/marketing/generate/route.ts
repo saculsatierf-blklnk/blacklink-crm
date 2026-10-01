@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
               hashtags: Array.isArray(n8nData.hashtags)
                 ? n8nData.hashtags
                 : ["#VendasB2B", "#BlackLink", "#InteligenciaComercial", "#SaaS"],
+              postCaption:
+                n8nData.postCaption ||
+                `${n8nData.bodyCopy}\n\n${n8nData.ctaText || "Clique no link da bio e solicite um dossiê executivo."}\n\n${(Array.isArray(n8nData.hashtags) ? n8nData.hashtags : ["#VendasB2B", "#BlackLink", "#InteligenciaComercial", "#SaaS"]).join(" ")}`.trim(),
               slides: Array.isArray(n8nData.slides) ? n8nData.slides : [],
               imageUrls: Array.isArray(n8nData.imageUrls) ? n8nData.imageUrls : [],
               createdAt: new Date().toISOString(),
@@ -201,6 +204,7 @@ export async function POST(request: NextRequest) {
         "#TrafegoPago",
         "#Growth",
       ],
+      postCaption: `${bodyCopy}\n\n${ctaText}\n\n#${cleanTheme.replace(/\s+/g, "")} #VendasB2B #BlackLink #GestaoComercial #Growth`,
       slides,
       imageUrls,
       createdAt: new Date().toISOString(),

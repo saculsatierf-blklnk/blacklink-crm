@@ -28,6 +28,7 @@ export interface GeneratedCreativeResult {
   bodyCopy: string;
   ctaText: string;
   hashtags: string[];
+  postCaption?: string;
   slides: CreativeSlide[];
   imageUrls: string[];
   createdAt: string;
@@ -47,6 +48,7 @@ export interface ScheduledPost {
   bodyCopy: string;
   ctaText: string;
   hashtags: string[];
+  postCaption?: string;
   slides: CreativeSlide[];
   imageUrls: string[];
   reformulationFeedback?: string;

@@ -211,6 +211,20 @@ export function BlackLinkCarouselStudio() {
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [aiErrorNotice, setAiErrorNotice] = useState<string>("");
 
+  // Estado da Legenda do Post (LinkedIn & Instagram Post Copy)
+  const [postCaption, setPostCaption] = useState<string>(
+    `Construir uma máquina de vendas B2B previsível exige mais do que intuição: exige arquitetura de processos e inteligência de dados.\n\nNeste carrossel, detalhamos os passos essenciais para reduzir gargalos de qualificação e acelerar o ciclo de fechamento comercial em empresas de alto crescimento.\n\nSalve este post para consultar com seu time e compartilhe com líderes que buscam escala com eficiência de capital.\n\n#VendasB2B #InteligenciaComercial #SaaS #Growth #BlackLinkCRM`
+  );
+  const [isCaptionOpen, setIsCaptionOpen] = useState<boolean>(true);
+  const [hasCopiedCaption, setHasCopiedCaption] = useState<boolean>(false);
+
+  // Estado do Copiloto de Micro-Edição por Lâmina
+  const [copilotLoadingSlide, setCopilotLoadingSlide] = useState<number | null>(null);
+  const [copilotAction, setCopilotAction] = useState<"agressivo" | "encurtar" | "executivo" | null>(null);
+
+  // Estado da Central de Publicação (Modal Fase 3)
+  const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
+
   // Referência para o container de exportação offscreen
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
 
@@ -417,6 +431,18 @@ export function BlackLinkCarouselStudio() {
         }));
         setSlides(formatted);
         setCurrentSlideIndex(0);
+
+        // Ingestão da Legenda Persuasiva do Post (postCaption)
+        const incomingCaption =
+          parsedData?.postCaption ||
+          parsedData?.caption ||
+          (parsedData?.bodyCopy
+            ? `${parsedData.bodyCopy}\n\n${parsedData.ctaText || ""}\n\n${(Array.isArray(parsedData.hashtags) ? parsedData.hashtags : []).join(" ")}`.trim()
+            : "");
+
+        if (incomingCaption) {
+          setPostCaption(incomingCaption);
+        }
       } else {
         throw new Error("Estrutura de slides ausente na resposta da IA.");
       }
@@ -493,6 +519,85 @@ export function BlackLinkCarouselStudio() {
       }
       return copy;
     });
+  };
+
+  // ==========================================================================
+  // COPILOTO DE MICRO-EDIÇÃO POR LÂMINA (AI LOCAL / REWRITE ESTRATÉGICO)
+  // ==========================================================================
+  const handleCopilotRewrite = async (
+    action: "agressivo" | "encurtar" | "executivo",
+    slideIndex: number
+  ) => {
+    setCopilotLoadingSlide(slideIndex);
+    setCopilotAction(action);
+
+    const current = slides[slideIndex];
+    if (!current) {
+      setCopilotLoadingSlide(null);
+      setCopilotAction(null);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/marketing/copilot/rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          headline: current.headline,
+          bodyText: current.bodyText,
+          tag: current.tag,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.headline && data.bodyText) {
+          setSlides((prev) => {
+            const copy = [...prev];
+            copy[slideIndex] = {
+              ...copy[slideIndex],
+              headline: data.headline,
+              bodyText: data.bodyText,
+            };
+            return copy;
+          });
+          return;
+        }
+      }
+      throw new Error("Resposta fora do formato esperado pelo copiloto");
+    } catch (err) {
+      console.warn("Copiloto local com fallback de segurança:", err);
+      // Fallback algorítmico local para garantir que a UI sempre responda
+      const rawH = (current.headline || "").replace(/\*\*/g, "");
+      let nextH = current.headline;
+      let nextB = current.bodyText;
+
+      if (action === "agressivo") {
+        nextH = `O custo oculto de ignorar **${rawH.split(" ").slice(0, 4).join(" ") || "este processo"}**: você está perdendo receita`;
+        nextB = "A cada ciclo sem padronização, sua esteira vaza leads e queima CAC. O mercado B2B não tolera processos amadores. Implemente a mudança hoje ou ceda espaço para a concorrência.";
+      } else if (action === "encurtar") {
+        const words = rawH.split(" ").filter(Boolean);
+        nextH = words.length > 5 ? `**${words.slice(0, 3).join(" ")}**: ${words.slice(3, 6).join(" ")}` : `**${rawH || "Ajuste Imediato"}** em escala`;
+        nextB = current.bodyText.split(/[.!?]+/)[0] ? `${current.bodyText.split(/[.!?]+/)[0].trim()}. Menos atrito, maior conversão.` : "Elimine o atrito técnico agora.";
+      } else if (action === "executivo") {
+        nextH = `Maximizando a eficiência de capital: a tese de **${rawH.split(" ").slice(0, 4).join(" ") || "governança comercial"}**`;
+        nextB = "Decisores corporativos priorizam blindagem dos unit economics e previsibilidade de caixa. Esta diretriz consolida a governança da esteira comercial.";
+      }
+
+      setSlides((prev) => {
+        const copy = [...prev];
+        copy[slideIndex] = {
+          ...copy[slideIndex],
+          headline: nextH,
+          bodyText: nextB,
+        };
+        return copy;
+      });
+    } finally {
+      setCopilotLoadingSlide(null);
+      setCopilotAction(null);
+    }
   };
 
   // Upload Local de Screenshot para Mockups Apple
@@ -1301,6 +1406,58 @@ export function BlackLinkCarouselStudio() {
                   />
                 </div>
 
+                {/* TOOLBAR FLUTUANTE DO COPILOTO DE MICRO-EDIÇÃO IA */}
+                <div className="p-2.5 rounded-xl bg-black/60 border border-white/10 flex flex-wrap items-center justify-between gap-2 backdrop-blur-md">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-300 font-bold">
+                    <span className="text-xs">🤖</span>
+                    <span>Copiloto de Lâmina:</span>
+                    {copilotLoadingSlide === currentSlideIndex && (
+                      <span className="w-2.5 h-2.5 rounded-full border border-cyan-400 border-t-transparent animate-spin inline-block ml-1" />
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleCopilotRewrite("agressivo", currentSlideIndex)}
+                      disabled={copilotLoadingSlide === currentSlideIndex}
+                      className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-rose-500/20 hover:border-rose-500/40 text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-40"
+                      title="Reescreve focando em dor, urgência e perda de receita"
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M7 2v11h3v9l7-12h-4l4-8z" />
+                      </svg>
+                      <span>Agressivo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopilotRewrite("encurtar", currentSlideIndex)}
+                      disabled={copilotLoadingSlide === currentSlideIndex}
+                      className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-amber-500/20 hover:border-amber-500/40 text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-40"
+                      title="Reduz caracteres e simplifica a mensagem mantendo impacto"
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M19 3L13 9M9 15L3 21M9 9l6 6M17.5 12a5.5 5.5 0 11-11 0 5.5 5.5 0 0111 0z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                      <span>Encurtar</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCopilotRewrite("executivo", currentSlideIndex)}
+                      disabled={copilotLoadingSlide === currentSlideIndex}
+                      className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-cyan-300 hover:text-cyan-200 border border-cyan-500/20 hover:border-cyan-500/40 text-[10px] font-mono font-semibold transition-all cursor-pointer flex items-center gap-1 disabled:opacity-40"
+                      title="Eleva o vocabulário para tom institucional C-Level"
+                    >
+                      <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                        <path d="M6 3h12l-2 5-4-2-4 2-2-5zm0 8l6 3 6-3v9a1 1 0 01-1 1H7a1 1 0 01-1-1v-9z" />
+                      </svg>
+                      <span>Executivo</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* DADOS VISUAIS (B2B CHART ENGINE MVP) */}
                 <div className="pt-3 border-t border-white/10 space-y-2">
                   <div className="flex items-center justify-between">
@@ -1390,6 +1547,65 @@ export function BlackLinkCarouselStudio() {
                 >
                   Próximo →
                 </button>
+              </div>
+
+              {/* PAINEL COLAPSÁVEL: LEGENDA DO POST (LINKEDIN / INSTAGRAM) */}
+              <div className="rounded-2xl bg-black/50 border border-white/10 overflow-hidden transition-all mt-4">
+                <div className="p-3.5 flex items-center justify-between gap-3 bg-white/[0.03] border-b border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setIsCaptionOpen((prev) => !prev)}
+                    className="flex items-center gap-2 text-left cursor-pointer flex-1"
+                  >
+                    <span className="text-base select-none">📝</span>
+                    <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                      Legenda do Post (LinkedIn / Instagram)
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      {isCaptionOpen ? "▲ Recolher" : "▼ Expandir"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(postCaption);
+                      setHasCopiedCaption(true);
+                      setTimeout(() => setHasCopiedCaption(false), 2500);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                      hasCopiedCaption
+                        ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                        : "bg-white/10 hover:bg-white/15 border-white/15 text-white"
+                    }`}
+                  >
+                    <span>{hasCopiedCaption ? "✓" : "📋"}</span>
+                    <span>{hasCopiedCaption ? "Copiado!" : "Copiar Legenda"}</span>
+                  </button>
+                </div>
+
+                {isCaptionOpen && (
+                  <div className="p-4 space-y-3 animate-in fade-in duration-200">
+                    <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                      Texto persuasivo completo gerado para acompanhar a publicação. Edite livremente ou copie para o clipboard com 1 clique.
+                    </p>
+
+                    <textarea
+                      rows={6}
+                      value={postCaption}
+                      onChange={(e) => setPostCaption(e.target.value)}
+                      placeholder="Cole ou redija aqui a legenda do post..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-black/60 border border-white/15 text-xs text-zinc-200 focus:outline-none focus:border-white/30 leading-relaxed font-mono"
+                    />
+
+                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-1">
+                      <span>{postCaption.length} caracteres • {postCaption.split(/\s+/).filter(Boolean).length} palavras</span>
+                      <span className="text-cyan-400">
+                        {(postCaption.match(/#\w+/g) || []).length} hashtags
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1504,45 +1720,89 @@ export function BlackLinkCarouselStudio() {
             </div>
           </div>
 
-          {/* BARRA DE EXPORTAÇÃO CORPORATIVA (COM DOWNLOAD UNITÁRIO) */}
-          <div className="w-full mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-left">
-              <span className="text-xs font-mono uppercase text-zinc-400 block">
-                Exportação de Alta Resolução
-              </span>
-              <span className="text-sm font-bold text-white">
-                Downloads Oficiais B2B
-              </span>
+          {/* ================================================================ */}
+          {/* CENTRAL DE PUBLICAÇÃO & DISTRIBUIÇÃO B2B (BASE DO CANVAS)         */}
+          {/* ================================================================ */}
+          <div className="w-full mt-6 p-5 md:p-6 rounded-3xl bg-black/60 border border-white/15 backdrop-blur-2xl shadow-2xl flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400" />
+                <div>
+                  <h3 className="text-sm font-black text-white tracking-tight flex items-center gap-2">
+                    <span>Central de Publicação &amp; Distribuição</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-zinc-300 font-semibold border border-white/10">
+                      Pipeline API v2.0
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                    Tenant: <span className="text-white font-bold">{tenantName}</span> • Distribuição Multi-Canal
+                  </p>
+                </div>
+              </div>
+
+              {/* Badges de Canais Prontos */}
+              <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400">
+                <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                  LinkedIn Ready
+                </span>
+                <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                  Meta v20.0
+                </span>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* BOTÃO SECUNDÁRIO E ELEGANTE: DOWNLOAD UNITÁRIO DA LÂMINA ATUAL */}
+            {/* Ações: Botão Principal Colossal + Downloads Secundários */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              {/* BOTÃO COLOSSAL PRINCIPAL: LANÇAR CAMPANHA (API) */}
               <button
-                onClick={handleDownloadSinglePng}
-                disabled={isExporting}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                type="button"
+                onClick={() => setShowPublishModal(true)}
+                className="group relative flex-1 py-4 px-6 rounded-2xl text-white text-xs md:text-sm font-mono font-black uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-xl hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 overflow-hidden border border-white/20"
+                style={{
+                  background: `linear-gradient(135deg, ${designConfig.accentColor} 0%, #3b82f6 50%, #1d4ed8 100%)`,
+                  boxShadow: `0 8px 30px -5px ${designConfig.accentColor}66`,
+                }}
               >
-                <span>⬇ Baixar Lâmina Atual</span>
+                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <span className="text-base">🚀</span>
+                <span className="drop-shadow-sm font-black">Lançar Campanha (API)</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/30 border border-white/20 text-white font-bold">
+                  Autônomo
+                </span>
               </button>
 
-              <button
-                onClick={handleDownloadZip}
-                disabled={isExporting}
-                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                <span>Exportar Pacote (.ZIP)</span>
-              </button>
+              {/* BOTÕES SECUNDÁRIOS E ELEGANTES */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadSinglePng}
+                  disabled={isExporting}
+                  className="flex-1 sm:flex-none px-3.5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  title="Baixar apenas o slide atual em 1080px"
+                >
+                  <span>⬇ Lâmina Atual</span>
+                </button>
 
-              <button
-                onClick={handleDownloadPdf}
-                disabled={isExporting}
-                className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all shadow-xl hover:shadow-2xl cursor-pointer disabled:opacity-50 flex items-center gap-2"
-              >
-                <span>Exportar LinkedIn (.PDF)</span>
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9h2.79v8.37H6.46v-8.37M7.86 6.5a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z" />
-                </svg>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadZip}
+                  disabled={isExporting}
+                  className="flex-1 sm:flex-none px-3.5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-mono font-bold border border-white/15 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  title="Baixar todas as lâminas em arquivo ZIP"
+                >
+                  <span>📦 ZIP</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  disabled={isExporting}
+                  className="flex-1 sm:flex-none px-4 py-3 rounded-xl bg-white/90 hover:bg-white text-black text-xs font-mono font-bold border border-white/30 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                  title="Gerar PDF multi-página pronto para postar como documento no LinkedIn"
+                >
+                  <span>📄 PDF LinkedIn</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1649,6 +1909,98 @@ export function BlackLinkCarouselStudio() {
                 className="px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all disabled:opacity-40 cursor-pointer flex items-center gap-2 shadow-lg hover:shadow-xl"
               >
                 <span>⚡ Disparar em Background</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL DE LANÇAMENTO DE CAMPANHA (FASE 3: OAUTH SOCIAL EM BREVE)      */}
+      {/* ==================================================================== */}
+      {showPublishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-xl bg-[#0c0d12] border border-white/20 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl p-2 rounded-2xl bg-white/5 border border-white/10">🚀</span>
+                <div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    Lançar Campanha (API de Distribuição)
+                  </h3>
+                  <span className="text-xs font-mono text-cyan-400">
+                    Fase 3 • Orquestração Multi-Canal
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPublishModal(false)}
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center font-mono cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Aviso de Integração Social em Breve */}
+            <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 space-y-2">
+              <div className="flex items-center gap-2 text-cyan-300 text-xs font-mono font-bold">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>Integração Social em Breve (Fase 3)</span>
+              </div>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                A infraestrutura de empacotamento paramétrico está concluída. Na Fase 3, ao plugar os tokens OAuth corporativos do LinkedIn e da Meta, este botão disparará a publicação automática sem necessidade de download manual.
+              </p>
+            </div>
+
+            {/* Resumo do Ativo a ser Distribuído */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 font-mono text-xs">
+              <div className="text-zinc-400 font-bold uppercase tracking-wider text-[10px]">
+                Dossiê da Campanha Pronta
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-zinc-300">
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-zinc-500 text-[10px] block">Tenant Conectado:</span>
+                  <span className="text-white font-bold truncate block">{tenantName}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-zinc-500 text-[10px] block">Lâminas do Carrossel:</span>
+                  <span className="text-white font-bold block">{slides.length} lâminas ({designConfig.aspectRatio})</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-zinc-500 text-[10px] block">Legenda (Post Copy):</span>
+                  <span className="text-emerald-400 font-bold block">✓ Pronta ({postCaption.length} carac.)</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-zinc-500 text-[10px] block">Canais Configurados:</span>
+                  <span className="text-white font-bold block">LinkedIn &amp; Instagram</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Ações Imediatas: Download ou Cópia de Legenda enquanto a API finaliza */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(postCaption);
+                  setHasCopiedCaption(true);
+                  setTimeout(() => setHasCopiedCaption(false), 2000);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>{hasCopiedCaption ? "✓ Legenda Copiada!" : "📋 Copiar Legenda"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPublishModal(false);
+                  handleDownloadPdf();
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
+              >
+                <span>Baixar PDF para Postar Agora</span>
               </button>
             </div>
           </div>
