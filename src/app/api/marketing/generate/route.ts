@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { GeneratedCreativeResult, CreativeSlide } from "@/store/useMarketingStore";
+import { db } from "@/db/db";
+import { scheduledPosts } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
+import { resolveTenantCompanyId } from "@/lib/auth/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +19,7 @@ export async function POST(request: NextRequest) {
       competitorsReferences,
       nicheValueProposition,
       format = "carousel",
+      recentContext: explicitContext,
     } = body;
 
     if (!theme || typeof theme !== "string" || !theme.trim()) {
@@ -24,13 +29,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
+    // 1. Roteamento Estrito para Produção (n8n Webhook)
+    // Força a alteração de rota de teste (/webhook-test/) para a rota oficial de produção (/webhook/)
+    const rawWebhookUrl =
+      process.env.N8N_WEBHOOK_URL ||
+      "https://n8n.blacklink.com.br/webhook/blacklink-marketing-generate";
+    const n8nWebhookUrl = rawWebhookUrl.replace("/webhook-test/", "/webhook/");
 
-    // 1. Se o Webhook do n8n estiver configurado, despacha para o n8n
+    // 2. Injeção de Contexto (Evitar Amnésia da IA)
+    // Resgata os temas e headlines das últimas 3 campanhas geradas neste Tenant no Supabase
+    let recentContext = explicitContext || "Nenhum histórico recente";
+    try {
+      const tenantCompanyId = await resolveTenantCompanyId();
+      if (tenantCompanyId) {
+        const recentCampaigns = await db
+          .select({
+            theme: scheduledPosts.theme,
+            hookHeadline: scheduledPosts.hookHeadline,
+          })
+          .from(scheduledPosts)
+          .where(eq(scheduledPosts.companyId, tenantCompanyId))
+          .orderBy(desc(scheduledPosts.createdAt))
+          .limit(3);
+
+        if (recentCampaigns.length > 0) {
+          recentContext = recentCampaigns
+            .map((c, i) => `${i + 1}. Tema: "${c.theme}" (Headline: "${c.hookHeadline}")`)
+            .join(" | ");
+        }
+      }
+    } catch (historyErr) {
+      console.warn("Aviso ao resgatar histórico recente de campanhas para contexto:", historyErr);
+    }
+
+    // 3. Se a URL do n8n estiver configurada, despacha para a rota de produção do n8n
     if (n8nWebhookUrl) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+        const n8nPayload = {
+          theme,
+          recentContext,
+          nicheValueProposition: nicheValueProposition || "Inteligência comercial e conversão B2B",
+          targetAudience: targetAudience || "Decisores B2B (CEOs, Diretores Comerciais, Heads de Vendas)",
+          competitorsReferences: competitorsReferences || "Nenhuma informada",
+          format,
+          timestamp: new Date().toISOString(),
+        };
 
         const n8nResponse = await fetch(n8nWebhookUrl, {
           method: "POST",
@@ -38,14 +84,7 @@ export async function POST(request: NextRequest) {
             "Content-Type": "application/json",
             "User-Agent": "BlackLink-CRM-Agent/2.0",
           },
-          body: JSON.stringify({
-            theme,
-            nicheValueProposition: nicheValueProposition || "Inteligência comercial e conversão B2B",
-            targetAudience: targetAudience || "Decisores B2B (CEOs, Diretores Comerciais, Heads de Vendas)",
-            competitorsReferences: competitorsReferences || "Nenhuma informada",
-            format,
-            timestamp: new Date().toISOString(),
-          }),
+          body: JSON.stringify(n8nPayload),
           signal: controller.signal,
         });
 
@@ -87,7 +126,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Gerador Nativo Estratégico (Fallback / Standalone de Alta Fidelidade)
+    // 4. Gerador Nativo Estratégico (Fallback / Standalone de Alta Fidelidade)
     // Produz estrutura completa de carrossel, story ou post único com copywriting executivo B2B
     const cleanTheme = theme.trim();
     const audience = targetAudience?.trim() || "Decisores B2B, Diretores Comerciais e Fundadores";
