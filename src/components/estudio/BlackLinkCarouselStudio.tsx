@@ -225,6 +225,12 @@ export function BlackLinkCarouselStudio() {
   // Estado da Central de Publicação (Modal Fase 3)
   const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
 
+  // Estado do Gatilho de Inbound & Automação (Loop de Captura)
+  const [inboundKeyword, setInboundKeyword] = useState<string>("SCRIPT");
+  const [inboundDestination, setInboundDestination] = useState<string>("Inbound / Para Qualificação");
+  const [hasCopiedWebhookUrl, setHasCopiedWebhookUrl] = useState<boolean>(false);
+  const [hasCopiedCampaignJson, setHasCopiedCampaignJson] = useState<boolean>(false);
+
   // Referência para o container de exportação offscreen
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1607,6 +1613,136 @@ export function BlackLinkCarouselStudio() {
                   </div>
                 )}
               </div>
+
+              {/* PAINEL TÁTICO: GATILHO DE INBOUND (AUTOMAÇÃO DE CAPTURA) */}
+              <div className="rounded-2xl bg-black/60 border border-emerald-500/25 p-4 md:p-5 space-y-4 shadow-xl relative overflow-hidden backdrop-blur-xl mt-4">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-lg select-none p-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                      🧲
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <span>Gatilho de Inbound (Automação)</span>
+                        <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Loop Ativo
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                        Conexão direta com esteira de vendas B2B
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const endpointUrl = typeof window !== "undefined"
+                        ? `${window.location.origin}/api/crm/inbound-webhook`
+                        : "/api/crm/inbound-webhook";
+                      navigator.clipboard.writeText(endpointUrl);
+                      setHasCopiedWebhookUrl(true);
+                      setTimeout(() => setHasCopiedWebhookUrl(false), 2000);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-mono text-zinc-300 border border-white/10 transition-all cursor-pointer flex items-center gap-1.5"
+                    title="Copiar URL do Webhook para ManyChat / n8n / Meta"
+                  >
+                    <span>{hasCopiedWebhookUrl ? "✓" : "🔗"}</span>
+                    <span>{hasCopiedWebhookUrl ? "URL Copiada!" : "URL Webhook"}</span>
+                  </button>
+                </div>
+
+                {/* 1. Input: Palavra-Chave de Captura */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                      Palavra-Chave de Captura
+                    </label>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Disparo no comentário
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={inboundKeyword}
+                    onChange={(e) => setInboundKeyword(e.target.value.toUpperCase())}
+                    placeholder="Ex: SCRIPT, PDF, CRM, AUDITORIA"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/70 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs uppercase tracking-widest focus:outline-none focus:border-emerald-400"
+                  />
+
+                  {/* Quick Chips de Palavra-Chave */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {["SCRIPT", "PDF", "PLAYBOOK", "CRM", "AUDITORIA"].map((kw) => (
+                      <button
+                        key={kw}
+                        type="button"
+                        onClick={() => setInboundKeyword(kw)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition-all cursor-pointer border ${
+                          inboundKeyword === kw
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold"
+                            : "bg-white/5 text-zinc-400 border-white/10 hover:text-white"
+                        }`}
+                      >
+                        {kw}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Seletor Visual: Destino no Kanban */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                      Destino do Lead no Kanban
+                    </label>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                      Tag: 🏷️ Capturado via Estúdio
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { id: "Inbound / Para Qualificação", desc: "Primeira coluna (Filtro SDR)" },
+                      { id: "Novos Leads", desc: "Esteira padrão de entrada" },
+                    ].map((col) => (
+                      <button
+                        key={col.id}
+                        type="button"
+                        onClick={() => setInboundDestination(col.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          inboundDestination === col.id
+                            ? "bg-emerald-500/15 border-emerald-500/40 text-white shadow-sm"
+                            : "bg-black/50 border-white/10 text-zinc-400 hover:text-white hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-mono font-bold leading-tight">
+                            {col.id}
+                          </span>
+                          {inboundDestination === col.id && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          )}
+                        </div>
+                        <span className="text-[9px] font-mono text-zinc-500">
+                          {col.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resumo da Automação n8n/ManyChat */}
+                <div className="p-3 rounded-xl bg-black/40 border border-white/10 text-[10px] font-mono text-zinc-400 leading-relaxed space-y-1">
+                  <div className="text-zinc-300 font-bold flex items-center gap-1.5">
+                    <span>⚡ Como funciona o Loop:</span>
+                  </div>
+                  <p>
+                    O carrossel convida: <span className="text-white font-bold">&quot;Comente {inboundKeyword}&quot;</span>. Quando o seguidor comenta no Instagram ou LinkedIn, seu fluxo no n8n dispara uma DM e envia um POST para <span className="text-emerald-300 font-bold">/api/crm/inbound-webhook</span>, criando o card em <span className="text-white font-bold">&quot;{inboundDestination}&quot;</span> com a tag <span className="text-emerald-400 font-bold">🏷️ Capturado via Estúdio</span>.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1972,14 +2108,47 @@ export function BlackLinkCarouselStudio() {
                   <span className="text-emerald-400 font-bold block">✓ Pronta ({postCaption.length} carac.)</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
-                  <span className="text-zinc-500 text-[10px] block">Canais Configurados:</span>
-                  <span className="text-white font-bold block">LinkedIn &amp; Instagram</span>
+                  <span className="text-zinc-500 text-[10px] block">Gatilho de Inbound:</span>
+                  <span className="text-emerald-300 font-bold block">&quot;{inboundKeyword}&quot; → {inboundDestination}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 col-span-2">
+                  <span className="text-zinc-500 text-[10px] block">Endpoint do Webhook (POST):</span>
+                  <span className="text-cyan-400 font-mono text-[11px] block truncate">
+                    {typeof window !== "undefined" ? `${window.location.origin}/api/crm/inbound-webhook` : "/api/crm/inbound-webhook"}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Ações Imediatas: Download ou Cópia de Legenda enquanto a API finaliza */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
+            {/* Ações Imediatas: Download, Cópia de Legenda ou JSON para Automação n8n */}
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const campaignPayload = {
+                    tenantId,
+                    tenantName,
+                    campaignOrigin: "Black Link Carousel Studio",
+                    inboundKeyword,
+                    inboundDestination,
+                    inboundWebhookUrl: typeof window !== "undefined"
+                      ? `${window.location.origin}/api/crm/inbound-webhook`
+                      : "/api/crm/inbound-webhook",
+                    aspectRatio: designConfig.aspectRatio,
+                    totalSlides: slides.length,
+                    postCaption,
+                    slides,
+                  };
+                  navigator.clipboard.writeText(JSON.stringify(campaignPayload, null, 2));
+                  setHasCopiedCampaignJson(true);
+                  setTimeout(() => setHasCopiedCampaignJson(false), 2000);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                title="Copia o JSON estruturado para plugar no n8n ou ManyChat"
+              >
+                <span>{hasCopiedCampaignJson ? "✓ Payload Copiado!" : "🧲 Copiar JSON (n8n/ManyChat)"}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {

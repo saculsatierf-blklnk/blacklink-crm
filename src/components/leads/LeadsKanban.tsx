@@ -616,9 +616,15 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
                                   <div className="flex items-center justify-between border-t border-glass-border/60 pt-2.5 text-[10px] font-mono text-sub">
                                     <div className="flex items-center gap-1">
                                       <Globe className="h-3 w-3 text-sub" />
-                                      <span className="truncate max-w-[120px]">
-                                        {lead.origin || "Direto"}
-                                      </span>
+                                      {lead.origin?.includes("Estúdio") ? (
+                                        <span className="truncate max-w-[170px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px] shadow-sm">
+                                          {lead.origin}
+                                        </span>
+                                      ) : (
+                                        <span className="truncate max-w-[120px]">
+                                          {lead.origin || "Direto"}
+                                        </span>
+                                      )}
                                     </div>
 
                                     <div className="flex items-center gap-1 text-[10px]">
