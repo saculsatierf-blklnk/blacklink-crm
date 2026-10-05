@@ -138,6 +138,7 @@ export interface CompanyProfile {
   targetAudience: string;
   bio?: string;
   tagline?: string;
+  profileType?: "company" | "influencer";
 }
 
 export interface CompetitorItem {
@@ -497,6 +498,7 @@ const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   targetAudience: "CEOs, Diretores Comerciais, Heads de Growth e Hunters B2B",
   bio: "Inteligência Comercial B2B para times de elite 🚀\nTransformamos seu CRM em uma máquina de receita previsível.\nRadar Anti-Colisão | Automação | IA\n👇 Domine seu mercado abaixo:",
   tagline: "Onde a estratégia de Growth encontra a precisão da Inteligência Comercial.",
+  profileType: "company",
 };
 
 const DEFAULT_DIAGNOSTIC: CompetitorsDiagnostic = {
