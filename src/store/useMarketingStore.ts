@@ -32,7 +32,7 @@ export interface GeneratedCreativeResult {
   slides: CreativeSlide[];
   imageUrls: string[];
   createdAt: string;
-  source: "n8n" | "ai_pipeline";
+  source: "n8n" | "ai_pipeline" | "gemini_direct" | "dynamic_synthesizer";
 }
 
 export interface ScheduledPost {
