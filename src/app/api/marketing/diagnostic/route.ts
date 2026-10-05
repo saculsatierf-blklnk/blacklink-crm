@@ -19,6 +19,9 @@ interface DiagnosticRequestBody {
 }
 
 interface ParsedGeminiDiagnostic {
+  name?: string;
+  instagram?: string;
+  website?: string;
   niche?: string;
   products?: string;
   bio?: string;
@@ -30,55 +33,147 @@ interface ParsedGeminiDiagnostic {
 }
 
 /**
- * Consulta a API do Google Gemini com fallback inteligente de modelos para garantia de alta disponibilidade
+ * Normaliza e busca o conteúdo do site oficial da empresa em tempo real
+ */
+async function scrapeWebsiteText(url: string): Promise<{
+  title?: string;
+  description?: string;
+  bodyText: string;
+  normalizedUrl: string;
+}> {
+  let normalizedUrl = url.trim();
+  if (!/^https?:\/\//i.test(normalizedUrl)) {
+    normalizedUrl = `https://${normalizedUrl}`;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const res = await fetch(normalizedUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      return { bodyText: "", normalizedUrl };
+    }
+
+    const html = await res.text();
+
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : undefined;
+
+    const descMatch =
+      html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+    const description = descMatch ? descMatch[1].trim() : undefined;
+
+    const cleanText = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+      .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, " ")
+      .replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, " ")
+      .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, " ")
+      .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&quot;/gi, '"')
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 4500);
+
+    return { title, description, bodyText: cleanText, normalizedUrl };
+  } catch (err) {
+    console.warn("Aviso ao extrair texto do site:", err);
+    return { bodyText: "", normalizedUrl };
+  }
+}
+
+/**
+ * Consulta a API do Google Gemini com fallback inteligente de modelos e suporte a extração apenas por site
  */
 async function callGeminiDiagnostic(
   apiKey: string,
-  body: DiagnosticRequestBody
+  body: DiagnosticRequestBody,
+  scraped: { title?: string; description?: string; bodyText: string; normalizedUrl: string }
 ): Promise<ParsedGeminiDiagnostic | null> {
   const candidateModels = [
     "gemini-3.1-flash-lite",
     "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
+    "gemini-flash-lite-latest",
     "gemini-3.8-flash",
   ];
 
-  const brandName = body.name?.trim() || "Black Link";
-  const brandHandle = body.instagram?.trim() || "@blklnk.com.br";
-  const brandSite = body.website?.trim() || "https://blklnk.com";
-  const brandNiche = body.niche?.trim() || "CRM Enterprise, Automação de Vendas e Inteligência Comercial B2B";
-  const brandProducts = body.products?.trim() || "Plataforma CRM, Radar Anti-Colisão de Hunters, Estúdio de IA para Carrosséis";
-  const targetAudience = body.targetAudience?.trim() || "CEOs, Diretores Comerciais, Heads de Growth e Líderes B2B";
+  const hasWebsiteContent = Boolean(scraped.bodyText && scraped.bodyText.length > 50);
+  const websiteSummary = hasWebsiteContent
+    ? `DADOS EXTRAÍDOS DO SITE OFICIAL EM TEMPO REAL:
+- URL Oficial: "${scraped.normalizedUrl}"
+- Título da Página: "${scraped.title || "N/A"}"
+- Meta Descrição: "${scraped.description || "N/A"}"
+- Conteúdo Textual Resumido do Site:
+"""
+${scraped.bodyText}
+"""`
+    : `URL Informada: "${body.website || "N/A"}" (Sem conteúdo textual extraído diretamente)`;
 
-  const prompt = `Você é o Estrategista-Chefe de Inteligência Competitiva e Crescimento B2B da Black Link.
-Sua missão é realizar um diagnóstico executivo PROFUNDO, hiper-personalizado e fundamentado no Instagram corporativo e ecossistema digital para a seguinte empresa:
+  const hasInstagram = Boolean(body.instagram && body.instagram.trim() && body.instagram.trim() !== "@");
+  let providedName = body.name?.trim() || "";
 
-DADOS DA EMPRESA:
-- Nome da Empresa / Marca: "${brandName}"
-- @Instagram Institucional: "${brandHandle}"
-- Website Oficial: "${brandSite}"
-- Nicho / Setor: "${brandNiche}"
-- Produtos & Soluções: "${brandProducts}"
-- Público-Alvo: "${targetAudience}"
+  // Se o site foi lido e o nome do formulário não bate com o site (ex: resquício de "Black Link CRM" no formulário e site "gofermetais.com.br")
+  if (scraped.title && providedName) {
+    const lowerTitle = scraped.title.toLowerCase();
+    const lowerName = providedName.toLowerCase();
+    if (!lowerTitle.includes(lowerName) && !lowerName.includes(lowerTitle)) {
+      providedName = ""; // Prioriza o site como fonte primária
+    }
+  }
 
-DIRETRIZES DA ANÁLISE:
-1. SE NENHUM PRODUTO OU NICHO ESPECÍFICO TIVER SIDO DIGITADO, DEDUZA COM BASE NO NOME, INSTAGRAM E DOMÍNIO (${brandName}, ${brandHandle}, ${brandSite}).
-2. IDENTIFIQUE CONCORRENTES REAIS NO INSTAGRAM EM 3 NÍVEIS:
-   - Nível 1 (leader): Líder de mercado global ou incumbente consolidado da categoria.
-   - Nível 2 (direct): Concorrente direto no mercado nacional ou nicho de atuação com perfil no Instagram.
-   - Nível 3 (indirect): Alternativa indireta / métodos manuais (planilhas, agências de outbound tradicionais, etc.).
-   Para cada concorrente, aponte a força real, a vulnerabilidade/clichê que eles cometem no feed do Instagram e como a "${brandName}" se posiciona e vence com autoridade.
-3. MÉTODOS VIRALIZÁVEIS: Crie 3 padrões de ganchos virais específicos para os produtos da empresa, explicando o mecanismo psicológico que faz tomadores de decisão (C-Level) salvarem e compartilharem.
-4. CRONOGRAMA EDITORIAL: Crie 4 pautas estratégicas estruturadas (Topo, Meio, Fundo de funil) prontas para publicação no Instagram.
-5. BIO DO INSTAGRAM: Formate uma bio de alto impacto, minimalista e persuasiva com emojis e chamada para ação (CTA).
+  const prompt = `Você é o Estrategista-Chefe de Inteligência Competitiva, Análise de Mercado B2B e Growth da Black Link.
+Sua missão é realizar um diagnóstico corporativo PROFUNDO, hiper-personalizado e fundamentado no negócio real da empresa abaixo:
 
-Responda ESTRITAMENTE em formato JSON puro:
+${websiteSummary}
+
+INFORMAÇÕES ADICIONAIS FORNECIDAS PELO OPERADOR:
+- Nome da Empresa Informado: "${providedName || "NÃO INFORMADO (Extraia do site)"}"
+- @Instagram Informado: "${hasInstagram ? body.instagram?.trim() : "NÃO INFORMADO / NÃO POSSUI (Instagram é Opcional)"}"
+- Nicho / Setor Informado: "${body.niche?.trim() || "NÃO INFORMADO (Extraia do site)"}"
+- Produtos & Soluções Informados: "${body.products?.trim() || "NÃO INFORMADO (Extraia do site)"}"
+- Público-Alvo Informado: "${body.targetAudience?.trim() || "NÃO INFORMADO (Deduza com base no mercado da empresa)"}"
+
+DIRETRIZES FUNDAMENTAIS:
+1. EXTRAÇÃO CIRÚRGICA DA IDENTIDADE:
+   - Se o usuário forneceu apenas o site (ou se o nome e Instagram não foram preenchidos), extraia com total fidelidade o NOME REAL DA EMPRESA, o NICHO e os PRODUTOS/SOLUÇÕES a partir do site analisado.
+   - NÃO presuma que a empresa é uma empresa de software/CRM a menos que o site realmente seja de software/CRM. Se o site for de engenharia metálica (ex: Gofer Metais), construção pesada, saúde, logística, indústria ou serviços, adapte 100% da análise para esse segmento.
+2. O INSTAGRAM É 100% OPCIONAL:
+   - Se o Instagram não foi informado ou a empresa não possui, crie e sugira um @handle limpo e profissional (ex: @nome_da_empresa) para estruturar a presença da marca na rede, e crie uma proposta de Bio e posicionamento que faça a empresa se destacar.
+3. CONCORRENTES REAIS NO MERCADO ESPECÍFICO (3 NÍVEIS):
+   - Nível 1 (leader): Líder global ou grande player nacional consolidado do setor dessa empresa.
+   - Nível 2 (direct): Concorrente direto no Brasil ou no mesmo nicho de mercado.
+   - Nível 3 (indirect): Alternativas indiretas, concorrentes substitutos ou processos manuais/tradicionais.
+   Para cada concorrente, indique força, fraqueza/clichê e como a empresa analisada se diferencia.
+4. MÉTODOS VIRALIZÁVEIS E CRONOGRAMA:
+   - Crie 3 métodos com ganchos virais específicos para os produtos/obras/serviços reais da empresa.
+   - Crie 4 pautas de carrossel de alto impacto para o cronograma editorial (Topo, Meio, Fundo de funil).
+
+Responda ESTRITAMENTE em formato JSON puro (sem marcação de bloco de código):
 {
-  "niche": "nicho refinado e articulado com clareza",
-  "products": "produtos e soluções principais detalhados",
-  "bio": "Bio executiva pronta para o perfil com quebras de linha e CTA",
-  "tagline": "Frase de posicionamento de alto impacto",
-  "executiveSummary": "Dossiê executivo e tese de contra-posicionamento da marca contra clichês de mercado",
+  "name": "Nome Real da Empresa Extraído do Site ou Fornecido",
+  "instagram": "@handle_real_ou_sugerido",
+  "website": "${scraped.normalizedUrl || body.website || ""}",
+  "niche": "Nicho detalhado e refinado da empresa",
+  "products": "Produtos, serviços e soluções centrais identificados",
+  "bio": "Bio profissional de alto impacto pronta para o Instagram com emojis e CTA",
+  "tagline": "Slogan ou frase de impacto da empresa",
+  "executiveSummary": "Dossiê executivo e contra-posicionamento da marca contra clichês e competidores",
   "competitors": [
     {
       "id": "comp-1",
@@ -86,8 +181,8 @@ Responda ESTRITAMENTE em formato JSON puro:
       "handle": "@handle_concorrente",
       "level": "leader",
       "strength": "Ponto forte do concorrente",
-      "vulnerabilityOrCliché": "Clichê ou ponto fraco visível nas postagens",
-      "differentiator": "Diferencial concreto e contra-posicionamento da ${brandName}"
+      "vulnerabilityOrCliché": "Clichê ou ponto fraco visível",
+      "differentiator": "Diferencial concreto e contra-posicionamento da empresa"
     },
     {
       "id": "comp-2",
@@ -111,9 +206,9 @@ Responda ESTRITAMENTE em formato JSON puro:
   "viralMethods": [
     {
       "id": "vm-1",
-      "hookPattern": "Gancho provocativo entre aspas",
+      "hookPattern": "Gancho provocativo específico do nicho da empresa",
       "viralMechanism": "Nome do mecanismo psicológico",
-      "whyItWorks": "Por que decisores B2B salvam e compartilham",
+      "whyItWorks": "Por que decisores salvam e compartilham",
       "suggestedFormat": "carousel"
     },
     {
@@ -136,20 +231,20 @@ Responda ESTRITAMENTE em formato JSON puro:
       "id": "plan-1",
       "dayNumber": 1,
       "dayLabel": "Segunda • 06/Out",
-      "theme": "Tema do Post 1",
-      "hookHeadline": "Headline provocativa",
+      "theme": "Tema da Pauta 1",
+      "hookHeadline": "Headline de Parada de Rolagem",
       "format": "carousel",
       "funnelStage": "topo",
-      "objective": "Objetivo estratégico do conteúdo",
+      "objective": "Objetivo estratégico",
       "viralAngle": "Ângulo de atração",
-      "ctaText": "CTA para engajamento ou direct",
+      "ctaText": "CTA sugerida",
       "status": "planejado"
     },
     {
       "id": "plan-2",
       "dayNumber": 2,
       "dayLabel": "Quarta • 08/Out",
-      "theme": "Tema do Post 2",
+      "theme": "Tema da Pauta 2",
       "hookHeadline": "Headline 2",
       "format": "carousel",
       "funnelStage": "meio",
@@ -162,7 +257,7 @@ Responda ESTRITAMENTE em formato JSON puro:
       "id": "plan-3",
       "dayNumber": 3,
       "dayLabel": "Sexta • 10/Out",
-      "theme": "Tema do Post 3",
+      "theme": "Tema da Pauta 3",
       "hookHeadline": "Headline 3",
       "format": "carousel",
       "funnelStage": "meio",
@@ -175,7 +270,7 @@ Responda ESTRITAMENTE em formato JSON puro:
       "id": "plan-4",
       "dayNumber": 4,
       "dayLabel": "Terça • 14/Out",
-      "theme": "Tema do Post 4",
+      "theme": "Tema da Pauta 4",
       "hookHeadline": "Headline 4",
       "format": "carousel",
       "funnelStage": "fundo",
@@ -190,7 +285,7 @@ Responda ESTRITAMENTE em formato JSON puro:
   for (const model of candidateModels) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 14000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
@@ -244,154 +339,235 @@ Responda ESTRITAMENTE em formato JSON puro:
 /**
  * Sintetizador Dinâmico Baseado no Core Business (Fallback de Alta Fidelidade)
  */
-function synthesizeDynamicDiagnostic(body: DiagnosticRequestBody): ParsedGeminiDiagnostic {
-  const brandName = body.name?.trim() || "Black Link";
-  const brandHandle = body.instagram?.trim() || "@blklnk.com.br";
-  const brandSite = body.website?.trim() || "https://blklnk.com";
+function synthesizeDynamicDiagnostic(
+  body: DiagnosticRequestBody,
+  scraped: { title?: string; description?: string; bodyText: string; normalizedUrl: string }
+): ParsedGeminiDiagnostic {
+  // Dedução de Nome: se fornecido usa o fornecido; senão extrai do título ou da URL
+  let brandName = body.name?.trim();
+  if (!brandName || brandName === "Black Link CRM" || brandName === "Black Link") {
+    if (scraped.title) {
+      // Ex: "Gofer Metais | Estruturas Metálicas..." -> "Gofer Metais"
+      const titleClean = scraped.title.split(/[|\-–•]/)[0].trim();
+      if (titleClean.length > 1 && titleClean.length < 50) {
+        brandName = titleClean;
+      }
+    }
+    if (!brandName && body.website) {
+      const match = body.website.match(/(?:https?:\/\/)?(?:www\.)?([^/.]+)/i);
+      if (match && match[1]) {
+        brandName = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+      }
+    }
+  }
+  if (!brandName) brandName = "Empresa Corporativa";
+
+  // Dedução de Handle: se não tiver ou for vazio, gera com base no nome
+  let brandHandle = body.instagram?.trim();
+  if (!brandHandle || brandHandle === "@" || brandHandle === "@blacklink.b2b" || brandHandle === "@blklnk.com.br") {
+    const slug = brandName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "");
+    brandHandle = `@${slug || "oficial"}`;
+  }
+
+  const brandSite = scraped.normalizedUrl || body.website?.trim() || "https://empresa.com.br";
 
   const lowerName = brandName.toLowerCase();
-  const lowerProducts = (body.products || "").toLowerCase();
+  const lowerText = (scraped.bodyText + " " + (scraped.title || "") + " " + (scraped.description || "")).toLowerCase();
 
-  const isSoftwareOrCRM =
-    lowerName.includes("crm") ||
-    lowerName.includes("link") ||
-    lowerProducts.includes("crm") ||
-    lowerProducts.includes("vendas") ||
-    lowerProducts.includes("software");
+  const isMetalOrSteel =
+    lowerText.includes("metal") ||
+    lowerText.includes("aço") ||
+    lowerText.includes("aco") ||
+    lowerText.includes("estrutur") ||
+    lowerText.includes("construção") ||
+    lowerText.includes("obra");
 
-  const refinedNiche =
-    body.niche?.trim() ||
-    (isSoftwareOrCRM
-      ? "SaaS Enterprise & Inteligência Comercial B2B"
-      : `Soluções Corporativas de Alta Performance em ${brandName}`);
+  const isSoftwareOrTech =
+    lowerText.includes("software") ||
+    lowerText.includes("tecnologia") ||
+    lowerText.includes("crm") ||
+    lowerText.includes("ia") ||
+    lowerText.includes("automação");
 
-  const refinedProducts =
-    body.products?.trim() ||
-    (isSoftwareOrCRM
-      ? "Plataforma CRM Enterprise, Radar Anti-Colisão de Hunters, Estúdio Autônomo de Carrosséis B2B"
-      : `Plataforma e Serviços Estratégicos de Alta Conversão da ${brandName}`);
+  let refinedNiche = body.niche?.trim() || "";
+  let refinedProducts = body.products?.trim() || "";
 
-  const bio = `⚡ ${brandName} | Inteligência Comercial & Escala B2B
-🛡️ Eficiência operacional e conversão previsível
-🚀 Agende um diagnóstico exclusivo pelo link abaixo`;
+  if (!refinedNiche) {
+    if (isMetalOrSteel) {
+      refinedNiche = "Engenharia Estrutural & Fabricação de Estruturas Metálicas para Obras de Grande Porte";
+    } else if (isSoftwareOrTech) {
+      refinedNiche = "Tecnologia B2B & Inteligência Digital Corporativa";
+    } else {
+      refinedNiche = `Soluções Corporativas Especializadas em ${brandName}`;
+    }
+  }
 
-  const tagline = `${brandName}: Transformando Processos Comerciais em Máquinas Previsíveis de Receita`;
+  if (!refinedProducts) {
+    if (isMetalOrSteel) {
+      refinedProducts = "Estruturas Metálicas de Alta Performance, Kits Estruturais Padronizados e Projetos de Infraestrutura";
+    } else if (isSoftwareOrTech) {
+      refinedProducts = "Plataforma de Gestão, Automação de Processos e Inteligência Comercial";
+    } else {
+      refinedProducts = `Linha de Soluções e Atendimento Corporativo da ${brandName}`;
+    }
+  }
 
-  const executiveSummary = `Diagnóstico Estratégico para ${brandName} (${brandHandle}): O mercado no nicho ${refinedNiche} sofre com saturação de mensagens genéricas e templates superficiais de Canva no Instagram. Para ${brandName} consolidar autoridade executiva e romper o algoritmo, a estratégia mestra reside em contra-posicionar dados reais de esteira, métricas densas e autoridade técnica contra o discurso raso da concorrência tradicional.`;
+  const bio = `🏗️ ${brandName} | Excelência e Precisão B2B
+⚙️ Soluções de alta performance e rigor técnico
+👇 Solicite seu atendimento executivo:
+${brandSite}`;
 
-  const competitors: CompetitorItem[] = [
-    {
-      id: `comp-1`,
-      name: "HubSpot / Salesforce Ecosystem",
-      handle: "@salesforce @hubspot",
-      level: "leader",
-      strength: "Reconhecimento global massivo de marca e infraestrutura corporativa.",
-      vulnerabilityOrCliché:
-        "Custos proibitivos em moeda estrangeira, burocracia de implantação e comunicação institucional fria sem apelo direto a times ágeis.",
-      differentiator: `${brandName}: Velocidade cirúrgica de implantação, interface Dark Industrial focada no operador e estúdio criativo nativo integrado.`,
-    },
-    {
-      id: `comp-2`,
-      name: "CRMs Nacionais Legados",
-      handle: "@rdstation @ploomescrm",
-      level: "direct",
-      strength: "Presença consolidada no mercado brasileiro e canais amplos de distribuição.",
-      vulnerabilityOrCliché:
-        "Interfaces convencionais, ausência de radar anti-colisão em tempo real e criativos pasteurizados no feed.",
-      differentiator: `${brandName}: Arquitetura de esteira blindada, zero atrito entre hunters e geração automatizada de criativos de alta densidade.`,
-    },
-    {
-      id: `comp-3`,
-      name: "Agências Tradicionais de Outbound",
-      handle: "@growth_agency_br",
-      level: "indirect",
-      strength: "Promessas agressivas de volume de reuniões.",
-      vulnerabilityOrCliché:
-        "Disparos em massa não personalizados que desgastam domínios e posts superficiais de 'dicas de prospecção'.",
-      differentiator: `${brandName}: Governança de dados, cadência com telemetria preditiva e preservação da reputação institucional.`,
-    },
-  ];
+  const tagline = `${brandName}: Soluções Confiáveis com Precisão e Alta Performance`;
+
+  const executiveSummary = `Diagnóstico Estratégico para ${brandName} (${brandHandle}): Análise baseada no ecossistema ${brandSite}. No mercado de ${refinedNiche}, a maioria das empresas foca em mensagens genéricas sem comprovar rigor técnico ou diferenciais de entrega. Para a ${brandName} liderar e viralizar com alta autoridade, a estratégia mestra reside em contra-posicionar prazos rápidos, rastreabilidade técnica e portfólio comprovado contra players tradicionais.`;
+
+  const competitors: CompetitorItem[] = isMetalOrSteel
+    ? [
+        {
+          id: "comp-1",
+          name: "Líderes Siderúrgicos & Grandes Fabricantes",
+          handle: "@usiminas @gerdau",
+          level: "leader",
+          strength: "Capacidade de fornecimento massivo de matéria-prima e escala global.",
+          vulnerabilityOrCliché: "Burocracia contratual excessiva e lentidão para projetos customizados.",
+          differentiator: `${brandName}: Agilidade técnica, atendimento consultivo direto e flexibilidade na execução de projetos especiais.`,
+        },
+        {
+          id: "comp-2",
+          name: "Metalúrgicas Regionais Tradicionais",
+          handle: "@estruturas_metalicas_brasil",
+          level: "direct",
+          strength: "Proximidade geográfica e preços de entrada concorrenciais.",
+          vulnerabilityOrCliché: "Falta de controle de qualidade rigoroso, atrasos em cronogramas e ausência de presença digital executiva.",
+          differentiator: `${brandName}: Rastreabilidade completa, certificações de qualidade e garantia estrita de cumprimento de cronogramas.`,
+        },
+        {
+          id: "comp-3",
+          name: "Métodos Construtivos em Concreto Armado",
+          handle: "@construcao_tradicional",
+          level: "indirect",
+          strength: "Cultura tradicional de construção civil enraizada no mercado brasileiro.",
+          vulnerabilityOrCliché: "Obras mais lentas, maior desperdício de insumos no canteiro e custo operacional imprevisto.",
+          differentiator: `${brandName}: Redução de até 40% no tempo de montagem da obra, precisão milimétrica e menor custo total de instalação.`,
+        },
+      ]
+    : [
+        {
+          id: "comp-1",
+          name: "Líder Global do Segmento",
+          handle: "@lider_global",
+          level: "leader",
+          strength: "Reconhecimento massivo de marca e infraestrutura consolidada.",
+          vulnerabilityOrCliché: "Custos elevados e soluções engessadas que não atendem demandas ágeis.",
+          differentiator: `${brandName}: Atendimento cirúrgico, implementação acelerada e maior proximidade com os tomadores de decisão.`,
+        },
+        {
+          id: "comp-2",
+          name: "Concorrentes Nacionais Estabelecidos",
+          handle: "@concorrente_nacional",
+          level: "direct",
+          strength: "Presença consolidada no mercado regional.",
+          vulnerabilityOrCliché: "Comunicação antiquada e processos que não evoluíram com a demanda moderna.",
+          differentiator: `${brandName}: Tecnologia de ponta, processos eficientes e diferenciação visual marcante.`,
+        },
+        {
+          id: "comp-3",
+          name: "Processos Tradicionais e Manuais",
+          handle: "@metodos_antigos",
+          level: "indirect",
+          strength: "Resistência à mudança e familiaridade de operações antigas.",
+          vulnerabilityOrCliché: "Erros operacionais frequentes e retrabalho silencioso que drena margem.",
+          differentiator: `${brandName}: Modernização completa e previsibilidade com métricas de resultado claras.`,
+        },
+      ];
 
   const viralMethods: ViralMethodAngle[] = [
     {
-      id: `vm-1`,
-      hookPattern: `Os 5 Erros Invisíveis que Fazem Empresas em ${refinedNiche} Queimar Margem`,
-      viralMechanism: "Diagnóstico de Fricção Oculta",
-      whyItWorks: "Decisores B2B param o feed imediatamente ao confrontar vazamentos de receita e ineficiências operacionais.",
+      id: "vm-1",
+      hookPattern: `Os 3 Erros Críticos que Encarecem Obras e Projetos em ${refinedNiche}`,
+      viralMechanism: "Diagnóstico de Sangria Financeira",
+      whyItWorks: "Decisores corporativos param o feed ao identificar custos invisíveis e riscos de execução.",
       suggestedFormat: "carousel",
     },
     {
-      id: `vm-2`,
-      hookPattern: `Por que Times Comerciais de Elite Estão Abandonando Métodos Tradicionais`,
-      viralMechanism: "Contra-Consenso & Tendência Oculta",
-      whyItWorks: "Gera curiosidade imediata e quebra de paradigma entre líderes e executivos.",
-      suggestedFormat: "carousel",
-    },
-    {
-      id: `vm-3`,
-      hookPattern: `O Framework de Esteira que Multiplicou a Tração da ${brandName} (Passo a Passo)`,
+      id: "vm-2",
+      hookPattern: `Estudo de Caso: Como Reduzir em 40% o Cronograma de Entrega com a ${brandName}`,
       viralMechanism: "Engenharia Reversa de Sucesso Real",
-      whyItWorks: "Profissionais corporativos salvam postagens densas com processos práticos para replicar internamente.",
+      whyItWorks: "Casos reais com números práticos geram alto volume de salvamentos por engenheiros e diretores.",
+      suggestedFormat: "carousel",
+    },
+    {
+      id: "vm-3",
+      hookPattern: `O que Grandes Empresas Fazem de Diferente na Escolha de Parceiros Estratégicos`,
+      viralMechanism: "Contra-Consenso & Tendência Oculta",
+      whyItWorks: "Desafia o senso comum e posiciona a marca como autoridade técnica indiscutível.",
       suggestedFormat: "carousel",
     },
   ];
 
   const editorialPlan: EditorialPlanItem[] = [
     {
-      id: `plan-1`,
+      id: "plan-1",
       dayNumber: 1,
       dayLabel: "Segunda • 06/Out",
-      theme: `O Diagnóstico Real do Funil em ${brandName}`,
-      hookHeadline: "Por que 80% das empresas erram na estruturação comercial e como virar o jogo.",
+      theme: `O Impacto da Escolha Certa de Fornecedores em ${refinedNiche}`,
+      hookHeadline: "Por que economizar na fase inicial pode dobrar o custo total do seu projeto.",
       format: "carousel",
       funnelStage: "topo",
-      objective: "Atrair decisores com quebra de mitos e análise diagnóstica do setor.",
-      viralAngle: "Contraste entre métodos amadores e processos de alta performance.",
-      ctaText: "Salve este post para analisar na próxima reunião estratégica.",
+      objective: "Atração e conscientização de diretores e gestores sobre custos ocultos.",
+      viralAngle: "Contraste direto entre preço aparente e custo real de ciclo de vida.",
+      ctaText: "Salve este carrossel para consultar na sua próxima cotação.",
       status: "planejado",
     },
     {
-      id: `plan-2`,
+      id: "plan-2",
       dayNumber: 2,
       dayLabel: "Quarta • 08/Out",
-      theme: `Como Eliminar Conflitos e Silos Operacionais em ${refinedNiche}`,
-      hookHeadline: "O custo silencioso de equipes operando sem alinhamento e telemetria em tempo real.",
+      theme: `Bastidores Técnicos: Como a ${brandName} Garante Precisão Absoluta`,
+      hookHeadline: "Conheça o protocolo de qualidade e rastreabilidade que protege nossos clientes.",
       format: "carousel",
       funnelStage: "meio",
-      objective: "Demonstrar a importância da governança e da tecnologia de ponta.",
-      viralAngle: "Storytelling executivo com números reais de impacto em margem.",
-      ctaText: "Compartilhe este carrossel com sua liderança de operações.",
+      objective: "Educação técnica e comprovação de autoridade operacional.",
+      viralAngle: "Imagens técnicas e dados densos de conformidade.",
+      ctaText: "Compartilhe este material com a sua equipe de engenharia e operações.",
       status: "planejado",
     },
     {
-      id: `plan-3`,
+      id: "plan-3",
       dayNumber: 3,
       dayLabel: "Sexta • 10/Out",
-      theme: `Arquitetura Visual B2B: Por que Templates Genéricos Não Convertem Decisores`,
-      hookHeadline: "Carrosséis amadores afastam clientes qualificados. Esta é a estrutura estética que gera autoridade.",
+      theme: `Comparativo de Performance: Métodos Ágeis vs Abordagens Convencionais`,
+      hookHeadline: "Veja a diferença real de produtividade entre soluções modernas e legadas.",
       format: "carousel",
       funnelStage: "meio",
-      objective: "Educação estética e valorização da presença digital da marca.",
-      viralAngle: "Desconstrução de frameworks visuais com contraste executivo.",
-      ctaText: "Comente 'ESTRUTURA' para receber o checklist de design B2B.",
+      objective: "Quebra de objeções e consolidação da tese de superioridade técnica.",
+      viralAngle: "Tabela comparativa com métricas de tempo e desperdício zero.",
+      ctaText: "Comente 'DIAGNÓSTICO' para receber nossa planilha comparativa.",
       status: "planejado",
     },
     {
-      id: `plan-4`,
+      id: "plan-4",
       dayNumber: 4,
       dayLabel: "Terça • 14/Out",
-      theme: `Demonstração Executiva: A Tecnologia por Trás da ${brandName}`,
-      hookHeadline: "Veja na prática como nossa plataforma transforma esforço manual em receita previsível.",
+      theme: `Apresentação Executiva: Como Iniciar uma Parceria com a ${brandName}`,
+      hookHeadline: "Descubra como estruturar sua próxima demanda com máxima segurança e agilidade.",
       format: "carousel",
       funnelStage: "fundo",
-      objective: "Conversão direta e geração de oportunidades qualificadas.",
-      viralAngle: "Telas de alta fidelidade e dados reais do ecossistema.",
-      ctaText: "Toque no link da bio para solicitar um diagnóstico corporativo.",
+      objective: "Geração de orçamentos e contato direto com o time comercial.",
+      viralAngle: "Apresentação dos canais diretos e prazos de atendimento.",
+      ctaText: "Toque no link da bio para solicitar um orçamento corporativo.",
       status: "planejado",
     },
   ];
 
   return {
+    name: brandName,
+    instagram: brandHandle,
+    website: brandSite,
     niche: refinedNiche,
     products: refinedProducts,
     bio,
@@ -404,7 +580,7 @@ function synthesizeDynamicDiagnostic(body: DiagnosticRequestBody): ParsedGeminiD
 }
 
 /**
- * Constrói posts sincronizados com o novo perfil da marca para o Feed do Instagram
+ * Constrói posts sincronizados com o perfil da marca para o Feed do Instagram
  */
 function buildSynchronizedFeedPosts(
   brandName: string,
@@ -413,81 +589,78 @@ function buildSynchronizedFeedPosts(
 ): ScheduledPost[] {
   return plan.map((item, idx) => {
     const slideHeadline = item.hookHeadline;
+    const cleanTag = brandName.replace(/[^a-zA-Z0-9]/g, "");
+
     const slides: CreativeSlide[] = [
       {
         slideNumber: 1,
         headline: slideHeadline,
-        bodyText: `Como líderes e executivos estruturam ${item.theme} com excelência prática.`,
+        bodyText: `Diretrizes estratégicas elaboradas para ${brandName}.`,
         imageUrl: `/api/marketing/render-slide?slide=1&total=5&headline=${encodeURIComponent(
           slideHeadline
         )}&body=${encodeURIComponent(
-          `Estratégia executiva desenvolvida para ${brandName}.`
+          `Soluções de alta performance e rigor técnico com a ${brandName}.`
         )}&format=carousel`,
         tag: "DIAGNÓSTICO",
       },
       {
         slideNumber: 2,
-        headline: "O Ponto Crítico da Operação",
-        bodyText:
-          "Sem processos desenhados e telemetria clara, sua equipe gasta energia em gargalos evitáveis.",
+        headline: "O Gargalo do Modelo Tradicional",
+        bodyText: "Processos sem rastreabilidade geram atrasos críticos e encarecem o projeto.",
         imageUrl: `/api/marketing/render-slide?slide=2&total=5&headline=${encodeURIComponent(
-          "O Ponto Critico da Operacao"
+          "O Gargalo do Modelo Tradicional"
         )}&body=${encodeURIComponent(
-          "Sem processos desenhados e telemetria clara sua equipe perde tracao."
+          "Processos sem rastreabilidade geram atrasos criticos e encarecem o projeto."
         )}&format=carousel`,
-        tag: "GARGALO",
+        tag: "ANÁLISE",
       },
       {
         slideNumber: 3,
-        headline: "O Método de Alavancagem",
-        bodyText:
-          "Substitua abordagens genéricas por cadências rigorosas e tecnologia que blinda o resultado.",
+        headline: "A Engenharia de Alavancagem",
+        bodyText: "Com padrões técnicos e fornecimento de precisão, você blinda seu cronograma.",
         imageUrl: `/api/marketing/render-slide?slide=3&total=5&headline=${encodeURIComponent(
-          "O Metodo de Alavancagem"
+          "A Engenharia de Alavancagem"
         )}&body=${encodeURIComponent(
-          "Substitua abordagens genericas por tecnologia de alta conversao."
+          "Com padroes tecnicos e precisao você blinda seu cronograma."
         )}&format=carousel`,
-        tag: "FRAMEWORK",
+        tag: "SOLUÇÃO",
       },
       {
         slideNumber: 4,
-        headline: "Execução Tática no Terreno",
-        bodyText:
-          "Implemente indicadores de progresso diários e elimine ruídos na transição de tarefas.",
+        headline: "Execução Prática no Terreno",
+        bodyText: "Elimine imprevistos através de controle de qualidade e comunicação transparente.",
         imageUrl: `/api/marketing/render-slide?slide=4&total=5&headline=${encodeURIComponent(
-          "Execucao Tatica no Terreno"
+          "Execucao Pratica no Terreno"
         )}&body=${encodeURIComponent(
-          "Implemente indicadores de progresso diarios e elimine ruidos."
+          "Elimine imprevistos atraves de controle de qualidade rigoroso."
         )}&format=carousel`,
         tag: "EXECUÇÃO",
       },
       {
         slideNumber: 5,
-        headline: "Ação Estratégica Imediata",
-        bodyText: `Conecte-se com a ${brandName} e acelere a transformação da sua esteira comercial.`,
+        headline: "Próximo Passo Estratégico",
+        bodyText: `Consulte os especialistas da ${brandName} e garanta os melhores resultados para sua demanda.`,
         imageUrl: `/api/marketing/render-slide?slide=5&total=5&headline=${encodeURIComponent(
-          "Acao Estrategica Imediata"
+          "Proximo Passo Estrategico"
         )}&body=${encodeURIComponent(
-          `Conecte-se com a ${brandName} para alcancar resultados de elite.`
+          `Consulte os especialistas da ${brandName} para alcancar resultados de elite.`
         )}&format=carousel`,
         tag: "DECISÃO",
       },
     ];
 
-    const cleanTag = brandName.replace(/[^a-zA-Z0-9]/g, "");
-
     return {
       id: `post-synced-${idx + 1}-${Date.now()}`,
       theme: item.theme,
       format: item.format,
-      targetAudience: "Decisores B2B, CEOs e Diretores Comerciais",
+      targetAudience: "Gestores, Diretores e Tomadores de Decisão",
       scheduledDate: item.dayLabel,
       status: idx === 0 ? "awaiting_approval" : "scheduled",
       hookHeadline: item.hookHeadline,
-      bodyCopy: `${item.hookHeadline}\n\nNo mercado B2B moderno, o diferencial competitivo está na clareza dos processos e na consistência da entrega.\n\nConfira as lâminas deste carrossel preparadas pela ${brandName}.\n\n${item.ctaText}`,
+      bodyCopy: `${item.hookHeadline}\n\nPara liderar no mercado moderno, precisão técnica e compromisso com o cronograma são inegociáveis.\n\nConfira as lâminas deste carrossel preparadas pela ${brandName}.\n\n${item.ctaText}`,
       ctaText: item.ctaText,
-      hashtags: [`#${cleanTag}`, "#EstrategiaB2B", "#GestaoExecutiva", "#Crescimento"],
-      postCaption: `${item.hookHeadline}\n\nNo mercado corporativo, o que separa os líderes dos retardatários é a velocidade com que transformam diagnóstico em execução.\n\nArraste para o lado e confira os pontos críticos.\n\n${item.ctaText}\n\n#${cleanTag} #EstrategiaB2B #BlackLink`,
+      hashtags: [`#${cleanTag}`, "#GestaoB2B", "#ExcelenciaOperacional", "#AltaPerformance"],
+      postCaption: `${item.hookHeadline}\n\nNo mercado B2B, o que separa os líderes é a segurança na entrega e a capacidade de transformar projetos em resultados concretos.\n\nArraste para o lado e confira os pontos essenciais.\n\n${item.ctaText}\n\n#${cleanTag} #${brandHandle.replace(/^@/, "")}`,
       slides,
       imageUrls: slides.map((s) => s.imageUrl || ""),
       createdAt: new Date().toISOString(),
@@ -499,38 +672,60 @@ export async function POST(request: NextRequest) {
   try {
     const body: DiagnosticRequestBody = await request.json();
 
-    const brandName = body.name?.trim() || "Black Link";
-    const brandHandle = body.instagram?.trim() || "@blklnk.com.br";
-    const brandSite = body.website?.trim() || "https://blklnk.com";
+    // 1. Rastreia o site se informado
+    let scraped: {
+      title?: string;
+      description?: string;
+      bodyText: string;
+      normalizedUrl: string;
+    } = { bodyText: "", normalizedUrl: "" };
+    if (body.website && body.website.trim()) {
+      scraped = await scrapeWebsiteText(body.website);
+    }
 
     const geminiKey = process.env.GEMINI_API_KEY;
     let diagnosticResult: ParsedGeminiDiagnostic | null = null;
     let engineSource: "gemini_ai" | "synthetic_engine" = "synthetic_engine";
 
-    // 1. Tenta análise real via Gemini com fallback inteligente entre os modelos
+    // 2. Consulta a IA Gemini alimentando com o site rastreado e dados do usuário
     if (geminiKey) {
-      diagnosticResult = await callGeminiDiagnostic(geminiKey, {
-        ...body,
-        name: brandName,
-        instagram: brandHandle,
-        website: brandSite,
-      });
-
+      diagnosticResult = await callGeminiDiagnostic(geminiKey, body, scraped);
       if (diagnosticResult) {
         engineSource = "gemini_ai";
       }
     }
 
-    // 2. Se Gemini indisponível ou throttled, aciona o sintetizador dinâmico personalizado
+    // 3. Fallback inteligente personalizado baseado no site caso a IA falhe
     if (!diagnosticResult) {
-      diagnosticResult = synthesizeDynamicDiagnostic({
-        ...body,
-        name: brandName,
-        instagram: brandHandle,
-        website: brandSite,
-      });
+      diagnosticResult = synthesizeDynamicDiagnostic(body, scraped);
       engineSource = "synthetic_engine";
     }
+
+    const resolvedName =
+      diagnosticResult.name ||
+      body.name?.trim() ||
+      (scraped.title ? scraped.title.split(/[|\-–]/)[0].trim() : "Empresa Analisada");
+
+    const resolvedInstagram =
+      diagnosticResult.instagram ||
+      (body.instagram && body.instagram.trim() !== "@" ? body.instagram.trim() : "") ||
+      `@${resolvedName.toLowerCase().replace(/[^a-z0-9]/g, "") || "oficial"}`;
+
+    const resolvedWebsite =
+      diagnosticResult.website ||
+      scraped.normalizedUrl ||
+      body.website?.trim() ||
+      "";
+
+    const resolvedNiche =
+      diagnosticResult.niche ||
+      body.niche?.trim() ||
+      "Soluções Corporativas Especializadas";
+
+    const resolvedProducts =
+      diagnosticResult.products ||
+      body.products?.trim() ||
+      "Soluções e Serviços de Alta Performance";
 
     const nowFormatted = new Date().toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -543,7 +738,7 @@ export async function POST(request: NextRequest) {
     const finalDiagnostic = {
       executiveSummary:
         diagnosticResult.executiveSummary ||
-        `Análise executiva gerada para ${brandName} (${brandHandle}): Foco prioritário em contra-posicionamento de autoridade no feed do Instagram contra a média dos concorrentes.`,
+        `Diagnóstico Estratégico para ${resolvedName} (${resolvedInstagram}): Foco em autoridade e contra-posicionamento fundamentado nas soluções da empresa.`,
       competitors: diagnosticResult.competitors || [],
       viralMethods: diagnosticResult.viralMethods || [],
       lastAnalyzedAt: nowFormatted,
@@ -551,27 +746,24 @@ export async function POST(request: NextRequest) {
 
     const finalEditorialPlan = diagnosticResult.editorialPlan || [];
 
-    // Constrói posts sincronizados para o feed do Instagram
     const synchronizedPosts = buildSynchronizedFeedPosts(
-      brandName,
-      brandHandle,
+      resolvedName,
+      resolvedInstagram,
       finalEditorialPlan
     );
 
     return NextResponse.json({
       success: true,
       source: engineSource,
+      scrapedSite: Boolean(scraped.bodyText),
       companyProfile: {
-        name: brandName,
-        instagram: brandHandle,
-        website: brandSite,
-        niche: diagnosticResult.niche || body.niche || "SaaS Enterprise & Inteligência Comercial B2B",
-        products:
-          diagnosticResult.products ||
-          body.products ||
-          "CRM Enterprise, Radar Anti-Colisão, Estúdio de IA para Carrosséis",
+        name: resolvedName,
+        instagram: resolvedInstagram,
+        website: resolvedWebsite,
+        niche: resolvedNiche,
+        products: resolvedProducts,
         targetAudience:
-          body.targetAudience || "CEOs, Diretores Comerciais e Líderes B2B",
+          body.targetAudience || "Gestores, Diretores e Tomadores de Decisão",
         bio: diagnosticResult.bio,
         tagline: diagnosticResult.tagline,
       },
@@ -583,7 +775,7 @@ export async function POST(request: NextRequest) {
     console.error("Erro interno no endpoint de diagnóstico:", err);
     return NextResponse.json(
       {
-        error: "Falha ao processar diagnóstico de inteligência competitiva.",
+        error: "Falha ao processar diagnóstico de inteligência corporativa.",
       },
       { status: 500 }
     );

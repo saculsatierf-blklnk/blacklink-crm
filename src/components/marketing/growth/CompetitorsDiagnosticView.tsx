@@ -41,11 +41,38 @@ export function CompetitorsDiagnosticView() {
 
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
+  const handleResetForm = () => {
+    setCompanyProfile({
+      name: "",
+      instagram: "",
+      website: "",
+      niche: "",
+      products: "",
+      bio: "",
+      tagline: "",
+    });
+    setFeedbackMsg("Campos limpos. Insira o site ou dados da nova empresa.");
+    setTimeout(() => setFeedbackMsg(null), 3000);
+  };
+
   const handleRunAnalysis = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (
+      !companyProfile.website?.trim() &&
+      !companyProfile.instagram?.trim() &&
+      !companyProfile.name?.trim()
+    ) {
+      setFeedbackMsg("Por favor, informe ao menos o Site oficial (ex: gofermetais.com.br) ou @Instagram.");
+      setTimeout(() => setFeedbackMsg(null), 4000);
+      return;
+    }
     await analyzeCompanyAndCompetitors();
-    const targetLabel = companyProfile.instagram || companyProfile.name || "sua empresa";
-    setFeedbackMsg(`Diagnóstico de IA concluído com sucesso para ${targetLabel}! Concorrentes, métodos e cronograma atualizados.`);
+    const targetLabel =
+      companyProfile.name ||
+      companyProfile.instagram ||
+      companyProfile.website ||
+      "empresa";
+    setFeedbackMsg(`Diagnóstico de IA concluído para ${targetLabel}! Concorrentes reais, métodos e cronograma gerados.`);
     setTimeout(() => setFeedbackMsg(null), 5000);
   };
 
@@ -70,28 +97,38 @@ export function CompetitorsDiagnosticView() {
               </h2>
             </div>
             <p className="text-xs text-zinc-400 font-sans max-w-2xl">
-              Insira os dados da sua empresa ou @Instagram. A inteligência artificial analisa seu nicho, mapeia os concorrentes diretos e extrai os métodos de maior potencial viralizável.
+              Pesquise informando apenas o <strong>Site Oficial</strong> (ex: <span className="font-mono text-zinc-300">gofermetais.com.br</span>) ou o <strong>@Instagram</strong>. O robô de IA rastreia o site ao vivo, extrai o nicho, concorrentes e monta o plano de conteúdo automaticamente. O Instagram é 100% opcional.
             </p>
           </div>
 
-          <button
-            type="button"
-            disabled={isAnalyzingCompetitors}
-            onClick={handleRunAnalysis}
-            className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 self-start sm:self-auto"
-          >
-            {isAnalyzingCompetitors ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Escaneando Concorrentes...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 text-black" />
-                <span>Executar Scanner com IA</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handleResetForm}
+              className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-xs font-mono text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer shadow-sm"
+            >
+              <span>+ Nova Empresa</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isAnalyzingCompetitors}
+              onClick={handleRunAnalysis}
+              className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            >
+              {isAnalyzingCompetitors ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Rastreando Site &amp; Concorrentes...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 text-black" />
+                  <span>Executar Scanner com IA</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Feedback Alert */}
@@ -104,9 +141,32 @@ export function CompetitorsDiagnosticView() {
 
         {/* Formulário de Input do Core Business */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* 1. Site Oficial (Campo principal de extração) */}
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold block">
+                Site Oficial / Domínio *
+              </label>
+              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                Lido por IA
+              </span>
+            </div>
+            <div className="relative">
+              <Globe className="absolute left-3.5 top-3 h-3.5 w-3.5 text-sky-400" />
+              <input
+                type="text"
+                value={companyProfile.website}
+                onChange={(e) => setCompanyProfile({ website: e.target.value })}
+                placeholder="Ex: https://gofermetais.com.br"
+                className="w-full h-9.5 rounded-xl border border-sky-500/30 bg-black/50 pl-9.5 pr-3 text-xs text-white font-mono focus:border-sky-400 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* 2. Nome da Empresa */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
-              Nome da Empresa / Marca
+              Nome da Empresa (Ou extraído do site)
             </label>
             <div className="relative">
               <Building2 className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-500" />
@@ -114,15 +174,16 @@ export function CompetitorsDiagnosticView() {
                 type="text"
                 value={companyProfile.name}
                 onChange={(e) => setCompanyProfile({ name: e.target.value })}
-                placeholder="Ex: Black Link CRM"
+                placeholder="Ex: Gofer Metais (ou deixe o site preencher)"
                 className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white focus:border-white/30 focus:outline-none"
               />
             </div>
           </div>
 
+          {/* 3. Instagram (Opcional) */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
-              @Instagram Institucional (Opcional)
+              @Instagram (100% Opcional)
             </label>
             <div className="relative">
               <AtSign className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-500" />
@@ -130,50 +191,36 @@ export function CompetitorsDiagnosticView() {
                 type="text"
                 value={companyProfile.instagram}
                 onChange={(e) => setCompanyProfile({ instagram: e.target.value })}
-                placeholder="Ex: @blacklink.b2b"
+                placeholder="Ex: @empresa (ou sugerido pela IA)"
                 className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
-              Site Oficial / Domínio
-            </label>
-            <div className="relative">
-              <Globe className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-500" />
-              <input
-                type="text"
-                value={companyProfile.website}
-                onChange={(e) => setCompanyProfile({ website: e.target.value })}
-                placeholder="Ex: https://blacklink.com.br"
-                className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
-              />
-            </div>
-          </div>
-
+          {/* 4. Nicho / Setor */}
           <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
             <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
-              Nicho / Setor de Atuação B2B
+              Nicho / Setor (Opcional - IA extrai do site)
             </label>
             <input
               type="text"
               value={companyProfile.niche}
               onChange={(e) => setCompanyProfile({ niche: e.target.value })}
-              placeholder="Ex: SaaS Enterprise & Gestão de Vendas B2B"
+              placeholder="Ex: Estruturas Metálicas, Construção Civil, Saúde..."
               className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
             />
           </div>
 
+          {/* 5. Produtos & Soluções */}
           <div className="space-y-1.5 sm:col-span-2">
             <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
-              Produtos &amp; Soluções Existentes
+              Produtos &amp; Soluções (Opcional - IA extrai do site)
             </label>
             <input
               type="text"
               value={companyProfile.products}
               onChange={(e) => setCompanyProfile({ products: e.target.value })}
-              placeholder="Ex: CRM Enterprise, Radar Anti-Colisão, Estúdio de IA para Carrosséis B2B"
+              placeholder="Ex: Deixe vazio para a IA catalogar as soluções diretamente do site oficial"
               className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
             />
           </div>
