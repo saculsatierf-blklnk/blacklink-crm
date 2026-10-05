@@ -204,10 +204,19 @@ export function BlackLinkCarouselStudio() {
   const [tenantName, setTenantName] = useState<string>("Black Link Enterprise");
   const [tenantId, setTenantId] = useState<string>("");
 
-  // Estado do Modal de IA e Geração Fluida
+  // Estado do Modal de IA e Geração Fluida (com Inteligência Competitiva de Instagram)
   const [showAIModal, setShowAIModal] = useState<boolean>(false);
   const [aiTheme, setAiTheme] = useState<string>("");
   const [aiAudience, setAiAudience] = useState<string>("");
+  const [aiCompetitors, setAiCompetitors] = useState<string>("");
+  const [aiPositioning, setAiPositioning] = useState<string>("anti-consenso");
+  const [competitorInsight, setCompetitorInsight] = useState<{
+    competitorCliché: string;
+    ourDifferentiator: string;
+    layoutRationale: string;
+    suggestedLayout?: string;
+  } | null>(null);
+  const [showCompetitorRadar, setShowCompetitorRadar] = useState<boolean>(true);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [aiErrorNotice, setAiErrorNotice] = useState<string>("");
 
@@ -382,8 +391,10 @@ export function BlackLinkCarouselStudio() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          theme: fullPrompt,
-          audience: aiAudience.trim(),
+          theme: aiTheme.trim(),
+          targetAudience: aiAudience.trim(),
+          competitorsReferences: aiCompetitors.trim(),
+          positioningStrategy: aiPositioning,
           format: "carousel",
         }),
       });
@@ -421,6 +432,35 @@ export function BlackLinkCarouselStudio() {
         setCurrentSlideIndex(0);
         setAiErrorNotice("A IA retornou texto não formatado. O estado de fallback foi aplicado com segurança.");
         return;
+      }
+
+      // Ingestão de Inteligência Competitiva de Instagram e Contra-Posicionamento
+      if (parsedData?.competitorInsight) {
+        setCompetitorInsight({
+          ...parsedData.competitorInsight,
+          suggestedLayout: parsedData.suggestedLayout,
+        });
+        setShowCompetitorRadar(true);
+      }
+
+      // Aplicação Automática do Layout Recomendado pela IA
+      if (
+        parsedData?.suggestedLayout &&
+        LAYOUT_DEFINITIONS.some((l) => l.id === parsedData.suggestedLayout)
+      ) {
+        updateDesignConfig({
+          layout: parsedData.suggestedLayout as SlideLayout,
+        });
+      }
+
+      // Aplicação Automática da Fonte Recomendada pela IA
+      if (
+        parsedData?.suggestedFont &&
+        FONT_DEFINITIONS.some((f) => f.id === parsedData.suggestedFont)
+      ) {
+        updateDesignConfig({
+          font: parsedData.suggestedFont as SlideFont,
+        });
       }
 
       // Validação da lista de slides recebida
@@ -1766,6 +1806,74 @@ export function BlackLinkCarouselStudio() {
         {/* COLUNA DIREITA: VISUALIZADOR DA LÂMINA & EXPORTAÇÕES               */}
         {/* ================================================================== */}
         <div className="lg:col-span-7 flex flex-col items-center">
+          {/* ================================================================ */}
+          {/* RADAR DE INTELIGÊNCIA COMPETITIVA // INSTAGRAM COUNTER-POSITIONING */}
+          {/* ================================================================ */}
+          {competitorInsight && (
+            <div className="w-full mb-6 p-4 md:p-5 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-purple-950/30 to-black/80 border border-cyan-500/30 backdrop-blur-2xl shadow-2xl relative overflow-hidden transition-all duration-300">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]" />
+                  <span className="text-xs font-mono font-black text-cyan-300 tracking-wider uppercase">
+                    📡 Radar Competitivo de Instagram // Contra-Posicionamento
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {competitorInsight.suggestedLayout && designConfig.layout !== competitorInsight.suggestedLayout && (
+                    <button
+                      type="button"
+                      onClick={() => updateDesignConfig({ layout: competitorInsight.suggestedLayout as SlideLayout })}
+                      className="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono font-bold transition-all cursor-pointer shadow-sm"
+                    >
+                      Aplicar Layout Recomendado ({competitorInsight.suggestedLayout})
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowCompetitorRadar(!showCompetitorRadar)}
+                    className="text-zinc-400 hover:text-white text-xs font-mono px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 transition-colors cursor-pointer"
+                  >
+                    {showCompetitorRadar ? "Recolher ▲" : "Expandir ▼"}
+                  </button>
+                </div>
+              </div>
+
+              {showCompetitorRadar && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3.5 text-xs font-mono">
+                  {/* Card 1: O que a concorrência faz */}
+                  <div className="p-3.5 rounded-2xl bg-black/60 border border-red-500/25 space-y-1.5 shadow-md">
+                    <span className="text-[10px] uppercase font-bold text-red-400 flex items-center gap-1.5">
+                      <span>⚠️</span> Clichê dos Concorrentes no Feed:
+                    </span>
+                    <p className="text-zinc-300 font-sans text-xs leading-relaxed">
+                      {competitorInsight.competitorCliché}
+                    </p>
+                  </div>
+
+                  {/* Card 2: Como nos contra-posicionamos */}
+                  <div className="p-3.5 rounded-2xl bg-black/60 border border-emerald-500/25 space-y-1.5 shadow-md">
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1.5">
+                      <span>🎯</span> Nosso Contra-Posicionamento:
+                    </span>
+                    <p className="text-zinc-300 font-sans text-xs leading-relaxed">
+                      {competitorInsight.ourDifferentiator}
+                    </p>
+                  </div>
+
+                  {/* Card 3: Estética e Quebra de Padrão */}
+                  <div className="p-3.5 rounded-2xl bg-black/60 border border-cyan-500/25 space-y-1.5 shadow-md">
+                    <span className="text-[10px] uppercase font-bold text-cyan-400 flex items-center gap-1.5">
+                      <span>🎨</span> Estética Visual Recomendada:
+                    </span>
+                    <p className="text-zinc-300 font-sans text-xs leading-relaxed">
+                      <span className="font-bold text-white uppercase">{competitorInsight.suggestedLayout || designConfig.layout}</span>: {competitorInsight.layoutRationale}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* BARRA SUPERIOR DO VISUALIZADOR: SELETOR DE TEMAS & PROPORÇÃO */}
           <div className="w-full flex flex-wrap items-center justify-between gap-3 mb-6 bg-black/40 border border-white/10 p-3 rounded-2xl backdrop-blur-xl">
             {/* SELETOR VISUAL DE TEMAS (THEME ENGINE) */}
@@ -2032,6 +2140,102 @@ export function BlackLinkCarouselStudio() {
                       }`}
                     >
                       + {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Instagram / Concorrentes de Referência */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 font-bold">
+                    3. Instagram / Concorrentes de Referência
+                  </label>
+                  <span className="text-[10px] font-mono text-cyan-400 font-semibold">Análise de Feed</span>
+                </div>
+                <input
+                  type="text"
+                  value={aiCompetitors}
+                  onChange={(e) => setAiCompetitors(e.target.value)}
+                  placeholder="Ex: @concorrente_a, @concorrente_b ou perfis tradicionais do nicho..."
+                  className="w-full px-4 py-3 rounded-xl bg-black/60 border border-white/15 text-white text-sm focus:outline-none focus:border-cyan-400/50"
+                />
+
+                {/* Quick Chips para Concorrentes */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    "@concorrentes_do_feed",
+                    "Perfis Tradicionais de CRM",
+                    "Infoprodutores Genéricos",
+                    "Agências Tradicionais",
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setAiCompetitors(chip)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                        aiCompetitors === chip
+                          ? "bg-cyan-400 text-black border-cyan-400 font-bold"
+                          : "bg-white/5 text-zinc-400 border-white/10 hover:text-cyan-300 hover:bg-white/10"
+                      }`}
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Ângulo de Contra-Posicionamento (Quebra de Padrão) */}
+              <div>
+                <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-300 block mb-2 font-bold">
+                  4. Ângulo de Contra-Posicionamento no Feed
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      id: "anti-consenso",
+                      icon: "⚡",
+                      title: "Anti-Consenso",
+                      desc: "Desmascara clichês e dicas rasas",
+                    },
+                    {
+                      id: "c-level",
+                      icon: "👔",
+                      title: "C-Level & Métricas",
+                      desc: "Autoridade densa com dados reais",
+                    },
+                    {
+                      id: "pragmatico",
+                      icon: "🎯",
+                      title: "Pragmático",
+                      desc: "Execução cirúrgica sem rodeios",
+                    },
+                    {
+                      id: "disruptivo",
+                      icon: "🔮",
+                      title: "Disruptivo",
+                      desc: "Posiciona concorrentes como obsoletos",
+                    },
+                  ].map((strategy) => (
+                    <button
+                      key={strategy.id}
+                      type="button"
+                      onClick={() => setAiPositioning(strategy.id)}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
+                        aiPositioning === strategy.id
+                          ? "bg-white/15 border-white text-white shadow-lg shadow-white/5"
+                          : "bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold text-xs">
+                        <span>{strategy.icon}</span>
+                        <span className={aiPositioning === strategy.id ? "text-white" : "text-zinc-300"}>
+                          {strategy.title}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-400 leading-tight">
+                        {strategy.desc}
+                      </span>
                     </button>
                   ))}
                 </div>

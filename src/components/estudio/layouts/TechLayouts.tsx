@@ -1,44 +1,67 @@
 import React from "react";
 import { LayoutProps } from "./layoutTypes";
 
-// 1. Brutalista Tech
+// 1. Brutalista Tech (Industrial / High-Impact B2B)
 export function BrutalistaLayout({
   slide,
   config,
   scale,
+  isLight,
   textPrimaryClass,
   textSecondaryClass,
   renderHighlightedText,
 }: LayoutProps) {
   return (
-    <div className="flex flex-col flex-grow justify-center h-full gap-6 text-left">
-      {slide.tag && (
+    <div className="flex flex-col flex-grow justify-center h-full gap-6 text-left select-none max-w-4xl">
+      {/* Industrial Mono Tag */}
+      <div className="flex items-center gap-3">
         <span
-          className="w-fit px-4 py-1.5 rounded font-mono text-sm font-bold uppercase tracking-wider"
+          className="px-3.5 py-1 rounded font-mono text-xs font-black uppercase tracking-widest border"
           style={{
-            backgroundColor: `${config.accentColor}22`,
+            backgroundColor: `${config.accentColor}18`,
+            borderColor: `${config.accentColor}40`,
             color: config.accentColor,
           }}
         >
-          {slide.tag}
+          {slide.tag || "BRUTALIST PROTOCOL"}
         </span>
-      )}
+        <span
+          className={`text-[11px] font-mono tracking-widest uppercase opacity-40 ${
+            isLight ? "text-black" : "text-white"
+          }`}
+        >
+          SYS // 01
+        </span>
+      </div>
+
+      {/* Colossal Headline */}
       <h1
-        className={`font-black uppercase tracking-tight leading-[1.08] ${textPrimaryClass}`}
+        className={`font-black uppercase tracking-tight leading-[1.04] ${textPrimaryClass}`}
         style={{
-          fontSize: `clamp(2.2rem, calc(3.2rem * ${scale}), 5.5rem)`,
+          fontSize: `clamp(2.4rem, calc(3.4rem * ${scale}), 5.8rem)`,
         }}
       >
         {renderHighlightedText(slide.headline, config.accentColor)}
       </h1>
-      <div
-        className="h-2 w-24 rounded-full"
-        style={{ backgroundColor: config.accentColor }}
-      />
+
+      {/* Industrial Divider Bar */}
+      <div className="flex items-center gap-2 my-1">
+        <div
+          className="h-2 w-28 rounded-full"
+          style={{ backgroundColor: config.accentColor }}
+        />
+        <div
+          className="h-2 w-4 rounded-full opacity-40"
+          style={{ backgroundColor: config.accentColor }}
+        />
+      </div>
+
+      {/* Body Copy */}
       <p
         className={`font-normal leading-relaxed max-w-2xl ${textSecondaryClass}`}
         style={{
-          fontSize: `clamp(1.15rem, calc(1.4rem * ${scale}), 2.2rem)`,
+          fontSize: `clamp(1.2rem, calc(1.45rem * ${scale}), 2.3rem)`,
+          lineHeight: 1.6,
         }}
       >
         {renderHighlightedText(slide.bodyText, config.accentColor)}

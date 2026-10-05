@@ -1,37 +1,68 @@
 import React from "react";
 import { LayoutProps } from "./layoutTypes";
 
-// 6. Minimal Editorial Luxo
+// 6. Minimal Editorial Luxo (Estilo Suíço / Apple Keynote)
 export function MinimalLayout({
   slide,
   config,
   scale,
+  isLight,
   textPrimaryClass,
   textSecondaryClass,
   renderHighlightedText,
 }: LayoutProps) {
   return (
-    <div className="flex flex-col flex-grow justify-center items-center h-full gap-8 text-center max-w-3xl mx-auto">
-      <div
-        className="w-16 h-2 rounded-full"
-        style={{ backgroundColor: config.accentColor }}
-      />
+    <div className="flex flex-col flex-grow justify-center items-center h-full gap-8 text-center max-w-4xl mx-auto px-6 relative select-none">
+      {/* Top Folio & Category Tag */}
+      <div className="flex items-center gap-3">
+        <span
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: config.accentColor }}
+        />
+        <span
+          className={`text-xs font-mono uppercase tracking-[0.25em] font-bold ${
+            isLight ? "text-zinc-600" : "text-zinc-400"
+          }`}
+        >
+          {slide.tag || "INSIGHT EXECUTIVO"}
+        </span>
+      </div>
+
+      {/* Monumental Headline */}
       <h1
-        className={`font-bold tracking-tight leading-snug ${textPrimaryClass}`}
+        className={`font-black tracking-tight leading-[1.12] max-w-3xl ${textPrimaryClass}`}
         style={{
-          fontSize: `clamp(2.2rem, calc(3rem * ${scale}), 5rem)`,
+          fontSize: `clamp(2.4rem, calc(3.2rem * ${scale}), 5.2rem)`,
         }}
       >
         {renderHighlightedText(slide.headline, config.accentColor)}
       </h1>
+
+      {/* Hairline Accent Divider */}
+      <div
+        className="w-20 h-1.5 rounded-full my-1 transition-all"
+        style={{ backgroundColor: config.accentColor }}
+      />
+
+      {/* Editorial Body Text */}
       <p
-        className={`font-normal leading-relaxed max-w-xl ${textSecondaryClass}`}
+        className={`font-normal leading-relaxed max-w-2xl text-center ${textSecondaryClass}`}
         style={{
-          fontSize: `clamp(1.15rem, calc(1.4rem * ${scale}), 2.2rem)`,
+          fontSize: `clamp(1.2rem, calc(1.45rem * ${scale}), 2.3rem)`,
+          lineHeight: 1.6,
         }}
       >
         {renderHighlightedText(slide.bodyText, config.accentColor)}
       </p>
+
+      {/* Subtle Micro Footnote */}
+      <div
+        className={`mt-4 text-[11px] font-mono tracking-widest uppercase opacity-40 ${
+          isLight ? "text-black" : "text-white"
+        }`}
+      >
+        BLACK LINK • EDITORIAL LUXO
+      </div>
     </div>
   );
 }

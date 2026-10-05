@@ -15,6 +15,13 @@ export interface CreativeSlide {
   bodyText: string;
   imageUrl?: string;
   visualPrompt?: string;
+  tag?: string;
+}
+
+export interface CompetitorInsightData {
+  competitorCliché: string;
+  ourDifferentiator: string;
+  layoutRationale: string;
 }
 
 export interface GeneratedCreativeResult {
@@ -23,7 +30,12 @@ export interface GeneratedCreativeResult {
   format: CreativeFormat;
   targetAudience: string;
   competitorsReferences?: string;
+  positioningStrategy?: string;
   nicheValueProposition?: string;
+  suggestedLayout?: string;
+  suggestedFont?: string;
+  suggestedTheme?: string;
+  competitorInsight?: CompetitorInsightData;
   hookHeadline: string;
   bodyCopy: string;
   ctaText: string;

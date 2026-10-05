@@ -2,7 +2,7 @@ import React from "react";
 import { LayoutProps } from "./layoutTypes";
 import { B2BChart } from "../B2BChart";
 
-// 15. Glass Floating 3D (Card Flutuante em Vidro)
+// 15. Glass Floating 3D (Card Flutuante em Vidro de Alta Resolução)
 export function GlassFloatingLayout({
   slide,
   config,
@@ -14,44 +14,63 @@ export function GlassFloatingLayout({
   renderHighlightedText,
 }: LayoutProps) {
   return (
-    <div className="flex flex-col flex-grow items-center justify-center h-full p-6 text-left">
+    <div className="flex flex-col flex-grow items-center justify-center h-full p-6 text-left select-none relative">
+      {/* Ambient Depth Orbs */}
       <div
-        className={`w-full max-w-2xl p-12 rounded-3xl border shadow-2xl backdrop-blur-2xl text-left relative overflow-hidden ${borderClass}`}
+        className="absolute top-1/4 -left-12 w-80 h-80 rounded-full blur-[110px] pointer-events-none opacity-40"
+        style={{ backgroundColor: config.accentColor }}
+      />
+      <div
+        className="absolute bottom-1/4 -right-12 w-80 h-80 rounded-full blur-[120px] pointer-events-none opacity-25"
+        style={{ backgroundColor: isLight ? "#000000" : "#ffffff" }}
+      />
+
+      <div
+        className={`w-full max-w-2xl p-12 md:p-14 rounded-[2.5rem] border shadow-2xl backdrop-blur-3xl text-left relative overflow-hidden transition-all duration-300 ${borderClass}`}
         style={{
-          backgroundColor: isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(10, 10, 12, 0.78)",
+          backgroundColor: isLight
+            ? "rgba(255, 255, 255, 0.85)"
+            : "rgba(12, 13, 18, 0.78)",
           boxShadow: isLight
-            ? "0 25px 50px -12px rgba(0, 0, 0, 0.15)"
-            : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+            ? "0 30px 60px -15px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)"
+            : `0 35px 70px -15px rgba(0, 0, 0, 0.8), 0 0 40px ${config.accentColor}18, inset 0 1px 0 rgba(255, 255, 255, 0.15)`,
         }}
       >
-        <div
-          className="absolute -top-16 -left-16 w-56 h-56 rounded-full blur-3xl pointer-events-none"
-          style={{ backgroundColor: `${config.accentColor}30` }}
-        />
+        {/* Specular Top Hairline */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
         <div className="relative z-10 space-y-6">
-          {slide.tag && (
+          <div className="flex items-center gap-3">
             <span
-              className="inline-block px-4 py-1.5 rounded-full text-sm font-mono font-bold uppercase tracking-wider"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-mono font-bold uppercase tracking-widest border shadow-sm"
               style={{
-                backgroundColor: `${config.accentColor}25`,
+                backgroundColor: `${config.accentColor}18`,
+                borderColor: `${config.accentColor}40`,
                 color: config.accentColor,
               }}
             >
-              {slide.tag}
+              <span
+                className="w-2 h-2 rounded-full animate-ping"
+                style={{ backgroundColor: config.accentColor }}
+              />
+              {slide.tag || "INSIGHT ESTRATÉGICO"}
             </span>
-          )}
+          </div>
+
           <h1
-            className={`font-extrabold tracking-tight leading-tight ${textPrimaryClass}`}
+            className={`font-black tracking-tight leading-[1.12] ${textPrimaryClass}`}
             style={{
-              fontSize: `clamp(2rem, calc(2.8rem * ${scale}), 4.8rem)`,
+              fontSize: `clamp(2.2rem, calc(2.9rem * ${scale}), 4.8rem)`,
             }}
           >
             {renderHighlightedText(slide.headline, config.accentColor)}
           </h1>
+
           <p
             className={`font-normal leading-relaxed ${textSecondaryClass}`}
             style={{
-              fontSize: `clamp(1.1rem, calc(1.35rem * ${scale}), 2.1rem)`,
+              fontSize: `clamp(1.15rem, calc(1.4rem * ${scale}), 2.2rem)`,
+              lineHeight: 1.6,
             }}
           >
             {renderHighlightedText(slide.bodyText, config.accentColor)}
@@ -62,7 +81,7 @@ export function GlassFloatingLayout({
   );
 }
 
-// 16. Dashboard / Analytics (Painel BI com Gráficos Falsos e Bordas Neon)
+// 16. Dashboard / Analytics (Painel BI com Gráficos e Telemetria Neon Dinâmica)
 export function DashboardAnalyticsLayout({
   slide,
   config,
@@ -72,78 +91,122 @@ export function DashboardAnalyticsLayout({
   textMutedClass,
   renderHighlightedText,
 }: LayoutProps) {
+  const accent = config.accentColor || "#38bdf8";
+
   return (
-    <div className="w-full h-full flex-grow flex flex-col justify-between p-10 rounded-3xl bg-[#090b10] border border-cyan-500/30 shadow-2xl relative overflow-hidden text-left font-mono">
+    <div
+      className="w-full h-full flex-grow flex flex-col justify-between p-10 md:p-12 rounded-[2.5rem] bg-[#08090d] border shadow-2xl relative overflow-hidden text-left font-mono select-none"
+      style={{
+        borderColor: `${accent}40`,
+        boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 50px ${accent}15`,
+      }}
+    >
       {/* Background Soft Neon Glow */}
-      <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+      <div
+        className="absolute top-0 right-0 w-96 h-96 rounded-full blur-[130px] pointer-events-none opacity-25"
+        style={{ backgroundColor: accent }}
+      />
 
       {/* Top BI Header */}
-      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-4 z-10">
+      <div
+        className="flex items-center justify-between border-b pb-4 z-10"
+        style={{ borderColor: `${accent}25` }}
+      >
         <div className="flex items-center gap-3">
-          <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-sm font-bold text-cyan-300 tracking-wider uppercase">
-            BLACK LINK BI // ANALYTICS SUITE
+          <span
+            className="w-3 h-3 rounded-full animate-pulse shadow-sm"
+            style={{ backgroundColor: accent, boxShadow: `0 0 10px ${accent}` }}
+          />
+          <span
+            className="text-xs md:text-sm font-bold tracking-wider uppercase font-mono"
+            style={{ color: accent }}
+          >
+            RADAR B2B // TELEMETRIA DE ALTO NÍVEL
           </span>
         </div>
-        <span className="text-xs text-zinc-400">TELEMETRIA ATIVA</span>
+        <span className="text-[11px] text-zinc-400 font-mono tracking-widest">
+          SISTEMA SINCRONIZADO
+        </span>
       </div>
 
       {/* Center KPI & Headline */}
       <div className="my-auto space-y-6 py-4 z-10">
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/20">
-            <span className="block text-xs text-zinc-400">CONVERSÃO B2B</span>
-            <span className="text-2xl font-black text-cyan-400">+342%</span>
+        <div className="grid grid-cols-3 gap-3 md:gap-4">
+          <div
+            className="p-4 rounded-2xl bg-black/60 border backdrop-blur-md"
+            style={{ borderColor: `${accent}25` }}
+          >
+            <span className="block text-[11px] text-zinc-400 uppercase tracking-wider">EFICIÊNCIA</span>
+            <span className="text-2xl md:text-3xl font-black" style={{ color: accent }}>+342%</span>
           </div>
-          <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/20">
-            <span className="block text-xs text-zinc-400">LATÊNCIA</span>
-            <span className="text-2xl font-black text-emerald-400">18ms</span>
+          <div
+            className="p-4 rounded-2xl bg-black/60 border backdrop-blur-md"
+            style={{ borderColor: `${accent}25` }}
+          >
+            <span className="block text-[11px] text-zinc-400 uppercase tracking-wider">RESPOSTA</span>
+            <span className="text-2xl md:text-3xl font-black text-emerald-400">18ms</span>
           </div>
-          <div className="p-4 rounded-2xl bg-cyan-950/40 border border-cyan-500/20">
-            <span className="block text-xs text-zinc-400">RETENÇÃO</span>
-            <span className="text-2xl font-black text-white">99.4%</span>
+          <div
+            className="p-4 rounded-2xl bg-black/60 border backdrop-blur-md"
+            style={{ borderColor: `${accent}25` }}
+          >
+            <span className="block text-[11px] text-zinc-400 uppercase tracking-wider">RETENÇÃO</span>
+            <span className="text-2xl md:text-3xl font-black text-white">99.4%</span>
           </div>
         </div>
 
         <h1
-          className={`font-black tracking-tight leading-tight ${textPrimaryClass}`}
+          className={`font-black tracking-tight leading-[1.12] ${textPrimaryClass}`}
           style={{
-            fontSize: `clamp(1.8rem, calc(2.5rem * ${scale}), 4rem)`,
+            fontSize: `clamp(1.9rem, calc(2.6rem * ${scale}), 4.2rem)`,
           }}
         >
-          {renderHighlightedText(slide.headline, config.accentColor)}
+          {renderHighlightedText(slide.headline, accent)}
         </h1>
 
         <p
           className={`text-sm md:text-base leading-relaxed ${textSecondaryClass}`}
           style={{
-            fontSize: `clamp(1rem, calc(1.25rem * ${scale}), 1.8rem)`,
+            fontSize: `clamp(1.05rem, calc(1.3rem * ${scale}), 2rem)`,
+            lineHeight: 1.6,
           }}
         >
-          {renderHighlightedText(slide.bodyText, config.accentColor)}
+          {renderHighlightedText(slide.bodyText, accent)}
         </p>
 
-        {/* Fake Mini SVG Area Chart */}
-        <div className="w-full h-16 bg-black/40 rounded-2xl p-3 border border-cyan-500/20 flex items-end">
+        {/* Dynamic Accent SVG Area Sparkline */}
+        <div
+          className="w-full h-16 bg-black/50 rounded-2xl p-3 border flex items-end overflow-hidden"
+          style={{ borderColor: `${accent}25` }}
+        >
           <svg className="w-full h-full" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="dashboardSparkGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={accent} stopOpacity="0.4" />
+                <stop offset="100%" stopColor={accent} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
             <path
-              d="M0 35 Q30 20, 60 28 T120 12 T160 18 T200 4 L200 40 L0 40 Z"
-              fill="rgba(6, 182, 212, 0.2)"
+              d="M0 35 Q30 18, 60 26 T120 10 T160 16 T200 4 L200 40 L0 40 Z"
+              fill="url(#dashboardSparkGradient)"
             />
             <path
-              d="M0 35 Q30 20, 60 28 T120 12 T160 18 T200 4"
+              d="M0 35 Q30 18, 60 26 T120 10 T160 16 T200 4"
               fill="none"
-              stroke="#22d3ee"
-              strokeWidth="2"
+              stroke={accent}
+              strokeWidth="2.5"
             />
           </svg>
         </div>
       </div>
 
       {/* BI Footer */}
-      <div className="flex items-center justify-between text-xs text-cyan-400/80 border-t border-cyan-500/20 pt-3 z-10">
-        <span>DATA PIPELINE: SINCRONIZADO</span>
-        <span className={textMutedClass}>v2.5 PREDICTIVE ENGINE</span>
+      <div
+        className="flex items-center justify-between text-xs border-t pt-3 z-10"
+        style={{ borderColor: `${accent}25`, color: `${accent}bb` }}
+      >
+        <span>PIPELINE: ATIVO • DADOS REAIS</span>
+        <span className={textMutedClass}>BLACK LINK // DECISÃO C-LEVEL</span>
       </div>
     </div>
   );
@@ -515,42 +578,69 @@ export function BentoGridLayout({
           )}
         </div>
 
-        {/* Box 2: Elemento Visual/Ação Dinâmica (Stack em 9:16) */}
+        {/* Box 2: Card Executivo de Takeaway / Status Tático */}
         <div
           className={`${
-            is916 ? "py-6 px-8 flex-row justify-between" : "p-8 flex-col justify-center"
-          } backdrop-blur-xl rounded-[2.5rem] border flex items-center text-center transition-colors duration-200 ${
+            is916 ? "py-6 px-8 flex-row justify-between" : "p-8 flex-col justify-between"
+          } backdrop-blur-xl rounded-[2.5rem] border flex items-center transition-colors duration-200 relative overflow-hidden ${
             isLight
-              ? "bg-white/60 border-black/10"
-              : "bg-black/30 border-white/15"
+              ? "bg-white/70 border-black/10"
+              : "bg-black/40 border-white/15"
           }`}
+          style={{
+            boxShadow: isLight
+              ? "0 10px 30px rgba(0,0,0,0.05)"
+              : `0 15px 35px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)`,
+          }}
         >
-          <div className="flex items-center gap-4">
+          {/* Subtle Ambient Glow */}
+          <div
+            className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl pointer-events-none opacity-20"
+            style={{ backgroundColor: config.accentColor }}
+          />
+
+          <div className="flex items-center gap-3.5 z-10">
             <div
-              className="w-14 h-14 rounded-full border-2 flex items-center justify-center animate-[spin_4s_linear_infinite]"
-              style={{ borderColor: `${config.accentColor}60` }}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center font-mono font-black text-xl shadow-md border"
+              style={{
+                backgroundColor: `${config.accentColor}20`,
+                borderColor: `${config.accentColor}40`,
+                color: config.accentColor,
+              }}
             >
-              <span className="text-2xl" style={{ color: config.accentColor }}>
-                ✦
-              </span>
+              ✦
             </div>
-            {is916 && (
+            <div className="text-left">
               <span
-                className={`text-sm font-mono font-bold text-left uppercase tracking-wider ${
+                className={`text-xs font-mono font-bold uppercase tracking-wider block ${
                   isLight ? "text-zinc-950" : "text-white"
                 }`}
               >
-                Key Takeaway B2B
+                {is916 ? "DIRETRIZ DE AÇÃO" : "KEY TAKEAWAY"}
               </span>
-            )}
+              <span
+                className={`text-[11px] font-mono tracking-tight block ${
+                  isLight ? "text-zinc-500" : "text-zinc-400"
+                }`}
+              >
+                ESTRATÉGIA B2B
+              </span>
+            </div>
           </div>
-          <span
-            className={`text-xs font-mono uppercase tracking-widest font-semibold ${
-              isLight ? "text-zinc-600" : "text-zinc-400"
-            }`}
-          >
-            {is916 ? "Deslize para ver mais" : "Takeaway"}
-          </span>
+
+          <div className="flex items-center gap-2 z-10">
+            <span
+              className="w-2 h-2 rounded-full animate-pulse"
+              style={{ backgroundColor: config.accentColor }}
+            />
+            <span
+              className={`text-[11px] font-mono uppercase tracking-widest font-bold ${
+                isLight ? "text-zinc-700" : "text-zinc-300"
+              }`}
+            >
+              {is916 ? "DESLIZE ❯" : "APLICAR"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
