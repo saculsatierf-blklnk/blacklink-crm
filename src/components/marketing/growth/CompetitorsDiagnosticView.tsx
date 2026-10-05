@@ -1,0 +1,336 @@
+"use client";
+
+import { useState } from "react";
+import {
+  ArrowRight,
+  Brain,
+  Building2,
+  CheckCircle2,
+  Cpu,
+  Flame,
+  Globe,
+  AtSign,
+  Layers,
+  Lightbulb,
+  Loader2,
+  RefreshCw,
+  Save,
+  Search,
+  Shield,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Zap,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  useMarketingStore,
+  type CompetitorItem,
+  type ViralMethodAngle,
+} from "@/store/useMarketingStore";
+
+export function CompetitorsDiagnosticView() {
+  const {
+    companyProfile,
+    setCompanyProfile,
+    competitorsDiagnostic,
+    isAnalyzingCompetitors,
+    analyzeCompanyAndCompetitors,
+    setActiveGrowthTab,
+  } = useMarketingStore();
+
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  const handleRunAnalysis = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await analyzeCompanyAndCompetitors();
+    setFeedbackMsg("Inteligência competitiva e métodos viralizáveis mapeados com sucesso!");
+    setTimeout(() => setFeedbackMsg(null), 4000);
+  };
+
+  const handleAdvanceToPlanning = () => {
+    setActiveGrowthTab("planejamento");
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Banner de Contexto da Etapa */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl p-7 lg:p-9 shadow-2xl space-y-6">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 border-b border-white/[0.08] pb-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sky-500/20 text-sky-300 text-xs font-mono font-bold">
+                01
+              </span>
+              <h2 className="text-xl font-semibold text-white tracking-tight font-heading">
+                Diagnóstico da Empresa &amp; Inteligência Competitiva
+              </h2>
+            </div>
+            <p className="text-xs text-zinc-400 font-sans max-w-2xl">
+              Insira os dados da sua empresa ou @Instagram. A inteligência artificial analisa seu nicho, mapeia os concorrentes diretos e extrai os métodos de maior potencial viralizável.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled={isAnalyzingCompetitors}
+            onClick={handleRunAnalysis}
+            className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 self-start sm:self-auto"
+          >
+            {isAnalyzingCompetitors ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Escaneando Concorrentes...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 text-black" />
+                <span>Executar Scanner com IA</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Feedback Alert */}
+        {feedbackMsg && (
+          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3.5 text-xs font-mono text-emerald-300 flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{feedbackMsg}</span>
+          </div>
+        )}
+
+        {/* Formulário de Input do Core Business */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+              Nome da Empresa / Marca
+            </label>
+            <div className="relative">
+              <Building2 className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-500" />
+              <input
+                type="text"
+                value={companyProfile.name}
+                onChange={(e) => setCompanyProfile({ name: e.target.value })}
+                placeholder="Ex: Black Link CRM"
+                className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white focus:border-white/30 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+              @Instagram Institucional (Opcional)
+            </label>
+            <div className="relative">
+              <AtSign className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-500" />
+              <input
+                type="text"
+                value={companyProfile.instagram}
+                onChange={(e) => setCompanyProfile({ instagram: e.target.value })}
+                placeholder="Ex: @blacklink.b2b"
+                className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+              Site Oficial / Domínio
+            </label>
+            <div className="relative">
+              <Globe className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-500" />
+              <input
+                type="text"
+                value={companyProfile.website}
+                onChange={(e) => setCompanyProfile({ website: e.target.value })}
+                placeholder="Ex: https://blacklink.com.br"
+                className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+              Nicho / Setor de Atuação B2B
+            </label>
+            <input
+              type="text"
+              value={companyProfile.niche}
+              onChange={(e) => setCompanyProfile({ niche: e.target.value })}
+              placeholder="Ex: SaaS Enterprise & Gestão de Vendas B2B"
+              className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+              Produtos &amp; Soluções Existentes
+            </label>
+            <input
+              type="text"
+              value={companyProfile.products}
+              onChange={(e) => setCompanyProfile({ products: e.target.value })}
+              placeholder="Ex: CRM Enterprise, Radar Anti-Colisão, Estúdio de IA para Carrosséis B2B"
+              className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* RAIO-X EXECUTIVO DE IA (DOSSIÊ DE POSICIONAMENTO) */}
+      <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/30 p-7 lg:p-9 shadow-2xl backdrop-blur-2xl space-y-5">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+          <div className="flex items-center gap-3">
+            <Brain className="h-5 w-5 text-purple-400" />
+            <h3 className="text-base font-semibold text-white font-heading">
+              Dossiê de Contra-Posicionamento da IA
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-400">
+            Atualizado em: {competitorsDiagnostic.lastAnalyzedAt || "Recente"}
+          </span>
+        </div>
+
+        <p className="text-xs text-zinc-300 leading-relaxed font-sans bg-black/40 p-5 rounded-2xl border border-white/5">
+          {competitorsDiagnostic.executiveSummary}
+        </p>
+      </div>
+
+      {/* MAPEAMENTO DE CONCORRENTES EM 3 NÍVEIS */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Target className="h-4 w-4 text-emerald-400" />
+            <h3 className="text-base font-semibold text-white font-heading">
+              Mapeamento de Concorrentes em 3 Níveis
+            </h3>
+          </div>
+          <span className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
+            {competitorsDiagnostic.competitors.length} players monitorados
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {competitorsDiagnostic.competitors.map((comp) => {
+            const isLeader = comp.level === "leader";
+            const isDirect = comp.level === "direct";
+
+            return (
+              <div
+                key={comp.id}
+                className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 space-y-4 hover:border-white/20 transition-all shadow-xl"
+              >
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                      isLeader
+                        ? "border-purple-500/40 bg-purple-500/15 text-purple-300"
+                        : isDirect
+                        ? "border-rose-500/40 bg-rose-500/15 text-rose-300"
+                        : "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                    }`}
+                  >
+                    {isLeader
+                      ? "Nível 1 • Líder Global"
+                      : isDirect
+                      ? "Nível 2 • Concorrente Direto"
+                      : "Nível 3 • Substituto / Indireto"}
+                  </span>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-white font-heading">
+                    {comp.name}
+                  </h4>
+                  <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
+                    {comp.handle}
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 text-xs font-sans">
+                  <div className="rounded-xl bg-black/40 p-3 border border-white/5 space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-zinc-400 block font-bold">
+                      Força do Player:
+                    </span>
+                    <p className="text-zinc-300 leading-snug">{comp.strength}</p>
+                  </div>
+
+                  <div className="rounded-xl bg-black/40 p-3 border border-white/5 space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-rose-400 block font-bold">
+                      Vulnerabilidade / Clichê:
+                    </span>
+                    <p className="text-zinc-300 leading-snug">{comp.vulnerabilityOrCliché}</p>
+                  </div>
+
+                  <div className="rounded-xl bg-emerald-500/5 p-3 border border-emerald-500/20 space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-emerald-400 block font-bold">
+                      Nosso Diferencial:
+                    </span>
+                    <p className="text-emerald-200 leading-snug">{comp.differentiator}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* MÉTODOS VIRALIZÁVEIS IDENTIFICADOS COM IA */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2.5">
+          <Flame className="h-4 w-4 text-amber-400" />
+          <h3 className="text-base font-semibold text-white font-heading">
+            Métodos Viralizáveis para os Produtos da Empresa
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {competitorsDiagnostic.viralMethods.map((vm, index) => (
+            <div
+              key={vm.id}
+              className="rounded-3xl border border-white/[0.08] bg-black/40 p-6 space-y-3.5 hover:border-amber-500/30 transition-all shadow-xl"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold text-amber-300 uppercase bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                  Formato #{index + 1} &bull; {vm.suggestedFormat}
+                </span>
+                <Zap className="h-3.5 w-3.5 text-amber-400" />
+              </div>
+
+              <h4 className="text-sm font-semibold text-white font-heading leading-snug">
+                &quot;{vm.hookPattern}&quot;
+              </h4>
+
+              <div className="space-y-2 text-xs text-zinc-400 font-sans">
+                <p>
+                  <strong className="text-zinc-200">Mecanismo:</strong> {vm.viralMechanism}
+                </p>
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  <strong className="text-zinc-400">Por que viraliza no B2B:</strong> {vm.whyItWorks}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* BOTÃO DE AVANÇO PARA A PRÓXIMA ETAPA */}
+      <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
+        <div className="text-xs font-mono text-zinc-500">
+          Etapa 01 concluída &bull; Pronta para alimentar o cronograma
+        </div>
+
+        <button
+          type="button"
+          onClick={handleAdvanceToPlanning}
+          className="flex items-center gap-2.5 rounded-xl bg-white px-6 py-3 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+        >
+          <span>Avançar para Planejamento &amp; Cronograma</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}

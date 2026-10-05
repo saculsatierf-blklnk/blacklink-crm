@@ -16,6 +16,7 @@ import * as htmlToImage from "html-to-image";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
+import { useMarketingStore } from "@/store/useMarketingStore";
 
 const BRAND_STORAGE_KEY = "blacklink_studio_brand_memory";
 
@@ -204,9 +205,19 @@ export function BlackLinkCarouselStudio() {
   const [tenantName, setTenantName] = useState<string>("Black Link Enterprise");
   const [tenantId, setTenantId] = useState<string>("");
 
+  const selectedPlanForCreation = useMarketingStore((state) => state.selectedPlanForCreation);
+  const selectPlanForCreation = useMarketingStore((state) => state.selectPlanForCreation);
+
   // Estado do Modal de IA e Geração Fluida (com Inteligência Competitiva de Instagram)
   const [showAIModal, setShowAIModal] = useState<boolean>(false);
   const [aiTheme, setAiTheme] = useState<string>("");
+
+  useEffect(() => {
+    if (selectedPlanForCreation) {
+      setAiTheme(selectedPlanForCreation.theme);
+      setAiAudience("Decisores B2B, CEOs e Diretores Comerciais");
+    }
+  }, [selectedPlanForCreation]);
   const [aiAudience, setAiAudience] = useState<string>("");
   const [aiCompetitors, setAiCompetitors] = useState<string>("");
   const [aiPositioning, setAiPositioning] = useState<string>("anti-consenso");
@@ -876,6 +887,41 @@ export function BlackLinkCarouselStudio() {
           </div>
         </div>
       </div>
+
+      {/* Banner de Pauta Selecionada do Cronograma */}
+      {selectedPlanForCreation && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">
+              ✓
+            </span>
+            <div>
+              <span className="text-[10px] font-mono uppercase text-emerald-400 font-bold block">
+                Pauta Ativa do Cronograma ({selectedPlanForCreation.dayLabel})
+              </span>
+              <span className="text-white font-semibold">{selectedPlanForCreation.theme}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setAiTheme(selectedPlanForCreation.theme);
+                setShowAIModal(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-colors cursor-pointer shadow-sm"
+            >
+              🪄 Preencher na IA
+            </button>
+            <button
+              onClick={() => selectPlanForCreation(null)}
+              className="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white cursor-pointer"
+              title="Limpar seleção"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Aviso de Fallback de IA caso ativado */}
       {aiErrorNotice && (

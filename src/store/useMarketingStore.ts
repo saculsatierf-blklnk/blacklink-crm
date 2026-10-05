@@ -122,8 +122,89 @@ export interface MarketingFormData {
   format: CreativeFormat;
 }
 
+export type GrowthTab =
+  | "diagnostico"
+  | "planejamento"
+  | "estudio"
+  | "feed"
+  | "performance";
+
+export interface CompanyProfile {
+  name: string;
+  instagram: string;
+  website: string;
+  niche: string;
+  products: string;
+  targetAudience: string;
+}
+
+export interface CompetitorItem {
+  id: string;
+  name: string;
+  handle: string;
+  level: "direct" | "indirect" | "leader";
+  strength: string;
+  vulnerabilityOrCliché: string;
+  differentiator: string;
+}
+
+export interface ViralMethodAngle {
+  id: string;
+  hookPattern: string;
+  viralMechanism: string;
+  whyItWorks: string;
+  suggestedFormat: "carousel" | "post";
+}
+
+export interface CompetitorsDiagnostic {
+  executiveSummary: string;
+  competitors: CompetitorItem[];
+  viralMethods: ViralMethodAngle[];
+  lastAnalyzedAt: string | null;
+}
+
+export interface EditorialPlanItem {
+  id: string;
+  dayNumber: number;
+  dayLabel: string;
+  theme: string;
+  hookHeadline: string;
+  format: CreativeFormat;
+  funnelStage: "topo" | "meio" | "fundo";
+  objective: string;
+  viralAngle: string;
+  ctaText: string;
+  status: "planejado" | "em_producao" | "pronto";
+}
+
 interface MarketingState {
-  // Navegação Interna da Rota /marketing
+  // Navegação da Jornada de Growth Marketing B2B
+  activeGrowthTab: GrowthTab;
+  setActiveGrowthTab: (tab: GrowthTab) => void;
+
+  // 1. Diagnóstico da Empresa & Concorrentes
+  companyProfile: CompanyProfile;
+  setCompanyProfile: (profile: Partial<CompanyProfile>) => void;
+  competitorsDiagnostic: CompetitorsDiagnostic;
+  isAnalyzingCompetitors: boolean;
+  analyzeCompanyAndCompetitors: () => Promise<void>;
+
+  // 2. Planejamento Estratégico & Cronograma
+  editorialPlan: EditorialPlanItem[];
+  isGeneratingPlan: boolean;
+  generateEditorialPlan: () => Promise<void>;
+  selectedPlanForCreation: EditorialPlanItem | null;
+  selectPlanForCreation: (plan: EditorialPlanItem | null) => void;
+  addPlanItem: (item: Omit<EditorialPlanItem, "id">) => void;
+
+  // 4. Feed & Vitrine do Instagram
+  feedViewMode: "grid" | "feed";
+  setFeedViewMode: (mode: "grid" | "feed") => void;
+  selectedFeedPost: ScheduledPost | null;
+  setSelectedFeedPost: (post: ScheduledPost | null) => void;
+  updateScheduledPost: (id: string, updates: Partial<ScheduledPost>) => void;
+
+  // Navegação Legada
   activeMarketingTab: "studio" | "schedule" | "carousel-studio";
   setActiveMarketingTab: (tab: "studio" | "schedule" | "carousel-studio") => void;
 
@@ -405,9 +486,216 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
   },
 ];
 
+const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
+  name: "Black Link CRM",
+  instagram: "@blacklink.b2b",
+  website: "https://blacklink.com.br",
+  niche: "SaaS Enterprise & Inteligência Comercial B2B",
+  products: "Plataforma CRM Enterprise, Esteira de Prospecção Anti-Colisão e Estúdio de IA para Carrosséis",
+  targetAudience: "CEOs, Diretores Comerciais, Heads de Growth e Hunters B2B",
+};
+
+const DEFAULT_DIAGNOSTIC: CompetitorsDiagnostic = {
+  executiveSummary:
+    "O mercado de prospecção e marketing B2B está saturado de 'dicas genéricas' e layouts padronizados de templates Canva. Para se destacar e viralizar com alta autoridade, a Black Link deve focar no ângulo 'Engenharia de Receita & Dados Densos', quebrando o clichê do coach de vendas e apresentando números de pipeline reais, telas de sistemas e contra-posicionamento direto contra CRMs lentos e burocráticos.",
+  competitors: [
+    {
+      id: "comp-1",
+      name: "HubSpot / Salesforce Ecosystem",
+      handle: "@salesforce @hubspot",
+      level: "leader",
+      strength: "Reconhecimento massivo de marca e ecossistema integrado.",
+      vulnerabilityOrCliché:
+        "Complexidade extrema, custo em dólar proibitivo e postagens corporativas burocráticas sem apelo emocional.",
+      differentiator:
+        "Black Link: Foco brutal em execução ágil, sem fricção, estúdio de IA integrado nativo e Dark Mode de alta conversão.",
+    },
+    {
+      id: "comp-2",
+      name: "CRMs Nacionais Tradicionais",
+      handle: "@rdstation @ploomescrm",
+      level: "direct",
+      strength: "Base instalada no Brasil e canais de inbound consolidados.",
+      vulnerabilityOrCliché:
+        "Comunicação visual infantil/colorida, templates repetitivos e ausência de motor de IA criativa autônoma.",
+      differentiator:
+        "Black Link: Visual 'Dark Industrial' sofisticado para decisores C-Level, com esteira de cadência e anti-colisão em tempo real.",
+    },
+    {
+      id: "comp-3",
+      name: "Agências de Outbound & Cold Mail",
+      handle: "@growth_b2b_agency",
+      level: "indirect",
+      strength: "Discurso agressivo de geração de leads.",
+      vulnerabilityOrCliché:
+        "Promessas milagrosas de '100 leads por dia' que desgastam a reputação do domínio corporativo.",
+      differentiator:
+        "Black Link: Blindagem de domínio corporativo, telemetria preditiva e hand-off direto para fechamento comercial.",
+    },
+  ],
+  viralMethods: [
+    {
+      id: "vm-1",
+      hookPattern: "Os 5 Erros Críticos que Destroem seu CAC no B2B",
+      viralMechanism: "Diagnóstico de Sangria Financeira",
+      whyItWorks: "Decisores não se movem por novidades, mas por medo de perder dinheiro e ineficiência oculta.",
+      suggestedFormat: "carousel",
+    },
+    {
+      id: "vm-2",
+      hookPattern: "Por que Empresas de 8 Dígitos Estão Abandonando CRMs Legados",
+      viralMechanism: "Contra-Consenso & Tendência Oculta",
+      whyItWorks: "Gera curiosidade imediata ao questionar um padrão de mercado estabelecido.",
+      suggestedFormat: "carousel",
+    },
+    {
+      id: "vm-3",
+      hookPattern: "O Script de Abordagem que Gerou R$ 420k em Retainers (Sem Cold Call Chata)",
+      viralMechanism: "Engenharia Reversa de Sucesso Real",
+      whyItWorks: "Profissionais B2B salvam carrosséis com roteiros práticos para copiar e testar com a equipe.",
+      suggestedFormat: "carousel",
+    },
+  ],
+  lastAnalyzedAt: "05/10/2026 14:00",
+};
+
+const DEFAULT_EDITORIAL_PLAN: EditorialPlanItem[] = [
+  {
+    id: "plan-1",
+    dayNumber: 1,
+    dayLabel: "Segunda • 06/Out",
+    theme: "Os 5 Gargalos Ocultos do Funil B2B",
+    hookHeadline: "Sua operação não tem problema de geração de leads. O gargalo é outro.",
+    format: "carousel",
+    funnelStage: "topo",
+    objective: "Atração e conscientização de decisores sobre vazamento de pipeline.",
+    viralAngle: "Quebra de paradigma sobre volume vs qualificação real.",
+    ctaText: "Comente 'FUNIL' para receber o checklist de diagnóstico.",
+    status: "pronto",
+  },
+  {
+    id: "plan-2",
+    dayNumber: 2,
+    dayLabel: "Quarta • 08/Out",
+    theme: "Anti-Colisão: Como 2 Hunters Abordaram o Mesmo CFO e Queimaram o Contrato",
+    hookHeadline: "O erro amador de R$ 180k que acontece quando seu CRM não tem radar anti-duplicidade.",
+    format: "carousel",
+    funnelStage: "meio",
+    objective: "Apresentar a dor da falta de blindagem entre operadores comerciais.",
+    viralAngle: "Storytelling de bastidores com números reais de perda de receita.",
+    ctaText: "Salve este post para revisar as travas de segurança do seu time.",
+    status: "planejado",
+  },
+  {
+    id: "plan-3",
+    dayNumber: 3,
+    dayLabel: "Sexta • 10/Out",
+    theme: "Arquitetura de Carrosséis B2B: O Framework de 7 Lâminas que Converte Decisores",
+    hookHeadline: "Carrossel de Canva colorido não vende para C-Level. Esta é a estrutura exata de retenção.",
+    format: "carousel",
+    funnelStage: "meio",
+    objective: "Educação técnica e posicionamento da Black Link como referência visual.",
+    viralAngle: "Desconstrução de framework passo a passo para salvar e aplicar.",
+    ctaText: "Envie este carrossel para o líder de marketing da sua empresa.",
+    status: "planejado",
+  },
+  {
+    id: "plan-4",
+    dayNumber: 4,
+    dayLabel: "Terça • 14/Out",
+    theme: "Demonstração Prática: Da Prospecção ao Faturamento em 1 Única Tela",
+    hookHeadline: "Veja como funciona o fluxo de trabalho de um time de vendas de elite.",
+    format: "carousel",
+    funnelStage: "fundo",
+    objective: "Demonstração da plataforma Black Link CRM e geração de reuniões qualificadas.",
+    viralAngle: "Telas de alta fidelidade e dados ao vivo (Glassmorphism).",
+    ctaText: "Toque no link da bio para solicitar uma demonstração executiva.",
+    status: "planejado",
+  },
+];
+
 export const useMarketingStore = create<MarketingState>()(
   persist(
     (set, get) => ({
+      // Jornada de Growth Marketing B2B (5 Etapas)
+      activeGrowthTab: "diagnostico",
+      setActiveGrowthTab: (tab) => set({ activeGrowthTab: tab }),
+
+      // 1. Diagnóstico da Empresa & Concorrentes
+      companyProfile: DEFAULT_COMPANY_PROFILE,
+      setCompanyProfile: (profile) =>
+        set((state) => ({ companyProfile: { ...state.companyProfile, ...profile } })),
+      competitorsDiagnostic: DEFAULT_DIAGNOSTIC,
+      isAnalyzingCompetitors: false,
+      analyzeCompanyAndCompetitors: async () => {
+        set({ isAnalyzingCompetitors: true });
+        // Simulação enriquecida com IA mantendo latência executiva
+        await new Promise((r) => setTimeout(r, 1500));
+        const { companyProfile } = get();
+        const updatedDiagnostic: CompetitorsDiagnostic = {
+          ...DEFAULT_DIAGNOSTIC,
+          executiveSummary: `Análise gerada para ${companyProfile.name || "a empresa"} no nicho ${companyProfile.niche || "B2B"}: Para maximizar autoridade sobre os concorrentes diretos (${companyProfile.instagram || "@concorrentes"}), a estratégia prioritária consiste em contrastar números de pipeline reais e engenharia de processos contra clichês de vendas superficiais.`,
+          lastAnalyzedAt: new Date().toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        set({
+          competitorsDiagnostic: updatedDiagnostic,
+          isAnalyzingCompetitors: false,
+        });
+      },
+
+      // 2. Planejamento Estratégico & Cronograma
+      editorialPlan: DEFAULT_EDITORIAL_PLAN,
+      isGeneratingPlan: false,
+      generateEditorialPlan: async () => {
+        set({ isGeneratingPlan: true });
+        await new Promise((r) => setTimeout(r, 1200));
+        set({ isGeneratingPlan: false });
+      },
+      selectedPlanForCreation: null,
+      selectPlanForCreation: (plan) => {
+        set({
+          selectedPlanForCreation: plan,
+          activeGrowthTab: "estudio",
+        });
+        if (plan) {
+          get().setFormData({
+            theme: plan.theme,
+            targetAudience: "Decisores B2B, CEOs e Diretores Comerciais",
+            format: plan.format,
+          });
+        }
+      },
+      addPlanItem: (item) => {
+        const newItem: EditorialPlanItem = {
+          ...item,
+          id: `plan-${Date.now()}`,
+        };
+        set((s) => ({ editorialPlan: [...s.editorialPlan, newItem] }));
+      },
+
+      // 4. Feed & Vitrine do Instagram
+      feedViewMode: "grid",
+      setFeedViewMode: (mode) => set({ feedViewMode: mode }),
+      selectedFeedPost: null,
+      setSelectedFeedPost: (post) => set({ selectedFeedPost: post }),
+      updateScheduledPost: (id, updates) => {
+        set((state) => ({
+          scheduledPosts: state.scheduledPosts.map((p) =>
+            p.id === id ? { ...p, ...updates } : p
+          ),
+          selectedFeedPost:
+            state.selectedFeedPost?.id === id
+              ? { ...state.selectedFeedPost, ...updates }
+              : state.selectedFeedPost,
+        }));
+      },
+
       activeMarketingTab: "studio",
       setActiveMarketingTab: (tab) => set({ activeMarketingTab: tab }),
 
