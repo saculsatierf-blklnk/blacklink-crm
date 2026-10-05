@@ -28,11 +28,17 @@ body {
   background-color: #000000 !important;
   color: #F5F5F7;
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-plus-jakarta-sans), -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.01em;
+}
+
+/* Tipografia Corporativa B2B: Headings em Space Grotesk */
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--font-space-grotesk), monospace, sans-serif;
+  letter-spacing: -0.02em;
 }
 
 /* Tipografia Monospaçada Nativa do Sistema */

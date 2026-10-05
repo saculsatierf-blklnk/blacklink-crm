@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Compass, LogOut, Search, User as UserIcon, Users } from "lucide-react";
+import { Compass, LogOut, Menu, Search, User as UserIcon, Users } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTourStore } from "@/store/useTourStore";
+import { useUiStore } from "@/store/useUiStore";
 import { TeamManagementModal } from "@/components/team/TeamManagementModal";
 
 interface HeaderProps {
@@ -16,6 +17,7 @@ export function Header({ initialRole }: HeaderProps) {
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
   const resetTour = useTourStore((state) => state.resetTour);
+  const toggleMobileSidebar = useUiStore((state) => state.toggleMobileSidebar);
 
   const handleLogout = async () => {
     clearSession();
@@ -41,7 +43,17 @@ export function Header({ initialRole }: HeaderProps) {
     <>
       <header className="sticky top-0 z-40 flex h-18 w-full items-center justify-between border-b border-white/10 bg-black/40 px-6 sm:px-8 backdrop-blur-2xl transition-all">
         {/* Busca e Contexto Global */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Botão de Menu para Telas Menores */}
+          <button
+            type="button"
+            onClick={toggleMobileSidebar}
+            className="md:hidden flex h-9.5 w-9.5 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+            title="Abrir menu de navegação"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+
           <div data-tour="header-search" className="relative hidden sm:block">
             <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-400" />
             <input

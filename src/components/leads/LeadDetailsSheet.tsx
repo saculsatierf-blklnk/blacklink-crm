@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   AlertCircle,
   ArrowRightLeft,
@@ -411,13 +412,22 @@ export function LeadDetailsSheet({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Backdrop Translúcido com Blur */}
-      <div
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         onClick={onClose}
         className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
       />
 
-      {/* Painel Lateral Slide-over (Dossiê do Hunter) */}
-      <div className="relative z-50 flex h-full w-full max-w-xl flex-col justify-between border-l border-white/10 bg-[#0A0A0A] p-6 shadow-2xl sm:p-8 animate-in slide-in-from-right duration-200">
+      {/* Painel Lateral Slide-over (Dossiê do Hunter) com Física de Mola */}
+      <motion.div
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 260 }}
+        className="relative z-50 flex h-full w-full max-w-xl flex-col justify-between border-l border-white/10 bg-[#0A0A0A] p-6 shadow-2xl sm:p-8"
+      >
         <div className="space-y-6 overflow-y-auto pr-1">
           {/* 1. TOPO: Cabeçalho com Nome, Empresa, Cargo e Dono */}
           <div className="border-b border-white/10 pb-5 space-y-4">
@@ -1093,7 +1103,7 @@ export function LeadDetailsSheet({
             Fechar
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

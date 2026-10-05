@@ -41,16 +41,20 @@ export function middleware(request: NextRequest) {
 
     // Redireciona usuários já autenticados tentando acessar o login
     if (isAuthRoute) {
-      const target = userRole === "commercial" ? "/leads" : "/";
+      const target = userRole === "commercial" ? "/vendas" : "/dashboard";
       return NextResponse.redirect(new URL(target, request.url));
     }
 
     // Barreira de Isolamento RBAC para perfil Comercial
     if (userRole === "commercial") {
-      const isLeadsRoute = pathname === "/leads" || pathname.startsWith("/leads/");
-      if (!isLeadsRoute) {
-        // Redirecionamento compulsório com status 307 direto para o pipeline de leads
-        return NextResponse.redirect(new URL("/leads", request.url), 307);
+      const isVendasRoute =
+        pathname === "/vendas" ||
+        pathname.startsWith("/vendas/") ||
+        pathname === "/leads" ||
+        pathname.startsWith("/leads/");
+      if (!isVendasRoute) {
+        // Redirecionamento compulsório com status 307 direto para o pipeline de vendas
+        return NextResponse.redirect(new URL("/vendas", request.url), 307);
       }
     }
   }

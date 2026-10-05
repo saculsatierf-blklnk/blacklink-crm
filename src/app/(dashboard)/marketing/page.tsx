@@ -1,11 +1,5 @@
-import { MarketingTabsWrapper } from "@/components/marketing/MarketingTabsWrapper";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Marketing, Cronograma & Criativos Autônomos • Black Link CRM",
-  description:
-    "Geração autônoma de criativos B2B, cronograma de aprovação multi-tenant e orquestração de tráfego pago integrada à Meta Graph API.",
-};
-
-export default function MarketingPage() {
-  return <MarketingTabsWrapper />;
+export default function MarketingRedirectPage() {
+  redirect("/estudio");
 }

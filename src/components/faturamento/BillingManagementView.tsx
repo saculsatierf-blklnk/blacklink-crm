@@ -380,24 +380,24 @@ export function BillingManagementView() {
                         </div>
                       </td>
 
-                      {/* Status */}
+                      {/* Status Semântico Cristalino */}
                       <td className="px-6 py-5">
                         {invoice.paymentStatus === "paid" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-300">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Pago
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-1 text-[11px] font-semibold text-emerald-300 shadow-sm backdrop-blur-md">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            Pago (Liquidado)
                           </span>
                         )}
                         {invoice.paymentStatus === "pending" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-300">
-                            <Clock className="h-3 w-3" />
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3.5 py-1 text-[11px] font-semibold text-amber-300 shadow-sm backdrop-blur-md">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                             Pendente
                           </span>
                         )}
                         {invoice.paymentStatus === "overdue" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-medium text-red-300">
-                            <AlertCircle className="h-3 w-3" />
-                            Atrasado
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/40 bg-rose-500/15 px-3.5 py-1 text-[11px] font-semibold text-rose-300 shadow-sm backdrop-blur-md">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
+                            Vencido (Overdue)
                           </span>
                         )}
                       </td>

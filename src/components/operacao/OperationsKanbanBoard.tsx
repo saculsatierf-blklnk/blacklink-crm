@@ -140,26 +140,26 @@ export function OperationsKanbanBoard() {
     switch (priority) {
       case "urgent":
         return (
-          <span className="rounded-full bg-red-500/10 border border-red-500/30 px-2.5 py-0.5 text-[9px] font-mono font-medium text-red-300 uppercase tracking-wider">
+          <span className="rounded-md bg-rose-600 px-2.5 py-0.5 text-[10px] font-mono font-bold text-white uppercase tracking-wider shadow-md shadow-rose-950/50">
             Urgente
           </span>
         );
       case "high":
         return (
-          <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-[9px] font-mono font-medium text-amber-300 uppercase tracking-wider">
+          <span className="rounded-md bg-amber-400 px-2.5 py-0.5 text-[10px] font-mono font-extrabold text-black uppercase tracking-wider shadow-md shadow-amber-950/40">
             Alta
           </span>
         );
       case "medium":
         return (
-          <span className="rounded-full bg-sky-500/10 border border-sky-500/30 px-2.5 py-0.5 text-[9px] font-mono font-medium text-sky-300 uppercase tracking-wider">
+          <span className="rounded-md bg-sky-500 px-2.5 py-0.5 text-[10px] font-mono font-bold text-black uppercase tracking-wider shadow-md shadow-sky-950/40">
             Média
           </span>
         );
       case "low":
       default:
         return (
-          <span className="rounded-full bg-white/[0.05] border border-white/10 px-2.5 py-0.5 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
+          <span className="rounded-md bg-zinc-700 px-2.5 py-0.5 text-[10px] font-mono font-bold text-zinc-100 uppercase tracking-wider shadow-sm">
             Baixa
           </span>
         );
@@ -170,13 +170,15 @@ export function OperationsKanbanBoard() {
     if (!dateStr) return null;
     const date = new Date(dateStr);
     const now = new Date();
-    const isPast = date < now;
+    const isPast = date < now && date.toDateString() !== now.toDateString();
+    const isToday = date.toDateString() === now.toDateString();
 
     const formatted = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 
     return {
       text: formatted,
       isPast,
+      isToday,
     };
   };
 
@@ -369,14 +371,21 @@ export function OperationsKanbanBoard() {
 
                             {dueInfo && (
                               <div
-                                className={`flex items-center gap-1.5 ${
-                                  dueInfo.isPast ? "text-red-400 font-medium" : "text-zinc-400"
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-mono font-medium ${
+                                  dueInfo.isPast
+                                    ? "bg-rose-500/20 border-rose-500/50 text-rose-300 font-bold"
+                                    : dueInfo.isToday
+                                    ? "bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold"
+                                    : "bg-white/[0.04] border-white/10 text-zinc-300"
                                 }`}
                               >
-                                <Clock className="h-3 w-3 shrink-0" />
+                                <Calendar className="h-3 w-3 shrink-0" />
                                 <span>
-                                  {dueInfo.isPast ? "Atrasado: " : "Entrega: "}
-                                  {dueInfo.text}
+                                  {dueInfo.isPast
+                                    ? `Atrasado: ${dueInfo.text}`
+                                    : dueInfo.isToday
+                                    ? `Vence Hoje (${dueInfo.text})`
+                                    : `Entrega: ${dueInfo.text}`}
                                 </span>
                               </div>
                             )}
