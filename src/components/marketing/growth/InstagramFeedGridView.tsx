@@ -53,6 +53,19 @@ export function InstagramFeedGridView() {
   // Slide index por post no modo feed vertical
   const [feedSlideIndexes, setFeedSlideIndexes] = useState<Record<string, number>>({});
 
+  const getInitials = (name?: string, handle?: string) => {
+    if (name && name.trim()) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      return name.slice(0, 2).toUpperCase();
+    }
+    if (handle && handle.trim()) {
+      const clean = handle.replace(/[@._]/g, "");
+      return clean.slice(0, 2).toUpperCase();
+    }
+    return "BL";
+  };
+
   const handleOpenPostModal = (post: ScheduledPost) => {
     setSelectedFeedPost(post);
     setActiveSlideIdx(0);
@@ -121,7 +134,7 @@ export function InstagramFeedGridView() {
             <div className="p-1 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-xl">
               <div className="p-0.5 rounded-full bg-black">
                 <div className="flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-gradient-to-br from-zinc-800 to-black text-white font-heading font-bold text-xl sm:text-2xl border border-white/20 shadow-inner">
-                  BL
+                  {getInitials(companyProfile.name, companyProfile.instagram)}
                 </div>
               </div>
             </div>
@@ -168,19 +181,31 @@ export function InstagramFeedGridView() {
             {/* Bio Executiva B2B */}
             <div className="text-xs text-zinc-300 font-sans leading-relaxed max-w-xl">
               <div className="font-semibold text-white">{companyProfile.name}</div>
-              <div className="text-zinc-400">{companyProfile.niche}</div>
-              <div className="text-zinc-400 mt-0.5">
-                {companyProfile.products.slice(0, 80)}...
-              </div>
-              <a
-                href={companyProfile.website}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sky-400 hover:underline font-mono text-[11px] mt-1"
-              >
-                <span>{companyProfile.website.replace(/^https?:\/\//, "")}</span>
-                <ExternalLink className="h-2.5 w-2.5" />
-              </a>
+              <div className="text-zinc-400 font-medium">{companyProfile.niche}</div>
+              {companyProfile.bio ? (
+                <div className="text-zinc-300 whitespace-pre-line mt-1.5 leading-relaxed font-sans">
+                  {companyProfile.bio}
+                </div>
+              ) : (
+                <div className="text-zinc-400 mt-0.5">
+                  {companyProfile.products?.slice(0, 90)}...
+                </div>
+              )}
+              {companyProfile.website && (
+                <a
+                  href={
+                    companyProfile.website.startsWith("http")
+                      ? companyProfile.website
+                      : `https://${companyProfile.website}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-sky-400 hover:underline font-mono text-[11px] mt-1.5"
+                >
+                  <span>{companyProfile.website.replace(/^https?:\/\//, "")}</span>
+                  <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -330,7 +355,7 @@ export function InstagramFeedGridView() {
                   <div className="flex items-center gap-3">
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 p-0.5">
                       <div className="flex h-full w-full items-center justify-center rounded-full bg-black text-white font-bold text-xs">
-                        BL
+                        {getInitials(companyProfile.name, companyProfile.instagram)}
                       </div>
                     </div>
                     <div>

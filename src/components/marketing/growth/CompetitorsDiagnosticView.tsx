@@ -44,8 +44,9 @@ export function CompetitorsDiagnosticView() {
   const handleRunAnalysis = async (e: React.FormEvent) => {
     e.preventDefault();
     await analyzeCompanyAndCompetitors();
-    setFeedbackMsg("Inteligência competitiva e métodos viralizáveis mapeados com sucesso!");
-    setTimeout(() => setFeedbackMsg(null), 4000);
+    const targetLabel = companyProfile.instagram || companyProfile.name || "sua empresa";
+    setFeedbackMsg(`Diagnóstico de IA concluído com sucesso para ${targetLabel}! Concorrentes, métodos e cronograma atualizados.`);
+    setTimeout(() => setFeedbackMsg(null), 5000);
   };
 
   const handleAdvanceToPlanning = () => {
@@ -181,14 +182,21 @@ export function CompetitorsDiagnosticView() {
 
       {/* RAIO-X EXECUTIVO DE IA (DOSSIÊ DE POSICIONAMENTO) */}
       <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-black/30 p-7 lg:p-9 shadow-2xl backdrop-blur-2xl space-y-5">
-        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
           <div className="flex items-center gap-3">
-            <Brain className="h-5 w-5 text-purple-400" />
-            <h3 className="text-base font-semibold text-white font-heading">
-              Dossiê de Contra-Posicionamento da IA
-            </h3>
+            <Brain className="h-5 w-5 text-purple-400 shrink-0" />
+            <div>
+              <h3 className="text-base font-semibold text-white font-heading">
+                Dossiê de Contra-Posicionamento da IA
+              </h3>
+              {companyProfile.tagline && (
+                <p className="text-[11px] font-mono text-purple-300 mt-0.5">
+                  &quot;{companyProfile.tagline}&quot;
+                </p>
+              )}
+            </div>
           </div>
-          <span className="text-[10px] font-mono text-zinc-400">
+          <span className="text-[10px] font-mono text-zinc-400 self-start sm:self-auto">
             Atualizado em: {competitorsDiagnostic.lastAnalyzedAt || "Recente"}
           </span>
         </div>
@@ -196,6 +204,22 @@ export function CompetitorsDiagnosticView() {
         <p className="text-xs text-zinc-300 leading-relaxed font-sans bg-black/40 p-5 rounded-2xl border border-white/5">
           {competitorsDiagnostic.executiveSummary}
         </p>
+
+        {companyProfile.bio && (
+          <div className="rounded-2xl border border-white/10 bg-black/50 p-4.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase text-sky-400 font-bold tracking-wider">
+                Proposta de Bio Executiva para o Instagram:
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">
+                {companyProfile.instagram || "@instagram"}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-200 whitespace-pre-line font-sans leading-relaxed">
+              {companyProfile.bio}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* MAPEAMENTO DE CONCORRENTES EM 3 NÍVEIS */}

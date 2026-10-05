@@ -136,6 +136,8 @@ export interface CompanyProfile {
   niche: string;
   products: string;
   targetAudience: string;
+  bio?: string;
+  tagline?: string;
 }
 
 export interface CompetitorItem {
@@ -493,6 +495,8 @@ const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   niche: "SaaS Enterprise & Inteligência Comercial B2B",
   products: "Plataforma CRM Enterprise, Esteira de Prospecção Anti-Colisão e Estúdio de IA para Carrosséis",
   targetAudience: "CEOs, Diretores Comerciais, Heads de Growth e Hunters B2B",
+  bio: "Inteligência Comercial B2B para times de elite 🚀\nTransformamos seu CRM em uma máquina de receita previsível.\nRadar Anti-Colisão | Automação | IA\n👇 Domine seu mercado abaixo:",
+  tagline: "Onde a estratégia de Growth encontra a precisão da Inteligência Comercial.",
 };
 
 const DEFAULT_DIAGNOSTIC: CompetitorsDiagnostic = {
@@ -629,12 +633,45 @@ export const useMarketingStore = create<MarketingState>()(
       isAnalyzingCompetitors: false,
       analyzeCompanyAndCompetitors: async () => {
         set({ isAnalyzingCompetitors: true });
-        // Simulação enriquecida com IA mantendo latência executiva
-        await new Promise((r) => setTimeout(r, 1500));
         const { companyProfile } = get();
+
+        try {
+          const res = await fetch("/api/marketing/diagnostic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(companyProfile),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              set((state) => ({
+                companyProfile: {
+                  ...state.companyProfile,
+                  ...data.companyProfile,
+                },
+                competitorsDiagnostic: data.diagnostic,
+                editorialPlan:
+                  Array.isArray(data.editorialPlan) && data.editorialPlan.length > 0
+                    ? data.editorialPlan
+                    : state.editorialPlan,
+                scheduledPosts:
+                  Array.isArray(data.scheduledPosts) && data.scheduledPosts.length > 0
+                    ? [...data.scheduledPosts, ...state.scheduledPosts.slice(4)]
+                    : state.scheduledPosts,
+                isAnalyzingCompetitors: false,
+              }));
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Aviso ao conectar com endpoint de diagnóstico de IA:", err);
+        }
+
+        // Fallback local se a chamada falhar
         const updatedDiagnostic: CompetitorsDiagnostic = {
           ...DEFAULT_DIAGNOSTIC,
-          executiveSummary: `Análise gerada para ${companyProfile.name || "a empresa"} no nicho ${companyProfile.niche || "B2B"}: Para maximizar autoridade sobre os concorrentes diretos (${companyProfile.instagram || "@concorrentes"}), a estratégia prioritária consiste em contrastar números de pipeline reais e engenharia de processos contra clichês de vendas superficiais.`,
+          executiveSummary: `Análise estratégica para ${companyProfile.name || "a empresa"} (${companyProfile.instagram || "@instagram"}): Foco em contra-posicionamento e diferenciação visual no feed contra a média dos concorrentes.`,
           lastAnalyzedAt: new Date().toLocaleDateString("pt-BR", {
             day: "2-digit",
             month: "2-digit",
@@ -654,7 +691,34 @@ export const useMarketingStore = create<MarketingState>()(
       isGeneratingPlan: false,
       generateEditorialPlan: async () => {
         set({ isGeneratingPlan: true });
-        await new Promise((r) => setTimeout(r, 1200));
+        const { companyProfile } = get();
+
+        try {
+          const res = await fetch("/api/marketing/diagnostic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(companyProfile),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.editorialPlan) && data.editorialPlan.length > 0) {
+              set((state) => ({
+                editorialPlan: data.editorialPlan,
+                scheduledPosts:
+                  Array.isArray(data.scheduledPosts) && data.scheduledPosts.length > 0
+                    ? [...data.scheduledPosts, ...state.scheduledPosts.slice(4)]
+                    : state.scheduledPosts,
+                isGeneratingPlan: false,
+              }));
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Aviso ao regenerar planejamento editorial:", err);
+        }
+
+        await new Promise((r) => setTimeout(r, 800));
         set({ isGeneratingPlan: false });
       },
       selectedPlanForCreation: null,
