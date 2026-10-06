@@ -45,47 +45,103 @@ async function generateWithGeminiDirect(
   format: string,
   recentContext: string,
   competitorsReferences?: string,
-  positioningStrategy?: string
+  positioningStrategy?: string,
+  brandContext?: {
+    brandName?: string;
+    brandHandle?: string;
+    isInfluencer?: boolean;
+    niche?: string;
+    products?: string;
+  }
 ): Promise<ParsedAICopy | null> {
   const candidateModels = [
-    "gemini-3.1-flash-lite",
-    "gemini-3.8-flash",
-    "gemini-3.6-flash",
-    "gemini-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
   ];
 
   const slideCount = format === "story" ? 3 : format === "post" ? 1 : 5;
+  const brandName = brandContext?.brandName || "Black Link";
+  const brandHandle = brandContext?.brandHandle || "@blacklink.b2b";
+  const isInfluencer = Boolean(brandContext?.isInfluencer);
 
-  const prompt = `Você é o Diretor Criativo e Estrategista Chefe de Posicionamento da Black Link (ecossistema premium B2B).
-Sua missão é desenvolver um carrossel / peça de marketing de altíssima conversão sobre o tema informado, com foco cirúrgico em CONTRA-POSICIONAMENTO e ANÁLISE COMPETITIVA no Instagram.
+  const prompt = isInfluencer
+    ? `Você é o Estrategista Criativo de Conteúdo Viral e Retenção no Instagram para o criador ${brandName} (${brandHandle}).
+Sua missão é desenvolver um carrossel de ${slideCount} lâminas de alta retenção sobre o tema informado, explorando o estilo autoral, bastidores, identificação imediata e contra-posicionamento contra posts engessados.
+
+DIRETRIZES PARA CREATOR / INFLUENCER:
+1. NARRATIVA & TOM DE VOZ:
+   - Foco na persona autoral, espontaneidade, histórias sem filtro e conexão humana.
+   - Destaque palavras-chave de impacto entre asteriscos duplos (ex: **bastidores**, **erro bizarro**).
+   - Lâmina 1 (Gancho Viral): Pare o feed com um choque, curiosidade irresistível ou relato inusitado.
+   - Lâmina 2: O ponto crítico da história onde tudo fugiu do controle.
+   - Lâmina 3: A virada de chave / o que ninguém conta na internet.
+   - Lâmina 4: O ensinamento ou identificação com quem assiste.
+   - Lâmina 5: Chamada para ação com humor e convite para interagir nos comentários.
+
+2. RECOMENDAÇÃO DE LAYOUT:
+   - Escolha entre: "tweet", "podcast-quote", "polaroid-retro", "split", "minimal".
+
+BRIEFING:
+- Criador: "${brandName}" (${brandHandle})
+- Tema: "${theme}"
+- Público: "${targetAudience || "Seguidores e audiência do Instagram"}"
+- Nicho: "${brandContext?.niche || "Entretenimento & Criador de Conteúdo"}"
+
+Responda ESTRITAMENTE em formato JSON puro:
+{
+  "suggestedLayout": "tweet",
+  "suggestedFont": "syne",
+  "suggestedTheme": "dark-industrial",
+  "competitorInsight": {
+    "competitorCliché": "Criadores concorrentes reciclam piadas batidas e vídeos sem conexão autoral.",
+    "ourDifferentiator": "Autenticidade crua, situações reais de bastidores e conexão direta com a comunidade.",
+    "layoutRationale": "O layout dinâmico quebra o feed com visual nativo do Instagram."
+  },
+  "hookHeadline": "Headline de parada de rolagem com **destaque**",
+  "bodyCopy": "Legenda completa do post pronta para publicação com hashtags",
+  "ctaText": "Comente o que você achou e envie para um amigo!",
+  "hashtags": ["#Tag1", "#Tag2", "#Tag3"],
+  "postCaption": "Legenda completa com quebras de linha e hashtags",
+  "slides": [
+    {
+      "slideNumber": 1,
+      "tag": "GANCHO VIRAL",
+      "headline": "Título da lâmina com **destaque**",
+      "bodyText": "Texto envolvente e direto de 2 a 3 linhas",
+      "visualPrompt": "Aesthetic minimal visual"
+    }
+  ]
+}`
+    : `Você é o Diretor Criativo e Estrategista Chefe de Posicionamento da ${brandName} (${brandHandle}).
+Sua missão é desenvolver um carrossel de marketing de altíssima conversão sobre o tema informado, com foco cirúrgico em CONTRA-POSICIONAMENTO e ANÁLISE COMPETITIVA no Instagram.
 
 DIRETRIZES DE INTELIGÊNCIA COMPETITIVA & CONTRA-POSICIONAMENTO NO INSTAGRAM:
 1. ANÁLISE DE CONCORRENTES NO INSTAGRAM:
-   - Diagnostique o que a média dos concorrentes / perfis do nicho posta sobre esse tema no feed do Instagram: conselhos rasos ("5 dicas para...", "o segredo do sucesso"), posts com templates batidos do Canva, definições teóricas que não geram resultado de negócios.
-   - Referências de Concorrentes informadas: "${competitorsReferences || "Perfis convencionais e tradicionais do nicho no Instagram"}"
-   - Ângulo de Posicionamento solicitado: "${positioningStrategy || "Anti-Consenso / Quebra de Mitos"}"
+   - Diagnostique o que a média dos concorrentes do nicho posta sobre esse tema no feed: conselhos rasos, posts com templates batidos do Canva, definições teóricas que não geram resultado de negócios.
+   - Referências de Concorrentes informadas: "${competitorsReferences || "Perfis convencionais e tradicionais do setor no Instagram"}"
+   - Ângulo de Posicionamento solicitado: "${positioningStrategy || "Anti-Consenso / Autoridade Prática"}"
 
-2. CONTRA-POSICIONAMENTO (COPIES & NARRATIVA DE ALTO IMPACTO):
-   - Adote uma postura provocativa, pragmática e fundamentada em autoridade executiva (C-Level).
-   - Use palavras-chave com destaque tipográfico entre asteriscos duplos (ex: **alavancagem**, **métrica de vaidade**) para renderização com a cor de destaque da marca.
+2. CONTRA-POSICIONAMENTO:
+   - Use palavras-chave com destaque tipográfico entre asteriscos duplos (ex: **alavancagem**, **precisão cirúrgica**).
    - Construa um carrossel progressivo de ${slideCount} lâminas:
      * Lâmina 1 (Gancho Provocativo): Destrua a premissa rasa ou o conselho clichê dos concorrentes com uma verdade desconfortável.
-     * Lâmina 2 (O Gargalo Oculto): Mostre o custo invisível ou o erro estrutural que as outras contas ignoram.
-     * Lâmina 3 (O Método Superior): Apresente o framework analítico ou tese proprietária que coloca o leitor à frente.
+     * Lâmina 2 (O Gargalo Oculto): Mostre o custo invisível ou o erro estrutural que as outras empresas ignoram.
+     * Lâmina 3 (O Método Superior): Apresente o framework analítico ou tese proprietária da ${brandName}.
      * Lâmina 4 (Execução Tática): Passo a passo denso e acionável sem enrolação.
-     * Lâmina 5 (Conclusão & CTA): Síntese executiva e chamada para ação clara.
+     * Lâmina 5 (Conclusão & CTA): Síntese executiva e chamada para ação clara direcionada a ${brandHandle}.
 
 3. RECOMENDAÇÃO DE LAYOUT GRÁFICO (QUEBRA DE PADRÃO NO FEED):
-   - Escolha o modelo visual que mais se diferencia esteticamente da concorrência no feed entre:
-     "bento-grid", "dashboard-analytics", "minimal", "brutalista", "glass-floating", "aura-gradient", "terminal", "magazine-cover", "apple-mockup".
-   - Indique em "suggestedLayout" e explique em "layoutRationale" porque essa estética vence visualmente os concorrentes no feed.
+   - Escolha o modelo visual que mais se diferencia esteticamente no feed entre:
+     "bento-grid", "dashboard-analytics", "minimal", "brutalista", "glass-floating", "wireframe-blueprint", "terminal", "magazine-cover", "apple-mockup".
 
 BRIEFING EXECUTIVO:
+- Marca / Empresa: "${brandName}" (${brandHandle})
+- Nicho / Mercado: "${brandContext?.niche || "Soluções Corporativas Especializadas"}"
+- Produtos / Soluções: "${brandContext?.products || "Linha de produtos corporativos de alta performance"}"
 - Tema: "${theme}"
 - Público-Alvo: "${targetAudience}"
 - Formato: "${format}"
-- Concorrentes / Referências: "${competitorsReferences || "Concorrentes tradicionais do Instagram"}"
-- Estratégia de Posicionamento: "${positioningStrategy || "Anti-Consenso"}"
 - Contexto de Campanhas Anteriores: "${recentContext}"
 
 Responda ESTRITAMENTE em formato JSON (sem blocos de markdown em volta, apenas o JSON puro) com este formato exato:
@@ -96,7 +152,7 @@ Responda ESTRITAMENTE em formato JSON (sem blocos de markdown em volta, apenas o
   "competitorInsight": {
     "competitorCliché": "A maioria dos concorrentes no Instagram apenas recomenda...",
     "ourDifferentiator": "Nós nos contra-posicionamos revelando que...",
-    "layoutRationale": "O layout Bento Grid rompe o feed com blocos visuais de alta densidade e acabamento executivo superior aos templates amadores dos concorrentes."
+    "layoutRationale": "O layout rompe o feed com blocos visuais de alta densidade e acabamento executivo superior aos templates amadores dos concorrentes."
   },
   "hookHeadline": "Título de alto impacto da peça com **destaque**",
   "bodyCopy": "Texto persuasivo completo para a legenda do post com quebras de linha",
@@ -106,7 +162,7 @@ Responda ESTRITAMENTE em formato JSON (sem blocos de markdown em volta, apenas o
   "slides": [
     {
       "slideNumber": 1,
-      "tag": "DIAGNOSTICO",
+      "tag": "DIAGNÓSTICO",
       "headline": "Título da lâmina com **destaque**",
       "bodyText": "Explicação densa e objetiva de 2 a 3 linhas",
       "visualPrompt": "Diretriz estética dark minimalista"
@@ -117,7 +173,7 @@ Responda ESTRITAMENTE em formato JSON (sem blocos de markdown em volta, apenas o
   for (const model of candidateModels) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = await fetch(url, {
@@ -177,14 +233,50 @@ function generateDynamicStrategicCopy(
   targetAudience: string,
   format: string,
   competitorsReferences?: string,
-  positioningStrategy?: string
+  positioningStrategy?: string,
+  brandContext?: {
+    brandName?: string;
+    brandHandle?: string;
+    isInfluencer?: boolean;
+    niche?: string;
+    products?: string;
+  }
 ): ParsedAICopy {
   const cleanTheme = theme.trim();
+  const brandName = brandContext?.brandName || "Black Link";
+  const brandHandle = brandContext?.brandHandle || "@blacklink.b2b";
   const audience =
     targetAudience?.trim() || "Decisores B2B, Gestores e Líderes de Negócios";
 
   // Identificação temática de palavras-chave para modulação do tom
   const lowerTheme = cleanTheme.toLowerCase();
+  const contextStr = ((brandContext?.niche || "") + " " + (brandContext?.products || "") + " " + (brandContext?.brandName || "") + " " + lowerTheme).toLowerCase();
+
+  const isMetalOrIndustry = Boolean(
+    contextStr.includes("metal") ||
+    contextStr.includes("aço") ||
+    contextStr.includes("aco") ||
+    contextStr.includes("estrutur") ||
+    contextStr.includes("obra") ||
+    contextStr.includes("galpão") ||
+    contextStr.includes("galpao") ||
+    contextStr.includes("fabricação") ||
+    contextStr.includes("indústria")
+  );
+
+  const isInfluencer = Boolean(
+    brandContext?.isInfluencer ||
+    (!isMetalOrIndustry && (
+      lowerTheme.includes("humor") ||
+      lowerTheme.includes("gravac") ||
+      lowerTheme.includes("meme") ||
+      lowerTheme.includes("dia que") ||
+      lowerTheme.includes("fui expulso") ||
+      lowerTheme.includes("conteúdo sem filtro") ||
+      lowerTheme.includes("bastidores sem filtro")
+    ))
+  );
+
   const isTechOrAI =
     lowerTheme.includes("inteligência") ||
     lowerTheme.includes("ia") ||
@@ -218,7 +310,7 @@ function generateDynamicStrategicCopy(
   let suggestedTheme = "dark-industrial";
   let competitorInsight = {
     competitorCliché: "A maioria dos concorrentes no Instagram publica listas superficiais de dicas ou conselhos teóricos sem comprovação em dados.",
-    ourDifferentiator: "Contra-posicionamento estruturado em esteiras corporativas, mitigação de riscos e alavancagem de receita comprovável.",
+    ourDifferentiator: `Contra-posicionamento estruturado pela equipe da ${brandName}: esteiras sólidas, mitigação de riscos e autoridade comprovada.`,
     layoutRationale: "O layout Bento Grid rompe o feed com blocos visuais de alta densidade e acabamento executivo superior aos templates amadores dos concorrentes.",
   };
 
@@ -230,7 +322,105 @@ function generateDynamicStrategicCopy(
     visualPrompt: string;
   }> = [];
 
-  if (isMindset) {
+  if (isInfluencer) {
+    suggestedLayout = "tweet";
+    suggestedFont = "syne";
+    competitorInsight = {
+      competitorCliché: "Criadores no Instagram apenas copiam tendências batidas de áudios em alta sem identidade própria.",
+      ourDifferentiator: `${brandName}: Relatos genuínos de bastidores, histórias de choque/humor e conexão visceral com a comunidade.`,
+      layoutRationale: "O layout Tweet Social confere autenticidade nativa de conversa informal, parando a rolagem pela leitura rápida.",
+    };
+    hookHeadline = `${cleanTheme}: O que Aconteceu nos **Bastidores**`;
+    bodyCopy = `Nem tudo que acontece nas gravações vai para o ar de primeira.\n\n${cleanTheme} foi uma daquelas histórias que só quem viveu entende o nível do caos.\n\nArraste as lâminas para ver o relato completo e comente sua opinião!`;
+    ctaText = `Siga ${brandHandle} e comente o que você faria nessa situação!`;
+
+    slideList = [
+      {
+        slideNumber: 1,
+        tag: "BASTIDORES REAIS",
+        headline: `A Verdade sem Filtro sobre **${cleanTheme}**`,
+        bodyText: `Relato autoral de ${brandName}: histórias de bastidores que quase ninguém tem coragem de contar na internet.`,
+        visualPrompt: "Candid lifestyle photography with dramatic contrast and natural lighting",
+      },
+      {
+        slideNumber: 2,
+        tag: "O PONTO DE VIRADA",
+        headline: "O Momento em que **Tudo Fugiu do Controle**",
+        bodyText: "Quando você acha que tudo está correndo no padrão, acontece aquele imprevisto que muda o rumo de tudo.",
+        visualPrompt: "Dynamic snapshot aesthetic, expressive visual tone",
+      },
+      {
+        slideNumber: 3,
+        tag: "A REVELAÇÃO",
+        headline: "A Regra Oculta que **Poucos Entendem**",
+        bodyText: "Por trás de cada post viral existe muito mais teste, erro e insistência do que perfeição planejada.",
+        visualPrompt: "Authentic behind the scenes environment, retro ambient warmth",
+      },
+      {
+        slideNumber: 4,
+        tag: "O APRENDIZADO",
+        headline: "O que Ficou de **Lição Real**",
+        bodyText: "Manter sua autenticidade e conexão com quem te acompanha vale mais do que qualquer fórmula pronta de engajamento.",
+        visualPrompt: "High-contrast clean typography on dark slate canvas",
+      },
+      {
+        slideNumber: 5,
+        tag: "INTERAÇÃO DIRETA",
+        headline: "Comente Aqui: O que **Você Faria**?",
+        bodyText: `Deixe seu comentário abaixo! Siga ${brandHandle} para acompanhar os bastidores e os próximos conteúdos sem censura.`,
+        visualPrompt: "Bold minimalist closing slide with creator signature",
+      },
+    ];
+  } else if (isMetalOrIndustry) {
+    suggestedLayout = "wireframe-blueprint";
+    suggestedFont = "jetbrains-mono";
+    competitorInsight = {
+      competitorCliché: "Concorrentes do setor industrial usam catálogos antiquados em PDF e publicam fotos de obras sem dados técnicos ou clareza de valor.",
+      ourDifferentiator: `${brandName}: Engenharia de precisão com rastreabilidade total, tolerância milimétrica e prazos contratuais garantidos.`,
+      layoutRationale: "O layout Blueprint Técnico transmite rigor de engenharia e autoridade fabril inquestionável para diretores de projetos e engenheiros.",
+    };
+    hookHeadline = `${cleanTheme}: Rigor Técnico e **Precisão Estrutural**`;
+    bodyCopy = `Em projetos de grande porte, tolerância a imprevistos é zero.\n\nA ${brandName} projeta e fabrica soluções estruturais com controle milimétrico e rastreabilidade total de materiais.\n\nConfira as diretrizes técnicas detalhadas neste carrossel.`;
+    ctaText = `Consulte a equipe da ${brandName} e solicite um estudo técnico para sua demanda.`;
+
+    slideList = [
+      {
+        slideNumber: 1,
+        tag: "DIAGNÓSTICO TÉCNICO",
+        headline: `O Custo Oculto de Falhas em **${cleanTheme}**`,
+        bodyText: `Por que fornecedores sem controle dimensional rigoroso causam atrasos em cadeia e como a ${brandName} blinda sua operação.`,
+        visualPrompt: "Technical blueprint schematic, industrial precision, dark architectural lines",
+      },
+      {
+        slideNumber: 2,
+        tag: "O RISCO CRÍTICO",
+        headline: "A Armadilha do **Preço Aparente vs Custo Real**",
+        bodyText: "Economizar na fase inicial com fornecedores sem rastreabilidade pode dobrar o custo total com retrabalho no terreno.",
+        visualPrompt: "Industrial steel components macro texture, technical contrast",
+      },
+      {
+        slideNumber: 3,
+        tag: "ENGENHARIA DE PRECISÃO",
+        headline: "Padronização e **Tolerância Zero a Falhas**",
+        bodyText: "Processos fabris com checagem rigorosa garantem que cada peça chegue pronta para montagem limpa e sem adaptações.",
+        visualPrompt: "Sleek metallic CAD wireframe on deep dark background",
+      },
+      {
+        slideNumber: 4,
+        tag: "CRONOGRAMA BLINDADO",
+        headline: "Execução no Terreno com **Prazo Assegurado**",
+        bodyText: "Alinhamento contínuo entre produção industrial e equipes de campo para que o cronograma seja rigorosamente cumprido.",
+        visualPrompt: "High-contrast technical documentation layout, clean typography",
+      },
+      {
+        slideNumber: 5,
+        tag: "SOLUÇÃO CORPORATIVA",
+        headline: `Conecte-se com os Especialistas da **${brandName}**`,
+        bodyText: `Fale com nossos engenheiros pelo link da bio em ${brandHandle} e receba um orçamento corporativo estruturado.`,
+        visualPrompt: "Signature dark industrial closing card with corporate badge",
+      },
+    ];
+  } else if (isMindset) {
     suggestedLayout = "minimal";
     suggestedFont = "syne";
     competitorInsight = {
@@ -432,19 +622,19 @@ function generateDynamicStrategicCopy(
     suggestedFont = "bricolage";
     competitorInsight = {
       competitorCliché: "A maioria dos concorrentes de vendas e consultoria no Instagram posta conselhos rasos e recicla ideias batidas de 2020.",
-      ourDifferentiator: "Nosso posicionamento trata fechamento corporativo como engenharia de receita: cadência estrita, sem achismos e com margem preservada.",
+      ourDifferentiator: `Posicionamento executivo da ${brandName}: cadência estrita, sem achismos e com margem preservada.`,
       layoutRationale: "O layout Bento Grid apresenta múltiplos blocos de informação hierarquizados, demonstrando autoridade visual inalcançável para concorrentes amadores.",
     };
     hookHeadline = `${cleanTheme}: O Dossiê Estratégico para **${audience}**`;
     bodyCopy = `O mercado corporativo moderno não tolera amadorismo ou execuções genéricas.\n\nPara liderar seu segmento em ${cleanTheme}, é indispensável combinar precisão tática, inteligência de posicionamento e processos previsíveis.\n\nConfira as diretrizes práticas detalhadas nas lâminas a seguir.`;
-    ctaText = "Salve este carrossel e revise com sua equipe na próxima sessão de planejamento.";
+    ctaText = `Salve este carrossel e siga ${brandHandle} para mais análises estratégicas.`;
 
     slideList = [
       {
         slideNumber: 1,
         tag: "TESE CENTRAL",
         headline: `O Desafio Central de **${cleanTheme}**`,
-        bodyText: `Por que as abordagens convencionais estão perdendo fôlego e o que os líderes de mercado fazem de diferente.`,
+        bodyText: `Por que as abordagens convencionais estão perdendo fôlego e o que a ${brandName} faz de diferente no mercado.`,
         visualPrompt: "Minimal dark architectural structure, high-contrast typography, premium editorial",
       },
       {
@@ -456,7 +646,7 @@ function generateDynamicStrategicCopy(
       },
       {
         slideNumber: 3,
-        tag: "FRAMEWORK B2B",
+        tag: "FRAMEWORK",
         headline: "A Estrutura de **Domínio de Mercado**",
         bodyText: "Alinhe posicionamento de autoridade com esteiras de entrega consistentes para consolidar valor percebido.",
         visualPrompt: "Sleek dark layout with refined spacing, modern Swiss typography inspiration",
@@ -471,19 +661,20 @@ function generateDynamicStrategicCopy(
       {
         slideNumber: 5,
         tag: "CONVOCAÇÃO",
-        headline: "A Próxima Fronteira de **Resultados**",
-        bodyText: "Aplique este roteiro no seu negócio e acelere o alcance dos seus objetivos com máxima segurança.",
-        visualPrompt: "Pure black background #030303, bold contrasting typography, Black Link signature",
+        headline: `A Próxima Fronteira com a **${brandName}**`,
+        bodyText: `Aplique este roteiro no seu negócio e acelere o alcance dos seus objetivos com máxima segurança.`,
+        visualPrompt: "Pure black background #030303, bold contrasting typography, brand signature",
       },
     ];
   }
 
   const cleanTagTheme = cleanTheme.replace(/[^a-zA-Z0-9]/g, "");
+  const cleanTagBrand = brandName.replace(/[^a-zA-Z0-9]/g, "");
   const hashtags = [
     `#${cleanTagTheme}`,
-    "#EstrategiaB2B",
+    `#${cleanTagBrand || "BlackLink"}`,
     "#AltaPerformance",
-    "#BlackLink",
+    "#InstagramGrowth",
     "#GestaoCorporativa",
   ];
 
@@ -518,6 +709,11 @@ export async function POST(request: NextRequest) {
       nicheValueProposition,
       format = "carousel",
       recentContext: explicitContext,
+      brandName,
+      brandHandle,
+      isInfluencer,
+      niche,
+      products,
     } = body;
 
     if (!theme || typeof theme !== "string" || !theme.trim()) {
@@ -532,29 +728,55 @@ export async function POST(request: NextRequest) {
       (targetAudience || audience || "").trim() ||
       "Decisores B2B, Gestores e Líderes de Negócios";
 
-    // 1. Resgate de Contexto Recente do Tenant para evitar amnésia da IA
+    const rawBrand =
+      body.brandContext && typeof body.brandContext === "object"
+        ? body.brandContext
+        : {};
+    const brandContext = {
+      brandName: (body.brandName || rawBrand.brandName)?.trim() || "Black Link",
+      brandHandle: (body.brandHandle || rawBrand.brandHandle)?.trim() || "@blacklink.b2b",
+      isInfluencer: Boolean(body.isInfluencer ?? rawBrand.isInfluencer),
+      niche: (body.niche || rawBrand.niche)?.trim() || "",
+      products: (body.products || rawBrand.products)?.trim() || "",
+    };
+
+    // 1. Resgate de Contexto Recente do Tenant com timeout rápido (não bloqueia a IA)
     let recentContext = explicitContext || "Nenhum histórico recente";
     try {
-      const tenantCompanyId = await resolveTenantCompanyId();
-      if (tenantCompanyId) {
-        const recentCampaigns = await db
-          .select({
-            theme: scheduledPosts.theme,
-            hookHeadline: scheduledPosts.hookHeadline,
-          })
-          .from(scheduledPosts)
-          .where(eq(scheduledPosts.companyId, tenantCompanyId))
-          .orderBy(desc(scheduledPosts.createdAt))
-          .limit(3);
+      const fetchHistoryWithTimeout = async () => {
+        const tenantCompanyId = await resolveTenantCompanyId();
+        if (tenantCompanyId) {
+          const recentCampaigns = await db
+            .select({
+              theme: scheduledPosts.theme,
+              hookHeadline: scheduledPosts.hookHeadline,
+            })
+            .from(scheduledPosts)
+            .where(eq(scheduledPosts.companyId, tenantCompanyId))
+            .orderBy(desc(scheduledPosts.createdAt))
+            .limit(3);
 
-        if (recentCampaigns.length > 0) {
-          recentContext = recentCampaigns
-            .map(
-              (c, i) =>
-                `${i + 1}. Tema: "${c.theme}" (Headline: "${c.hookHeadline}")`
-            )
-            .join(" | ");
+          if (recentCampaigns.length > 0) {
+            return recentCampaigns
+              .map(
+                (c, i) =>
+                  `${i + 1}. Tema: "${c.theme}" (Headline: "${c.hookHeadline}")`
+              )
+              .join(" | ");
+          }
         }
+        return null;
+      };
+
+      const historyTimeout = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 1200)
+      );
+      const historyResult = await Promise.race([
+        fetchHistoryWithTimeout(),
+        historyTimeout,
+      ]);
+      if (historyResult) {
+        recentContext = historyResult;
       }
     } catch (historyErr) {
       console.warn("Aviso ao resgatar histórico recente para contexto:", historyErr);
@@ -564,16 +786,38 @@ export async function POST(request: NextRequest) {
     let sourceEngine: "n8n" | "gemini_direct" | "dynamic_synthesizer" =
       "dynamic_synthesizer";
 
-    // 2. Tentativa Primária: Webhook do n8n (caso configurado e ativo)
-    const rawWebhookUrl =
-      process.env.N8N_WEBHOOK_URL ||
-      "http://localhost:5678/webhook/blacklink-marketing-generate";
-    const n8nWebhookUrl = rawWebhookUrl.replace("/webhook-test/", "/webhook/");
+    // 2. Tentativa Primária: IA Direta (Google Gemini com modelos ultra-rápidos e contexto de marca)
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (geminiKey) {
+      try {
+        const directResult = await generateWithGeminiDirect(
+          geminiKey,
+          cleanTheme,
+          cleanAudience,
+          format,
+          recentContext,
+          competitorsReferences,
+          positioningStrategy,
+          brandContext
+        );
 
-    if (n8nWebhookUrl) {
+        if (directResult && directResult.slides && directResult.slides.length > 0) {
+          resolvedCopy = directResult;
+          sourceEngine = "gemini_direct";
+        }
+      } catch (directErr) {
+        console.warn("Falha ao gerar diretamente via Gemini:", directErr);
+      }
+    }
+
+    // 3. Tentativa Secundária: Webhook do n8n (apenas se configurado explicitamente e não for o mock estático padrão)
+    const rawWebhookUrl = process.env.N8N_WEBHOOK_URL;
+    const enableN8n = process.env.USE_N8N_GENERATOR === "true";
+    if (!resolvedCopy && enableN8n && rawWebhookUrl && rawWebhookUrl.trim()) {
+      const n8nWebhookUrl = rawWebhookUrl.replace("/webhook-test/", "/webhook/");
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000); // 8 segundos para evitar travamento da UI
+        const timeout = setTimeout(() => controller.abort(), 2000);
 
         const n8nPayload = {
           theme: cleanTheme,
@@ -584,6 +828,7 @@ export async function POST(request: NextRequest) {
           competitorsReferences: competitorsReferences || "Nenhuma informada",
           positioningStrategy: positioningStrategy || "anti-consenso",
           format,
+          brandContext,
           timestamp: new Date().toISOString(),
         };
 
@@ -610,13 +855,17 @@ export async function POST(request: NextRequest) {
             }
 
             if (n8nData) {
-              // Suporta tanto resposta direta do n8n quanto payloads aninhados
               const incomingSlides =
                 n8nData.slides ||
                 n8nData.carouselSlides ||
                 n8nData.data?.slides;
 
-              if (Array.isArray(incomingSlides) && incomingSlides.length > 0) {
+              // Rejeita o mock estático do n8n onde o slide 2 é fixo como 'O Gargalo Invisível na Operação'
+              const isStaticMock = Array.isArray(incomingSlides) && incomingSlides.some(
+                (s: any) => s.headline?.includes("O Gargalo Invisível na Operação") || s.headline?.includes("A Estrutura de Domínio de Mercado")
+              );
+
+              if (Array.isArray(incomingSlides) && incomingSlides.length > 0 && !isStaticMock) {
                 resolvedCopy = {
                   hookHeadline:
                     n8nData.hookHeadline ||
@@ -645,45 +894,21 @@ export async function POST(request: NextRequest) {
               }
             }
           }
-        } else {
-          console.warn("Webhook n8n retornou status diferente de 200:", n8nResponse.status);
         }
       } catch (webhookErr) {
-        console.warn("n8n indisponível ou com timeout, acionando gerador direto:", webhookErr);
+        console.warn("n8n indisponível ou timeout, prosseguindo para gerador dinâmico:", webhookErr);
       }
     }
 
-    // 3. Tentativa Secundária: IA Direta (Google Gemini) se n8n não respondeu
-    const geminiKey = process.env.GEMINI_API_KEY;
-    if (!resolvedCopy && geminiKey) {
-      try {
-        const directResult = await generateWithGeminiDirect(
-          geminiKey,
-          cleanTheme,
-          cleanAudience,
-          format,
-          recentContext,
-          competitorsReferences,
-          positioningStrategy
-        );
-
-        if (directResult && directResult.slides && directResult.slides.length > 0) {
-          resolvedCopy = directResult;
-          sourceEngine = "gemini_direct";
-        }
-      } catch (directErr) {
-        console.warn("Falha ao gerar diretamente via Gemini:", directErr);
-      }
-    }
-
-    // 4. Tentativa Terciária: Sintetizador Estratégico Dinâmico (Offline / Fallback Resiliente)
+    // 4. Tentativa Terciária: Sintetizador Estratégico Dinâmico (Offline / Fallback Resiliente Instantâneo)
     if (!resolvedCopy) {
       resolvedCopy = generateDynamicStrategicCopy(
         cleanTheme,
         cleanAudience,
         format,
         competitorsReferences,
-        positioningStrategy
+        positioningStrategy,
+        brandContext
       );
       sourceEngine = "dynamic_synthesizer";
     }
@@ -695,7 +920,8 @@ export async function POST(request: NextRequest) {
         cleanAudience,
         format,
         competitorsReferences,
-        positioningStrategy
+        positioningStrategy,
+        brandContext
       );
       resolvedCopy.competitorInsight = enrichment.competitorInsight;
       if (!resolvedCopy.suggestedLayout) {

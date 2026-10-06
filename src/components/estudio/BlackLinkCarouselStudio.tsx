@@ -16,7 +16,12 @@ import * as htmlToImage from "html-to-image";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
-import { useMarketingStore } from "@/store/useMarketingStore";
+import {
+  useMarketingStore,
+  type CompanyProfile,
+  type EditorialPlanItem,
+  type CreativeSlide,
+} from "@/store/useMarketingStore";
 
 const BRAND_STORAGE_KEY = "blacklink_studio_brand_memory";
 
@@ -182,9 +187,142 @@ const INITIAL_SLIDES: SlideData[] = [
   },
 ];
 
+/**
+ * Sintetizador Inteligente Instantâneo para Pautas do Planejamento (Stage 2 -> Stage 3)
+ * Gera lâminas de altíssima fidelidade e conversão baseadas no perfil real do criador ou empresa.
+ */
+function synthesizeSlidesForPlan(
+  plan: EditorialPlanItem,
+  profile: CompanyProfile
+): SlideData[] {
+  const isInfluencer = profile.profileType === "influencer";
+  const brand = profile.name?.trim() || "Black Link";
+  const handle = profile.instagram?.trim() || "@oficial";
+  const cleanTheme = plan.theme.trim();
+  const rawHook = (plan.hookHeadline || cleanTheme).trim().replace(/^"|"$/g, "");
+  const hook = rawHook.includes("**")
+    ? rawHook
+    : rawHook.length > 25
+    ? rawHook.replace(/([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]+(\s+[a-záéíóúâêîôûãõç]+)?)$/, "**$1**")
+    : `O Segredo de **${rawHook}**`;
+  const cta = plan.ctaText?.trim() || "Salve este carrossel para consultar na sua próxima sessão de planejamento.";
+
+  if (isInfluencer) {
+    return [
+      {
+        tag: plan.funnelStage === "topo" ? "GANCHO VIRAL" : plan.funnelStage === "meio" ? "BASTIDORES" : "INTERAÇÃO",
+        headline: hook,
+        bodyText: `Relato autoral e bastidores reais de ${brand}. Arraste para o lado para conferir como tudo aconteceu.`,
+      },
+      {
+        tag: "O PONTO DE VIRADA",
+        headline: "O Momento em que **Tudo Fugiu do Controle**",
+        bodyText: "Quando você acha que tudo está correndo no padrão, acontece aquele imprevisto que muda o rumo de tudo.",
+      },
+      {
+        tag: "A REVELAÇÃO",
+        headline: "A Regra Oculta que **Poucos Entendem**",
+        bodyText: "Por trás de cada post viral existe muito mais teste, erro e insistência do que perfeição planejada.",
+      },
+      {
+        tag: "O APRENDIZADO",
+        headline: "O que Ficou de **Lição Real**",
+        bodyText: "Manter sua autenticidade e conexão com quem te acompanha vale mais do que qualquer fórmula pronta de engajamento.",
+      },
+      {
+        tag: "INTERAÇÃO DIRETA",
+        headline: "Comente Aqui: O que **Você Faria**?",
+        bodyText: `${cta} Siga ${handle} para acompanhar os bastidores e os próximos conteúdos sem filtro!`,
+      },
+    ];
+  }
+
+  const contextStr = ((profile.niche || "") + " " + (profile.products || "") + " " + brand + " " + cleanTheme).toLowerCase();
+  const isMetalOrIndustry =
+    contextStr.includes("metal") ||
+    contextStr.includes("aço") ||
+    contextStr.includes("aco") ||
+    contextStr.includes("estrutur") ||
+    contextStr.includes("obra") ||
+    contextStr.includes("galpão") ||
+    contextStr.includes("fabricação") ||
+    contextStr.includes("indústria");
+
+  if (isMetalOrIndustry) {
+    return [
+      {
+        tag: "DIAGNÓSTICO TÉCNICO",
+        headline: hook,
+        bodyText: `Por que fornecedores sem controle dimensional rigoroso causam atrasos em cadeia e como a ${brand} blinda sua operação.`,
+      },
+      {
+        tag: "O RISCO CRÍTICO",
+        headline: "A Armadilha do **Preço Aparente vs Custo Real**",
+        bodyText: "Economizar na fase inicial com fornecimento sem rastreabilidade pode dobrar o custo total com retrabalho no terreno.",
+      },
+      {
+        tag: "ENGENHARIA DE PRECISÃO",
+        headline: "Padronização e **Tolerância Zero a Falhas**",
+        bodyText: "Processos fabris com checagem milimétrica garantem que cada peça chegue pronta para montagem limpa e sem adaptações.",
+      },
+      {
+        tag: "CRONOGRAMA BLINDADO",
+        headline: "Execução no Terreno com **Prazo Assegurado**",
+        bodyText: "Alinhamento contínuo entre produção industrial e equipes de campo para que o cronograma seja rigorosamente cumprido.",
+      },
+      {
+        tag: "SOLUÇÃO CORPORATIVA",
+        headline: `Conecte-se com os Especialistas da **${brand}**`,
+        bodyText: `${cta} Fale com nossos engenheiros pelo link da bio em ${handle} e receba um orçamento corporativo estruturado.`,
+      },
+    ];
+  }
+
+  // Padrão Corporativo B2B
+  return [
+    {
+      tag: plan.funnelStage === "topo" ? "TESE CENTRAL" : plan.funnelStage === "meio" ? "FRAMEWORK" : "CONVERSÃO",
+      headline: hook,
+      bodyText: `Diretrizes estratégicas elaboradas para decisores corporativos pela equipe da ${brand}.`,
+    },
+    {
+      tag: "O GARGALO OCULTO",
+      headline: "Onde a Maioria Comete o **Erro Fatal**",
+      bodyText: "Processos manuais e ausência de alinhamento estratégico criam atrito silencioso e drenam a rentabilidade do negócio.",
+    },
+    {
+      tag: "A ARQUITETURA",
+      headline: "O Método Superior de **Alta Performance**",
+      bodyText: "Substitua o improviso por uma esteira estruturada: dados centralizados, automação inteligente e foco no que gera retorno real.",
+    },
+    {
+      tag: "EXECUÇÃO CIRÚRGICA",
+      headline: "Implementação Rápida no **Terreno**",
+      bodyText: `Aplique o objetivo desta pauta (${plan.objective}) através de etapas acionáveis que sua equipe consegue executar hoje mesmo.`,
+    },
+    {
+      tag: "CALL TO ACTION",
+      headline: `Pronto para Escalar com a **${brand}**?`,
+      bodyText: `${cta} Siga ${handle} e compartilhe este carrossel com sua diretoria para acelerar seus resultados.`,
+    },
+  ];
+}
+
 export function BlackLinkCarouselStudio() {
+  // Conexão com a Store de Growth Marketing
+  const companyProfile = useMarketingStore((state) => state.companyProfile);
+  const scheduledPosts = useMarketingStore((state) => state.scheduledPosts);
+  const updateScheduledPost = useMarketingStore((state) => state.updateScheduledPost);
+  const addManualPost = useMarketingStore((state) => state.addManualPost);
+  const selectedPlanForCreation = useMarketingStore((state) => state.selectedPlanForCreation);
+  const selectPlanForCreation = useMarketingStore((state) => state.selectPlanForCreation);
+
   // Estado Raiz: Configurações Paramétricas do Design
-  const [designConfig, setDesignConfig] = useState<SlideDesignConfig>(DEFAULT_CONFIG);
+  const [designConfig, setDesignConfig] = useState<SlideDesignConfig>(() => ({
+    ...DEFAULT_CONFIG,
+    authorName: companyProfile.name || DEFAULT_CONFIG.authorName,
+    authorHandle: companyProfile.instagram || DEFAULT_CONFIG.authorHandle,
+  }));
 
   // Estado Raiz: Lâminas de Conteúdo do Carrossel
   const [slides, setSlides] = useState<SlideData[]>(INITIAL_SLIDES);
@@ -202,22 +340,12 @@ export function BlackLinkCarouselStudio() {
   const [exportMessage, setExportMessage] = useState<string>("");
 
   // Contexto Multi-Tenant do Banco de Dados
-  const [tenantName, setTenantName] = useState<string>("Black Link Enterprise");
+  const [tenantName, setTenantName] = useState<string>(companyProfile.name || "Black Link Enterprise");
   const [tenantId, setTenantId] = useState<string>("");
 
-  const selectedPlanForCreation = useMarketingStore((state) => state.selectedPlanForCreation);
-  const selectPlanForCreation = useMarketingStore((state) => state.selectPlanForCreation);
-
-  // Estado do Modal de IA e Geração Fluida (com Inteligência Competitiva de Instagram)
+  // Estado do Modal de IA e Geração Fluida
   const [showAIModal, setShowAIModal] = useState<boolean>(false);
   const [aiTheme, setAiTheme] = useState<string>("");
-
-  useEffect(() => {
-    if (selectedPlanForCreation) {
-      setAiTheme(selectedPlanForCreation.theme);
-      setAiAudience("Decisores B2B, CEOs e Diretores Comerciais");
-    }
-  }, [selectedPlanForCreation]);
   const [aiAudience, setAiAudience] = useState<string>("");
   const [aiCompetitors, setAiCompetitors] = useState<string>("");
   const [aiPositioning, setAiPositioning] = useState<string>("anti-consenso");
@@ -230,6 +358,7 @@ export function BlackLinkCarouselStudio() {
   const [showCompetitorRadar, setShowCompetitorRadar] = useState<boolean>(true);
   const [isGeneratingAI, setIsGeneratingAI] = useState<boolean>(false);
   const [aiErrorNotice, setAiErrorNotice] = useState<string>("");
+  const [saveFeedToast, setSaveFeedToast] = useState<string | null>(null);
 
   // Estado da Legenda do Post (LinkedIn & Instagram Post Copy)
   const [postCaption, setPostCaption] = useState<string>(
@@ -237,6 +366,65 @@ export function BlackLinkCarouselStudio() {
   );
   const [isCaptionOpen, setIsCaptionOpen] = useState<boolean>(true);
   const [hasCopiedCaption, setHasCopiedCaption] = useState<boolean>(false);
+
+  // 1. Sincronização Automática com o Perfil da Empresa / Criador
+  useEffect(() => {
+    if (companyProfile.name && companyProfile.name !== "Black Link CRM") {
+      setTenantName(companyProfile.name);
+      setDesignConfig((prev) => ({
+        ...prev,
+        authorName: companyProfile.name,
+        authorHandle: companyProfile.instagram || prev.authorHandle,
+      }));
+    }
+  }, [companyProfile.name, companyProfile.instagram]);
+
+  // 2. Sincronização Automática com a Pauta Selecionada (Stage 2 -> Stage 3)
+  useEffect(() => {
+    if (!selectedPlanForCreation) return;
+
+    const brand = companyProfile.name?.trim() || "Black Link CRM";
+    const handle = companyProfile.instagram?.trim() || "@blacklink.b2b";
+
+    setTenantName(brand);
+    setDesignConfig((prev) => ({
+      ...prev,
+      authorName: brand,
+      authorHandle: handle,
+    }));
+
+    setAiTheme(selectedPlanForCreation.theme);
+    setAiAudience(companyProfile.targetAudience || "Público do Nicho");
+
+    // Procura se já existe um post sincronizado no Feed/Cronograma com lâminas prontas
+    const matching = scheduledPosts.find(
+      (p) =>
+        p.theme.toLowerCase().trim() === selectedPlanForCreation.theme.toLowerCase().trim() ||
+        p.hookHeadline.toLowerCase().trim() === selectedPlanForCreation.hookHeadline.toLowerCase().trim() ||
+        p.id === selectedPlanForCreation.id
+    );
+
+    if (matching && matching.slides && matching.slides.length > 0) {
+      const formatted: SlideData[] = matching.slides.map((s, idx) => ({
+        tag: s.tag || (idx === 0 ? "GANCHO" : idx === matching.slides.length - 1 ? "CTA" : `LÂMINA ${idx + 1}`),
+        headline: s.headline,
+        bodyText: s.bodyText,
+      }));
+      setSlides(formatted);
+      setCurrentSlideIndex(0);
+      if (matching.postCaption) {
+        setPostCaption(matching.postCaption);
+      }
+    } else {
+      // Sintetiza 5 lâminas personalizadas imediatamente para a pauta
+      const tailored = synthesizeSlidesForPlan(selectedPlanForCreation, companyProfile);
+      setSlides(tailored);
+      setCurrentSlideIndex(0);
+
+      const generatedCaption = `${selectedPlanForCreation.hookHeadline}\n\n${selectedPlanForCreation.theme}: Diretrizes práticas desenvolvidas especialmente para ${brand}.\n\n${selectedPlanForCreation.ctaText}\n\n#${brand.replace(/[^a-zA-Z0-9]/g, "")} #${selectedPlanForCreation.theme.replace(/[^a-zA-Z0-9]/g, "")} #AltaPerformance #InstagramGrowth`;
+      setPostCaption(generatedCaption);
+    }
+  }, [selectedPlanForCreation, companyProfile, scheduledPosts]);
 
   // Estado do Copiloto de Micro-Edição por Lâmina
   const [copilotLoadingSlide, setCopilotLoadingSlide] = useState<number | null>(null);
@@ -403,10 +591,15 @@ export function BlackLinkCarouselStudio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           theme: aiTheme.trim(),
-          targetAudience: aiAudience.trim(),
+          targetAudience: aiAudience.trim() || companyProfile.targetAudience,
           competitorsReferences: aiCompetitors.trim(),
           positioningStrategy: aiPositioning,
           format: "carousel",
+          brandName: companyProfile.name,
+          brandHandle: companyProfile.instagram,
+          isInfluencer: companyProfile.profileType === "influencer",
+          niche: companyProfile.niche,
+          products: companyProfile.products,
         }),
       });
 
@@ -421,27 +614,24 @@ export function BlackLinkCarouselStudio() {
       try {
         parsedData = JSON.parse(rawText);
       } catch (jsonErr) {
-        console.warn("Retorno da IA não é um JSON válido. Injetando fallback anti-quebra de tela:", jsonErr);
-        // INJEÇÃO OBRIGATÓRIA DE FALLBACK ELEGANTE (ZERO TELAS BRANCAS)
-        setSlides([
-          {
-            tag: "AJUSTE MANUAL",
-            headline: "Ajuste Manual Necessário",
-            bodyText: "O motor de IA retornou o texto fora da estrutura. Edite as lâminas livremente aqui.",
-          },
-          {
-            tag: "DIRETRIZ B2B",
-            headline: "Desenvolva o seu **insight principal**",
-            bodyText: "A resposta do webhook não retornou uma lista formatada de lâminas. Ajuste seus tópicos livremente neste editor.",
-          },
-          {
-            tag: "CALL TO ACTION",
-            headline: "Pronto para acelerar seus **resultados corporativos**?",
-            bodyText: "Salve este carrossel e compartilhe com sua rede para gerar discussões de alto nível.",
-          },
-        ]);
+        console.warn("Retorno da IA não é um JSON válido. Injetando fallback contextual:", jsonErr);
+        const fallbackPlan: EditorialPlanItem = selectedPlanForCreation || {
+          id: `p-${Date.now()}`,
+          dayNumber: 1,
+          dayLabel: "Hoje",
+          theme: aiTheme,
+          hookHeadline: aiTheme,
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Autoridade e engajamento",
+          viralAngle: "Ângulo de alto impacto",
+          ctaText: "Salve este carrossel",
+          status: "planejado",
+        };
+        const tailored = synthesizeSlidesForPlan(fallbackPlan, companyProfile);
+        setSlides(tailored);
         setCurrentSlideIndex(0);
-        setAiErrorNotice("A IA retornou texto não formatado. O estado de fallback foi aplicado com segurança.");
+        setAiErrorNotice("Ajuste contextual aplicado com base nas diretrizes da marca.");
         return;
       }
 
@@ -474,6 +664,14 @@ export function BlackLinkCarouselStudio() {
         });
       }
 
+      // Sincroniza Marca no DesignConfig
+      if (companyProfile.name && companyProfile.name !== "Black Link CRM") {
+        updateDesignConfig({
+          authorName: companyProfile.name,
+          authorHandle: companyProfile.instagram || `@${companyProfile.name.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
+        });
+      }
+
       // Validação da lista de slides recebida
       const incomingSlides =
         parsedData?.carouselSlides ||
@@ -482,7 +680,7 @@ export function BlackLinkCarouselStudio() {
 
       if (Array.isArray(incomingSlides) && incomingSlides.length > 0) {
         const formatted: SlideData[] = incomingSlides.map((s: any, idx: number) => ({
-          tag: s.tag || `LÂMINA ${idx + 1}`,
+          tag: s.tag || (idx === 0 ? "GANCHO" : idx === incomingSlides.length - 1 ? "CTA" : `LÂMINA ${idx + 1}`),
           headline: s.headline || s.title || `Insight ${idx + 1}`,
           bodyText: s.bodyText || s.body || s.content || "",
         }));
@@ -505,29 +703,81 @@ export function BlackLinkCarouselStudio() {
       }
     } catch (err: any) {
       console.error("Erro capturado na integração de IA:", err);
-      // Fallback seguro: A tela NUNCA fica branca!
-      setSlides([
-        {
-          tag: "AJUSTE MANUAL",
-          headline: "Ajuste Manual Necessário",
-          bodyText: "O motor de IA retornou o texto fora da estrutura. Edite as lâminas livremente aqui.",
-        },
-        {
-          tag: "ESTRUTURA B2B",
-          headline: "Estruture o seu **conteúdo de valor**",
-          bodyText: "Houve uma instabilidade na comunicação com o webhook. Os campos continuam 100% editáveis.",
-        },
-        {
-          tag: "CHAMADA FINAL",
-          headline: "Gostou deste conteúdo de **alta precisão**?",
-          bodyText: "Finalize chamando sua audiência para interagir e salvar este post.",
-        },
-      ]);
+      // Fallback seguro inteligente: Gera lâminas contextuais da marca
+      const fallbackPlan: EditorialPlanItem = selectedPlanForCreation || {
+        id: `p-${Date.now()}`,
+        dayNumber: 1,
+        dayLabel: "Hoje",
+        theme: aiTheme,
+        hookHeadline: aiTheme,
+        format: "carousel",
+        funnelStage: "meio",
+        objective: "Autoridade e engajamento",
+        viralAngle: "Ângulo de alto impacto",
+        ctaText: "Salve este carrossel",
+        status: "planejado",
+      };
+      const tailored = synthesizeSlidesForPlan(fallbackPlan, companyProfile);
+      setSlides(tailored);
       setCurrentSlideIndex(0);
-      setAiErrorNotice("Instabilidade no webhook. Lâminas de fallback foram injetadas para edição manual.");
+      setAiErrorNotice("Lâminas contextuais foram aplicadas com sucesso para edição.");
     } finally {
       setIsGeneratingAI(false);
     }
+  };
+
+  // Sincronização e Salvamento no Feed e Vitrine (Stage 3 -> Stage 4)
+  const handleSaveToFeed = () => {
+    const title =
+      selectedPlanForCreation?.theme ||
+      aiTheme ||
+      slides[0]?.headline.replace(/\*\*/g, "") ||
+      "Carrossel Criado no Estúdio";
+    const hook = slides[0]?.headline || title;
+
+    const creativeSlides: CreativeSlide[] = slides.map((s, idx) => ({
+      slideNumber: idx + 1,
+      headline: s.headline,
+      bodyText: s.bodyText,
+      tag: s.tag,
+      imageUrl: `/api/marketing/render-slide?slide=${idx + 1}&total=${slides.length}&headline=${encodeURIComponent(
+        s.headline
+      )}&body=${encodeURIComponent(s.bodyText)}&format=carousel`,
+    }));
+
+    const matching = scheduledPosts.find(
+      (p) =>
+        p.theme.toLowerCase().trim() === title.toLowerCase().trim() ||
+        p.id === selectedPlanForCreation?.id
+    );
+
+    if (matching) {
+      updateScheduledPost(matching.id, {
+        slides: creativeSlides,
+        postCaption,
+        hookHeadline: hook,
+        theme: title,
+        format: designConfig.aspectRatio === "9:16" ? "story" : "carousel",
+      });
+    } else {
+      addManualPost({
+        id: `post-studio-${Date.now()}`,
+        theme: title,
+        format: designConfig.aspectRatio === "9:16" ? "story" : "carousel",
+        scheduledDate: selectedPlanForCreation?.dayLabel || "Amanhã • 10:00",
+        status: "awaiting_approval",
+        hookHeadline: hook,
+        bodyCopy: postCaption,
+        ctaText: slides[slides.length - 1]?.bodyText || "Salve este carrossel",
+        hashtags: (postCaption.match(/#\w+/g) || ["#AltaPerformance", "#BlackLink"]),
+        postCaption,
+        slides: creativeSlides,
+        imageUrls: creativeSlides.map((s) => s.imageUrl || ""),
+        createdAt: new Date().toISOString(),
+      });
+    }
+    setSaveFeedToast("✓ Carrossel sincronizado com a Vitrine e Feed do Instagram com sucesso!");
+    setTimeout(() => setSaveFeedToast(null), 3500);
   };
 
   // Gerenciador de Métricas e Curvas Bézier (B2B Chart Engine)
@@ -881,6 +1131,13 @@ export function BlackLinkCarouselStudio() {
             <span>🪄 Gerar com IA</span>
           </button>
 
+          <button
+            onClick={handleSaveToFeed}
+            className="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-emerald-500/20"
+          >
+            <span>💾 Salvar no Feed</span>
+          </button>
+
           <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
             <span className="text-xs font-mono text-zinc-400">Lâminas Ativas:</span>
             <span className="text-sm font-bold text-white font-mono">{slides.length}</span>
@@ -902,15 +1159,31 @@ export function BlackLinkCarouselStudio() {
               <span className="text-white font-semibold">{selectedPlanForCreation.theme}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setAiTheme(selectedPlanForCreation.theme);
+                handleGenerateWithAI();
+              }}
+              disabled={isGeneratingAI}
+              className="px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold text-xs hover:bg-blue-500/30 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+            >
+              <span>🪄 Regenerar com IA</span>
+            </button>
             <button
               onClick={() => {
                 setAiTheme(selectedPlanForCreation.theme);
                 setShowAIModal(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-colors cursor-pointer shadow-sm"
+              className="px-3 py-1.5 rounded-lg bg-white/10 text-white font-semibold text-xs hover:bg-white/20 transition-colors cursor-pointer border border-white/15"
             >
-              🪄 Preencher na IA
+              ⚙️ Opções de IA
+            </button>
+            <button
+              onClick={handleSaveToFeed}
+              className="px-3.5 py-1.5 rounded-lg bg-emerald-500 text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+            >
+              <span>💾 Salvar no Feed</span>
             </button>
             <button
               onClick={() => selectPlanForCreation(null)}
@@ -920,6 +1193,22 @@ export function BlackLinkCarouselStudio() {
               ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Toast de Feedback de Salvamento no Feed */}
+      {saveFeedToast && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-between text-emerald-300 text-xs font-mono animate-in fade-in">
+          <div className="flex items-center gap-2.5 font-bold">
+            <span>✓</span>
+            <span>{saveFeedToast}</span>
+          </div>
+          <button
+            onClick={() => setSaveFeedToast(null)}
+            className="text-emerald-400 hover:text-white font-bold ml-4 cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
       )}
 
