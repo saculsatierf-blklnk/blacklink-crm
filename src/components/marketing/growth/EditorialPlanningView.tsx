@@ -12,6 +12,7 @@ import {
   Loader2,
   Plus,
   RefreshCw,
+  Smartphone,
   Sparkles,
   Target,
   Wand2,
@@ -33,6 +34,9 @@ export function EditorialPlanningView() {
     addPlanItem,
     setActiveGrowthTab,
     companyProfile,
+    scheduledPosts,
+    setSelectedFeedPost,
+    setFeedViewMode,
   } = useMarketingStore();
 
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -309,6 +313,13 @@ export function EditorialPlanningView() {
           const isMeio = item.funnelStage === "meio";
           const isFundo = item.funnelStage === "fundo";
 
+          const matchingPost = scheduledPosts.find(
+            (p) =>
+              p.id === item.id ||
+              p.theme.toLowerCase().trim() === item.theme.toLowerCase().trim()
+          );
+          const isPronto = item.status === "pronto" || Boolean(matchingPost);
+
           return (
             <div
               key={item.id}
@@ -316,7 +327,7 @@ export function EditorialPlanningView() {
             >
               <div className="space-y-4">
                 {/* Header do Card de Pauta */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5 text-zinc-400" />
                     <span className="text-xs font-mono font-semibold text-white">
@@ -324,21 +335,30 @@ export function EditorialPlanningView() {
                     </span>
                   </div>
 
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider border ${
-                      isTopo
-                        ? "border-sky-500/40 bg-sky-500/15 text-sky-300"
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider border ${
+                        isTopo
+                          ? "border-sky-500/40 bg-sky-500/15 text-sky-300"
+                          : isMeio
+                          ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                          : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                      }`}
+                    >
+                      {isTopo
+                        ? "Funil: Topo (Atração)"
                         : isMeio
-                        ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                        : "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                    }`}
-                  >
-                    {isTopo
-                      ? "Funil: Topo (Atração)"
-                      : isMeio
-                      ? "Funil: Meio (Educação)"
-                      : "Funil: Fundo (Conversão)"}
-                  </span>
+                        ? "Funil: Meio (Educação)"
+                        : "Funil: Fundo (Conversão)"}
+                    </span>
+
+                    {isPronto && (
+                      <span className="rounded-full px-2.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider border border-emerald-500/50 bg-emerald-500/20 text-emerald-300 flex items-center gap-1 shadow-sm">
+                        <span>✓</span>
+                        <span>Pronto nas Prévias</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Título & Gancho Magnético */}
@@ -368,20 +388,46 @@ export function EditorialPlanningView() {
                 </div>
               </div>
 
-              {/* BOTÃO 1-CLIQUE: PRODUZIR ESTE POST NO ESTÚDIO */}
+              {/* BOTÕES: AÇÃO NO ESTÚDIO OU PRÉVIAS */}
               <div className="pt-4 border-t border-white/[0.08] flex items-center justify-between">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                   Formato: {item.format}
                 </span>
 
-                <button
-                  type="button"
-                  onClick={() => selectPlanForCreation(item)}
-                  className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-md hover:scale-[1.01] active:scale-[0.99]"
-                >
-                  <Wand2 className="h-3.5 w-3.5 text-black" />
-                  <span>Produzir no Estúdio ➔</span>
-                </button>
+                {isPronto ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => selectPlanForCreation(item)}
+                      className="text-zinc-400 hover:text-white text-xs underline cursor-pointer font-medium"
+                    >
+                      Editar Arte
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (matchingPost) {
+                          setSelectedFeedPost(matchingPost);
+                        }
+                        setFeedViewMode("visor");
+                        setActiveGrowthTab("feed");
+                      }}
+                      className="flex items-center gap-1.5 rounded-xl bg-emerald-500 text-black px-3.5 py-2 text-xs font-bold hover:bg-emerald-400 transition-all cursor-pointer shadow-md hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <Smartphone className="h-3.5 w-3.5" />
+                      <span>Ver nas Prévias ➔</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => selectPlanForCreation(item)}
+                    className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-md hover:scale-[1.01] active:scale-[0.99]"
+                  >
+                    <Wand2 className="h-3.5 w-3.5 text-black" />
+                    <span>Produzir no Estúdio ➔</span>
+                  </button>
+                )}
               </div>
             </div>
           );

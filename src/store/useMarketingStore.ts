@@ -180,6 +180,8 @@ export interface EditorialPlanItem {
   status: "planejado" | "em_producao" | "pronto";
 }
 
+export type FeedViewMode = "grid" | "feed" | "visor";
+
 interface MarketingState {
   // Navegação da Jornada de Growth Marketing B2B
   activeGrowthTab: GrowthTab;
@@ -199,13 +201,18 @@ interface MarketingState {
   selectedPlanForCreation: EditorialPlanItem | null;
   selectPlanForCreation: (plan: EditorialPlanItem | null) => void;
   addPlanItem: (item: Omit<EditorialPlanItem, "id">) => void;
+  updatePlanItem: (id: string, updates: Partial<EditorialPlanItem>) => void;
 
-  // 4. Feed & Vitrine do Instagram
-  feedViewMode: "grid" | "feed";
-  setFeedViewMode: (mode: "grid" | "feed") => void;
+  // 4. Feed & Vitrine do Instagram (Prévias)
+  feedViewMode: FeedViewMode;
+  setFeedViewMode: (mode: FeedViewMode) => void;
   selectedFeedPost: ScheduledPost | null;
   setSelectedFeedPost: (post: ScheduledPost | null) => void;
   updateScheduledPost: (id: string, updates: Partial<ScheduledPost>) => void;
+  approveStudioArtToFeed: (
+    postData: Partial<ScheduledPost>,
+    planId?: string
+  ) => ScheduledPost;
 
   // Navegação Legada
   activeMarketingTab: "studio" | "schedule" | "carousel-studio";
@@ -744,9 +751,16 @@ export const useMarketingStore = create<MarketingState>()(
         };
         set((s) => ({ editorialPlan: [...s.editorialPlan, newItem] }));
       },
+      updatePlanItem: (id, updates) => {
+        set((s) => ({
+          editorialPlan: s.editorialPlan.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
+          ),
+        }));
+      },
 
-      // 4. Feed & Vitrine do Instagram
-      feedViewMode: "grid",
+      // 4. Feed & Vitrine do Instagram (Prévias)
+      feedViewMode: "visor",
       setFeedViewMode: (mode) => set({ feedViewMode: mode }),
       selectedFeedPost: null,
       setSelectedFeedPost: (post) => set({ selectedFeedPost: post }),
@@ -760,6 +774,67 @@ export const useMarketingStore = create<MarketingState>()(
               ? { ...state.selectedFeedPost, ...updates }
               : state.selectedFeedPost,
         }));
+      },
+      approveStudioArtToFeed: (postData, planId) => {
+        const state = get();
+        const existingId = postData.id;
+        const existingPost = state.scheduledPosts.find(
+          (p) =>
+            (existingId && p.id === existingId) ||
+            (postData.theme &&
+              p.theme.toLowerCase().trim() === postData.theme.toLowerCase().trim())
+        );
+
+        const finalPost: ScheduledPost = {
+          id: existingPost?.id || postData.id || `post-art-${Date.now()}`,
+          theme: postData.theme || "Carrossel Aprovado no Estúdio",
+          format: postData.format || "carousel",
+          scheduledDate:
+            postData.scheduledDate || existingPost?.scheduledDate || "Hoje • Aprovado",
+          status: "scheduled",
+          hookHeadline: postData.hookHeadline || postData.theme || "",
+          bodyCopy: postData.bodyCopy || postData.postCaption || "",
+          ctaText: postData.ctaText || "Salve este carrossel",
+          hashtags: postData.hashtags || ["#AltaPerformance", "#BlackLink"],
+          postCaption: postData.postCaption || postData.bodyCopy || "",
+          slides: postData.slides || [],
+          imageUrls:
+            postData.imageUrls ||
+            (postData.slides || []).map((s) => s.imageUrl || ""),
+          createdAt: existingPost?.createdAt || new Date().toISOString(),
+        };
+
+        let updatedScheduledPosts: ScheduledPost[];
+        if (existingPost) {
+          updatedScheduledPosts = state.scheduledPosts.map((p) =>
+            p.id === existingPost.id ? finalPost : p
+          );
+        } else {
+          updatedScheduledPosts = [finalPost, ...state.scheduledPosts];
+        }
+
+        const targetPlanId = planId || state.selectedPlanForCreation?.id;
+        const updatedEditorialPlan = state.editorialPlan.map((item) => {
+          if (
+            (targetPlanId && item.id === targetPlanId) ||
+            (finalPost.theme &&
+              item.theme.toLowerCase().trim() ===
+                finalPost.theme.toLowerCase().trim())
+          ) {
+            return { ...item, status: "pronto" as const };
+          }
+          return item;
+        });
+
+        set({
+          scheduledPosts: updatedScheduledPosts,
+          editorialPlan: updatedEditorialPlan,
+          selectedFeedPost: finalPost,
+          feedViewMode: "visor",
+          activeGrowthTab: "feed",
+        });
+
+        return finalPost;
       },
 
       activeMarketingTab: "studio",

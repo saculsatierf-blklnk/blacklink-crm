@@ -316,6 +316,14 @@ export function BlackLinkCarouselStudio() {
   const addManualPost = useMarketingStore((state) => state.addManualPost);
   const selectedPlanForCreation = useMarketingStore((state) => state.selectedPlanForCreation);
   const selectPlanForCreation = useMarketingStore((state) => state.selectPlanForCreation);
+  const approveStudioArtToFeed = useMarketingStore((state) => state.approveStudioArtToFeed);
+  const setActiveGrowthTab = useMarketingStore((state) => state.setActiveGrowthTab);
+  const setFeedViewMode = useMarketingStore((state) => state.setFeedViewMode);
+  const setSelectedFeedPost = useMarketingStore((state) => state.setSelectedFeedPost);
+
+  // Estado do Visor Rápido do Instagram dentro do Estúdio
+  const [showStudioVisorModal, setShowStudioVisorModal] = useState<boolean>(false);
+  const [studioVisorSlideIdx, setStudioVisorSlideIdx] = useState<number>(0);
 
   // Estado Raiz: Configurações Paramétricas do Design
   const [designConfig, setDesignConfig] = useState<SlideDesignConfig>(() => ({
@@ -780,6 +788,54 @@ export function BlackLinkCarouselStudio() {
     setTimeout(() => setSaveFeedToast(null), 3500);
   };
 
+  // Aprovação Definitiva da Arte & Integração Direta com as Prévias do Instagram (Stage 3 -> Stage 4)
+  const handleApproveArtAndGoToPreviews = () => {
+    const title =
+      selectedPlanForCreation?.theme ||
+      aiTheme ||
+      slides[0]?.headline.replace(/\*\*/g, "") ||
+      "Carrossel Aprovado no Estúdio";
+    const hook = slides[0]?.headline || title;
+
+    const creativeSlides: CreativeSlide[] = slides.map((s, idx) => ({
+      slideNumber: idx + 1,
+      headline: s.headline,
+      bodyText: s.bodyText,
+      tag: s.tag,
+      imageUrl: `/api/marketing/render-slide?slide=${idx + 1}&total=${slides.length}&headline=${encodeURIComponent(
+        s.headline
+      )}&body=${encodeURIComponent(s.bodyText)}&format=carousel`,
+    }));
+
+    const matching = scheduledPosts.find(
+      (p) =>
+        p.theme.toLowerCase().trim() === title.toLowerCase().trim() ||
+        p.id === selectedPlanForCreation?.id
+    );
+
+    const approvedPost = approveStudioArtToFeed(
+      {
+        id: matching?.id || `post-art-${Date.now()}`,
+        theme: title,
+        format: designConfig.aspectRatio === "9:16" ? "story" : "carousel",
+        scheduledDate: selectedPlanForCreation?.dayLabel || "Hoje • Aprovado",
+        status: "scheduled",
+        hookHeadline: hook,
+        bodyCopy: postCaption,
+        ctaText: slides[slides.length - 1]?.bodyText || "Salve este carrossel",
+        hashtags: (postCaption.match(/#\w+/g) || ["#AltaPerformance", "#BlackLink"]),
+        postCaption,
+        slides: creativeSlides,
+        imageUrls: creativeSlides.map((s) => s.imageUrl || ""),
+      },
+      selectedPlanForCreation?.id
+    );
+
+    setSelectedFeedPost(approvedPost);
+    setFeedViewMode("visor");
+    setActiveGrowthTab("feed");
+  };
+
   // Gerenciador de Métricas e Curvas Bézier (B2B Chart Engine)
   const setSlideChartPreset = (preset: "mrr" | "cac" | "velocity" | "none") => {
     setSlides((prev) => {
@@ -1123,23 +1179,33 @@ export function BlackLinkCarouselStudio() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={() => setShowAIModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-blue-500/20"
+            className="px-3.5 py-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <span>🪄 Gerar com IA</span>
           </button>
 
           <button
-            onClick={handleSaveToFeed}
-            className="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-emerald-500/20"
+            onClick={() => {
+              setStudioVisorSlideIdx(currentSlideIndex);
+              setShowStudioVisorModal(true);
+            }}
+            className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-mono font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
-            <span>💾 Salvar no Feed</span>
+            <span>📱 Visor Instagram</span>
           </button>
 
-          <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
-            <span className="text-xs font-mono text-zinc-400">Lâminas Ativas:</span>
+          <button
+            onClick={handleApproveArtAndGoToPreviews}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-heading font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <span>✓ Aprovar &amp; Ir para Prévias ➔</span>
+          </button>
+
+          <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2">
+            <span className="text-xs font-mono text-zinc-400">Lâminas:</span>
             <span className="text-sm font-bold text-white font-mono">{slides.length}</span>
           </div>
         </div>
@@ -1180,10 +1246,19 @@ export function BlackLinkCarouselStudio() {
               ⚙️ Opções de IA
             </button>
             <button
-              onClick={handleSaveToFeed}
+              onClick={() => {
+                setStudioVisorSlideIdx(currentSlideIndex);
+                setShowStudioVisorModal(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-white/10 text-white font-semibold text-xs hover:bg-white/20 transition-colors cursor-pointer border border-white/15 flex items-center gap-1"
+            >
+              <span>📱 Visor</span>
+            </button>
+            <button
+              onClick={handleApproveArtAndGoToPreviews}
               className="px-3.5 py-1.5 rounded-lg bg-emerald-500 text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
             >
-              <span>💾 Salvar no Feed</span>
+              <span>✓ Aprovar Arte &amp; Ver no Feed ➔</span>
             </button>
             <button
               onClick={() => selectPlanForCreation(null)}
@@ -2716,6 +2791,169 @@ export function BlackLinkCarouselStudio() {
                 className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-mono font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg"
               >
                 <span>Baixar PDF para Postar Agora</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODAL DE VISOR DE SMARTPHONE INSTAGRAM (PRÉVIA RÁPIDA NO ESTÚDIO)   */}
+      {/* ==================================================================== */}
+      {showStudioVisorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-xl p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#0C0C0E] border border-white/20 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <span className="p-1.5 rounded-xl bg-white/10 text-base">📱</span>
+                <div>
+                  <h3 className="text-sm font-bold text-white font-heading">
+                    Visor de Instagram • Simulador
+                  </h3>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    Prévia em tempo real das artes ativas
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowStudioVisorModal(false)}
+                className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center font-mono cursor-pointer transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Mockup iPhone */}
+            <div className="relative rounded-[38px] border-[4px] border-[#2A2B30] bg-black p-2.5 shadow-2xl overflow-hidden space-y-3">
+              {/* Dynamic Island & Status Bar */}
+              <div className="flex items-center justify-between px-3 text-[10px] font-semibold text-white">
+                <span>9:41</span>
+                <div className="w-20 h-4 bg-black rounded-full border border-white/10 mx-auto" />
+                <div className="flex items-center gap-1">
+                  <span>5G</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              {/* Instagram Top Bar */}
+              <div className="flex items-center justify-between px-2 pt-1 text-white">
+                <span className="font-serif italic font-bold text-sm tracking-tight">Instagram</span>
+                <div className="flex items-center gap-2 text-xs">
+                  <span>♡</span>
+                  <span>✉</span>
+                </div>
+              </div>
+
+              {/* Post Header */}
+              <div className="flex items-center justify-between px-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 p-0.5">
+                    <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-[10px] font-bold text-white">
+                      {designConfig.authorName ? designConfig.authorName.slice(0, 2).toUpperCase() : "BL"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-white text-[11px]">
+                        {designConfig.authorHandle?.replace(/^@/, "") || "blacklink.b2b"}
+                      </span>
+                      <span className="text-[9px] text-sky-400 font-bold">✓</span>
+                    </div>
+                    <span className="text-[9px] text-zinc-400 block -mt-0.5">Áudio Original</span>
+                  </div>
+                </div>
+                <span className="text-zinc-400">•••</span>
+              </div>
+
+              {/* Slide Display com aspect ratio */}
+              <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-zinc-950 border border-white/5 flex items-center justify-center">
+                <div className="w-full h-full scale-[0.32] origin-top-left absolute top-0 left-0" style={{ width: "1080px", height: "1080px" }}>
+                  <BlackLinkSlidePreview
+                    slide={slides[studioVisorSlideIdx] || slides[0]}
+                    currentSlide={studioVisorSlideIdx + 1}
+                    totalSlides={slides.length}
+                    config={designConfig}
+                    canvasId="studio-visor-preview"
+                    scaleMode="manual"
+                  />
+                </div>
+
+                {/* Setas de navegação no visor */}
+                {studioVisorSlideIdx > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setStudioVisorSlideIdx(studioVisorSlideIdx - 1)}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-full bg-black/70 p-1 text-white border border-white/10 z-20 cursor-pointer"
+                  >
+                    ‹
+                  </button>
+                )}
+                {studioVisorSlideIdx < slides.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setStudioVisorSlideIdx(studioVisorSlideIdx + 1)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-black/70 p-1 text-white border border-white/10 z-20 cursor-pointer"
+                  >
+                    ›
+                  </button>
+                )}
+
+                {/* Pill contador */}
+                <div className="absolute top-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-mono font-bold text-white z-20">
+                  {studioVisorSlideIdx + 1}/{slides.length}
+                </div>
+              </div>
+
+              {/* Instagram Action Row */}
+              <div className="flex items-center justify-between px-2 text-white">
+                <div className="flex items-center gap-3 text-sm">
+                  <span>♡</span>
+                  <span>💬</span>
+                  <span>↗</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {slides.map((_, dot) => (
+                    <span
+                      key={dot}
+                      className={`h-1 rounded-full transition-all ${
+                        dot === studioVisorSlideIdx ? "w-2.5 bg-sky-400" : "w-1 bg-white/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm">☖</span>
+              </div>
+
+              {/* Caption Preview */}
+              <div className="px-2 text-[10px] text-zinc-300 line-clamp-3">
+                <strong className="text-white mr-1">
+                  {designConfig.authorHandle?.replace(/^@/, "") || "blacklink.b2b"}
+                </strong>
+                <span>{postCaption}</span>
+              </div>
+            </div>
+
+            {/* Ações do Modal */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStudioVisorModal(false);
+                  handleApproveArtAndGoToPreviews();
+                }}
+                className="w-full flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-black font-heading font-bold text-xs transition-all cursor-pointer shadow-lg flex items-center justify-center gap-1.5"
+              >
+                <span>✓ Aprovar Arte &amp; Ir para Prévias ➔</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowStudioVisorModal(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold cursor-pointer"
+              >
+                Voltar ao Canvas
               </button>
             </div>
           </div>

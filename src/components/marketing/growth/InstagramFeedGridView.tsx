@@ -20,6 +20,7 @@ import {
   Plus,
   Send,
   Share2,
+  Smartphone,
   Sparkles,
   UploadCloud,
   X,
@@ -41,6 +42,9 @@ export function InstagramFeedGridView() {
     selectedFeedPost,
     setSelectedFeedPost,
     updateScheduledPost,
+    setActiveGrowthTab,
+    selectPlanForCreation,
+    editorialPlan,
   } = useMarketingStore();
 
   const [activeSlideIdx, setActiveSlideIdx] = useState<number>(0);
@@ -52,6 +56,13 @@ export function InstagramFeedGridView() {
 
   // Slide index por post no modo feed vertical
   const [feedSlideIndexes, setFeedSlideIndexes] = useState<Record<string, number>>({});
+
+  // Estados específicos do Visor de Smartphone (iPhone)
+  const visorActivePost = selectedFeedPost || scheduledPosts[0] || null;
+  const [visorSlideIdx, setVisorSlideIdx] = useState<number>(0);
+  const [visorLiked, setVisorLiked] = useState<boolean>(false);
+  const [visorSaved, setVisorSaved] = useState<boolean>(false);
+  const [isVisorCaptionExpanded, setIsVisorCaptionExpanded] = useState<boolean>(false);
 
   const getInitials = (name?: string, handle?: string) => {
     if (name && name.trim()) {
@@ -240,16 +251,29 @@ export function InstagramFeedGridView() {
           ))}
         </div>
 
-        {/* Seletor de Modo de Exibição (Grade vs Feed Scroll) */}
+        {/* Seletor de Modo de Exibição (Visor Smartphone vs Grade vs Feed Scroll) */}
         <div className="flex items-center justify-center border-t border-white/[0.08] pt-4">
-          <div className="flex items-center gap-2 rounded-xl bg-black/40 p-1 border border-white/10">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-black/50 p-1.5 border border-white/10 shadow-lg">
+            <button
+              type="button"
+              onClick={() => setFeedViewMode("visor")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                feedViewMode === "visor"
+                  ? "bg-white/[0.15] text-white font-semibold shadow-sm border border-white/20"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <Smartphone className="h-3.5 w-3.5 text-sky-400" />
+              <span>Visor Smartphone (iPhone)</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setFeedViewMode("grid")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 feedViewMode === "grid"
-                  ? "bg-white/[0.15] text-white font-semibold"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-white/[0.15] text-white font-semibold shadow-sm border border-white/20"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.05]"
               }`}
             >
               <Grid className="h-3.5 w-3.5" />
@@ -259,10 +283,10 @@ export function InstagramFeedGridView() {
             <button
               type="button"
               onClick={() => setFeedViewMode("feed")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                 feedViewMode === "feed"
-                  ? "bg-white/[0.15] text-white font-semibold"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-white/[0.15] text-white font-semibold shadow-sm border border-white/20"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.05]"
               }`}
             >
               <List className="h-3.5 w-3.5" />
@@ -271,6 +295,359 @@ export function InstagramFeedGridView() {
           </div>
         </div>
       </div>
+
+      {/* MODO 0: VISOR DE SMARTPHONE (IPHONE REAL INTERATIVO) */}
+      {feedViewMode === "visor" && visorActivePost && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
+          {/* Coluna Esquerda/Centro: O iPhone 16 Pro Mockup (Visor Interativo) */}
+          <div className="lg:col-span-7 flex flex-col items-center">
+            {/* Seletor Rápido de Pauta no Topo do Visor */}
+            <div className="w-full max-w-sm mb-4 flex items-center justify-between px-2">
+              <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider font-semibold">
+                📱 Visor Interativo • Instagram Feed
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                ✓ Arte Aprovada
+              </span>
+            </div>
+
+            {/* Carcaça do iPhone Titanium com Dynamic Island */}
+            <div className="relative w-full max-w-[370px] rounded-[52px] border-[5px] border-[#2A2B30] bg-[#000000] p-3 shadow-2xl ring-1 ring-white/10 shadow-black/80 overflow-hidden">
+              {/* Moldura Interna de Vidro / Tela */}
+              <div className="rounded-[42px] bg-black overflow-hidden flex flex-col justify-between border border-white/5 min-h-[680px]">
+                {/* 1. iOS Status Bar & Dynamic Island */}
+                <div className="pt-3 px-6 pb-2 flex items-center justify-between text-white text-[11px] font-semibold select-none">
+                  <span>9:41</span>
+                  <div className="w-24 h-5 bg-black rounded-full border border-white/10 flex items-center justify-between px-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[8px] font-mono text-zinc-400">BlackLink</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <span>5G</span>
+                    <span className="w-4 h-2 rounded-sm border border-white/70 flex items-center p-0.5">
+                      <span className="w-full h-full bg-white rounded-2xs" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Instagram Top App Bar */}
+                <div className="px-4 py-2 flex items-center justify-between text-white border-b border-white/[0.06]">
+                  <div className="flex items-center gap-1">
+                    <span className="font-serif italic font-bold text-base tracking-tight">Instagram</span>
+                    <span className="text-[9px] text-zinc-400">▼</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-base">
+                    <button type="button" className="text-zinc-300 hover:text-white cursor-pointer">♡</button>
+                    <div className="relative cursor-pointer">
+                      <span>✉</span>
+                      <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                        2
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Post Header (Perfil, Nome, Selo, Três Pontos) */}
+                <div className="px-3.5 py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-0.5 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600">
+                      <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center text-[10px] font-bold text-white">
+                        {getInitials(companyProfile.name, companyProfile.instagram)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-bold text-white tracking-tight">
+                          {companyProfile.instagram?.replace(/^@/, "") || "blacklink.b2b"}
+                        </span>
+                        <span className="text-[9px] text-sky-400 font-bold">✓</span>
+                      </div>
+                      <span className="text-[9px] text-zinc-400 block -mt-0.5">Áudio Original • Retenção B2B</span>
+                    </div>
+                  </div>
+                  <button type="button" className="text-zinc-400 hover:text-white p-1">
+                    •••
+                  </button>
+                </div>
+
+                {/* 4. Canvas da Lâmina / Carrossel com Navegação Interativa */}
+                <div className="relative aspect-square w-full bg-zinc-950 overflow-hidden flex items-center justify-center select-none">
+                  {visorActivePost.slides[visorSlideIdx]?.imageUrl ? (
+                    <img
+                      src={visorActivePost.slides[visorSlideIdx].imageUrl}
+                      alt="Slide"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full flex-col justify-between p-6 bg-gradient-to-br from-zinc-900 via-black to-zinc-900 text-left">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 uppercase">
+                        <span>Lâmina {visorSlideIdx + 1} de {visorActivePost.slides.length}</span>
+                        <span>{companyProfile.name}</span>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-base font-bold text-white font-heading leading-tight">
+                          {visorActivePost.slides[visorSlideIdx]?.headline || visorActivePost.theme}
+                        </h4>
+                        <p className="text-xs text-zinc-300 leading-relaxed">
+                          {visorActivePost.slides[visorSlideIdx]?.bodyText || visorActivePost.hookHeadline}
+                        </p>
+                      </div>
+                      <div className="text-[9px] font-mono text-zinc-500">
+                        {companyProfile.instagram || "@blacklink.b2b"}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Setas de Troca de Lâmina no Visor */}
+                  {visorSlideIdx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setVisorSlideIdx(visorSlideIdx - 1)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 flex items-center justify-center text-sm hover:bg-black/80 transition-all cursor-pointer shadow-lg"
+                    >
+                      ‹
+                    </button>
+                  )}
+
+                  {visorSlideIdx < visorActivePost.slides.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setVisorSlideIdx(visorSlideIdx + 1)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 flex items-center justify-center text-sm hover:bg-black/80 transition-all cursor-pointer shadow-lg"
+                    >
+                      ›
+                    </button>
+                  )}
+
+                  {/* Contador de Slides no Canto Superior */}
+                  <div className="absolute top-2.5 right-2.5 rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-mono font-bold text-white backdrop-blur-md border border-white/10">
+                    {visorSlideIdx + 1}/{visorActivePost.slides.length}
+                  </div>
+                </div>
+
+                {/* 5. Barra de Engajamento do Instagram */}
+                <div className="px-3.5 pt-2.5 space-y-2">
+                  <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setVisorLiked(!visorLiked)}
+                        className={`transition-transform active:scale-125 cursor-pointer ${
+                          visorLiked ? "text-rose-500 fill-rose-500" : "hover:text-rose-400"
+                        }`}
+                      >
+                        <Heart className={`h-5 w-5 ${visorLiked ? "fill-rose-500 text-rose-500" : ""}`} />
+                      </button>
+                      <button type="button" className="hover:text-zinc-300 cursor-pointer">
+                        <MessageCircle className="h-5 w-5" />
+                      </button>
+                      <button type="button" className="hover:text-zinc-300 cursor-pointer">
+                        <Send className="h-4.5 w-4.5" />
+                      </button>
+                    </div>
+
+                    {/* Bolinhas de Paginação do Carrossel */}
+                    <div className="flex items-center gap-1">
+                      {visorActivePost.slides.map((_, dotIdx) => (
+                        <button
+                          key={dotIdx}
+                          type="button"
+                          onClick={() => setVisorSlideIdx(dotIdx)}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            dotIdx === visorSlideIdx ? "w-3 bg-sky-400" : "w-1.5 bg-white/30"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setVisorSaved(!visorSaved)}
+                      className={`cursor-pointer ${visorSaved ? "text-amber-400 fill-amber-400" : "hover:text-zinc-300"}`}
+                    >
+                      <Bookmark className={`h-5 w-5 ${visorSaved ? "fill-amber-400 text-amber-400" : ""}`} />
+                    </button>
+                  </div>
+
+                  {/* Curtidas */}
+                  <div className="text-[11px] text-white font-semibold">
+                    Curtido por <span className="font-bold">c-level.growth</span> e outras <span className="font-bold">{visorLiked ? 429 : 428} pessoas</span>
+                  </div>
+
+                  {/* Legenda com toggle */}
+                  <div className="text-[11px] text-zinc-300 leading-relaxed font-sans pb-1">
+                    <strong className="text-white mr-1.5">
+                      {companyProfile.instagram?.replace(/^@/, "") || "blacklink.b2b"}
+                    </strong>
+                    {isVisorCaptionExpanded ? (
+                      <span className="whitespace-pre-line">{visorActivePost.postCaption || visorActivePost.bodyCopy}</span>
+                    ) : (
+                      <span>{(visorActivePost.postCaption || visorActivePost.bodyCopy || "").slice(0, 85)}...</span>
+                    )}
+
+                    {(visorActivePost.postCaption || visorActivePost.bodyCopy || "").length > 85 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsVisorCaptionExpanded(!isVisorCaptionExpanded)}
+                        className="text-zinc-500 hover:text-zinc-300 ml-1 font-medium cursor-pointer"
+                      >
+                        {isVisorCaptionExpanded ? "menos" : "mais"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 6. Instagram Bottom Navigation */}
+                <div className="mt-auto pt-2 pb-3 px-6 border-t border-white/[0.06] flex items-center justify-between text-white text-base">
+                  <span className="font-bold cursor-pointer">⌂</span>
+                  <span className="cursor-pointer">🔍</span>
+                  <span className="cursor-pointer">⊞</span>
+                  <span className="cursor-pointer">▶</span>
+                  <div className="w-5 h-5 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-[9px] font-bold cursor-pointer">
+                    {getInitials(companyProfile.name, companyProfile.instagram)}
+                  </div>
+                </div>
+
+                {/* 7. Home Indicator iOS */}
+                <div className="w-28 h-1 bg-white/30 rounded-full mx-auto mb-2" />
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna Direita: Dossiê Executivo, Controle de Pautas & Ações */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Card com Metadados da Arte Aprovada */}
+            <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-6 lg:p-7 backdrop-blur-2xl space-y-5 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold block">
+                    ✓ Status: Aprovado &amp; Pronto para Publicação
+                  </span>
+                  <h3 className="text-base font-bold text-white font-heading">
+                    {visorActivePost.theme}
+                  </h3>
+                </div>
+
+                <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono font-bold text-emerald-300">
+                  {visorActivePost.scheduledDate}
+                </span>
+              </div>
+
+              {/* Lâminas em Miniatura para Seleção Direta */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                  Lâminas do Carrossel ({visorActivePost.slides.length} Lâminas)
+                </label>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {visorActivePost.slides.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setVisorSlideIdx(idx)}
+                      className={`h-14 w-14 rounded-xl border overflow-hidden shrink-0 transition-all cursor-pointer ${
+                        idx === visorSlideIdx
+                          ? "border-sky-400 ring-2 ring-sky-400/30 scale-105"
+                          : "border-white/10 opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-900 p-1 text-[9px] font-mono text-white text-center">
+                        <span className="font-bold">#{idx + 1}</span>
+                        <span className="text-[7px] text-zinc-400 line-clamp-1">{s.tag || `Slide ${idx + 1}`}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Editor / Visualizador da Legenda */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                    Copy &amp; Legenda do Post
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCaption(visorActivePost.postCaption || visorActivePost.bodyCopy)}
+                    className="text-[10px] font-mono text-sky-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="h-3 w-3" />
+                    <span>Copiar Legenda</span>
+                  </button>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-black/50 border border-white/10 text-xs text-zinc-300 leading-relaxed font-sans max-h-40 overflow-y-auto whitespace-pre-line">
+                  {visorActivePost.postCaption || visorActivePost.bodyCopy}
+                </div>
+              </div>
+
+              {/* Botões de Ação da Coluna Direita */}
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const matchingPlan = editorialPlan.find(
+                      (p) =>
+                        p.theme.toLowerCase().trim() === visorActivePost.theme.toLowerCase().trim() ||
+                        p.id === visorActivePost.id
+                    );
+                    selectPlanForCreation(matchingPlan || null);
+                    setActiveGrowthTab("estudio");
+                  }}
+                  className="w-full sm:flex-1 py-2.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] text-xs font-semibold text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  <span>Reeditar no Estúdio</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadAllSlides(visorActivePost)}
+                  className="w-full sm:flex-1 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>Baixar Lâmina HD</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Carrossel de Outros Posts na Mesa de Aprovação */}
+            {scheduledPosts.length > 1 && (
+              <div className="rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 backdrop-blur-2xl space-y-3">
+                <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                  Alternar Post no Visor ({scheduledPosts.length} posts prontos)
+                </span>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {scheduledPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      onClick={() => {
+                        setSelectedFeedPost(post);
+                        setVisorSlideIdx(0);
+                      }}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        post.id === visorActivePost.id
+                          ? "bg-white/10 border-sky-400 shadow-sm"
+                          : "bg-white/[0.02] border-white/5 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="space-y-0.5 flex-1 min-w-0">
+                        <h5 className="text-xs font-bold text-white truncate font-heading">
+                          {post.theme}
+                        </h5>
+                        <span className="text-[10px] font-mono text-zinc-400 block truncate">
+                          {post.scheduledDate} • {post.slides.length} lâminas
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-400 font-bold shrink-0">
+                        {post.id === visorActivePost.id ? "● No Visor" : "Ver ➔"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODO 1: GRADE 3x3 DO PERFIL (VISUAL HARMONY) */}
       {feedViewMode === "grid" && (

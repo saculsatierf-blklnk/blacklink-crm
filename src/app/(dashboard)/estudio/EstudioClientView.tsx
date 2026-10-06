@@ -9,6 +9,7 @@ import {
   Flame,
   Grid,
   Layers,
+  Smartphone,
   Sparkles,
   Target,
   UploadCloud,
@@ -56,8 +57,8 @@ export function EstudioClientView() {
     {
       id: "feed",
       step: "04",
-      label: "Feed do Instagram",
-      icon: Grid,
+      label: "Prévias do Instagram",
+      icon: Smartphone,
     },
     {
       id: "performance",
