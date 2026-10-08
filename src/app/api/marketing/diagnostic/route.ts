@@ -33,15 +33,19 @@ interface ParsedGeminiDiagnostic {
   editorialPlan?: EditorialPlanItem[];
 }
 
+export interface ScrapedWebsiteData {
+  title?: string;
+  description?: string;
+  keywords?: string;
+  headings?: string[];
+  bodyText: string;
+  normalizedUrl: string;
+}
+
 /**
  * Normaliza e busca o conteúdo do site oficial da empresa em tempo real
  */
-async function scrapeWebsiteText(url: string): Promise<{
-  title?: string;
-  description?: string;
-  bodyText: string;
-  normalizedUrl: string;
-}> {
+async function scrapeWebsiteText(url: string): Promise<ScrapedWebsiteData> {
   let normalizedUrl = url.trim();
   if (!/^https?:\/\//i.test(normalizedUrl)) {
     normalizedUrl = `https://${normalizedUrl}`;
@@ -49,7 +53,7 @@ async function scrapeWebsiteText(url: string): Promise<{
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 6500);
 
     const res = await fetch(normalizedUrl, {
       headers: {
@@ -68,15 +72,31 @@ async function scrapeWebsiteText(url: string): Promise<{
 
     const html = await res.text();
 
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const titleMatch =
+      html.match(/<title[^>]*>([^<]+)<\/title>/i) ||
+      html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i);
     const title = titleMatch ? titleMatch[1].trim() : undefined;
 
     const descMatch =
       html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
-      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i) ||
+      html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i) ||
+      html.match(/<meta[^>]*name=["']twitter:description["'][^>]*content=["']([^"']+)["']/i);
     const description = descMatch ? descMatch[1].trim() : undefined;
 
-    const cleanText = html
+    const keywordsMatch =
+      html.match(/<meta[^>]*name=["']keywords["'][^>]*content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']keywords["']/i);
+    const keywords = keywordsMatch ? keywordsMatch[1].trim() : undefined;
+
+    const headingMatches = Array.from(html.matchAll(/<h[1-3][^>]*>([^<]+)<\/h[1-3]>/gi))
+      .map((m) => m[1].replace(/\s+/g, " ").trim())
+      .filter((t) => t.length > 2 && t.length < 150)
+      .slice(0, 8);
+
+    let cleanText = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
       .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, " ")
@@ -87,11 +107,50 @@ async function scrapeWebsiteText(url: string): Promise<{
       .replace(/&nbsp;/gi, " ")
       .replace(/&amp;/gi, "&")
       .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
       .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 4500);
+      .trim();
 
-    return { title, description, bodyText: cleanText, normalizedUrl };
+    // Se o texto direto for curto (comum em Next.js SSR ou SPA), enriquecer com metadados e trechos do payload
+    if (cleanText.length < 80) {
+      const summaryParts: string[] = [];
+      if (title) summaryParts.push(`Título: ${title}`);
+      if (description) summaryParts.push(`Descrição: ${description}`);
+      if (keywords) summaryParts.push(`Palavras-chave: ${keywords}`);
+      if (headingMatches.length > 0) summaryParts.push(`Destaques: ${headingMatches.join(" • ")}`);
+
+      // Extrai trechos de texto legíveis dentro de scripts (como RSC ou NEXT_DATA)
+      const rscTextMatches = Array.from(html.matchAll(/"([^"\\]{4,120})"/g))
+        .map((m) => m[1])
+        .filter(
+          (s) =>
+            !s.startsWith("/") &&
+            !s.startsWith("http") &&
+            !s.includes("{") &&
+            !s.includes("}") &&
+            !s.includes("$") &&
+            /[a-zA-ZÀ-ÿ\s]{4,}/.test(s) &&
+            !/static|chunk|module|nonce|stylesheet|display|props|children/i.test(s)
+        )
+        .slice(0, 15);
+
+      if (rscTextMatches.length > 0) {
+        summaryParts.push(`Conteúdo da página: ${rscTextMatches.join(". ")}`);
+      }
+
+      cleanText = summaryParts.join(" | ");
+    } else {
+      cleanText = cleanText.slice(0, 4500);
+    }
+
+    return {
+      title,
+      description,
+      keywords,
+      headings: headingMatches,
+      bodyText: cleanText,
+      normalizedUrl,
+    };
   } catch (err) {
     console.warn("Aviso ao extrair texto do site:", err);
     return { bodyText: "", normalizedUrl };
@@ -104,17 +163,20 @@ async function scrapeWebsiteText(url: string): Promise<{
 async function callGeminiDiagnostic(
   apiKey: string,
   body: DiagnosticRequestBody,
-  scraped: { title?: string; description?: string; bodyText: string; normalizedUrl: string }
+  scraped: ScrapedWebsiteData
 ): Promise<ParsedGeminiDiagnostic | null> {
   const candidateModels = [
-    "gemini-3.1-flash-lite",
-    "gemini-3.5-flash-lite",
-    "gemini-3.6-flash",
     "gemini-flash-lite-latest",
-    "gemini-3.8-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
   ];
 
-  const hasWebsiteContent = Boolean(scraped.bodyText && scraped.bodyText.length > 50);
+  const hasWebsiteContent = Boolean(
+    (scraped.bodyText && scraped.bodyText.length > 30) ||
+      scraped.title ||
+      scraped.description
+  );
   const rawInstagram = body.instagram?.trim() || "";
   const hasInstagram = Boolean(rawInstagram && rawInstagram !== "@");
   let providedName = body.name?.trim() || "";
@@ -290,6 +352,8 @@ Responda ESTRITAMENTE em formato JSON puro:
 - URL Oficial: "${scraped.normalizedUrl}"
 - Título da Página: "${scraped.title || "N/A"}"
 - Meta Descrição: "${scraped.description || "N/A"}"
+- Palavras-chave (Keywords): "${scraped.keywords || "N/A"}"
+${scraped.headings && scraped.headings.length > 0 ? `- Destaques na Página: "${scraped.headings.join(" • ")}"` : ""}
 - Conteúdo Textual Resumido do Site:
 """
 ${scraped.bodyText}
@@ -311,7 +375,8 @@ INFORMAÇÕES ADICIONAIS FORNECIDAS PELO OPERADOR:
 DIRETRIZES FUNDAMENTAIS:
 1. EXTRAÇÃO CIRÚRGICA DA IDENTIDADE:
    - Se o usuário forneceu apenas o site (ou se o nome e Instagram não foram preenchidos), extraia com total fidelidade o NOME REAL DA EMPRESA, o NICHO e os PRODUTOS/SOLUÇÕES a partir do site analisado.
-   - Adapte 100% da análise para o segmento real da empresa (indústria, engenharia metálica, saúde, varejo, tecnologia, etc.).
+   - O campo "products" DEVE ser uma string descritiva clara com as principais soluções e produtos identificados (ex: "Solução A, Solução B, Solução C").
+   - Adapte 100% da análise para o segmento real da empresa (indústria, engenharia metálica/siderurgia, saúde, varejo, tecnologia/software, ecossistema digital, etc.).
 2. O INSTAGRAM É 100% OPCIONAL:
    - Se o Instagram não foi informado ou a empresa não possui, crie e sugira um @handle limpo e profissional (ex: @nome_da_empresa) para planejar a presença digital da marca.
 3. CONCORRENTES REAIS NO MERCADO ESPECÍFICO (3 NÍVEIS):
@@ -438,13 +503,15 @@ Responda ESTRITAMENTE em formato JSON puro:
       "status": "planejado"
     }
   ]
-}`;
+}
+
+IMPORTANTE: Responda apenas com o JSON puro, sem introduções ou markdown codeblocks antes ou depois.`;
   }
 
   for (const model of candidateModels) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
@@ -478,14 +545,20 @@ Responda ESTRITAMENTE em formato JSON puro:
         .replace(/```/g, "")
         .trim();
 
-      const parsed = JSON.parse(cleanJson) as ParsedGeminiDiagnostic;
+      const parsed = JSON.parse(cleanJson) as any;
       if (
         parsed &&
         Array.isArray(parsed.competitors) &&
         parsed.competitors.length > 0 &&
         parsed.executiveSummary
       ) {
-        return parsed;
+        if (Array.isArray(parsed.products)) {
+          parsed.products = (parsed.products as string[]).join(", ");
+        }
+        if (Array.isArray(parsed.niche)) {
+          parsed.niche = (parsed.niche as string[]).join(" / ");
+        }
+        return parsed as ParsedGeminiDiagnostic;
       }
     } catch (err) {
       console.warn(`Erro no modelo Gemini ${model}:`, err);
@@ -500,7 +573,7 @@ Responda ESTRITAMENTE em formato JSON puro:
  */
 function synthesizeDynamicDiagnostic(
   body: DiagnosticRequestBody,
-  scraped: { title?: string; description?: string; bodyText: string; normalizedUrl: string }
+  scraped: ScrapedWebsiteData
 ): ParsedGeminiDiagnostic {
   const isInfluencer =
     body.profileType === "influencer" ||
@@ -508,15 +581,15 @@ function synthesizeDynamicDiagnostic(
 
   // Dedução de Nome
   let brandName = body.name?.trim();
-  if (!brandName || brandName === "Black Link CRM" || brandName === "Black Link") {
-    if (isInfluencer && body.instagram) {
-      const clean = body.instagram.replace("@", "").trim();
-      brandName = clean.charAt(0).toUpperCase() + clean.slice(1);
-    } else if (scraped.title) {
+  if (!brandName || (brandName === "Black Link CRM" && (body.website || body.instagram))) {
+    if (scraped.title) {
       const titleClean = scraped.title.split(/[|\-–•]/)[0].trim();
       if (titleClean.length > 1 && titleClean.length < 50) {
         brandName = titleClean;
       }
+    } else if (isInfluencer && body.instagram) {
+      const clean = body.instagram.replace("@", "").trim();
+      brandName = clean.charAt(0).toUpperCase() + clean.slice(1);
     } else if (body.website) {
       const match = body.website.match(/(?:https?:\/\/)?(?:www\.)?([^/.]+)/i);
       if (match && match[1]) {
@@ -524,7 +597,7 @@ function synthesizeDynamicDiagnostic(
       }
     }
   }
-  if (!brandName) brandName = isInfluencer ? "Criador de Conteúdo" : "Empresa Corporativa";
+  if (!brandName) brandName = isInfluencer ? "Criador de Conteúdo" : "Black Link";
 
   // Dedução de Handle
   let brandHandle = body.instagram?.trim();
@@ -534,7 +607,7 @@ function synthesizeDynamicDiagnostic(
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]/g, "");
-    brandHandle = `@${slug || "oficial"}`;
+    brandHandle = `@${slug || "blacklink"}`;
   }
 
   const brandSite = scraped.normalizedUrl || body.website?.trim() || "";
@@ -674,144 +747,481 @@ function synthesizeDynamicDiagnostic(
   }
 
   // FALLBACK PARA EMPRESA
-  const lowerText = (scraped.bodyText + " " + (scraped.title || "") + " " + (scraped.description || "")).toLowerCase();
+  const lowerText = (
+    scraped.bodyText +
+    " " +
+    (scraped.title || "") +
+    " " +
+    (scraped.description || "") +
+    " " +
+    (scraped.keywords || "") +
+    " " +
+    brandName
+  ).toLowerCase();
+
+  // 1. Tech / Software / Ecossistema Digital / Black Link / Web Design
+  const isTechOrDigital =
+    lowerText.includes("software") ||
+    lowerText.includes("saas") ||
+    lowerText.includes("tecnologia") ||
+    lowerText.includes("web design") ||
+    lowerText.includes("ecossistema digital") ||
+    lowerText.includes("black link") ||
+    lowerText.includes("blklnk") ||
+    lowerText.includes("react") ||
+    lowerText.includes("engenharia da ausência") ||
+    lowerText.includes("digital") ||
+    lowerText.includes("desenvolvimento web") ||
+    lowerText.includes("aplicativo") ||
+    lowerText.includes("inteligência artificial") ||
+    lowerText.includes("crm");
+
+  // 2. Metalmecânica / Distribuição Siderúrgica / Aço / Gofer Metais (estrito, sem confundir "infraestrutura")
   const isMetalOrSteel =
-    lowerText.includes("metal") ||
-    lowerText.includes("aço") ||
-    lowerText.includes("aco") ||
-    lowerText.includes("estrutur") ||
-    lowerText.includes("construção") ||
-    lowerText.includes("obra");
+    !isTechOrDigital &&
+    (lowerText.includes("siderúrgic") ||
+      lowerText.includes("siderurgic") ||
+      lowerText.includes("metalúrgic") ||
+      lowerText.includes("metalurgic") ||
+      lowerText.includes("estruturas metálicas") ||
+      lowerText.includes("estrutura metalica") ||
+      lowerText.includes("tubos de aço") ||
+      lowerText.includes("tubos industriais") ||
+      lowerText.includes("vigas w") ||
+      lowerText.includes("metalon") ||
+      lowerText.includes("chapas de aço") ||
+      lowerText.includes("gofer") ||
+      (lowerText.includes("aço") && lowerText.includes("corte")) ||
+      (lowerText.includes("metal") && lowerText.includes("distribuidora")));
 
-  const refinedNiche =
-    body.niche?.trim() ||
-    (isMetalOrSteel
-      ? "Engenharia Estrutural & Fabricação de Estruturas Metálicas para Obras de Grande Porte"
-      : `Soluções Corporativas Especializadas em ${brandName}`);
+  // 3. Saúde / Medicina / Odontologia / Estética
+  const isHealth =
+    !isTechOrDigital &&
+    (lowerText.includes("médic") ||
+      lowerText.includes("medic") ||
+      lowerText.includes("clínica") ||
+      lowerText.includes("clinica") ||
+      lowerText.includes("odonto") ||
+      lowerText.includes("saúde") ||
+      lowerText.includes("saude") ||
+      lowerText.includes("estética") ||
+      lowerText.includes("estetica") ||
+      lowerText.includes("hospital") ||
+      lowerText.includes("dentista"));
 
-  const refinedProducts =
-    body.products?.trim() ||
-    (isMetalOrSteel
-      ? "Estruturas Metálicas de Alta Performance, Kits Estruturais Padronizados e Projetos de Infraestrutura"
-      : `Linha de Soluções e Atendimento Corporativo da ${brandName}`);
+  // 4. Educação / Mentorias / Treinamentos
+  const isEducation =
+    !isTechOrDigital &&
+    (lowerText.includes("mentoria") ||
+      lowerText.includes("treinamento") ||
+      lowerText.includes("curso") ||
+      lowerText.includes("escola") ||
+      lowerText.includes("imersão") ||
+      lowerText.includes("imersao") ||
+      lowerText.includes("workshop"));
 
-  const bio = `🏢 ${brandName} | Soluções Corporativas de Precisão
+  // 5. Jurídico / Contabilidade / Tributário / Finanças
+  const isLegalOrFinance =
+    !isTechOrDigital &&
+    (lowerText.includes("advocacia") ||
+      lowerText.includes("advogado") ||
+      lowerText.includes("jurídic") ||
+      lowerText.includes("juridic") ||
+      lowerText.includes("contabil") ||
+      lowerText.includes("tributár") ||
+      lowerText.includes("tributar") ||
+      lowerText.includes("financeir"));
+
+  let refinedNiche = body.niche?.trim() || "";
+  let refinedProducts = body.products?.trim() || "";
+
+  if (!refinedNiche) {
+    if (isTechOrDigital) {
+      refinedNiche = "Ecossistemas Digitais, Desenvolvimento Web & Software B2B de Alta Performance";
+    } else if (isMetalOrSteel) {
+      refinedNiche = "Distribuição de Produtos Siderúrgicos, Tubos Industriais & Chapas de Aço Carbono";
+    } else if (isHealth) {
+      refinedNiche = "Saúde Especializada, Procedimentos Clínicos & Diagnósticos de Precisão";
+    } else if (isEducation) {
+      refinedNiche = "Educação Executiva, Mentorias de Alto Nível & Treinamentos Corporativos";
+    } else if (isLegalOrFinance) {
+      refinedNiche = "Assessoria Jurídico-Tributária, Planejamento Societário & Governança B2B";
+    } else if (scraped.description && scraped.description.length > 15) {
+      refinedNiche = scraped.description.slice(0, 110).trim();
+    } else {
+      refinedNiche = `Soluções Corporativas Especializadas em ${brandName}`;
+    }
+  }
+
+  if (!refinedProducts) {
+    if (isTechOrDigital) {
+      refinedProducts = "Plataformas Digitais Customizadas, Ecossistemas Web de Alta Conversão, Web Design Imersivo e Soluções Tecnológicas B2B";
+    } else if (isMetalOrSteel) {
+      refinedProducts = "Tubos Industriais, Metalons, Vigas W, Cantoneiras, Perfis U e Chapas de Aço com Corte sob Medida";
+    } else if (isHealth) {
+      refinedProducts = "Consultas Especializadas, Protocolos Clínicos Personalizados e Acompanhamento de Alta Precisão";
+    } else if (isEducation) {
+      refinedProducts = "Programas de Mentoria Executiva, Imersões Estratégicas e Cursos Avançados";
+    } else if (isLegalOrFinance) {
+      refinedProducts = "Consultoria Jurídica Estratégica, Compliance e Planejamento Tributário Corporativo";
+    } else {
+      refinedProducts = `Linha de Soluções e Atendimento Corporativo da ${brandName}`;
+    }
+  }
+
+  const bio = isTechOrDigital
+    ? `🏢 ${brandName} | Ecossistema Digital & Engenharia Web
+⚡ Arquitetura digital de alto impacto, performance e autoridade
+👇 Inicie seu projeto corporativo:
+${brandSite}`
+    : isMetalOrSteel
+    ? `🏢 ${brandName} | Distribuição Siderúrgica de Precisão
+⚙️ Tubos, vigas, chapas e perfis de aço com corte sob medida e pronta-entrega
+👇 Solicite sua cotação corporativa:
+${brandSite}`
+    : `🏢 ${brandName} | Soluções Corporativas de Precisão
 ⚙️ Alta performance, rastreabilidade e segurança
 👇 Fale com nossos especialistas pelo link abaixo:
 ${brandSite}`;
 
-  const tagline = `${brandName}: Excelência e Eficiência Operacional`;
+  const tagline = isTechOrDigital
+    ? `${brandName}: Estabilizando e elevando sua presença digital com máxima autoridade.`
+    : isMetalOrSteel
+    ? `${brandName}: Fornecimento contínuo de aço com precisão milimétrica e pontualidade absoluta.`
+    : `${brandName}: Excelência e Eficiência Operacional.`;
 
-  const executiveSummary = `Diagnóstico Estratégico para ${brandName} (${brandHandle}): Foco em autoridade e contra-posicionamento fundamentado nas soluções da empresa.`;
+  const executiveSummary = isTechOrDigital
+    ? `Diagnóstico Estratégico para ${brandName} (${brandHandle}): Análise focada em engenharia digital, posicionamento de marca premium e diferenciação radical contra criadores de sites genéricos e agências de marketing ultrapassadas.`
+    : isMetalOrSteel
+    ? `Diagnóstico Estratégico para ${brandName} (${brandHandle}): Foco em autoridade industrial, garantia de fornecimento contínuo e contra-posicionamento contra intermediários sem estoque e cotações lentas.`
+    : `Diagnóstico Estratégico para ${brandName} (${brandHandle}): Foco em autoridade, diferenciação executiva e contra-posicionamento fundamentado nas soluções da empresa.`;
 
-  const competitors: CompetitorItem[] = [
-    {
-      id: "comp-1",
-      name: "Líder Global do Segmento",
-      handle: "@lider_global",
-      level: "leader",
-      strength: "Reconhecimento massivo de marca e infraestrutura consolidada.",
-      vulnerabilityOrCliché: "Custos elevados e soluções engessadas que não atendem demandas ágeis.",
-      differentiator: `${brandName}: Atendimento cirúrgico, implementação acelerada e maior proximidade com os tomadores de decisão.`,
-    },
-    {
-      id: "comp-2",
-      name: "Concorrentes Nacionais Estabelecidos",
-      handle: "@concorrente_nacional",
-      level: "direct",
-      strength: "Presença consolidada no mercado regional.",
-      vulnerabilityOrCliché: "Comunicação antiquada e processos que não evoluíram com a demanda moderna.",
-      differentiator: `${brandName}: Tecnologia de ponta, processos eficientes e diferenciação visual marcante.`,
-    },
-    {
-      id: "comp-3",
-      name: "Processos Tradicionais e Manuais",
-      handle: "@metodos_antigos",
-      level: "indirect",
-      strength: "Resistência à mudança e familiaridade de operações antigas.",
-      vulnerabilityOrCliché: "Erros operacionais frequentes e retrabalho silencioso que drena margem.",
-      differentiator: `${brandName}: Modernização completa e previsibilidade com métricas de resultado claras.`,
-    },
-  ];
+  const competitors: CompetitorItem[] = isTechOrDigital
+    ? [
+        {
+          id: "comp-1",
+          name: "Grandes Plataformas Globais de Tecnologia",
+          handle: "@tech_global",
+          level: "leader",
+          strength: "Domínio maciço de mercado e orçamentos bilionários de publicidade.",
+          vulnerabilityOrCliché: "Soluções genéricas e impessoais sem adaptação ao ecossistema exclusivo da empresa.",
+          differentiator: `${brandName}: Arquitetura sob medida, estética refinada de altíssimo padrão e proximidade executiva direta.`,
+        },
+        {
+          id: "comp-2",
+          name: "Software Houses e Agências Convencionais",
+          handle: "@agencias_tradicionais",
+          level: "direct",
+          strength: "Presença consolidada no mercado regional e redes de contatos prévias.",
+          vulnerabilityOrCliché: "Uso de templates genéricos em WordPress, lentidão no carregamento e designs datados.",
+          differentiator: `${brandName}: Tecnologias de fronteira, ecossistemas fluidos e conversão focada em decisores B2B.`,
+        },
+        {
+          id: "comp-3",
+          name: "Ferramentas No-Code Básicas e Amadoras",
+          handle: "@templates_prontos",
+          level: "indirect",
+          strength: "Custo de entrada ilusoriamente baixo para negócios iniciantes.",
+          vulnerabilityOrCliché: "Quebra de escala, zero exclusividade e perda imediata de autoridade perante grandes clientes.",
+          differentiator: `${brandName}: Engenharia proprietária e presença digital que transmite credibilidade instantânea.`,
+        },
+      ]
+    : isMetalOrSteel
+    ? [
+        {
+          id: "comp-1",
+          name: "Grandes Usinas e Distribuidores Multinacionais",
+          handle: "@usinas_globais",
+          level: "leader",
+          strength: "Poder de escala industrial e marcas com décadas de história.",
+          vulnerabilityOrCliché: "Atendimento burocrático, prazos de entrega extensos e falta de flexibilidade para pedidos fracionados.",
+          differentiator: `${brandName}: Pronta-entrega imediata, corte sob medida cirúrgico e canal direto sem burocracia.`,
+        },
+        {
+          id: "comp-2",
+          name: "Distribuidores Regionais de Aço",
+          handle: "@distribuidores_regionais",
+          level: "direct",
+          strength: "Atendimento comercial tradicional e carteiras antigas na região.",
+          vulnerabilityOrCliché: "Processos manuais, cotações demoradas e pós-venda reativo que trava a linha do cliente.",
+          differentiator: `${brandName}: Cotação ágil, rastreabilidade de certificados de conformidade e pontualidade na entrega.`,
+        },
+        {
+          id: "comp-3",
+          name: "Revendedores e Sucateiros Locais",
+          handle: "@revendas_locais",
+          level: "indirect",
+          strength: "Preço de balcão pontual para compras avulsas.",
+          vulnerabilityOrCliché: "Incerteza na procedência dos materiais, ausência de laudos e perda de material por medidas incorretas.",
+          differentiator: `${brandName}: Aço certificado com procedência comprovada e tolerância milimétrica no corte.`,
+        },
+      ]
+    : [
+        {
+          id: "comp-1",
+          name: "Líder Global do Segmento",
+          handle: "@lider_global",
+          level: "leader",
+          strength: "Reconhecimento massivo de marca e infraestrutura consolidada.",
+          vulnerabilityOrCliché: "Custos elevados e soluções engessadas que não atendem demandas ágeis.",
+          differentiator: `${brandName}: Atendimento cirúrgico, implementação acelerada e maior proximidade com os tomadores de decisão.`,
+        },
+        {
+          id: "comp-2",
+          name: "Concorrentes Nacionais Estabelecidos",
+          handle: "@concorrente_nacional",
+          level: "direct",
+          strength: "Presença consolidada no mercado regional.",
+          vulnerabilityOrCliché: "Comunicação antiquada e processos que não evoluíram com a demanda moderna.",
+          differentiator: `${brandName}: Tecnologia de ponta, processos eficientes e diferenciação visual marcante.`,
+        },
+        {
+          id: "comp-3",
+          name: "Processos Tradicionais e Manuais",
+          handle: "@metodos_antigos",
+          level: "indirect",
+          strength: "Resistência à mudança e familiaridade de operações antigas.",
+          vulnerabilityOrCliché: "Erros operacionais frequentes e retrabalho silencioso que drena margem.",
+          differentiator: `${brandName}: Modernização completa e previsibilidade com métricas de resultado claras.`,
+        },
+      ];
 
-  const viralMethods: ViralMethodAngle[] = [
-    {
-      id: "vm-1",
-      hookPattern: `Os 3 Erros Críticos que Encarecem Operações em ${refinedNiche}`,
-      viralMechanism: "Diagnóstico de Sangria Financeira",
-      whyItWorks: "Decisores corporativos param o feed ao identificar custos invisíveis e riscos de execução.",
-      suggestedFormat: "carousel",
-    },
-    {
-      id: "vm-2",
-      hookPattern: `Estudo de Caso: Como Reduzir em 40% o Cronograma com a ${brandName}`,
-      viralMechanism: "Engenharia Reversa de Sucesso Real",
-      whyItWorks: "Casos reais com números práticos geram alto volume de salvamentos.",
-      suggestedFormat: "carousel",
-    },
-    {
-      id: "vm-3",
-      hookPattern: `O que Grandes Empresas Fazem de Diferente na Escolha de Fornecedores`,
-      viralMechanism: "Contra-Consenso & Tendência Oculta",
-      whyItWorks: "Desafia o senso comum e posiciona a marca como autoridade técnica indiscutível.",
-      suggestedFormat: "carousel",
-    },
-  ];
+  const viralMethods: ViralMethodAngle[] = isTechOrDigital
+    ? [
+        {
+          id: "vm-1",
+          hookPattern: `Os 3 Erros Invisíveis na Presença Digital que Custam Contratos Milionários para a ${brandName}`,
+          viralMechanism: "Diagnóstico de Fricção e Perda Oculta de Margem",
+          whyItWorks: "Decisores B2B param o feed imediatamente ao perceberem que seu ecossistema digital está espantando clientes.",
+          suggestedFormat: "carousel",
+        },
+        {
+          id: "vm-2",
+          hookPattern: "Engenharia da Presença Digital: Por que Marcas Sofisticadas Não Gritam por Atenção",
+          viralMechanism: "Contra-Consenso e Psicologia de Autoridade",
+          whyItWorks: "Desafia o marketing apelativo comum e posiciona a empresa no topo da hierarquia de sofisticação.",
+          suggestedFormat: "carousel",
+        },
+        {
+          id: "vm-3",
+          hookPattern: `Estudo de Caso: Como um Ecossistema Digital de Alta Conversão Multiplica o Pipeline B2B`,
+          viralMechanism: "Engenharia Reversa com Arquitetura e Dados Reais",
+          whyItWorks: "Exposição técnica de arquitetura e resultados palpáveis geram alto volume de salvamentos entre executivos.",
+          suggestedFormat: "carousel",
+        },
+      ]
+    : isMetalOrSteel
+    ? [
+        {
+          id: "vm-1",
+          hookPattern: "Os 3 Erros Críticos na Compra de Aço que Encarecem Obras e Projetos Industriais",
+          viralMechanism: "Diagnóstico de Sangria Financeira na Especificação",
+          whyItWorks: "Engenheiros e compradores industriais salvam o post para evitar retrabalho e desperdício de material.",
+          suggestedFormat: "carousel",
+        },
+        {
+          id: "vm-2",
+          hookPattern: "Pronta-Entrega vs Importação: Como Evitar a Parada Fatal da Sua Linha de Produção",
+          viralMechanism: "Gatilho de Segurança Operacional e Continuidade de Negócio",
+          whyItWorks: "Mostra o custo real do atraso na entrega de matéria-prima e valida fornecedores ágeis.",
+          suggestedFormat: "carousel",
+        },
+        {
+          id: "vm-3",
+          hookPattern: "Corte sob Medida com Tolerância Zero: A Precisão que Protege a Margem do Seu Projeto",
+          viralMechanism: "Demonstração de Superioridade Técnica e Eficiência Operacional",
+          whyItWorks: "Imagens técnicas e dados de corte sem rebarba geram autoridade indiscutível perante gestores de obra.",
+          suggestedFormat: "carousel",
+        },
+      ]
+    : [
+        {
+          id: "vm-1",
+          hookPattern: `Os 3 Erros Críticos que Encarecem Operações em ${refinedNiche}`,
+          viralMechanism: "Diagnóstico de Sangria Financeira",
+          whyItWorks: "Decisores corporativos param o feed ao identificar custos invisíveis e riscos de execução.",
+          suggestedFormat: "carousel",
+        },
+        {
+          id: "vm-2",
+          hookPattern: `Estudo de Caso: Como Reduzir em 40% o Cronograma com a ${brandName}`,
+          viralMechanism: "Engenharia Reversa de Sucesso Real",
+          whyItWorks: "Casos reais com números práticos geram alto volume de salvamentos.",
+          suggestedFormat: "carousel",
+        },
+        {
+          id: "vm-3",
+          hookPattern: `O que Grandes Empresas Fazem de Diferente na Escolha de Soluções em ${refinedNiche}`,
+          viralMechanism: "Contra-Consenso & Tendência Oculta",
+          whyItWorks: "Desafia o senso comum e posiciona a marca como autoridade técnica indiscutível.",
+          suggestedFormat: "carousel",
+        },
+      ];
 
-  const editorialPlan: EditorialPlanItem[] = [
-    {
-      id: "plan-1",
-      dayNumber: 1,
-      dayLabel: "Segunda • 06/Out",
-      theme: `O Impacto da Escolha Certa de Fornecedores em ${refinedNiche}`,
-      hookHeadline: "Por que economizar na fase inicial pode dobrar o custo total do seu projeto.",
-      format: "carousel",
-      funnelStage: "topo",
-      objective: "Atração e conscientização de diretores e gestores sobre custos ocultos.",
-      viralAngle: "Contraste direto entre preço aparente e custo real de ciclo de vida.",
-      ctaText: "Salve este carrossel para consultar na sua próxima cotação.",
-      status: "planejado",
-    },
-    {
-      id: "plan-2",
-      dayNumber: 2,
-      dayLabel: "Quarta • 08/Out",
-      theme: `Bastidores Técnicos: Como a ${brandName} Garante Precisão Absoluta`,
-      hookHeadline: "Conheça o protocolo de qualidade e rastreabilidade que protege nossos clientes.",
-      format: "carousel",
-      funnelStage: "meio",
-      objective: "Educação técnica e comprovação de autoridade operacional.",
-      viralAngle: "Imagens técnicas e dados densos de conformidade.",
-      ctaText: "Compartilhe este material com a sua equipe.",
-      status: "planejado",
-    },
-    {
-      id: "plan-3",
-      dayNumber: 3,
-      dayLabel: "Sexta • 10/Out",
-      theme: `Comparativo de Performance: Métodos Ágeis vs Abordagens Convencionais`,
-      hookHeadline: "Veja a diferença real de produtividade entre soluções modernas e legadas.",
-      format: "carousel",
-      funnelStage: "meio",
-      objective: "Quebra de objeções e consolidação da tese de superioridade técnica.",
-      viralAngle: "Tabela comparativa com métricas de tempo e desperdício zero.",
-      ctaText: "Comente 'DIAGNÓSTICO' para receber nossa planilha comparativa.",
-      status: "planejado",
-    },
-    {
-      id: "plan-4",
-      dayNumber: 4,
-      dayLabel: "Terça • 14/Out",
-      theme: `Apresentação Executiva: Como Iniciar uma Parceria com a ${brandName}`,
-      hookHeadline: "Descubra como estruturar sua próxima demanda com máxima segurança.",
-      format: "carousel",
-      funnelStage: "fundo",
-      objective: "Geração de orçamentos e contato direto com o time comercial.",
-      viralAngle: "Apresentação dos canais diretos e prazos de atendimento.",
-      ctaText: "Toque no link da bio para solicitar um orçamento corporativo.",
-      status: "planejado",
-    },
-  ];
+  const editorialPlan: EditorialPlanItem[] = isTechOrDigital
+    ? [
+        {
+          id: "plan-1",
+          dayNumber: 1,
+          dayLabel: "Segunda • 06/Out",
+          theme: "A Ilusão da Presença Digital Genérica",
+          hookHeadline: "Por que uma presença digital amadora está custando seus melhores contratos B2B.",
+          format: "carousel",
+          funnelStage: "topo",
+          objective: "Quebra de paradigmas e conscientização de CEOs sobre o impacto da autoridade visual.",
+          viralAngle: "Contraste brutal entre ecossistemas de alta performance e sites comuns.",
+          ctaText: "Salve este carrossel para avaliar o ecossistema digital da sua marca.",
+          status: "planejado",
+        },
+        {
+          id: "plan-2",
+          dayNumber: 2,
+          dayLabel: "Quarta • 08/Out",
+          theme: "Arquitetura Invisível: Bastidores de Performance",
+          hookHeadline: "O que acontece nos primeiros 300 milissegundos quando um cliente acessa sua marca.",
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Comprovação de autoridade técnica e diferencial de engenharia.",
+          viralAngle: "Métricas de latência, retenção e impacto psicológico no decisor corporativo.",
+          ctaText: "Compartilhe este insight com o seu time de marketing e produto.",
+          status: "planejado",
+        },
+        {
+          id: "plan-3",
+          dayNumber: 3,
+          dayLabel: "Sexta • 10/Out",
+          theme: "Comparativo de Engenharia: Soluções Prontas vs Ecossistema Sob Medida",
+          hookHeadline: "Por que ferramentas prontas e templates travam o crescimento de marcas de alto valor.",
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Quebra de objeções de preço versus valor gerado em longo prazo.",
+          viralAngle: "Tabela comparativa direta com métricas de segurança, escala e conversão.",
+          ctaText: "Envie 'ECOSSISTEMA' no direct para receber nossa análise comparativa.",
+          status: "planejado",
+        },
+        {
+          id: "plan-4",
+          dayNumber: 4,
+          dayLabel: "Terça • 14/Out",
+          theme: "Diagnóstico Executivo: Elevando o Padrão da sua Marca",
+          hookHeadline: "Como reestruturar sua presença digital com máxima autoridade e precisão.",
+          format: "carousel",
+          funnelStage: "fundo",
+          objective: "Geração de demandas qualificadas e contato direto com a liderança.",
+          viralAngle: "Apresentação de casos reais e direcionamento para conversa executiva.",
+          ctaText: "Toque no link da bio para solicitar um diagnóstico com nossos especialistas.",
+          status: "planejado",
+        },
+      ]
+    : isMetalOrSteel
+    ? [
+        {
+          id: "plan-1",
+          dayNumber: 1,
+          dayLabel: "Segunda • 06/Out",
+          theme: "O Custo Invisível do Atraso no Fornecimento de Aço",
+          hookHeadline: "Por que economizar na compra inicial de tubos e vigas pode paralisar sua obra.",
+          format: "carousel",
+          funnelStage: "topo",
+          objective: "Conscientização de compradores e engenheiros sobre segurança de suprimentos.",
+          viralAngle: "Contraste entre preço aparente de balcão e prejuízo real de linha de montagem parada.",
+          ctaText: "Salve este carrossel para sua próxima tomada de decisão de compras.",
+          status: "planejado",
+        },
+        {
+          id: "plan-2",
+          dayNumber: 2,
+          dayLabel: "Quarta • 08/Out",
+          theme: "Rigor Técnico: Certificados de Conformidade e Procedência",
+          hookHeadline: "Conheça os protocolos de ensaio e tolerância que garantem a integridade da sua estrutura.",
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Educação técnica e comprovação de autoridade no setor siderúrgico.",
+          viralAngle: "Fichas técnicas de normas ASTM/NBR e dados de rastreabilidade do aço.",
+          ctaText: "Compartilhe este material com o engenheiro responsável pela sua obra.",
+          status: "planejado",
+        },
+        {
+          id: "plan-3",
+          dayNumber: 3,
+          dayLabel: "Sexta • 10/Out",
+          theme: "Corte sob Medida: Zero Retrabalho no Canteiro",
+          hookHeadline: "Veja a economia gerada ao receber tubos e perfis prontos para montagem.",
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Demonstração de produtividade e redução de perdas de material.",
+          viralAngle: "Comparativo de tempo de obra com corte industrial vs corte manual em canteiro.",
+          ctaText: "Envie uma mensagem para receber nossa tabela de pesos e medidas.",
+          status: "planejado",
+        },
+        {
+          id: "plan-4",
+          dayNumber: 4,
+          dayLabel: "Terça • 14/Out",
+          theme: "Canal Corporativo: Cotação Ágil para Grandes Demandas",
+          hookHeadline: "Precisa de aço para pronta-entrega? Veja como cotar em minutos com a equipe da Gofer.",
+          format: "carousel",
+          funnelStage: "fundo",
+          objective: "Conversão direta de compradores em orçamentos.",
+          viralAngle: "Apresentação dos canais diretos de atendimento e frota própria de entrega.",
+          ctaText: "Toque no link da bio para solicitar uma cotação com condições especiais.",
+          status: "planejado",
+        },
+      ]
+    : [
+        {
+          id: "plan-1",
+          dayNumber: 1,
+          dayLabel: "Segunda • 06/Out",
+          theme: `O Impacto da Escolha Certa de Soluções em ${refinedNiche}`,
+          hookHeadline: "Por que economizar na fase inicial pode dobrar o custo total do seu projeto.",
+          format: "carousel",
+          funnelStage: "topo",
+          objective: "Atração e conscientização de diretores e gestores sobre custos ocultos.",
+          viralAngle: "Contraste direto entre preço aparente e custo real de ciclo de vida.",
+          ctaText: "Salve este carrossel para consultar na sua próxima decisão.",
+          status: "planejado",
+        },
+        {
+          id: "plan-2",
+          dayNumber: 2,
+          dayLabel: "Quarta • 08/Out",
+          theme: `Bastidores Técnicos: Como a ${brandName} Garante Precisão Absoluta`,
+          hookHeadline: "Conheça o protocolo de qualidade e rastreabilidade que protege nossos clientes.",
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Educação técnica e comprovação de autoridade operacional.",
+          viralAngle: "Imagens técnicas e dados densos de conformidade.",
+          ctaText: "Compartilhe este material com a sua equipe.",
+          status: "planejado",
+        },
+        {
+          id: "plan-3",
+          dayNumber: 3,
+          dayLabel: "Sexta • 10/Out",
+          theme: `Comparativo de Performance: Métodos Ágeis vs Abordagens Convencionais`,
+          hookHeadline: "Veja a diferença real de produtividade entre soluções modernas e legadas.",
+          format: "carousel",
+          funnelStage: "meio",
+          objective: "Quebra de objeções e consolidação da tese de superioridade técnica.",
+          viralAngle: "Tabela comparativa com métricas de tempo e desperdício zero.",
+          ctaText: "Comente 'DIAGNÓSTICO' para receber nosso material comparativo.",
+          status: "planejado",
+        },
+        {
+          id: "plan-4",
+          dayNumber: 4,
+          dayLabel: "Terça • 14/Out",
+          theme: `Apresentação Executiva: Como Iniciar uma Parceria com a ${brandName}`,
+          hookHeadline: "Descubra como estruturar sua próxima demanda com máxima segurança.",
+          format: "carousel",
+          funnelStage: "fundo",
+          objective: "Geração de orçamentos e contato direto com o time comercial.",
+          viralAngle: "Apresentação dos canais diretos e prazos de atendimento.",
+          ctaText: "Toque no link da bio para solicitar um orçamento corporativo.",
+          status: "planejado",
+        },
+      ];
 
   return {
     name: brandName,
@@ -983,12 +1393,7 @@ export async function POST(request: NextRequest) {
     const body: DiagnosticRequestBody = await request.json();
 
     // 1. Rastreia o site se informado
-    let scraped: {
-      title?: string;
-      description?: string;
-      bodyText: string;
-      normalizedUrl: string;
-    } = { bodyText: "", normalizedUrl: "" };
+    let scraped: ScrapedWebsiteData = { bodyText: "", normalizedUrl: "" };
 
     if (body.website && body.website.trim()) {
       scraped = await scrapeWebsiteText(body.website);
