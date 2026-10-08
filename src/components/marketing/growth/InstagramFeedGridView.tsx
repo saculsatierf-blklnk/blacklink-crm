@@ -269,7 +269,7 @@ export function InstagramFeedGridView() {
           <div className="space-y-3 text-center sm:text-left flex-1">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-heading">
-                {companyProfile.instagram?.replace(/^@/, "") || "blacklink.com.br"}
+                {companyProfile.instagram?.replace(/^@/, "") || "blacklink.tech"}
               </h2>
               <span className="rounded-full bg-sky-500/20 border border-sky-500/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-sky-300">
                 Verificado Oficial
@@ -584,7 +584,7 @@ export function InstagramFeedGridView() {
                     <div>
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-bold text-white tracking-tight">
-                          {companyProfile.instagram?.replace(/^@/, "") || "blacklink.com.br"}
+                          {companyProfile.instagram?.replace(/^@/, "") || "blacklink.tech"}
                         </span>
                         <span className="text-[9px] text-sky-400 font-bold">✓</span>
                       </div>
@@ -712,7 +712,7 @@ export function InstagramFeedGridView() {
                   {/* Legenda com toggle */}
                   <div className="text-[11px] text-zinc-300 leading-relaxed font-sans pb-1">
                     <strong className="text-white mr-1.5">
-                      {companyProfile.instagram?.replace(/^@/, "") || "blacklink.com.br"}
+                      {companyProfile.instagram?.replace(/^@/, "") || "blacklink.tech"}
                     </strong>
                     {isVisorCaptionExpanded ? (
                       <span className="whitespace-pre-line">{visorActivePost.postCaption || visorActivePost.bodyCopy}</span>
@@ -909,7 +909,7 @@ export function InstagramFeedGridView() {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-white">
-                          {companyProfile.instagram?.replace(/^@/, "") || "blacklink.com.br"}
+                          {companyProfile.instagram?.replace(/^@/, "") || "blacklink.tech"}
                         </span>
                         <span className="h-1 w-1 rounded-full bg-zinc-500" />
                         <span className="text-[10px] font-mono text-zinc-400">{post.scheduledDate}</span>
@@ -1015,7 +1015,7 @@ export function InstagramFeedGridView() {
 
                   <div className="text-xs text-zinc-300 leading-relaxed font-sans">
                     <span className="font-bold text-white mr-2">
-                      {companyProfile.instagram?.replace(/^@/, "") || "blacklink.com.br"}
+                      {companyProfile.instagram?.replace(/^@/, "") || "blacklink.tech"}
                     </span>
                     {isCaptionExpanded ? (
                       <span className="whitespace-pre-line">{caption}</span>

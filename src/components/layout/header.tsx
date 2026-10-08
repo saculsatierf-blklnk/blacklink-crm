@@ -1,103 +1,125 @@
 "use client";
 
-import React from "react";
-import { Search, Plus, Bell, Command } from "lucide-react";
-import { useTenantStore } from "@/store/useTenantStore";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Compass, LogOut, Menu, Search, User as UserIcon, Users } from "lucide-react";
+import { logoutAction } from "@/actions/auth";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useTourStore } from "@/store/useTourStore";
+import { useUiStore } from "@/store/useUiStore";
+import { TeamManagementModal } from "@/components/team/TeamManagementModal";
 
 interface HeaderProps {
-  onOpenNewDealModal: () => void;
+  initialRole?: "admin" | "commercial";
 }
 
-export function Header({ onOpenNewDealModal }: HeaderProps) {
-  const { currentView, searchQuery, setSearchQuery, activeTenantId, tenants } =
-    useTenantStore();
-  const activeTenant =
-    tenants.find((t) => t.id === activeTenantId) || tenants[0];
+export function Header({ initialRole }: HeaderProps) {
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const clearSession = useAuthStore((state) => state.clearSession);
+  const resetTour = useTourStore((state) => state.resetTour);
+  const toggleMobileSidebar = useUiStore((state) => state.toggleMobileSidebar);
 
-  const viewTitles: Record<string, { title: string; subtitle: string }> = {
-    dashboard: {
-      title: "Visão Executiva",
-      subtitle: "Métricas de MRR, conversão e pipeline consolidado",
-    },
-    pipeline: {
-      title: "Pipeline de Oportunidades",
-      subtitle: "Visualização Kanban e fluxo de fechamento B2B",
-    },
-    leads: {
-      title: "Contas & Leads Corporativos",
-      subtitle: "Base de tomadores de decisão e empresas em prospecção",
-    },
-    portal: {
-      title: "Portal do Cliente SaaS",
-      subtitle: "Área restrita de entregáveis e transparência de projetos",
-    },
-    settings: {
-      title: "Configurações Corporativas",
-      subtitle: "Gestão de acessos, integrações e dados da organização",
-    },
+  const handleLogout = async () => {
+    clearSession();
+    await logoutAction();
   };
 
-  const current = viewTitles[currentView] || viewTitles.dashboard;
+  const currentRole = user?.role || initialRole || "admin";
+  const isAdmin = currentRole === "admin";
+
+  const displayName =
+    user?.name ||
+    (currentRole === "commercial"
+      ? "Operador Comercial"
+      : "Administrador");
+
+  const roleLabelMap: Record<string, string> = {
+    admin: "Administrador",
+    commercial: "Comercial",
+  };
+  const displayRole = roleLabelMap[currentRole] || "Comercial";
 
   return (
-    <header className="h-16 px-6 bg-carbon border-b border-border-hairline flex items-center justify-between select-none">
-      {/* TÍTULO DA VISÃO ATUAL */}
-      <div className="flex flex-col">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-gold">
-            {activeTenant.code}
-          </span>
-          <span className="text-muted text-xs">/</span>
-          <h1 className="text-sm font-bold uppercase tracking-wider text-foreground">
-            {current.title}
-          </h1>
-        </div>
-        <span className="text-[11px] text-muted hidden sm:inline">
-          {current.subtitle}
-        </span>
-      </div>
+    <>
+      <header className="sticky top-0 z-40 flex h-18 w-full items-center justify-between border-b border-white/10 bg-black/40 px-6 sm:px-8 backdrop-blur-2xl transition-all">
+        {/* Busca e Contexto Global */}
+        <div className="flex items-center gap-3">
+          {/* Botão de Menu para Telas Menores */}
+          <button
+            type="button"
+            onClick={toggleMobileSidebar}
+            className="md:hidden flex h-9.5 w-9.5 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
+            title="Abrir menu de navegação"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
 
-      {/* AÇÕES CENTRAIS / BUSCA & BOTÕES */}
-      <div className="flex items-center gap-3">
-        {/* BUSCA UNIVERSAL */}
-        <div className="relative w-48 md:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar contas, deals..."
-            className="w-full h-9 pl-9 pr-8 bg-surface border border-border-hairline text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:border-border-focus transition-colors"
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-muted pointer-events-none">
-            <Command className="h-3 w-3" />
-            <span className="font-mono text-[9px]">K</span>
+          <div data-tour="header-search" className="relative hidden sm:block">
+            <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Buscar registros, leads ou contas..."
+              className="h-9.5 w-64 md:w-80 rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-4 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.08] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-300"
+            />
           </div>
         </div>
 
-        {/* NOTIFICAÇÕES */}
-        <button
-          type="button"
-          className="h-9 w-9 flex items-center justify-center bg-surface border border-border-hairline text-muted hover:text-white hover:border-border-focus transition-colors relative"
-          title="Notificações do Sistema"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-gold rounded-full" />
-        </button>
+        {/* Gestão de Equipe, Tutorial Interativo, Identidade do Operador e Ação de Logout */}
+        <div className="flex items-center gap-3">
+          {/* Botão de Disparo do Tutorial Interativo */}
+          <button
+            onClick={() => resetTour()}
+            className="flex h-9.5 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 text-xs text-zinc-300 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 cursor-pointer shadow-sm"
+            title="Iniciar Tutorial Guiado Passo a Passo"
+          >
+            <Compass className="h-3.5 w-3.5 text-white" />
+            <span className="hidden lg:inline font-medium tracking-tight">Tutorial Guiado</span>
+          </button>
 
-        {/* BOTÃO NOVO DEAL */}
-        <Button
-          variant="accent"
-          size="sm"
-          onClick={onOpenNewDealModal}
-          className="flex items-center gap-1.5"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Nova Oportunidade</span>
-          <span className="sm:hidden">Novo</span>
-        </Button>
-      </div>
-    </header>
+          {isAdmin && (
+            <button
+              data-tour="header-team"
+              onClick={() => setIsTeamModalOpen(true)}
+              className="flex h-9.5 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 text-xs text-zinc-300 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 cursor-pointer shadow-sm"
+              title="Gerenciar Equipe e Operadores"
+            >
+              <Users className="h-3.5 w-3.5 text-white" />
+              <span className="hidden md:inline font-medium tracking-tight">Equipe</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-3 border-l border-r border-white/10 px-4">
+            <div className="flex h-8.5 w-8.5 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-white shadow-inner">
+              <UserIcon className="h-4 w-4 text-zinc-300" />
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-semibold text-white tracking-tight">
+                {displayName}
+              </span>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                Acesso: <span className="text-white font-medium">{displayRole}</span>
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            title="Encerrar Sessão"
+            className="flex h-9.5 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 text-xs text-zinc-300 hover:text-white hover:bg-red-500/10 hover:border-red-500/30 transition-all duration-300 cursor-pointer shadow-sm"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline font-medium tracking-tight">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Modal de Gestão de Equipe */}
+      {isTeamModalOpen && (
+        <TeamManagementModal
+          isOpen={isTeamModalOpen}
+          onClose={() => setIsTeamModalOpen(false)}
+        />
+      )}
+    </>
   );
 }

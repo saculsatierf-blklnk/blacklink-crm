@@ -660,7 +660,7 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
 
 const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   name: "Black Link",
-  instagram: "@blacklink.com.br",
+  instagram: "@blacklink.tech",
   website: "https://blacklink.com.br",
   niche: "Inteligência Comercial & Gestão B2B",
   products: "Plataforma de CRM Autônomo, Telemetria & Automação Comercial",
