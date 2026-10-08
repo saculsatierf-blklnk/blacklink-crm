@@ -12,6 +12,7 @@ import {
   LAYOUT_REGISTRY,
   CtaLayout,
   LayoutProps,
+  BlackLinkGlassLayout,
 } from "./layouts";
 
 export type {
@@ -181,6 +182,7 @@ export function BlackLinkSlidePreview({
     cardBgClass,
     renderHighlightedText,
     currentSlide,
+    totalSlides,
     isLoadingAI,
   };
 
@@ -238,11 +240,18 @@ export function BlackLinkSlidePreview({
   }, [canvasWidth, canvasHeight, scaleMode, manualScale, is916, is45]);
 
   // Renderizador do Conteúdo Interno da Lâmina em Resolução Nativa 1080px
-  const renderSlideInnerContent = () => (
-    <>
-      {/* ==================================================================== */}
-      {/* 1. CAMADA DE IMAGEM DE FUNDO (SE CONFIGURADA)                       */}
-      {/* ==================================================================== */}
+  const renderSlideInnerContent = () => {
+    // Se o layout for o Black Link (Template Oficial Antigravity 1.0),
+    // ele assume o controle integral do Canvas com acabamento Glassmorphism 4K de alta densidade
+    if (config.layout === "black-link") {
+      return <BlackLinkGlassLayout {...layoutProps} />;
+    }
+
+    return (
+      <>
+        {/* ==================================================================== */}
+        {/* 1. CAMADA DE IMAGEM DE FUNDO (SE CONFIGURADA)                       */}
+        {/* ==================================================================== */}
       {config.bgImage && config.layout !== "notion-doc" && config.layout !== "sticky-note" && (
         <div
           className="absolute inset-0 pointer-events-none bg-cover bg-center z-0 transition-opacity duration-300"
@@ -438,7 +447,8 @@ export function BlackLinkSlidePreview({
         </div>
       </div>
     </>
-  );
+    );
+  };
 
   // MODO EXPORT: Retorna diretamente o Canvas nativo 1080px (Sem wrapper transform)
   if (scaleMode === "export") {

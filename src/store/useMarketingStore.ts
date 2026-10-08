@@ -129,6 +129,8 @@ export type GrowthTab =
   | "feed"
   | "performance";
 
+export type InstagramAccountStage = "lancamento_zero" | "tracao" | "escala";
+
 export interface CompanyProfile {
   name: string;
   instagram: string;
@@ -139,6 +141,7 @@ export interface CompanyProfile {
   bio?: string;
   tagline?: string;
   profileType?: "company" | "influencer";
+  accountStage?: InstagramAccountStage;
 }
 
 export interface CompetitorItem {
@@ -230,6 +233,7 @@ interface MarketingState {
   // 1. Diagnóstico da Empresa & Concorrentes
   companyProfile: CompanyProfile;
   setCompanyProfile: (profile: Partial<CompanyProfile>) => void;
+  updateCompanyProfile: (profile: Partial<CompanyProfile>) => void;
   competitorsDiagnostic: CompetitorsDiagnostic;
   isAnalyzingCompetitors: boolean;
   analyzeCompanyAndCompetitors: () => Promise<void>;
@@ -548,15 +552,16 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
 ];
 
 const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
-  name: "",
-  instagram: "",
-  website: "",
-  niche: "",
-  products: "",
-  targetAudience: "",
-  bio: "",
-  tagline: "",
+  name: "Black Link",
+  instagram: "@blacklink.com.br",
+  website: "https://blacklink.com.br",
+  niche: "Inteligência Comercial & Gestão B2B",
+  products: "Plataforma de CRM Autônomo, Telemetria & Automação Comercial",
+  targetAudience: "Fundadores, Diretores Comerciais e Operações de Vendas B2B",
+  bio: "A nova arquitetura de velocidade comercial para equipes de alta performance.",
+  tagline: "Engenharia de Receita & Velocidade Comercial",
   profileType: "company",
+  accountStage: "lancamento_zero",
 };
 
 const DEFAULT_DIAGNOSTIC: CompetitorsDiagnostic = {
@@ -627,53 +632,53 @@ const DEFAULT_EDITORIAL_PLAN: EditorialPlanItem[] = [
   {
     id: "plan-1",
     dayNumber: 1,
-    dayLabel: "Segunda • 06/Out",
-    theme: "Os 5 Gargalos Ocultos do Funil B2B",
-    hookHeadline: "Sua operação não tem problema de geração de leads. O gargalo é outro.",
+    dayLabel: "Quarta • 08/Out (HOJE)",
+    theme: "O MANIFESTO: Por que o mercado corporativo de CRM precisava ser reinventado",
+    hookHeadline: "Por que o mercado corporativo de CRM falhou e o que viemos construir.",
     format: "carousel",
     funnelStage: "topo",
-    objective: "Atração e conscientização de decisores sobre vazamento de pipeline.",
-    viralAngle: "Quebra de paradigma sobre volume vs qualificação real.",
-    ctaText: "Comente 'FUNIL' para receber o checklist de diagnóstico.",
+    objective: "Manifesto oficial de fundação da Black Link, apresentação da visão e quebra de paradigma.",
+    viralAngle: "Contra-consenso sobre CRMs legados e declaração de princípios da fundação.",
+    ctaText: "Salve este post e siga @blacklink.com.br para acompanhar a fundação desde o Marco Zero.",
     status: "pronto",
   },
   {
     id: "plan-2",
     dayNumber: 2,
-    dayLabel: "Quarta • 08/Out",
-    theme: "Anti-Colisão: Como 2 Hunters Abordaram o Mesmo CFO e Queimaram o Contrato",
-    hookHeadline: "O erro amador de R$ 180k que acontece quando seu CRM não tem radar anti-duplicidade.",
+    dayLabel: "Quinta • 09/Out",
+    theme: "A MENTIRA DO PIPELINE: Por que entupir o CRM de reuniões não fecha contratos",
+    hookHeadline: "A maior mentira que te contaram sobre software de vendas.",
     format: "carousel",
     funnelStage: "meio",
-    objective: "Apresentar a dor da falta de blindagem entre operadores comerciais.",
-    viralAngle: "Storytelling de bastidores com números reais de perda de receita.",
-    ctaText: "Salve este post para revisar as travas de segurança do seu time.",
+    objective: "Desmistificar o volume cego e apresentar a necessidade de telemetria preditiva de fechamento.",
+    viralAngle: "Storytelling de bastidores sobre eficiência comercial real.",
+    ctaText: "Compartilhe com a liderança comercial da sua empresa.",
     status: "planejado",
   },
   {
     id: "plan-3",
     dayNumber: 3,
     dayLabel: "Sexta • 10/Out",
-    theme: "Arquitetura de Carrosséis B2B: O Framework de 7 Lâminas que Converte Decisores",
-    hookHeadline: "Carrossel de Canva colorido não vende para C-Level. Esta é a estrutura exata de retenção.",
+    theme: "Para Quem É a Black Link (E Para Quem NÃO É)",
+    hookHeadline: "Quem deve (e quem NÃO deve) usar a plataforma Black Link.",
     format: "carousel",
     funnelStage: "meio",
-    objective: "Educação técnica e posicionamento da Black Link como referência visual.",
-    viralAngle: "Desconstrução de framework passo a passo para salvar e aplicar.",
-    ctaText: "Envie este carrossel para o líder de marketing da sua empresa.",
+    objective: "Posicionamento firme de mercado, filtro de clientes ideais e atração de fundadores.",
+    viralAngle: "Filtro de exclusividade que gera alta atração por polarização positiva.",
+    ctaText: "Envie este post para os sócios da sua empresa.",
     status: "planejado",
   },
   {
     id: "plan-4",
     dayNumber: 4,
-    dayLabel: "Terça • 14/Out",
-    theme: "Demonstração Prática: Da Prospecção ao Faturamento em 1 Única Tela",
-    hookHeadline: "Veja como funciona o fluxo de trabalho de um time de vendas de elite.",
+    dayLabel: "Segunda • 13/Out",
+    theme: "A Nova Arquitetura de Velocidade Comercial: Do Lead ao Contrato sem Atrito",
+    hookHeadline: "Como desenhamos um sistema que pensa mais rápido que a sua equipe.",
     format: "carousel",
     funnelStage: "fundo",
-    objective: "Demonstração da plataforma Black Link CRM e geração de reuniões qualificadas.",
-    viralAngle: "Telas de alta fidelidade e dados ao vivo (Glassmorphism).",
-    ctaText: "Toque no link da bio para solicitar uma demonstração executiva.",
+    objective: "Apresentação dos módulos autônomos da plataforma e convite para a lista de fundadores.",
+    viralAngle: "Telas de alta fidelidade em Glassmorphism e dados de telemetria ao vivo.",
+    ctaText: "Toque no link da bio para solicitar acesso antecipado de membro fundador.",
     status: "planejado",
   },
 ];
@@ -808,19 +813,19 @@ export const DEFAULT_WEEKLY_AGENDA: AgendaDay[] = [
     fullDateLabel: "Quarta-feira, 08 de Outubro de 2026 (HOJE)",
     dayLabel: "Quarta • 08/Out",
     isToday: true,
-    strategicFocus: "Anti-Colisão & Blindagem de Operação (HOJE)",
+    strategicFocus: "Marco Zero & Manifesto Oficial (HOJE)",
     activities: [
       {
         id: "act-qua-1",
-        time: "07:45",
+        time: "08:15",
         period: "manha",
         format: "story",
-        funnelStage: "meio",
-        theme: "Alerta Crítico: 2 hunters abordando o mesmo CFO ao mesmo tempo",
-        hookHeadline: "Isso já aconteceu na sua equipe? Dois operadores disputando o mesmo decisor?",
-        objective: "Identificação da dor crítica de desorganização e perda de credibilidade corporativa.",
-        ctaText: "Vote na enquete: 'Já aconteceu aqui' ou 'Temos trava no sistema'.",
-        aiRationale: "Calibrado para as 07:45: quebra de rotina matinal com dor operacional real de liderança comercial.",
+        funnelStage: "topo",
+        theme: "Marco Zero: O Início Oficial da Black Link no Instagram",
+        hookHeadline: "Estamos abrindo as portas do nosso canal oficial. O que você verá por aqui a partir de hoje.",
+        objective: "Boas-vindas à fundação e abertura do espaço oficial no Instagram.",
+        ctaText: "Acompanhe nossos stories hoje para conhecer a visão por trás da marca.",
+        aiRationale: "Calibrado para as 08:15: primeiro contato matinal da audiência com o anúncio de fundação da conta.",
         status: "planejado",
       },
       {
@@ -828,25 +833,25 @@ export const DEFAULT_WEEKLY_AGENDA: AgendaDay[] = [
         time: "11:45",
         period: "tarde",
         format: "carousel",
-        funnelStage: "meio",
-        theme: "Anti-Colisão: Como 2 Hunters Abordaram o Mesmo CFO e Queimaram o Contrato",
-        hookHeadline: "O erro amador de R$ 180k que acontece quando seu CRM não tem radar anti-duplicidade.",
-        objective: "Apresentar a dor da falta de blindagem entre operadores comerciais e a solução de telemetria.",
-        ctaText: "Salve este carrossel para revisar as travas de segurança da sua operação.",
-        aiRationale: "Prescrito para as 11:45 pelo Agente de IA: quarta-feira ao meio-dia é o ponto de maior engajamento semanal para temas de gestão e ferramentas B2B.",
+        funnelStage: "topo",
+        theme: "O MANIFESTO: Por que o mercado corporativo de CRM precisava ser reinventado",
+        hookHeadline: "Por que o mercado corporativo de CRM falhou e o que viemos construir.",
+        objective: "Manifesto da marca, a tese central e a razão pela qual a Black Link foi criada.",
+        ctaText: "Salve este post e siga @blacklink.com.br para acompanhar a revolução desde o Marco Zero.",
+        aiRationale: "Prescrito para as 11:45 pelo Agente de IA: o post manifesto da conta nova precisa de máxima retenção no almoço de quarta-feira.",
         status: "planejado",
       },
       {
         id: "act-qua-3",
-        time: "17:30",
+        time: "18:00",
         period: "noite",
         format: "story",
         funnelStage: "meio",
-        theme: "Bastidores do Radar Anti-Colisão & Demonstração da Trava em Tempo Real",
-        hookHeadline: "Vários líderes pediram no direct para ver como a trava funciona na prática...",
-        objective: "Demonstração de produto com alta retenção e chamada para demonstração guiada.",
-        ctaText: "Envie 'RADAR' no Direct para receber um tour interativo em vídeo.",
-        aiRationale: "Agendado para as 17:30: momento ideal para converter interesse do carrossel do meio-dia em conversas diretas no Direct.",
+        theme: "Bastidores do Lançamento: Revelando as primeiras diretrizes da plataforma",
+        hookHeadline: "Nosso post manifesto está no ar. Veja o que preparamos para os próximos dias...",
+        objective: "Direcionamento para o feed e conexão com os primeiros seguidores da conta.",
+        ctaText: "Deixe sua pergunta na caixinha: qual é a maior dor comercial que sua equipe enfrenta hoje?",
+        aiRationale: "Agendado para as 18:00: encerramento do expediente, momento de maior abertura para interação em caixinhas de perguntas.",
         status: "planejado",
       },
     ],
@@ -1071,6 +1076,8 @@ export const useMarketingStore = create<MarketingState>()(
       // 1. Diagnóstico da Empresa & Concorrentes
       companyProfile: DEFAULT_COMPANY_PROFILE,
       setCompanyProfile: (profile) =>
+        set((state) => ({ companyProfile: { ...state.companyProfile, ...profile } })),
+      updateCompanyProfile: (profile) =>
         set((state) => ({ companyProfile: { ...state.companyProfile, ...profile } })),
       competitorsDiagnostic: DEFAULT_DIAGNOSTIC,
       isAnalyzingCompetitors: false,

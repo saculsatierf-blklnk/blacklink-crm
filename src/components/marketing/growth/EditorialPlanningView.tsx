@@ -82,6 +82,7 @@ export function EditorialPlanningView() {
     selectPlanForCreation,
     addPlanItem,
     companyProfile,
+    updateCompanyProfile,
     scheduledPosts,
   } = useMarketingStore();
 
@@ -239,6 +240,60 @@ export function EditorialPlanningView() {
             <p className="text-xs text-zinc-300 font-sans max-w-3xl leading-relaxed">
               Os horários, quantidade e formatos de postagens desta agenda <strong>não são fixos nem arbitrários</strong>. Eles foram calculados pelo Agente de IA com base no comportamento de consumo e janelas de atenção do seu público.
             </p>
+
+            {/* Seletor de Maturidade da Conta do Instagram */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <span className="text-[11px] font-mono text-zinc-400 font-bold uppercase flex items-center gap-1.5">
+                <span>Fase da Conta:</span>
+              </span>
+              <div className="inline-flex rounded-xl bg-black/60 border border-white/10 p-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateCompanyProfile({ accountStage: "lancamento_zero" });
+                    optimizeCadenceWithAI();
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                    (companyProfile.accountStage || "lancamento_zero") === "lancamento_zero"
+                      ? "bg-white text-black font-extrabold shadow-sm"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <span>🚀</span>
+                  <span>Marco Zero (Conta Nova)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateCompanyProfile({ accountStage: "tracao" });
+                    optimizeCadenceWithAI();
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                    companyProfile.accountStage === "tracao"
+                      ? "bg-white text-black font-extrabold shadow-sm"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <span>⚡</span>
+                  <span>Tração &amp; Consistência</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateCompanyProfile({ accountStage: "escala" });
+                    optimizeCadenceWithAI();
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                    companyProfile.accountStage === "escala"
+                      ? "bg-white text-black font-extrabold shadow-sm"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <span>🎯</span>
+                  <span>Escala &amp; Vendas</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Botão de Otimização da Cadência com Agente de IA */}

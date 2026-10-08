@@ -103,5 +103,6 @@ export interface LayoutProps {
   cardBgClass: string;
   renderHighlightedText: (text: string, accentColor: string) => React.ReactNode;
   currentSlide?: number;
+  totalSlides?: number;
   isLoadingAI?: boolean;
 }

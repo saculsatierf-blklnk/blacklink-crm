@@ -191,34 +191,34 @@ export function clampBody(text: string, max = 140): string {
 
 const INITIAL_SLIDES: SlideData[] = [
   {
-    tag: "DIAGNÓSTICO B2B",
-    headline: "Por que 82% dos **Leads Qualificados** esfriam em 48 horas?",
+    tag: "MARCO ZERO • MANIFESTO",
+    headline: "Por que o mercado de **CRM B2B falhou**?",
     bodyText:
-      "Sem um fluxo de inteligência preditiva e acompanhamento estruturado, a sua equipe perde negócios antes da primeira demonstração.",
+      "CRMs legados viraram cemitérios de dados lentos. Eles não ajudam a vender, apenas registram o passado.",
   },
   {
-    tag: "O ERRO CRÍTICO",
-    headline: "Planilhas e CRMs lentos **destroem o tempo de resposta**.",
+    tag: "A GRANDE MENTIRA",
+    headline: "Planilhas e burocracia **destroem seus hunters**.",
     bodyText:
-      "Empresas de alto crescimento não toleram atrito. O tempo entre o primeiro clique e o contato comercial define a taxa de vitória.",
+      "Empresas perdem milhões não por falta de leads, mas pelo atrito invisível entre o primeiro contato e o fechamento.",
   },
   {
-    tag: "A ARQUITETURA",
-    headline: "Automação de alto impacto e **dados centralizados**.",
+    tag: "A NOVA ARQUITETURA",
+    headline: "Um sistema que **pensa antes da sua equipe**.",
     bodyText:
-      "Integrar inteligência analítica em tempo real transforma operadores em consultores estratégicos de fechamento.",
+      "Criamos a Black Link para substituir o improviso por telemetria preditiva e velocidade comercial autônoma.",
   },
   {
-    tag: "RESULTADOS",
-    headline: "Redução de **64% no ciclo** das contas corporativas.",
+    tag: "NOSSO PADRÃO",
+    headline: "Tolerância zero a atrito e **foco em conversão**.",
     bodyText:
-      "A Black Link entrega visibilidade holística e controle rigoroso sobre cada etapa do pipeline comercial.",
+      "Sem interfaces pesadas. Apenas inteligência em tempo real para transformar operadores em consultores de elite.",
   },
   {
-    tag: "CALL TO ACTION",
-    headline: "Pronto para escalar sua **operação corporativa**?",
+    tag: "MEMBRO FUNDADOR",
+    headline: "Seja bem-vindo à **fundação da Black Link**.",
     bodyText:
-      "Salve este carrossel e compartilhe com sua diretoria para revolucionar seus fluxos de receita agora.",
+      "Salve este carrossel e siga @blacklink.com.br para acompanhar a revolução das vendas B2B desde o primeiro dia.",
   },
 ];
 
@@ -340,6 +340,42 @@ function synthesizeSlidesForPlan(
           tag: "SOLUÇÃO CORPORATIVA",
           headline: `Conecte-se com os Especialistas da **${brand}**`,
           bodyText: `${cta} Fale com nossos engenheiros pelo link da bio em ${handle} e receba um orçamento corporativo estruturado.`,
+        },
+      ];
+    }
+
+    const isManifesto =
+      cleanTheme.toLowerCase().includes("manifesto") ||
+      cleanTheme.toLowerCase().includes("marco zero") ||
+      rawHook.toLowerCase().includes("falhou") ||
+      rawHook.toLowerCase().includes("reinventado");
+
+    if (isManifesto) {
+      return [
+        {
+          tag: "MARCO ZERO • MANIFESTO",
+          headline: "Por que o mercado de **CRM B2B falhou**?",
+          bodyText: "CRMs legados viraram cemitérios de dados lentos. Eles não ajudam a vender, apenas registram o passado.",
+        },
+        {
+          tag: "A GRANDE MENTIRA",
+          headline: "Planilhas e burocracia **destroem seus hunters**.",
+          bodyText: "Empresas perdem milhões não por falta de leads, mas pelo atrito invisível entre o primeiro contato e o fechamento.",
+        },
+        {
+          tag: "A NOVA ARQUITETURA",
+          headline: "Um sistema que **pensa antes da sua equipe**.",
+          bodyText: "Criamos a Black Link para substituir o improviso por telemetria preditiva e velocidade comercial autônoma.",
+        },
+        {
+          tag: "NOSSO PADRÃO",
+          headline: "Tolerância zero a atrito e **foco em conversão**.",
+          bodyText: "Sem interfaces pesadas. Apenas inteligência em tempo real para transformar operadores em consultores de elite.",
+        },
+        {
+          tag: "MEMBRO FUNDADOR",
+          headline: "Seja bem-vindo à **fundação da Black Link**.",
+          bodyText: `${cta} Siga ${handle} e acompanhe a revolução das vendas B2B desde o primeiro dia.`,
         },
       ];
     }
