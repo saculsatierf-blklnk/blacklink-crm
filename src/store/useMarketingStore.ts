@@ -497,14 +497,14 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
 ];
 
 const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
-  name: "Black Link CRM",
-  instagram: "@blacklink.b2b",
-  website: "https://blacklink.com.br",
-  niche: "SaaS Enterprise & Inteligência Comercial B2B",
-  products: "Plataforma CRM Enterprise, Esteira de Prospecção Anti-Colisão e Estúdio de IA para Carrosséis",
-  targetAudience: "CEOs, Diretores Comerciais, Heads de Growth e Hunters B2B",
-  bio: "Inteligência Comercial B2B para times de elite 🚀\nTransformamos seu CRM em uma máquina de receita previsível.\nRadar Anti-Colisão | Automação | IA\n👇 Domine seu mercado abaixo:",
-  tagline: "Onde a estratégia de Growth encontra a precisão da Inteligência Comercial.",
+  name: "",
+  instagram: "",
+  website: "",
+  niche: "",
+  products: "",
+  targetAudience: "",
+  bio: "",
+  tagline: "",
   profileType: "company",
 };
 
@@ -644,11 +644,29 @@ export const useMarketingStore = create<MarketingState>()(
         set({ isAnalyzingCompetitors: true });
         const { companyProfile } = get();
 
+        // Sanitização contra contaminação cruzada se o site for diferente de Black Link
+        const cleanProfile = { ...companyProfile };
+        const webLower = (cleanProfile.website || "").toLowerCase();
+        if (webLower && !webLower.includes("blacklink") && !webLower.includes("blklnk")) {
+          if (cleanProfile.name === "Black Link CRM" || cleanProfile.name === "Black Link") {
+            cleanProfile.name = "";
+          }
+          if (cleanProfile.instagram === "@blacklink.b2b") {
+            cleanProfile.instagram = "";
+          }
+          if (cleanProfile.niche?.includes("SaaS Enterprise")) {
+            cleanProfile.niche = "";
+          }
+          if (cleanProfile.products?.includes("Plataforma CRM")) {
+            cleanProfile.products = "";
+          }
+        }
+
         try {
           const res = await fetch("/api/marketing/diagnostic", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(companyProfile),
+            body: JSON.stringify(cleanProfile),
           });
 
           if (res.ok) {
@@ -1338,7 +1356,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage",
+      name: "blacklink-marketing-storage-v3",
+      version: 3,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

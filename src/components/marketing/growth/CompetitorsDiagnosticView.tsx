@@ -293,7 +293,20 @@ export function CompetitorsDiagnosticView() {
                   <input
                     type="text"
                     value={companyProfile.website}
-                    onChange={(e) => setCompanyProfile({ website: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val && !val.includes("blacklink") && !val.includes("blklnk") && companyProfile.name === "Black Link CRM") {
+                        setCompanyProfile({
+                          website: val,
+                          name: "",
+                          niche: "",
+                          products: "",
+                          instagram: "",
+                        });
+                      } else {
+                        setCompanyProfile({ website: val });
+                      }
+                    }}
                     placeholder="Ex: https://gofermetais.com.br"
                     className="w-full h-9.5 rounded-xl border border-sky-500/30 bg-black/50 pl-9.5 pr-3 text-xs text-white font-mono focus:border-sky-400 focus:outline-none"
                   />

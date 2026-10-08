@@ -1399,6 +1399,32 @@ export async function POST(request: NextRequest) {
       scraped = await scrapeWebsiteText(body.website);
     }
 
+    // Descontaminação estrita: se o site ou instagram for de empresa terceira, descarta dados residuais da Black Link
+    const isNonBlackLinkWebsite = Boolean(
+      scraped.normalizedUrl &&
+      !scraped.normalizedUrl.toLowerCase().includes("blacklink") &&
+      !scraped.normalizedUrl.toLowerCase().includes("blklnk")
+    );
+    const isNonBlackLinkInstagram = Boolean(
+      body.instagram &&
+      !body.instagram.toLowerCase().includes("blacklink")
+    );
+
+    if (isNonBlackLinkWebsite || isNonBlackLinkInstagram) {
+      if (body.name && body.name.toLowerCase().includes("black link")) {
+        body.name = "";
+      }
+      if (body.niche && body.niche.includes("SaaS Enterprise")) {
+        body.niche = "";
+      }
+      if (body.products && body.products.includes("Plataforma CRM")) {
+        body.products = "";
+      }
+      if (body.instagram && body.instagram.includes("blacklink")) {
+        body.instagram = "";
+      }
+    }
+
     const isInfluencer =
       body.profileType === "influencer" ||
       (!body.website?.trim() && Boolean(body.instagram?.trim())) ||

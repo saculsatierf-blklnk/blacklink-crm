@@ -404,19 +404,45 @@ export function BlackLinkCarouselStudio() {
     setAiTheme(selectedPlanForCreation.theme);
     setAiAudience(companyProfile.targetAudience || "Público do Nicho");
 
-    // Procura se já existe um post sincronizado no Feed/Cronograma com lâminas prontas
+    // Procura se já existe um post sincronizado no Feed/Cronograma com lâminas prontas E válidas
     const matching = scheduledPosts.find(
       (p) =>
-        p.theme.toLowerCase().trim() === selectedPlanForCreation.theme.toLowerCase().trim() ||
-        p.hookHeadline.toLowerCase().trim() === selectedPlanForCreation.hookHeadline.toLowerCase().trim() ||
+        (p.theme &&
+          selectedPlanForCreation.theme &&
+          p.theme.toLowerCase().trim() ===
+            selectedPlanForCreation.theme.toLowerCase().trim()) ||
+        (p.hookHeadline &&
+          selectedPlanForCreation.hookHeadline &&
+          p.hookHeadline.toLowerCase().trim() ===
+            selectedPlanForCreation.hookHeadline.toLowerCase().trim()) ||
         p.id === selectedPlanForCreation.id
     );
 
-    if (matching && matching.slides && matching.slides.length > 0) {
+    const hasValidSlides =
+      matching &&
+      Array.isArray(matching.slides) &&
+      matching.slides.length > 0 &&
+      matching.slides.some(
+        (s) => s && (Boolean(s.headline?.trim()) || Boolean(s.bodyText?.trim()))
+      );
+
+    if (hasValidSlides && matching) {
       const formatted: SlideData[] = matching.slides.map((s, idx) => ({
-        tag: s.tag || (idx === 0 ? "GANCHO" : idx === matching.slides.length - 1 ? "CTA" : `LÂMINA ${idx + 1}`),
-        headline: s.headline,
-        bodyText: s.bodyText,
+        tag:
+          s.tag?.trim() ||
+          (idx === 0
+            ? "GANCHO"
+            : idx === matching.slides.length - 1
+            ? "CTA"
+            : `LÂMINA ${idx + 1}`),
+        headline:
+          s.headline?.trim() ||
+          selectedPlanForCreation.theme ||
+          `Lâmina ${idx + 1}`,
+        bodyText:
+          s.bodyText?.trim() ||
+          selectedPlanForCreation.objective ||
+          "Diretrizes e dados essenciais desta lâmina.",
       }));
       setSlides(formatted);
       setCurrentSlideIndex(0);
@@ -429,7 +455,7 @@ export function BlackLinkCarouselStudio() {
       setSlides(tailored);
       setCurrentSlideIndex(0);
 
-      const generatedCaption = `${selectedPlanForCreation.hookHeadline}\n\n${selectedPlanForCreation.theme}: Diretrizes práticas desenvolvidas especialmente para ${brand}.\n\n${selectedPlanForCreation.ctaText}\n\n#${brand.replace(/[^a-zA-Z0-9]/g, "")} #${selectedPlanForCreation.theme.replace(/[^a-zA-Z0-9]/g, "")} #AltaPerformance #InstagramGrowth`;
+      const generatedCaption = `${selectedPlanForCreation.hookHeadline || selectedPlanForCreation.theme}\n\n${selectedPlanForCreation.theme}: Diretrizes práticas desenvolvidas especialmente para ${brand}.\n\n${selectedPlanForCreation.ctaText || "Salve este post"}\n\n#${brand.replace(/[^a-zA-Z0-9]/g, "")} #AltaPerformance #InstagramGrowth`;
       setPostCaption(generatedCaption);
     }
   }, [selectedPlanForCreation, companyProfile, scheduledPosts]);
@@ -2371,9 +2397,13 @@ export function BlackLinkCarouselStudio() {
           <div className="w-full flex items-center justify-center p-3 md:p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl relative overflow-hidden">
             <div className="w-full flex items-center justify-center transition-all duration-300">
               <BlackLinkSlidePreview
-                slide={slides[currentSlideIndex]}
-                currentSlide={currentSlideIndex + 1}
-                totalSlides={slides.length}
+                slide={
+                  (slides && slides.length > 0 && slides[currentSlideIndex]) ||
+                  (slides && slides[0]) ||
+                  INITIAL_SLIDES[0]
+                }
+                currentSlide={Math.max(1, currentSlideIndex + 1)}
+                totalSlides={Math.max(1, slides?.length || 1)}
                 config={designConfig}
                 canvasId="blacklink-slide-canvas"
                 isLoadingAI={isGeneratingAI}

@@ -124,6 +124,28 @@ export function BlackLinkSlidePreview({
   const scale = config.fontSizeScale || 1.0;
   const isCta = currentSlide === totalSlides && totalSlides > 1;
 
+  // Garantia absoluta de fallback defensivo: nunca renderiza vazio nem crasha por campos nulos/indefinidos
+  const safeSlide: SlideData = {
+    tag:
+      slide?.tag?.trim() ||
+      (currentSlide === 1
+        ? "GANCHO MAGNÉTICO"
+        : isCta
+        ? "CTA FINAL"
+        : `LÂMINA ${currentSlide}`),
+    headline:
+      slide?.headline?.trim() ||
+      (isCta
+        ? "Próxima Ação Estratégica"
+        : "Defina a Headline desta Lâmina"),
+    bodyText:
+      slide?.bodyText?.trim() ||
+      "Diretrizes estratégicas e conteúdo acionável preparados para esta publicação.",
+    category: slide?.category,
+    chartData: slide?.chartData,
+    kpiHighlight: slide?.kpiHighlight,
+  };
+
   // Dimensões Fixas de Resolução (Padrão Canva)
   const is916 = config.aspectRatio === "9:16";
   const is45 = config.aspectRatio === "4:5";
@@ -145,7 +167,7 @@ export function BlackLinkSlidePreview({
   const LayoutComponent = LAYOUT_REGISTRY[config.layout] || LAYOUT_REGISTRY["brutalista"];
 
   const layoutProps: LayoutProps = {
-    slide,
+    slide: safeSlide,
     config,
     scale,
     isLight,
@@ -182,15 +204,16 @@ export function BlackLinkSlidePreview({
     const calculateScale = () => {
       const parent = wrapperRef.current?.parentElement || wrapperRef.current;
       if (!parent) return;
-      const availableWidth = parent.clientWidth || 460;
+      const rawWidth = parent.clientWidth;
+      const availableWidth = rawWidth && rawWidth > 40 ? rawWidth : 480;
       const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 900;
       const maxAvailableHeight = Math.min(viewportHeight * 0.72, 720);
 
-      const scaleByWidth = (availableWidth - 12) / canvasWidth;
-      const scaleByHeight = maxAvailableHeight / canvasHeight;
+      const scaleByWidth = Math.max(0.1, (availableWidth - 16) / canvasWidth);
+      const scaleByHeight = Math.max(0.1, maxAvailableHeight / canvasHeight);
 
       const bestScale = Math.min(scaleByWidth, scaleByHeight, 0.65);
-      const safeScale = Math.max(0.18, Math.min(bestScale, 1.0));
+      const safeScale = Math.max(0.28, Math.min(bestScale, 1.0));
 
       setComputedScale(Number(safeScale.toFixed(4)));
     };
