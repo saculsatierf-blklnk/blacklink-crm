@@ -168,7 +168,7 @@ export interface CompetitorsDiagnostic {
 
 export interface DailyActivityItem {
   id: string;
-  time: string; // "08:30", "12:00", "18:00"
+  time: string; // Horário calculado pelo Agente Especialista de IA
   period: "manha" | "tarde" | "noite";
   format: CreativeFormat; // "story" | "carousel" | "post"
   theme: string;
@@ -178,6 +178,30 @@ export interface DailyActivityItem {
   funnelStage: "topo" | "meio" | "fundo";
   status?: "planejado" | "em_producao" | "pronto";
   briefingNotes?: string;
+  aiRationale?: string; // Motivo algorítmico do Agente de IA para a escolha do horário e formato
+}
+
+export interface CadenceStrategy {
+  agentRole: string;
+  strategyName: string;
+  rationale: string;
+  peakEngagementWindows: string[];
+  recommendedVolume: string;
+  targetPersonaHabits: string;
+  lastOptimizedAt: string;
+}
+
+export interface AgendaDay {
+  index: number;
+  shortName: string;
+  fullName: string;
+  dateNumber: string;
+  monthStr: string;
+  fullDateLabel: string;
+  dayLabel: string;
+  isToday: boolean;
+  strategicFocus: string;
+  activities: DailyActivityItem[];
 }
 
 export interface EditorialPlanItem {
@@ -210,7 +234,7 @@ interface MarketingState {
   isAnalyzingCompetitors: boolean;
   analyzeCompanyAndCompetitors: () => Promise<void>;
 
-  // 2. Planejamento Estratégico & Cronograma
+  // 2. Planejamento Estratégico, Cronograma & Agente de Cadência Editorial
   editorialPlan: EditorialPlanItem[];
   isGeneratingPlan: boolean;
   generateEditorialPlan: () => Promise<void>;
@@ -218,6 +242,17 @@ interface MarketingState {
   selectPlanForCreation: (plan: EditorialPlanItem | null) => void;
   addPlanItem: (item: Omit<EditorialPlanItem, "id">) => void;
   updatePlanItem: (id: string, updates: Partial<EditorialPlanItem>) => void;
+
+  // Agente Especialista em Cadência Editorial & Algoritmo do Instagram
+  cadenceStrategy: CadenceStrategy;
+  weeklyAgenda: AgendaDay[];
+  isOptimizingCadence: boolean;
+  optimizeCadenceWithAI: () => Promise<void>;
+  updateDayActivity: (
+    dayIndex: number,
+    activityId: string,
+    updates: Partial<DailyActivityItem>
+  ) => void;
 
   // 4. Feed & Vitrine do Instagram (Prévias)
   feedViewMode: FeedViewMode;
@@ -643,6 +678,389 @@ const DEFAULT_EDITORIAL_PLAN: EditorialPlanItem[] = [
   },
 ];
 
+export const DEFAULT_CADENCE_STRATEGY: CadenceStrategy = {
+  agentRole: "Agente Especialista em Cadência & Algoritmo Editorial",
+  strategyName: "Cadência Executiva B2B • Retenção de Tomadores de Decisão",
+  rationale:
+    "Com base em dados de telemetria e comportamento digital de decisores corporativos, a abertura dos Stories às 07:50 atinge o público antes das reuniões de alinhamento. O consumo de carrosséis técnicos no feed atinge o ápice no intervalo de almoço (11:55), quando há maior disponibilidade para leitura profunda. O encerramento do expediente (17:45) concentra a maior taxa de conversão em respostas de Direct.",
+  peakEngagementWindows: [
+    "07:50 - 08:30 • Abertura Executiva (Menor Concorrência)",
+    "11:55 - 13:00 • Pico de Leitura & Salvamentos no Feed",
+    "17:45 - 19:15 • Fechamento de Dia & Conversão em Direct",
+  ],
+  recommendedVolume: "14 Stories de Engajamento + 4 Carrosséis Técnicos + 1 Post Único",
+  targetPersonaHabits:
+    "Tomadores de decisão corporativos e líderes B2B com consumo ágil de Stories matinais e tempo de leitura concentrado no meio-dia.",
+  lastOptimizedAt: "08/10/2026 11:40",
+};
+
+export const DEFAULT_WEEKLY_AGENDA: AgendaDay[] = [
+  {
+    index: 0,
+    shortName: "SEG",
+    fullName: "Segunda-feira",
+    dateNumber: "06",
+    monthStr: "Out",
+    fullDateLabel: "Segunda-feira, 06 de Outubro de 2026",
+    dayLabel: "Segunda • 06/Out",
+    isToday: false,
+    strategicFocus: "Ativação & Quebra de Padrão Semanal",
+    activities: [
+      {
+        id: "act-seg-1",
+        time: "07:50",
+        period: "manha",
+        format: "story",
+        funnelStage: "topo",
+        theme: "Enquete de Abertura: Diagnóstico de Gargalos Comerciais",
+        hookHeadline: "Você gasta mais tempo prospectando ou resolvendo ruído interno?",
+        objective: "Ativação de engajamento matinal sem atrito e coleta de intenção da audiência.",
+        ctaText: "Vote na enquete e ative o lembrete para a análise do meio-dia.",
+        aiRationale: "Calibrado para as 07:50 pelo Agente de IA: momento em que líderes checam o smartphone antes do expediente, gerando alta taxa de abertura nos Stories.",
+        status: "pronto",
+      },
+      {
+        id: "act-seg-2",
+        time: "11:55",
+        period: "tarde",
+        format: "carousel",
+        funnelStage: "topo",
+        theme: "Os 5 Gargalos Ocultos do Funil B2B",
+        hookHeadline: "Sua operação não tem problema de geração de leads. O gargalo é outro.",
+        objective: "Conscientização de decisores sobre vazamento de pipeline e falha no tempo de resposta.",
+        ctaText: "Comente 'FUNIL' para receber o checklist de diagnóstico no seu direct.",
+        aiRationale: "Prescrito para as 11:55: pausa do almoço com pico de retenção no feed, momento ideal para carrosséis de 5 a 7 lâminas com dados densos.",
+        status: "pronto",
+      },
+      {
+        id: "act-seg-3",
+        time: "17:45",
+        period: "noite",
+        format: "story",
+        funnelStage: "topo",
+        theme: "Debriefing da Enquete & Resposta às Dores nos Stories",
+        hookHeadline: "Mais de 65% votaram que o follow-up manual é o maior gargalo...",
+        objective: "Validação social das respostas do dia e direcionamento para conversa privada no Direct.",
+        ctaText: "Mande 'CHECKLIST' no direct para receber a planilha executiva.",
+        aiRationale: "Definido para as 17:45: encerramento do expediente corporativo, onde diretores respondem a Directs com menor pressão de tarefas imediatas.",
+        status: "pronto",
+      },
+    ],
+  },
+  {
+    index: 1,
+    shortName: "TER",
+    fullName: "Terça-feira",
+    dateNumber: "07",
+    monthStr: "Out",
+    fullDateLabel: "Terça-feira, 07 de Outubro de 2026",
+    dayLabel: "Terça • 07/Out",
+    isToday: false,
+    strategicFocus: "Processos & Engenharia de Outbound",
+    activities: [
+      {
+        id: "act-ter-1",
+        time: "08:10",
+        period: "manha",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Provocação: Follow-up Invasivo vs Presença Executiva Memorável",
+        hookHeadline: "Se sua mensagem parece spam, o decisor deleta antes da 2ª linha.",
+        objective: "Educação rápida sobre abordagem consultiva sem atrito com diretores e decisores.",
+        ctaText: "Responda à pergunta: Quantos toques seu time faz antes de desistir?",
+        aiRationale: "Calibrado para as 08:10: intervalo entre o café e a primeira reunião, com alta absorção de perguntas provocativas.",
+        status: "planejado",
+      },
+      {
+        id: "act-ter-2",
+        time: "12:15",
+        period: "tarde",
+        format: "carousel",
+        funnelStage: "meio",
+        theme: "Como Estruturar uma Cadência de Outbound Sem Parecer Invasivo",
+        hookHeadline: "A anatomia da sequência de 5 toques que gerou 34% de taxa de resposta executiva.",
+        objective: "Posicionamento técnico de metodologia comercial moderna e sem agressividade rasa.",
+        ctaText: "Salve este carrossel para estruturar os roteiros da sua equipe.",
+        aiRationale: "Agendado para as 12:15: horário de máxima entrega algorítmica para posts técnicos que demandam salvamento.",
+        status: "planejado",
+      },
+      {
+        id: "act-ter-3",
+        time: "18:05",
+        period: "noite",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Caixinha de Dúvidas: Como prospectar contas enterprise sem cold call chata",
+        hookHeadline: "Caixa aberta: qual a sua principal trava ao abordar contas grandes?",
+        objective: "Geração de leads qualificados respondendo dúvidas técnicas nos Stories.",
+        ctaText: "Deixe sua pergunta na caixinha para respondermos em vídeo.",
+        aiRationale: "Prescrito para as 18:05: alta adesão a caixinhas de perguntas após o encerramento das atividades comerciais.",
+        status: "planejado",
+      },
+    ],
+  },
+  {
+    index: 2,
+    shortName: "QUA",
+    fullName: "Quarta-feira",
+    dateNumber: "08",
+    monthStr: "Out",
+    fullDateLabel: "Quarta-feira, 08 de Outubro de 2026 (HOJE)",
+    dayLabel: "Quarta • 08/Out",
+    isToday: true,
+    strategicFocus: "Anti-Colisão & Blindagem de Operação (HOJE)",
+    activities: [
+      {
+        id: "act-qua-1",
+        time: "07:45",
+        period: "manha",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Alerta Crítico: 2 hunters abordando o mesmo CFO ao mesmo tempo",
+        hookHeadline: "Isso já aconteceu na sua equipe? Dois operadores disputando o mesmo decisor?",
+        objective: "Identificação da dor crítica de desorganização e perda de credibilidade corporativa.",
+        ctaText: "Vote na enquete: 'Já aconteceu aqui' ou 'Temos trava no sistema'.",
+        aiRationale: "Calibrado para as 07:45: quebra de rotina matinal com dor operacional real de liderança comercial.",
+        status: "planejado",
+      },
+      {
+        id: "act-qua-2",
+        time: "11:45",
+        period: "tarde",
+        format: "carousel",
+        funnelStage: "meio",
+        theme: "Anti-Colisão: Como 2 Hunters Abordaram o Mesmo CFO e Queimaram o Contrato",
+        hookHeadline: "O erro amador de R$ 180k que acontece quando seu CRM não tem radar anti-duplicidade.",
+        objective: "Apresentar a dor da falta de blindagem entre operadores comerciais e a solução de telemetria.",
+        ctaText: "Salve este carrossel para revisar as travas de segurança da sua operação.",
+        aiRationale: "Prescrito para as 11:45 pelo Agente de IA: quarta-feira ao meio-dia é o ponto de maior engajamento semanal para temas de gestão e ferramentas B2B.",
+        status: "planejado",
+      },
+      {
+        id: "act-qua-3",
+        time: "17:30",
+        period: "noite",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Bastidores do Radar Anti-Colisão & Demonstração da Trava em Tempo Real",
+        hookHeadline: "Vários líderes pediram no direct para ver como a trava funciona na prática...",
+        objective: "Demonstração de produto com alta retenção e chamada para demonstração guiada.",
+        ctaText: "Envie 'RADAR' no Direct para receber um tour interativo em vídeo.",
+        aiRationale: "Agendado para as 17:30: momento ideal para converter interesse do carrossel do meio-dia em conversas diretas no Direct.",
+        status: "planejado",
+      },
+    ],
+  },
+  {
+    index: 3,
+    shortName: "QUI",
+    fullName: "Quinta-feira",
+    dateNumber: "09",
+    monthStr: "Out",
+    fullDateLabel: "Quinta-feira, 09 de Outubro de 2026",
+    dayLabel: "Quinta • 09/Out",
+    isToday: false,
+    strategicFocus: "Burocracia vs Eficiência Operacional",
+    activities: [
+      {
+        id: "act-qui-1",
+        time: "08:00",
+        period: "manha",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Termômetro da Semana: Quantas horas seu time gasta preenchendo relatórios?",
+        hookHeadline: "Vendedor de alta performance tem que estar falando com cliente, não em planilhas.",
+        objective: "Quebra de padrão contra CRMs legados pesados que atrapalham o fechamento comercial.",
+        ctaText: "Arraste o termômetro com a sua média semanal de horas burocráticas.",
+        aiRationale: "Calibrado para as 08:00: uso do adesivo interativo de termômetro que eleva a relevância algorítmica da conta.",
+        status: "planejado",
+      },
+      {
+        id: "act-qui-2",
+        time: "12:00",
+        period: "tarde",
+        format: "post",
+        funnelStage: "meio",
+        theme: "O Custo Invisível da Burocracia Comercial: Métricas Reais de Desperdício",
+        hookHeadline: "Por que equipes com sistemas ultrapassados perdem até 42% do tempo produtivo dos closers.",
+        objective: "Apresentação de dados estatísticos densos e impacto direto no CAC da empresa.",
+        ctaText: "Compartilhe este insight com o líder de operações da sua organização.",
+        aiRationale: "Agendado para as 12:00: formato de post único de dados/gráfico para variar o ritmo visual do feed após dois carrosséis seguidos.",
+        status: "planejado",
+      },
+      {
+        id: "act-qui-3",
+        time: "18:15",
+        period: "noite",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Teaser da Sexta-Feira: O Framework de 7 Lâminas para Carrosséis B2B",
+        hookHeadline: "Amanhã vamos liberar o framework exato de 7 lâminas que usamos em clientes...",
+        objective: "Geração de expectativa e ativação de lembrete para a publicação do dia seguinte.",
+        ctaText: "Ative as notificações no perfil para conferir o carrossel amanhã às 12:00.",
+        aiRationale: "Prescrito para as 18:15: gatilho de antecipação que aquece a audiência para a publicação principal de sexta.",
+        status: "planejado",
+      },
+    ],
+  },
+  {
+    index: 4,
+    shortName: "SEX",
+    fullName: "Sexta-feira",
+    dateNumber: "10",
+    monthStr: "Out",
+    fullDateLabel: "Sexta-feira, 10 de Outubro de 2026",
+    dayLabel: "Sexta • 10/Out",
+    isToday: false,
+    strategicFocus: "Autoridade Visual & Frameworks Técnicos",
+    activities: [
+      {
+        id: "act-sex-1",
+        time: "07:40",
+        period: "manha",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Contraste de Posicionamento: Template genérico vs Apresentação Dark Industrial",
+        hookHeadline: "Você fecharia um contrato de R$ 60k com uma marca com artes infantis no feed?",
+        objective: "Conscientização executiva sobre o valor da percepção visual na precificação.",
+        ctaText: "Vote: 'O design define o valor percebido' ou 'Conteúdo basta'.",
+        aiRationale: "Calibrado para as 07:40: sexta-feira matinal tem alta dispersão, exigindo provocações visuais curtas e diretas.",
+        status: "planejado",
+      },
+      {
+        id: "act-sex-2",
+        time: "11:30",
+        period: "tarde",
+        format: "carousel",
+        funnelStage: "meio",
+        theme: "Arquitetura de Carrosséis B2B: O Framework de 7 Lâminas que Converte Decisores",
+        hookHeadline: "Carrossel comum não vende para C-Level. Esta é a estrutura exata de retenção.",
+        objective: "Educação técnica aprofundada e posicionamento como referência visual de alta conversão.",
+        ctaText: "Envie este carrossel para o líder de marketing ou growth da sua empresa.",
+        aiRationale: "Prescrito para as 11:30: na sexta-feira, o almoço se antecipa; postar às 11:30 maximiza o alcance antes do encerramento da semana.",
+        status: "planejado",
+      },
+      {
+        id: "act-sex-3",
+        time: "17:15",
+        period: "noite",
+        format: "story",
+        funnelStage: "fundo",
+        theme: "Checklist de Sexta: Como deixar o pipeline pronto para bater a meta na próxima semana",
+        hookHeadline: "Encerramento da semana com pipeline blindado e sem pontas soltas.",
+        objective: "Consolidação de autoridade executiva e oferta de material complementar.",
+        ctaText: "Mande 'FRAMEWORK' no Direct para receber o PDF em alta resolução.",
+        aiRationale: "Agendado para as 17:15: horário de 'fechar o computador' na sexta, com pico de retenção rápida em materiais para a semana seguinte.",
+        status: "planejado",
+      },
+    ],
+  },
+  {
+    index: 5,
+    shortName: "SÁB",
+    fullName: "Sábado",
+    dateNumber: "11",
+    monthStr: "Out",
+    fullDateLabel: "Sábado, 11 de Outubro de 2026",
+    dayLabel: "Sábado • 11/Out",
+    isToday: false,
+    strategicFocus: "Cultura, Princípios & Liderança",
+    activities: [
+      {
+        id: "act-sab-1",
+        time: "09:30",
+        period: "manha",
+        format: "story",
+        funnelStage: "topo",
+        theme: "Café com Insights: 3 Princípios de Líderes Comerciais de Alta Performance",
+        hookHeadline: "Disciplina de processo sempre supera a motivação momentânea.",
+        objective: "Humanização de marca com foco em liderança, maturidade e cultura corporativa.",
+        ctaText: "Qual princípio mais ressoa com o momento atual da sua empresa?",
+        aiRationale: "Calibrado para as 09:30: fim de semana possui despertar mais tardio; postar antes das 09:00 gera queima de alcance no sábado.",
+        status: "planejado",
+      },
+      {
+        id: "act-sab-2",
+        time: "12:30",
+        period: "tarde",
+        format: "post",
+        funnelStage: "topo",
+        theme: "Engenharia de Receita: Por Que Empresas Escaláveis Não Dependem de Heróis",
+        hookHeadline: "Se sua empresa para quando seu melhor vendedor viaja, você tem um gargalo estrutural crítico.",
+        objective: "Provocação executiva e reflexão estratégica de fim de semana para sócios e fundadores.",
+        ctaText: "Salve esta reflexão para debater na reunião de diretoria da próxima semana.",
+        aiRationale: "Prescrito para as 12:30: post de autoridade reflexiva de fim de semana com alto compartilhamento via Direct.",
+        status: "planejado",
+      },
+      {
+        id: "act-sab-3",
+        time: "19:00",
+        period: "noite",
+        format: "story",
+        funnelStage: "topo",
+        theme: "Recomendação de Leitura: O Livro Essencial para Escalar Vendas B2B",
+        hookHeadline: "A recomendação de leitura técnica para o final de semana...",
+        objective: "Indicação de bibliografia estratégica e engajamento orgânico de comunidade.",
+        ctaText: "Deixe sua recomendação de livro corporativo na caixinha.",
+        aiRationale: "Agendado para as 19:00: momento de desaceleração e busca por conteúdos de autodesenvolvimento.",
+        status: "planejado",
+      },
+    ],
+  },
+  {
+    index: 6,
+    shortName: "DOM",
+    fullName: "Domingo",
+    dateNumber: "12",
+    monthStr: "Out",
+    fullDateLabel: "Domingo, 12 de Outubro de 2026",
+    dayLabel: "Domingo • 12/Out",
+    isToday: false,
+    strategicFocus: "Planejamento & Abertura da Semana",
+    activities: [
+      {
+        id: "act-dom-1",
+        time: "10:15",
+        period: "manha",
+        format: "story",
+        funnelStage: "meio",
+        theme: "Planejamento Estratégico: O que você priorizou para a semana que se inicia?",
+        hookHeadline: "Quem alinha o domingo começa a segunda-feira executando sem hesitação.",
+        objective: "Ativação de senso de prioridade e foco estratégico para a nova semana de trabalho.",
+        ctaText: "Vote: 'Semana 100% planejada' ou 'Definindo metas agora'.",
+        aiRationale: "Calibrado para as 10:15: domingo de manhã propício para reflexão de planejamento da semana que vai iniciar.",
+        status: "planejado",
+      },
+      {
+        id: "act-dom-2",
+        time: "13:00",
+        period: "tarde",
+        format: "carousel",
+        funnelStage: "fundo",
+        theme: "Demonstração Prática: Da Prospecção ao Faturamento em 1 Única Tela",
+        hookHeadline: "Veja como funciona o fluxo de trabalho de uma operação comercial de elite.",
+        objective: "Demonstração da plataforma e geração de reuniões qualificadas para a nova semana.",
+        ctaText: "Toque no link da bio para solicitar uma demonstração executiva com nosso time.",
+        aiRationale: "Prescrito para as 13:00: domingo após o almoço concentra o maior índice de leitura calma e navegação pré-segunda-feira.",
+        status: "planejado",
+      },
+      {
+        id: "act-dom-3",
+        time: "19:45",
+        period: "noite",
+        format: "story",
+        funnelStage: "fundo",
+        theme: "Abertura Oficial de Slots para Demonstração Executiva da Semana",
+        hookHeadline: "Liberamos 5 vagas na agenda executiva para diagnóstico gratuito de pipeline...",
+        objective: "Conversão direta para inbound agendando sessões de demonstração com tomadores de decisão.",
+        ctaText: "Responda 'QUERO' agora para garantir seu slot na agenda desta semana.",
+        aiRationale: "Definido para as 19:45: 'efeito domingo à noite', onde executivos sentem a ansiedade da semana e agendam soluções para seus problemas de negócio.",
+        status: "planejado",
+      },
+    ],
+  },
+];
+
 export const useMarketingStore = create<MarketingState>()(
   persist(
     (set, get) => ({
@@ -790,6 +1208,53 @@ export const useMarketingStore = create<MarketingState>()(
           editorialPlan: s.editorialPlan.map((item) =>
             item.id === id ? { ...item, ...updates } : item
           ),
+        }));
+      },
+
+      // Agente Especialista em Cadência Editorial & Algoritmo do Instagram
+      cadenceStrategy: DEFAULT_CADENCE_STRATEGY,
+      weeklyAgenda: DEFAULT_WEEKLY_AGENDA,
+      isOptimizingCadence: false,
+      optimizeCadenceWithAI: async () => {
+        set({ isOptimizingCadence: true });
+        const { companyProfile } = get();
+
+        try {
+          const res = await fetch("/api/marketing/cadence", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(companyProfile),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.weeklyAgenda && data.cadenceStrategy) {
+              set({
+                weeklyAgenda: data.weeklyAgenda,
+                cadenceStrategy: data.cadenceStrategy,
+                isOptimizingCadence: false,
+              });
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Aviso ao otimizar cadência com o Agente de IA:", err);
+        }
+
+        await new Promise((r) => setTimeout(r, 600));
+        set({ isOptimizingCadence: false });
+      },
+      updateDayActivity: (dayIndex, activityId, updates) => {
+        set((state) => ({
+          weeklyAgenda: state.weeklyAgenda.map((day) => {
+            if (day.index !== dayIndex) return day;
+            return {
+              ...day,
+              activities: day.activities.map((act) =>
+                act.id === activityId ? { ...act, ...updates } : act
+              ),
+            };
+          }),
         }));
       },
 
@@ -1372,8 +1837,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v3",
-      version: 3,
+      name: "blacklink-marketing-storage-v4",
+      version: 4,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

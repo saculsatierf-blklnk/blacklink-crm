@@ -21,10 +21,12 @@ import {
   X,
   Clock,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   Check,
   FileText,
+  BrainCircuit,
+  Zap,
+  TrendingUp,
+  Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,380 +34,10 @@ import {
   type EditorialPlanItem,
   type DailyActivityItem,
   type CreativeFormat,
+  type AgendaDay,
 } from "@/store/useMarketingStore";
 
 export type PlanningViewMode = "diario" | "semanal" | "mensal";
-
-interface AgendaDayDefinition {
-  index: number;
-  shortName: string; // SEG, TER, QUA...
-  fullName: string; // Segunda-feira, etc.
-  dateNumber: string; // 06, 07, 08...
-  monthStr: string; // Out
-  fullDateLabel: string; // Quarta-feira, 08 de Outubro de 2026
-  dayLabel: string; // Quarta • 08/Out
-  isToday: boolean;
-  strategicFocus: string;
-  defaultStage: "topo" | "meio" | "fundo";
-  defaultActivities: DailyActivityItem[];
-}
-
-/**
- * 7 Dias Estruturados da Semana Atual (06 a 12 de Outubro de 2026)
- * Dia Atual: Quarta-feira, 08 de Outubro (HOJE - índice 2)
- */
-const BASE_WEEK_DAYS: AgendaDayDefinition[] = [
-  {
-    index: 0,
-    shortName: "SEG",
-    fullName: "Segunda-feira",
-    dateNumber: "06",
-    monthStr: "Out",
-    fullDateLabel: "Segunda-feira, 06 de Outubro de 2026",
-    dayLabel: "Segunda • 06/Out",
-    isToday: false,
-    strategicFocus: "Topo de Funil • Atração & Quebra de Paradigma",
-    defaultStage: "topo",
-    defaultActivities: [
-      {
-        id: "act-seg-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "topo",
-        theme: "Enquete Matinal: Qual o maior gargalo da sua operação comercial?",
-        hookHeadline: "Você gasta mais tempo prospectando ou resolvendo ruído interno?",
-        objective: "Ativação de engajamento matinal e validação das dores da audiência através de enquetes interativas.",
-        ctaText: "Vote na enquete e veja o diagnóstico da nossa equipe ao meio-dia.",
-        status: "pronto",
-      },
-      {
-        id: "act-seg-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "carousel",
-        funnelStage: "topo",
-        theme: "Os 5 Gargalos Ocultos do Funil B2B",
-        hookHeadline: "Sua operação não tem problema de geração de leads. O gargalo é outro.",
-        objective: "Conscientização de decisores sobre vazamento de pipeline e falha no tempo de resposta.",
-        ctaText: "Comente 'FUNIL' para receber o checklist de diagnóstico no seu direct.",
-        status: "pronto",
-      },
-      {
-        id: "act-seg-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "topo",
-        theme: "Debriefing da Enquete & Resposta às Dores nos Stories",
-        hookHeadline: "Mais de 65% votaram que o follow-up manual é o maior gargalo...",
-        objective: "Validação social das respostas do dia e direcionamento para conversa privada no Direct.",
-        ctaText: "Mande 'CHECKLIST' no direct para receber a planilha executiva.",
-        status: "pronto",
-      },
-    ],
-  },
-  {
-    index: 1,
-    shortName: "TER",
-    fullName: "Terça-feira",
-    dateNumber: "07",
-    monthStr: "Out",
-    fullDateLabel: "Terça-feira, 07 de Outubro de 2026",
-    dayLabel: "Terça • 07/Out",
-    isToday: false,
-    strategicFocus: "Meio de Funil • Cadência & Processos de Outbound",
-    defaultStage: "meio",
-    defaultActivities: [
-      {
-        id: "act-ter-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Provocação: Follow-up Invasivo vs Presença Executiva Memorável",
-        hookHeadline: "Se sua mensagem parece spam, o decisor deleta antes da 2ª linha.",
-        objective: "Educação rápida sobre abordagem consultiva sem atrito com diretores e decisores.",
-        ctaText: "Responda à pergunta: Quantos toques seu time faz antes de desistir?",
-        status: "planejado",
-      },
-      {
-        id: "act-ter-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "carousel",
-        funnelStage: "meio",
-        theme: "Como Estruturar uma Cadência de Outbound Sem Parecer Invasivo",
-        hookHeadline: "A anatomia da sequência de 5 toques que gerou 34% de taxa de resposta executiva.",
-        objective: "Posicionamento técnico de metodologia comercial moderna e sem agressividade rasa.",
-        ctaText: "Salve este carrossel para estruturar os roteiros da sua equipe.",
-        status: "planejado",
-      },
-      {
-        id: "act-ter-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Caixinha de Dúvidas: Como prospectar contas enterprise sem cold call chata",
-        hookHeadline: "Caixa aberta: qual a sua principal trava ao abordar contas grandes?",
-        objective: "Geração de leads qualificados respondendo dúvidas técnicas nos Stories.",
-        ctaText: "Deixe sua pergunta na caixinha para respondermos em vídeo.",
-        status: "planejado",
-      },
-    ],
-  },
-  {
-    index: 2,
-    shortName: "QUA",
-    fullName: "Quarta-feira",
-    dateNumber: "08",
-    monthStr: "Out",
-    fullDateLabel: "Quarta-feira, 08 de Outubro de 2026 (HOJE)",
-    dayLabel: "Quarta • 08/Out",
-    isToday: true,
-    strategicFocus: "Meio de Funil • Anti-Colisão & Blindagem de Território",
-    defaultStage: "meio",
-    defaultActivities: [
-      {
-        id: "act-qua-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Alerta Crítico: 2 hunters abordando o mesmo CFO ao mesmo tempo",
-        hookHeadline: "Isso já aconteceu na sua equipe? Dois operadores disputando o mesmo decisor?",
-        objective: "Identificação da dor crítica de desorganização e perda de credibilidade corporativa.",
-        ctaText: "Vote na enquete: 'Já aconteceu aqui' ou 'Temos trava no sistema'.",
-        status: "planejado",
-      },
-      {
-        id: "act-qua-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "carousel",
-        funnelStage: "meio",
-        theme: "Anti-Colisão: Como 2 Hunters Abordaram o Mesmo CFO e Queimaram o Contrato",
-        hookHeadline: "O erro amador de R$ 180k que acontece quando seu CRM não tem radar anti-duplicidade.",
-        objective: "Apresentar a dor da falta de blindagem entre operadores comerciais e a solução de telemetria.",
-        ctaText: "Salve este carrossel para revisar as travas de segurança da sua operação.",
-        status: "planejado",
-      },
-      {
-        id: "act-qua-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Bastidores do Radar Anti-Colisão & Demonstração da Trava em Tempo Real",
-        hookHeadline: "Vários líderes pediram no direct para ver como a trava funciona na prática...",
-        objective: "Demonstração de produto com alta retenção e chamada para demonstração guiada.",
-        ctaText: "Envie 'RADAR' no Direct para receber um tour interativo em vídeo.",
-        status: "planejado",
-      },
-    ],
-  },
-  {
-    index: 3,
-    shortName: "QUI",
-    fullName: "Quinta-feira",
-    dateNumber: "09",
-    monthStr: "Out",
-    fullDateLabel: "Quinta-feira, 09 de Outubro de 2026",
-    dayLabel: "Quinta • 09/Out",
-    isToday: false,
-    strategicFocus: "Meio de Funil • Burocracia vs Eficiência Operacional",
-    defaultStage: "meio",
-    defaultActivities: [
-      {
-        id: "act-qui-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Termômetro da Semana: Quantas horas seu time gasta preenchendo relatórios?",
-        hookHeadline: "Vendedor de alta performance tem que estar falando com cliente, não em planilhas.",
-        objective: "Quebra de padrão contra CRMs legados pesados que atrapalham o fechamento comercial.",
-        ctaText: "Arraste o termômetro com a sua média semanal de horas burocráticas.",
-        status: "planejado",
-      },
-      {
-        id: "act-qui-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "post",
-        funnelStage: "meio",
-        theme: "O Custo Invisível da Burocracia Comercial: Métricas Reais de Desperdício",
-        hookHeadline: "Por que equipes com sistemas ultrapassados perdem até 42% do tempo produtivo dos closers.",
-        objective: "Apresentação de dados estatísticos densos e impacto direto no CAC da empresa.",
-        ctaText: "Compartilhe este insight com o líder de operações da sua organização.",
-        status: "planejado",
-      },
-      {
-        id: "act-qui-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Teaser da Sexta-Feira: O Framework de 7 Lâminas para Carrosséis B2B",
-        hookHeadline: "Amanhã vamos liberar o framework exato de 7 lâminas que usamos em clientes...",
-        objective: "Geração de expectativa e ativação de lembrete para a publicação do dia seguinte.",
-        ctaText: "Ative as notificações no perfil para conferir o carrossel amanhã às 12:00.",
-        status: "planejado",
-      },
-    ],
-  },
-  {
-    index: 4,
-    shortName: "SEX",
-    fullName: "Sexta-feira",
-    dateNumber: "10",
-    monthStr: "Out",
-    fullDateLabel: "Sexta-feira, 10 de Outubro de 2026",
-    dayLabel: "Sexta • 10/Out",
-    isToday: false,
-    strategicFocus: "Meio de Funil • Autoridade Visual & Arquitetura de Conteúdo",
-    defaultStage: "meio",
-    defaultActivities: [
-      {
-        id: "act-sex-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Contraste de Posicionamento: Template genérico vs Apresentação Dark Industrial",
-        hookHeadline: "Você fecharia um contrato de R$ 60k com uma marca com artes infantis no feed?",
-        objective: "Conscientização executiva sobre o valor da percepção visual na precificação.",
-        ctaText: "Vote: 'O design define o valor percebido' ou 'Conteúdo basta'.",
-        status: "planejado",
-      },
-      {
-        id: "act-sex-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "carousel",
-        funnelStage: "meio",
-        theme: "Arquitetura de Carrosséis B2B: O Framework de 7 Lâminas que Converte Decisores",
-        hookHeadline: "Carrossel comum não vende para C-Level. Esta é a estrutura exata de retenção.",
-        objective: "Educação técnica aprofundada e posicionamento como referência visual de alta conversão.",
-        ctaText: "Envie este carrossel para o líder de marketing ou growth da sua empresa.",
-        status: "planejado",
-      },
-      {
-        id: "act-sex-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "fundo",
-        theme: "Checklist de Sexta: Como deixar o pipeline pronto para bater a meta na próxima semana",
-        hookHeadline: "Encerramento da semana com pipeline blindado e sem pontas soltas.",
-        objective: "Consolidação de autoridade executiva e oferta de material complementar.",
-        ctaText: "Mande 'FRAMEWORK' no Direct para receber o PDF em alta resolução.",
-        status: "planejado",
-      },
-    ],
-  },
-  {
-    index: 5,
-    shortName: "SÁB",
-    fullName: "Sábado",
-    dateNumber: "11",
-    monthStr: "Out",
-    fullDateLabel: "Sábado, 11 de Outubro de 2026",
-    dayLabel: "Sábado • 11/Out",
-    isToday: false,
-    strategicFocus: "Topo de Funil • Cultura, Liderança & Princípios de Escala",
-    defaultStage: "topo",
-    defaultActivities: [
-      {
-        id: "act-sab-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "topo",
-        theme: "Café com Insights: 3 Princípios de Líderes Comerciais de Alta Performance",
-        hookHeadline: "Disciplina de processo sempre supera a motivação momentânea.",
-        objective: "Humanização de marca com foco em liderança, maturidade e cultura corporativa.",
-        ctaText: "Qual princípio mais ressoa com o momento atual da sua empresa?",
-        status: "planejado",
-      },
-      {
-        id: "act-sab-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "post",
-        funnelStage: "topo",
-        theme: "Engenharia de Receita: Por Que Empresas Escaláveis Não Dependem de Heróis",
-        hookHeadline: "Se sua empresa para quando seu melhor vendedor viaja, você tem um gargalo estrutural crítico.",
-        objective: "Provocação executiva e reflexão estratégica de fim de semana para sócios e fundadores.",
-        ctaText: "Salve esta reflexão para debater na reunião de diretoria da próxima semana.",
-        status: "planejado",
-      },
-      {
-        id: "act-sab-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "topo",
-        theme: "Recomendação de Leitura: O Livro Essencial para Escalar Vendas B2B",
-        hookHeadline: "A recomendação de leitura técnica para o final de semana...",
-        objective: "Indicação de bibliografia estratégica e engajamento orgânico de comunidade.",
-        ctaText: "Deixe sua recomendação de livro corporativo na caixinha.",
-        status: "planejado",
-      },
-    ],
-  },
-  {
-    index: 6,
-    shortName: "DOM",
-    fullName: "Domingo",
-    dateNumber: "12",
-    monthStr: "Out",
-    fullDateLabel: "Domingo, 12 de Outubro de 2026",
-    dayLabel: "Domingo • 12/Out",
-    isToday: false,
-    strategicFocus: "Fundo de Funil • Planejamento & Abertura de Agenda da Semana",
-    defaultStage: "fundo",
-    defaultActivities: [
-      {
-        id: "act-dom-0830",
-        time: "08:30",
-        period: "manha",
-        format: "story",
-        funnelStage: "meio",
-        theme: "Planejamento Estratégico: O que você priorizou para a semana que se inicia?",
-        hookHeadline: "Quem alinha o domingo começa a segunda-feira executando sem hesitação.",
-        objective: "Ativação de senso de prioridade e foco estratégico para a nova semana de trabalho.",
-        ctaText: "Vote: 'Semana 100% planejada' ou 'Definindo metas agora'.",
-        status: "planejado",
-      },
-      {
-        id: "act-dom-1200",
-        time: "12:00",
-        period: "tarde",
-        format: "carousel",
-        funnelStage: "fundo",
-        theme: "Demonstração Prática: Da Prospecção ao Faturamento em 1 Única Tela",
-        hookHeadline: "Veja como funciona o fluxo de trabalho de uma operação comercial de elite.",
-        objective: "Demonstração da plataforma e geração de reuniões qualificadas para a nova semana.",
-        ctaText: "Toque no link da bio para solicitar uma demonstração executiva com nosso time.",
-        status: "planejado",
-      },
-      {
-        id: "act-dom-1800",
-        time: "18:00",
-        period: "noite",
-        format: "story",
-        funnelStage: "fundo",
-        theme: "Abertura Oficial de Slots para Demonstração Executiva da Semana",
-        hookHeadline: "Liberamos 5 vagas na agenda executiva para diagnóstico gratuito de pipeline...",
-        objective: "Conversão direta para inbound agendando sessões de demonstração com tomadores de decisão.",
-        ctaText: "Responda 'QUERO' agora para garantir seu slot na agenda desta semana.",
-        status: "planejado",
-      },
-    ],
-  },
-];
 
 const MONTH_WEEKS = [
   {
@@ -441,14 +73,16 @@ const MONTH_WEEKS = [
 export function EditorialPlanningView() {
   const {
     editorialPlan,
+    weeklyAgenda,
+    cadenceStrategy,
+    isOptimizingCadence,
+    optimizeCadenceWithAI,
     isGeneratingPlan,
     generateEditorialPlan,
     selectPlanForCreation,
     addPlanItem,
     companyProfile,
     scheduledPosts,
-    setSelectedFeedPost,
-    setFeedViewMode,
   } = useMarketingStore();
 
   const [planningViewMode, setPlanningViewMode] = useState<PlanningViewMode>("diario");
@@ -457,6 +91,7 @@ export function EditorialPlanningView() {
   const [funnelFilter, setFunnelFilter] = useState<"all" | "topo" | "meio" | "fundo">("all");
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [downloadFeedback, setDownloadFeedback] = useState<string | null>(null);
+  const [showAgentDetails, setShowAgentDetails] = useState<boolean>(true);
 
   // Form State
   const [newTheme, setNewTheme] = useState("");
@@ -467,77 +102,32 @@ export function EditorialPlanningView() {
   const [newObjective, setNewObjective] = useState("");
   const [newCta, setNewCta] = useState("");
 
-  /**
-   * Constrói a semana completa integrando as pautas existentes no store
-   * nos horários nobres de cada dia (12:00) e mantendo as atividades matinais (08:30) e noturnas (18:00).
-   */
-  const weekAgenda = useMemo(() => {
-    return BASE_WEEK_DAYS.map((baseDay) => {
-      // Procura pauta correspondente em editorialPlan
-      const matchedPlan = editorialPlan.find((item) => {
-        const dNum = item.dayNumber;
-        const dLab = (item.dayLabel || "").toLowerCase();
-        return (
-          dNum === baseDay.index + 1 ||
-          dLab.includes(baseDay.shortName.toLowerCase()) ||
-          dLab.includes(baseDay.dateNumber)
-        );
-      }) || (baseDay.index < editorialPlan.length ? editorialPlan[baseDay.index] : undefined);
-
-      // Copia atividades padrão
-      const activities = baseDay.defaultActivities.map((act) => {
-        // Se for o horário nobre das 12:00 e houver uma pauta do store, atualiza com a pauta
-        if (act.time === "12:00" && matchedPlan) {
-          return {
-            ...act,
-            id: matchedPlan.id || act.id,
-            theme: matchedPlan.theme || act.theme,
-            hookHeadline: matchedPlan.hookHeadline || act.hookHeadline,
-            format: matchedPlan.format || act.format,
-            funnelStage: matchedPlan.funnelStage || act.funnelStage,
-            objective: matchedPlan.objective || act.objective,
-            ctaText: matchedPlan.ctaText || act.ctaText,
-            status: matchedPlan.status || act.status,
-          };
-        }
-        return act;
-      });
-
-      return {
-        ...baseDay,
-        mainPlanItem: matchedPlan,
-        activities,
-      };
-    });
-  }, [editorialPlan]);
-
-  const selectedDay = weekAgenda[selectedAgendaDayIndex] || weekAgenda[2];
+  // Dia atualmente selecionado na agenda
+  const selectedDay = useMemo(() => {
+    return weeklyAgenda[selectedAgendaDayIndex] || weeklyAgenda[2] || weeklyAgenda[0];
+  }, [weeklyAgenda, selectedAgendaDayIndex]);
 
   // Atividades filtradas do dia selecionado
   const filteredDayActivities = useMemo(() => {
+    if (!selectedDay?.activities) return [];
     if (funnelFilter === "all") return selectedDay.activities;
     return selectedDay.activities.filter((act) => act.funnelStage === funnelFilter);
   }, [selectedDay, funnelFilter]);
 
   /**
-   * Ação Primária Obrigatória:
-   * Leva diretamente para o Estúdio de Criação com o briefing carregado!
+   * Leva diretamente para o Estúdio de Criação com o briefing da atividade carregado
    */
-  const handleProduceActivity = (
-    dayLabel: string,
-    activity: DailyActivityItem,
-    mainPlan?: EditorialPlanItem
-  ) => {
+  const handleProduceActivity = (dayLabel: string, activity: DailyActivityItem) => {
     const planItem: EditorialPlanItem = {
       id: activity.id,
-      dayNumber: selectedDay.index + 1,
+      dayNumber: (selectedDay?.index ?? 0) + 1,
       dayLabel: `${dayLabel} • ${activity.time}`,
       theme: activity.theme,
       hookHeadline: activity.hookHeadline || activity.theme,
       format: activity.format,
       funnelStage: activity.funnelStage,
       objective: activity.objective,
-      viralAngle: activity.objective,
+      viralAngle: activity.aiRationale || activity.objective,
       ctaText: activity.ctaText,
       status: "em_producao",
       scheduledTime: activity.time,
@@ -549,11 +139,12 @@ export function EditorialPlanningView() {
   const handleExportPlan = () => {
     const headers = [
       "Dia da Semana",
-      "Horario",
+      "Horario (Definido pela IA)",
       "Formato",
       "Estagio de Funil",
       "Tema da Publicacao",
       "Hook Magnetico (Slide 1)",
+      "Racional Algoritmico da IA",
       "Objetivo Estrategico",
       "CTA Sugerida",
       "Status",
@@ -561,7 +152,7 @@ export function EditorialPlanningView() {
 
     const rows: string[][] = [];
 
-    weekAgenda.forEach((day) => {
+    weeklyAgenda.forEach((day) => {
       day.activities.forEach((act) => {
         rows.push([
           `"${day.fullName} (${day.dateNumber}/Out)"`,
@@ -570,6 +161,7 @@ export function EditorialPlanningView() {
           `"${act.funnelStage}"`,
           `"${act.theme.replace(/"/g, '""')}"`,
           `"${act.hookHeadline.replace(/"/g, '""')}"`,
+          `"${(act.aiRationale || "").replace(/"/g, '""')}"`,
           `"${act.objective.replace(/"/g, '""')}"`,
           `"${act.ctaText.replace(/"/g, '""')}"`,
           `"${act.status || "planejado"}"`,
@@ -587,12 +179,12 @@ export function EditorialPlanningView() {
     const brandFileName = (companyProfile.name || "blacklink")
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "_");
-    link.setAttribute("download", `agenda_editorial_${brandFileName}.csv`);
+    link.setAttribute("download", `agenda_cadencia_ia_${brandFileName}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    setDownloadFeedback("Agenda e cronograma editorial exportados com sucesso em CSV!");
+    setDownloadFeedback("Agenda de cadência da IA exportada com sucesso em CSV!");
     setTimeout(() => setDownloadFeedback(null), 4000);
   };
 
@@ -623,27 +215,53 @@ export function EditorialPlanningView() {
 
   return (
     <div className="space-y-7 animate-in fade-in duration-300">
-      {/* Banner Superior Limpo com Controles Executivos */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl p-6 lg:p-8 shadow-2xl space-y-6">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+      {/* ==================================================================== */}
+      {/* CARD DO AGENTE ESPECIALISTA EM CADÊNCIA & ALGORITMO EDITORIAL        */}
+      {/* ==================================================================== */}
+      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] via-black/60 to-black/90 backdrop-blur-2xl p-6 lg:p-7 shadow-2xl space-y-5">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent pointer-events-none" />
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 border-b border-white/[0.08] pb-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">
-                02
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 border-b border-white/[0.08] pb-5">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="flex items-center gap-1.5 rounded-lg bg-emerald-500 text-black px-2.5 py-1 text-xs font-mono font-extrabold uppercase shadow-sm">
+                <BrainCircuit className="h-3.5 w-3.5" />
+                <span>Agente Especialista de IA</span>
               </span>
-              <h2 className="text-xl font-semibold text-white tracking-tight font-heading">
-                Planejamento &amp; Cronograma Editorial
-              </h2>
+              <span className="text-xs font-mono text-emerald-300 font-bold bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md">
+                {cadenceStrategy.strategyName}
+              </span>
             </div>
-            <p className="text-xs text-zinc-400 font-sans max-w-2xl">
-              Selecione o dia na <strong>Agenda Diária</strong> para ver horários (Stories e Carrosséis) e produzir no estúdio com 1 clique, ou expanda para a <strong>Grade Semanal</strong> completa.
+
+            <h2 className="text-xl font-bold text-white tracking-tight font-heading">
+              Cadência &amp; Horários Calculados por Inteligência Artificial
+            </h2>
+            <p className="text-xs text-zinc-300 font-sans max-w-3xl leading-relaxed">
+              Os horários, quantidade e formatos de postagens desta agenda <strong>não são fixos nem arbitrários</strong>. Eles foram calculados pelo Agente de IA com base no comportamento de consumo e janelas de atenção do seu público.
             </p>
           </div>
 
-          {/* Botões Superiores de Exportação e Regeneração */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Botão de Otimização da Cadência com Agente de IA */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <button
+              type="button"
+              disabled={isOptimizingCadence}
+              onClick={() => optimizeCadenceWithAI()}
+              className="flex items-center gap-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 px-4 py-2 text-xs font-bold text-black transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            >
+              {isOptimizingCadence ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Calculando Cadência com IA...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-3.5 w-3.5 text-black fill-black" />
+                  <span>Recalcular Cadência com Agente de IA</span>
+                </>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={handleExportPlan}
@@ -652,25 +270,43 @@ export function EditorialPlanningView() {
               <Download className="h-3.5 w-3.5" />
               <span>Exportar CSV</span>
             </button>
+          </div>
+        </div>
 
-            <button
-              type="button"
-              disabled={isGeneratingPlan}
-              onClick={() => generateEditorialPlan()}
-              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-md hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-            >
-              {isGeneratingPlan ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Gerando Pautas...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-3.5 w-3.5 text-black" />
-                  <span>Regenerar com IA</span>
-                </>
-              )}
-            </button>
+        {/* Resumo do Racional Estratégico do Agente de IA */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+          {/* Racional Algorítmico */}
+          <div className="md:col-span-2 rounded-2xl bg-black/50 border border-white/10 p-4 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono uppercase text-emerald-400 font-extrabold flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5" />
+                <span>Racional do Agente de IA para Este Perfil:</span>
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">
+                Atualizado: {cadenceStrategy.lastOptimizedAt}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-200 font-sans leading-relaxed">
+              {cadenceStrategy.rationale}
+            </p>
+          </div>
+
+          {/* Janelas de Pico Calculadas */}
+          <div className="rounded-2xl bg-black/50 border border-white/10 p-4 space-y-2">
+            <span className="text-[10px] font-mono uppercase text-zinc-400 font-extrabold block">
+              Janelas de Pico Decididas pela IA:
+            </span>
+            <div className="space-y-1.5">
+              {cadenceStrategy.peakEngagementWindows.map((win, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 text-[11px] font-mono text-zinc-300 bg-white/[0.04] px-2.5 py-1 rounded-lg border border-white/5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="line-clamp-1">{win}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -683,7 +319,7 @@ export function EditorialPlanningView() {
         )}
 
         {/* Barra de Controles: SELETOR DE VISÃO (Diária / Semanal / Mensal) + FILTRO DE FUNIL */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-1">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-2 border-t border-white/[0.06]">
           {/* Seletor de Visão (Tabs Apple / Linear) */}
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold">
@@ -700,7 +336,7 @@ export function EditorialPlanningView() {
                 }`}
               >
                 <Clock className="h-3.5 w-3.5" />
-                <span>Diária (Agenda)</span>
+                <span>Diária (Agenda com IA)</span>
               </button>
 
               <button
@@ -713,7 +349,7 @@ export function EditorialPlanningView() {
                 }`}
               >
                 <Columns3 className="h-3.5 w-3.5" />
-                <span>Semanal (Grade)</span>
+                <span>Semanal (Grade 7 Dias)</span>
               </button>
 
               <button
@@ -726,7 +362,7 @@ export function EditorialPlanningView() {
                 }`}
               >
                 <CalendarRange className="h-3.5 w-3.5" />
-                <span>Mensal (4 Semanas)</span>
+                <span>Mensal (Estratégico)</span>
               </button>
             </div>
           </div>
@@ -771,7 +407,7 @@ export function EditorialPlanningView() {
         {isAddingItem && (
           <form
             onSubmit={handleAddNewItem}
-            className="rounded-2xl border border-white/10 bg-black/50 p-5 space-y-4 animate-in fade-in duration-200"
+            className="rounded-2xl border border-white/10 bg-black/60 p-5 space-y-4 animate-in fade-in duration-200"
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <span className="text-xs font-semibold text-white">Adicionar Pauta Personalizada</span>
@@ -847,17 +483,17 @@ export function EditorialPlanningView() {
       </div>
 
       {/* ==================================================================== */}
-      {/* 1. VISÃO DIÁRIA COM AGENDA INTERATIVA DE DIAS                        */}
+      {/* 1. VISÃO DIÁRIA COM AGENDA DECIDIDA PELO AGENTE DE IA                */}
       {/* ==================================================================== */}
       {planningViewMode === "diario" && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* SELETOR INTERATIVO DE DIAS DA AGENDA (STRIP SEMANAL) */}
+          {/* SELETOR INTERATIVO DE DIAS DA AGENDA */}
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:p-5 backdrop-blur-xl space-y-3">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-emerald-400" />
                 <span className="text-xs font-mono uppercase tracking-wider text-white font-bold">
-                  Agenda Semanal • Clique no Dia para Ver os Horários
+                  Agenda Semanal da IA • Clique no Dia para Ver os Horários
                 </span>
               </div>
               <span className="text-[11px] font-mono text-zinc-400">
@@ -867,7 +503,7 @@ export function EditorialPlanningView() {
 
             {/* Strip de 7 Botões de Dias */}
             <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5">
-              {weekAgenda.map((day) => {
+              {weeklyAgenda.map((day) => {
                 const isSelected = day.index === selectedAgendaDayIndex;
                 const isToday = day.isToday;
 
@@ -913,26 +549,23 @@ export function EditorialPlanningView() {
                       {day.dateNumber}
                     </span>
 
-                    {/* Indicadores de atividades programadas naquele dia */}
+                    {/* Indicadores de horários/atividades decididas pela IA naquele dia */}
                     <div className="flex items-center gap-1 mt-0.5">
-                      <span
-                        title="08:30 Story"
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isSelected ? "bg-purple-600" : "bg-purple-400"
-                        }`}
-                      />
-                      <span
-                        title="12:00 Post Principal"
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isSelected ? "bg-sky-600" : "bg-sky-400"
-                        }`}
-                      />
-                      <span
-                        title="18:00 Story"
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isSelected ? "bg-purple-600" : "bg-purple-400"
-                        }`}
-                      />
+                      {day.activities.map((act, i) => (
+                        <span
+                          key={act.id || i}
+                          title={`${act.time} ${act.format}`}
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isSelected
+                              ? act.format === "story"
+                                ? "bg-purple-600"
+                                : "bg-sky-600"
+                              : act.format === "story"
+                              ? "bg-purple-400"
+                              : "bg-sky-400"
+                          }`}
+                        />
+                      ))}
                     </div>
                   </button>
                 );
@@ -954,20 +587,20 @@ export function EditorialPlanningView() {
                 )}
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Foco Estratégico: <strong>{selectedDay.strategicFocus}</strong>
+                Foco do Dia: <strong>{selectedDay.strategicFocus}</strong>
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono text-zinc-400">
-                {filteredDayActivities.length} Atividades Programadas
+              <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-bold">
+                {filteredDayActivities.length} Atividades Prescritas pela IA
               </span>
               <button
                 type="button"
                 onClick={() => setPlanningViewMode("semanal")}
                 className="text-xs font-mono text-zinc-400 hover:text-white underline cursor-pointer flex items-center gap-1 ml-2"
               >
-                <span>Ver toda a semana</span>
+                <span>Ver semana inteira</span>
                 <ArrowRight className="h-3 w-3" />
               </button>
             </div>
@@ -978,7 +611,6 @@ export function EditorialPlanningView() {
             {filteredDayActivities.map((activity) => {
               const isStory = activity.format === "story";
               const isCarousel = activity.format === "carousel";
-              const isPost = activity.format === "post";
               const isTopo = activity.funnelStage === "topo";
               const isMeio = activity.funnelStage === "meio";
 
@@ -987,19 +619,19 @@ export function EditorialPlanningView() {
                   key={activity.id}
                   className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6 space-y-4 hover:border-white/20 transition-all shadow-xl backdrop-blur-xl group"
                 >
-                  {/* Top Bar da Atividade com Horário e Formato */}
+                  {/* Top Bar da Atividade com Horário da IA e Formato */}
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
                     <div className="flex items-center gap-3">
-                      {/* Badge de Horário em Destaque */}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] border border-white/10 text-white font-mono text-xs font-bold shadow-inner">
+                      {/* Badge de Horário Calculado pela IA */}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] border border-emerald-500/30 text-white font-mono text-xs font-bold shadow-inner">
                         <Clock className="h-3.5 w-3.5 text-emerald-400" />
-                        <span>{activity.time}</span>
+                        <span className="text-emerald-300 font-extrabold">{activity.time}</span>
                         <span className="text-[10px] text-zinc-400 font-normal">
                           {activity.period === "manha"
-                            ? "• Manhã"
+                            ? "• Abertura Matinal"
                             : activity.period === "tarde"
-                            ? "• Tarde (Horário Nobre)"
-                            : "• Noite"}
+                            ? "• Janela de Almoço"
+                            : "• Encerramento / Noite"}
                         </span>
                       </div>
 
@@ -1053,6 +685,19 @@ export function EditorialPlanningView() {
                     </div>
                   </div>
 
+                  {/* Racional Algorítmico do Agente de IA para Este Horário */}
+                  {activity.aiRationale && (
+                    <div className="flex items-start gap-2 bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-200/90 font-sans">
+                      <BrainCircuit className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
+                      <div>
+                        <strong className="text-emerald-300 font-mono text-[11px] uppercase block mb-0.5">
+                          Racional do Agente de IA para este Horário:
+                        </strong>
+                        <p className="leading-relaxed">{activity.aiRationale}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Conteúdo: Tema e Gancho */}
                   <div className="space-y-2">
                     <h4 className="text-base font-semibold text-white tracking-tight font-heading">
@@ -1061,7 +706,7 @@ export function EditorialPlanningView() {
 
                     <div className="rounded-xl bg-black/50 border border-white/5 p-3.5 space-y-1">
                       <span className="text-[10px] font-mono uppercase text-zinc-400 block font-bold">
-                        {isStory ? "Gancho / Texto da Tela de Abertura:" : "Gancho de Retenção (Headline do Slide 1):"}
+                        {isStory ? "Gancho da Tela de Abertura do Story:" : "Gancho de Retenção (Headline do Slide 1):"}
                       </span>
                       <p className="text-xs text-zinc-200 font-sans leading-relaxed">
                         &ldquo;{activity.hookHeadline}&rdquo;
@@ -1089,17 +734,13 @@ export function EditorialPlanningView() {
                   {/* Rodapé com o BOTÃO DE AÇÃO OBRIGATÓRIO (PRODUZIR NO ESTÚDIO) */}
                   <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
                     <span className="text-[11px] font-mono text-zinc-400">
-                      {isStory
-                        ? "3 Lâminas verticais 9:16 geradas no estúdio"
-                        : isCarousel
-                        ? "Carrossel de alta retenção no feed"
-                        : "Post de autoridade executiva"}
+                      Horário prescrito: <strong className="text-white">{activity.time}</strong> • {isStory ? "9:16 Vertical" : "Feed"}
                     </span>
 
-                    {/* BOTÃO PRIMÁRIO: PRODUZIR NO ESTÚDIO (NUNCA 'VER NAS PRÉVIAS') */}
+                    {/* BOTÃO PRIMÁRIO: PRODUZIR NO ESTÚDIO */}
                     <button
                       type="button"
-                      onClick={() => handleProduceActivity(selectedDay.dayLabel, activity, selectedDay.mainPlanItem)}
+                      onClick={() => handleProduceActivity(selectedDay.dayLabel, activity)}
                       className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer shadow-lg"
                     >
                       <Wand2 className="h-3.5 w-3.5 text-black" />
@@ -1120,17 +761,17 @@ export function EditorialPlanningView() {
       )}
 
       {/* ==================================================================== */}
-      {/* 2. VISÃO SEMANAL EXPANDIDA (Grade Completa Segunda a Domingo)       */}
+      {/* 2. VISÃO SEMANAL EXPANDIDA (Grade Completa com Horários da IA)       */}
       {/* ==================================================================== */}
       {planningViewMode === "semanal" && (
         <div className="space-y-5 animate-in fade-in duration-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
             <div>
               <span className="text-xs font-mono uppercase tracking-wider text-white font-bold block">
-                Grade Semanal de Publicações (Segunda a Domingo)
+                Grade Semanal Prescrita pelo Agente de IA (Segunda a Domingo)
               </span>
               <span className="text-xs text-zinc-400">
-                Visão panorâmica dos 7 dias com Stories e Posts integrados. Clique em qualquer card para produzir.
+                Horários calculados para o nicho de {companyProfile.name || "sua empresa"}. Clique em qualquer pauta para produzir.
               </span>
             </div>
 
@@ -1149,9 +790,9 @@ export function EditorialPlanningView() {
 
           {/* Grid dos 7 Dias da Semana */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {weekAgenda.map((day) => {
+            {weeklyAgenda.map((day) => {
               const isToday = day.isToday;
-              const mainAct = day.activities.find((a) => a.time === "12:00") || day.activities[0];
+              const mainAct = day.activities.find((a) => a.format !== "story") || day.activities[0];
 
               return (
                 <div
@@ -1190,15 +831,17 @@ export function EditorialPlanningView() {
                         }}
                         className="text-[10px] font-mono text-zinc-400 hover:text-white underline cursor-pointer"
                       >
-                        Ver Detalhes ➔
+                        Abrir Agenda ➔
                       </button>
                     </div>
 
-                    {/* Pauta Principal do Meio-Dia */}
+                    {/* Pauta Principal do Dia */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                        <span className="text-emerald-400 font-bold">12:00 • Post Principal</span>
-                        <span className="uppercase text-zinc-400">{mainAct.format}</span>
+                        <span className="text-emerald-400 font-bold">
+                          {mainAct.time} • {mainAct.format === "story" ? "Story" : "Post Feed"}
+                        </span>
+                        <span className="uppercase text-zinc-400">{mainAct.funnelStage}</span>
                       </div>
                       <h4 className="text-sm font-semibold text-white tracking-tight line-clamp-2 font-heading">
                         {mainAct.theme}
@@ -1208,10 +851,10 @@ export function EditorialPlanningView() {
                       </p>
                     </div>
 
-                    {/* Lista dos 3 Horários Programados do Dia */}
+                    {/* Cadência Horária Decidida pelo Agente */}
                     <div className="space-y-1.5 pt-1">
                       <span className="text-[10px] font-mono uppercase text-zinc-400 block font-bold">
-                        Cadência do Dia ({day.activities.length} Atividades):
+                        Cadência Horária da IA ({day.activities.length} Atividades):
                       </span>
                       <div className="space-y-1">
                         {day.activities.map((act) => (
@@ -1219,14 +862,14 @@ export function EditorialPlanningView() {
                             key={act.id}
                             className="flex items-center justify-between text-[11px] bg-black/30 px-2 py-1.5 rounded-md border border-white/5"
                           >
-                            <span className="font-mono text-zinc-300 font-bold">{act.time}</span>
+                            <span className="font-mono text-emerald-400 font-bold">{act.time}</span>
                             <span className="text-zinc-400 line-clamp-1 max-w-[130px] text-[10px]">
                               {act.format === "story" ? "Story: " : "Feed: "}
                               {act.theme}
                             </span>
                             <button
                               type="button"
-                              onClick={() => handleProduceActivity(day.dayLabel, act, day.mainPlanItem)}
+                              onClick={() => handleProduceActivity(day.dayLabel, act)}
                               className="text-[10px] font-semibold text-white hover:underline cursor-pointer"
                             >
                               Produzir ➔
@@ -1240,12 +883,12 @@ export function EditorialPlanningView() {
                   {/* Rodapé do Card com Botão Primário para Produzir */}
                   <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
                     <span className="text-[10px] font-mono text-zinc-400">
-                      Foco: {day.strategicFocus.split("•")[0]}
+                      {day.activities.length} slots ativos
                     </span>
 
                     <button
                       type="button"
-                      onClick={() => handleProduceActivity(day.dayLabel, mainAct, day.mainPlanItem)}
+                      onClick={() => handleProduceActivity(day.dayLabel, mainAct)}
                       className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-sm"
                     >
                       <Wand2 className="h-3 w-3" />
@@ -1269,7 +912,7 @@ export function EditorialPlanningView() {
               Visão Mensal Estratégica (Ciclo de 4 Semanas de Crescimento)
             </span>
             <span className="text-xs text-zinc-400 font-mono">
-              Total: 21 Atividades Programadas no Mês • Cobertura de Funil: 100%
+              Total: 21 Atividades Programadas pela IA • Cobertura de Funil: 100%
             </span>
           </div>
 
