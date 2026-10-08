@@ -265,6 +265,7 @@ interface MarketingState {
   selectedFeedPost: ScheduledPost | null;
   setSelectedFeedPost: (post: ScheduledPost | null) => void;
   updateScheduledPost: (id: string, updates: Partial<ScheduledPost>) => void;
+  resetToOfficialFoundationPosts: () => void;
   approveStudioArtToFeed: (
     postData: Partial<ScheduledPost>,
     planId?: string
@@ -1387,6 +1388,12 @@ export const useMarketingStore = create<MarketingState>()(
               : state.selectedFeedPost,
         }));
       },
+      resetToOfficialFoundationPosts: () => {
+        set({
+          scheduledPosts: INITIAL_SCHEDULED_POSTS,
+          selectedFeedPost: INITIAL_SCHEDULED_POSTS[0],
+        });
+      },
       approveStudioArtToFeed: (postData, planId) => {
         const state = get();
         const existingId = postData.id;
@@ -1950,8 +1957,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v4",
-      version: 4,
+      name: "blacklink-marketing-storage-v5",
+      version: 5,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

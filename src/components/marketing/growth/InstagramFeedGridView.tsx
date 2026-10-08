@@ -78,6 +78,7 @@ export function InstagramFeedGridView() {
     selectedFeedPost,
     setSelectedFeedPost,
     updateScheduledPost,
+    resetToOfficialFoundationPosts,
     setActiveGrowthTab,
     selectPlanForCreation,
     editorialPlan,
@@ -277,6 +278,19 @@ export function InstagramFeedGridView() {
               <div className="flex items-center gap-2 sm:ml-auto">
                 <button
                   type="button"
+                  onClick={() => {
+                    resetToOfficialFoundationPosts();
+                    setCopiedFeedback("Grade Oficial de 9 Posts restaurada com sucesso!");
+                    setTimeout(() => setCopiedFeedback(null), 3000);
+                  }}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] px-3.5 py-2 text-xs font-semibold text-white transition-all cursor-pointer shadow-md"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                  <span>✦ 9 Posts Oficiais</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsManualModalOpen(true)}
                   className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-md"
                 >
@@ -424,11 +438,32 @@ export function InstagramFeedGridView() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {scheduledPosts.map((post) => {
+            {scheduledPosts.map((post, postIdx) => {
               const firstSlide = post.slides[0];
               const totalSlides = post.slides.length || 1;
-              const variant = firstSlide?.blackLinkVariant || "3d-sculpture";
-              const variantInfo = VARIANT_OPTIONS.find((v) => v.id === variant) || VARIANT_OPTIONS[0];
+              const fallbackVariants: BlackLinkStyleVariant[] = [
+                "3d-sculpture",
+                "swiss-box",
+                "pure-monumental",
+                "clean-ice",
+              ];
+              const variant =
+                firstSlide?.blackLinkVariant ||
+                fallbackVariants[postIdx % fallbackVariants.length];
+              const variantInfo =
+                VARIANT_OPTIONS.find((v) => v.id === variant) || VARIANT_OPTIONS[0];
+
+              const sanitizedSlide = {
+                ...firstSlide,
+                headline: firstSlide?.headline || post.theme,
+                bodyText: firstSlide?.bodyText || post.hookHeadline,
+                tag: firstSlide?.tag || `0${postIdx + 1} // DIRETRIZ`,
+                blackLinkVariant: variant,
+                imageUrl:
+                  firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide")
+                    ? firstSlide.imageUrl
+                    : undefined,
+              };
 
               return (
                 <div
@@ -438,7 +473,7 @@ export function InstagramFeedGridView() {
                 >
                   {/* Arte Gráfica Real da Lâmina */}
                   <PostSlideDisplay
-                    slide={firstSlide}
+                    slide={sanitizedSlide}
                     authorName={companyProfile.name}
                     authorHandle={companyProfile.instagram}
                     slideNumber={1}
@@ -567,13 +602,33 @@ export function InstagramFeedGridView() {
 
                 {/* 4. Canvas da Lâmina no Visor */}
                 <div className="relative aspect-square w-full bg-zinc-950 overflow-hidden flex items-center justify-center select-none">
-                  <PostSlideDisplay
-                    slide={visorActivePost.slides[visorSlideIdx] || visorActivePost.slides[0]}
-                    authorName={companyProfile.name}
-                    authorHandle={companyProfile.instagram}
-                    slideNumber={visorSlideIdx + 1}
-                    totalSlides={visorActivePost.slides.length}
-                  />
+                  {(() => {
+                    const rawVisorSlide =
+                      visorActivePost.slides[visorSlideIdx] || visorActivePost.slides[0];
+                    const visorSlide = {
+                      ...rawVisorSlide,
+                      headline: rawVisorSlide?.headline || visorActivePost.theme,
+                      bodyText: rawVisorSlide?.bodyText || visorActivePost.hookHeadline,
+                      tag: rawVisorSlide?.tag || "01 // DIRETRIZ",
+                      blackLinkVariant:
+                        rawVisorSlide?.blackLinkVariant ||
+                        visorActivePost.slides[0]?.blackLinkVariant ||
+                        "3d-sculpture",
+                      imageUrl:
+                        rawVisorSlide?.imageUrl && !rawVisorSlide.imageUrl.includes("render-slide")
+                          ? rawVisorSlide.imageUrl
+                          : undefined,
+                    };
+                    return (
+                      <PostSlideDisplay
+                        slide={visorSlide}
+                        authorName={companyProfile.name}
+                        authorHandle={companyProfile.instagram}
+                        slideNumber={visorSlideIdx + 1}
+                        totalSlides={visorActivePost.slides.length}
+                      />
+                    );
+                  })()}
 
                   {/* Setas de Troca de Lâmina se houver mais de uma */}
                   {visorSlideIdx > 0 && (
@@ -874,13 +929,28 @@ export function InstagramFeedGridView() {
 
                 {/* Carrossel de Imagem / Lâmina Navegável */}
                 <div className="relative aspect-square w-full overflow-hidden bg-black flex items-center justify-center">
-                  <PostSlideDisplay
-                    slide={currentSlide}
-                    authorName={companyProfile.name}
-                    authorHandle={companyProfile.instagram}
-                    slideNumber={currentIdx + 1}
-                    totalSlides={totalSlides}
-                  />
+                  {(() => {
+                    const sanitizedFeedSlide = {
+                      ...currentSlide,
+                      headline: currentSlide?.headline || post.theme,
+                      bodyText: currentSlide?.bodyText || post.hookHeadline,
+                      tag: currentSlide?.tag || "01 // DIRETRIZ",
+                      blackLinkVariant: currentSlide?.blackLinkVariant || "3d-sculpture",
+                      imageUrl:
+                        currentSlide?.imageUrl && !currentSlide.imageUrl.includes("render-slide")
+                          ? currentSlide.imageUrl
+                          : undefined,
+                    };
+                    return (
+                      <PostSlideDisplay
+                        slide={sanitizedFeedSlide}
+                        authorName={companyProfile.name}
+                        authorHandle={companyProfile.instagram}
+                        slideNumber={currentIdx + 1}
+                        totalSlides={totalSlides}
+                      />
+                    );
+                  })()}
 
                   {currentIdx > 0 && (
                     <button
@@ -1040,7 +1110,11 @@ export function InstagramFeedGridView() {
                         bodyText: editingBodyText,
                         tag: editingTag,
                         blackLinkVariant: editingVariant,
-                        imageUrl: selectedFeedPost.slides[activeSlideIdx]?.imageUrl,
+                        imageUrl:
+                          selectedFeedPost.slides[activeSlideIdx]?.imageUrl &&
+                          !selectedFeedPost.slides[activeSlideIdx]?.imageUrl?.includes("render-slide")
+                            ? selectedFeedPost.slides[activeSlideIdx]?.imageUrl
+                            : undefined,
                       }}
                       authorName={companyProfile.name}
                       authorHandle={companyProfile.instagram}
@@ -1325,18 +1399,32 @@ export function InstagramFeedGridView() {
 
       {/* Contêineres offscreen ocultos para renderização em HD 1080px */}
       <div className="fixed -left-[9999px] -top-[9999px] pointer-events-none opacity-0 select-none">
-        {scheduledPosts.map((p) => (
-          <PostSlideDisplay
-            key={p.id}
-            id={`export-canvas-${p.id}`}
-            slide={p.slides[0]}
-            authorName={companyProfile.name}
-            authorHandle={companyProfile.instagram}
-            slideNumber={1}
-            totalSlides={p.slides.length}
-            exportMode={true}
-          />
-        ))}
+        {scheduledPosts.map((p, pIdx) => {
+          const s = p.slides[0];
+          const sanitized = {
+            ...s,
+            headline: s?.headline || p.theme,
+            bodyText: s?.bodyText || p.hookHeadline,
+            tag: s?.tag || `0${pIdx + 1} // DIRETRIZ`,
+            blackLinkVariant: s?.blackLinkVariant || "3d-sculpture",
+            imageUrl:
+              s?.imageUrl && !s.imageUrl.includes("render-slide")
+                ? s.imageUrl
+                : undefined,
+          };
+          return (
+            <PostSlideDisplay
+              key={p.id}
+              id={`export-canvas-${p.id}`}
+              slide={sanitized}
+              authorName={companyProfile.name}
+              authorHandle={companyProfile.instagram}
+              slideNumber={1}
+              totalSlides={p.slides.length}
+              exportMode={true}
+            />
+          );
+        })}
       </div>
     </div>
   );

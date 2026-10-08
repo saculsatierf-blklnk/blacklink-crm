@@ -1251,62 +1251,50 @@ function buildSynchronizedFeedPosts(
     const slideHeadline = item.hookHeadline;
     const cleanTag = brandName.replace(/[^a-zA-Z0-9]/g, "");
 
+    const variants: ("3d-sculpture" | "swiss-box" | "pure-monumental" | "clean-ice")[] = [
+      "3d-sculpture",
+      "swiss-box",
+      "pure-monumental",
+      "clean-ice",
+    ];
+    const assignedVariant = variants[idx % variants.length];
+
     const slides: CreativeSlide[] = isInfluencer
       ? [
           {
             slideNumber: 1,
             headline: slideHeadline,
             bodyText: `Conteúdo autoral e reflexões sem filtro de ${brandName}.`,
-            imageUrl: `/api/marketing/render-slide?slide=1&total=5&headline=${encodeURIComponent(
-              slideHeadline
-            )}&body=${encodeURIComponent(
-              `Conteudo autoral de ${brandName}. Arraste para o lado.`
-            )}&format=carousel`,
             tag: "DESTAQUE",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 2,
             headline: "O Ponto Crítico da História",
             bodyText: "A maioria das pessoas tenta esconder as falhas, mas é no caos que a mágica acontece.",
-            imageUrl: `/api/marketing/render-slide?slide=2&total=5&headline=${encodeURIComponent(
-              "O Ponto Critico da Historia"
-            )}&body=${encodeURIComponent(
-              "A maioria tenta esconder as falhas mas e no caos que a magica acontece."
-            )}&format=carousel`,
             tag: "BASTIDORES",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 3,
             headline: "A Virada de Chave",
             bodyText: "Quando você desapega da perfeição, o engajamento e a conexão com a galera disparam.",
-            imageUrl: `/api/marketing/render-slide?slide=3&total=5&headline=${encodeURIComponent(
-              "A Virada de Chave"
-            )}&body=${encodeURIComponent(
-              "Quando voce desapega da perfeicao a conexao real com o publico dispara."
-            )}&format=carousel`,
             tag: "IDENTIFICAÇÃO",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 4,
             headline: "Visão sem Filtro",
             bodyText: "Faça o teste você mesmo. A vida é curta demais para postar o que todo mundo posta.",
-            imageUrl: `/api/marketing/render-slide?slide=4&total=5&headline=${encodeURIComponent(
-              "Visao sem Filtro"
-            )}&body=${encodeURIComponent(
-              "Faca o teste voce mesmo. A vida e curta demais para ser generico."
-            )}&format=carousel`,
             tag: "AUTORAL",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 5,
             headline: "Comente o que você achou",
             bodyText: `Siga ${brandHandle} para mais conteúdos diários e comente sua opinião abaixo!`,
-            imageUrl: `/api/marketing/render-slide?slide=5&total=5&headline=${encodeURIComponent(
-              "Comente o que voce achou"
-            )}&body=${encodeURIComponent(
-              `Siga ${brandHandle} para mais conteudos diarios.`
-            )}&format=carousel`,
             tag: "INTERAÇÃO",
+            blackLinkVariant: assignedVariant,
           },
         ]
       : [
@@ -1314,56 +1302,36 @@ function buildSynchronizedFeedPosts(
             slideNumber: 1,
             headline: slideHeadline,
             bodyText: `Diretrizes estratégicas elaboradas para ${brandName}.`,
-            imageUrl: `/api/marketing/render-slide?slide=1&total=5&headline=${encodeURIComponent(
-              slideHeadline
-            )}&body=${encodeURIComponent(
-              `Soluções de alta performance e rigor técnico com a ${brandName}.`
-            )}&format=carousel`,
             tag: "DIAGNÓSTICO",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 2,
             headline: "O Gargalo do Modelo Tradicional",
             bodyText: "Processos sem rastreabilidade geram atrasos críticos e encarecem o projeto.",
-            imageUrl: `/api/marketing/render-slide?slide=2&total=5&headline=${encodeURIComponent(
-              "O Gargalo do Modelo Tradicional"
-            )}&body=${encodeURIComponent(
-              "Processos sem rastreabilidade geram atrasos criticos e encarecem o projeto."
-            )}&format=carousel`,
             tag: "ANÁLISE",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 3,
             headline: "A Engenharia de Alavancagem",
             bodyText: "Com padrões técnicos e fornecimento de precisão, você blinda seu cronograma.",
-            imageUrl: `/api/marketing/render-slide?slide=3&total=5&headline=${encodeURIComponent(
-              "A Engenharia de Alavancagem"
-            )}&body=${encodeURIComponent(
-              "Com padroes tecnicos e precisao voce blinda seu cronograma."
-            )}&format=carousel`,
             tag: "SOLUÇÃO",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 4,
             headline: "Execução Prática no Terreno",
             bodyText: "Elimine imprevistos através de controle de qualidade e comunicação transparente.",
-            imageUrl: `/api/marketing/render-slide?slide=4&total=5&headline=${encodeURIComponent(
-              "Execucao Pratica no Terreno"
-            )}&body=${encodeURIComponent(
-              "Elimine imprevistos atraves de controle de qualidade rigoroso."
-            )}&format=carousel`,
             tag: "EXECUÇÃO",
+            blackLinkVariant: assignedVariant,
           },
           {
             slideNumber: 5,
             headline: "Próximo Passo Estratégico",
             bodyText: `Consulte os especialistas da ${brandName} e garanta os melhores resultados para sua demanda.`,
-            imageUrl: `/api/marketing/render-slide?slide=5&total=5&headline=${encodeURIComponent(
-              "Proximo Passo Estrategico"
-            )}&body=${encodeURIComponent(
-              `Consulte os especialistas da ${brandName} para alcancar resultados de elite.`
-            )}&format=carousel`,
             tag: "DECISÃO",
+            blackLinkVariant: assignedVariant,
           },
         ];
 

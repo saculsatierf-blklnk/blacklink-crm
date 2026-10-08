@@ -16,7 +16,7 @@ export function DashboardShell({ userRole, children }: DashboardShellProps) {
   return (
     <div className="relative min-h-screen bg-[#050505] text-zinc-100 flex flex-col">
       {/* Sidebar Flutuante / Retrátil */}
-      <Sidebar initialRole={userRole} />
+      <Sidebar />
 
       {/* Main Container com Margem Dinâmica para Maximizar o Canvas de Trabalho */}
       <div
@@ -24,7 +24,7 @@ export function DashboardShell({ userRole, children }: DashboardShellProps) {
           isSidebarCollapsed ? "md:pl-20" : "md:pl-64"
         }`}
       >
-        <Header initialRole={userRole} />
+        <Header onOpenNewDealModal={() => {}} />
         <main className="flex-1 p-6 lg:p-10 max-w-[1700px] w-full mx-auto">
           {children}
         </main>
