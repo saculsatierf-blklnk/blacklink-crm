@@ -59,7 +59,7 @@ export function CompetitorsDiagnosticView() {
     e.preventDefault();
     const isInf = companyProfile.profileType === "influencer";
     if (isInf && !companyProfile.instagram?.trim() && !companyProfile.name?.trim()) {
-      setFeedbackMsg("No modo Influencer, por favor informe o @Instagram (ex: @diogodefante).");
+      setFeedbackMsg("No modo Influencer, por favor informe o @Instagram.");
       setTimeout(() => setFeedbackMsg(null), 4000);
       return;
     }
@@ -69,7 +69,7 @@ export function CompetitorsDiagnosticView() {
       !companyProfile.instagram?.trim() &&
       !companyProfile.name?.trim()
     ) {
-      setFeedbackMsg("Por favor, informe o Site oficial (ex: gofermetais.com.br) ou @Instagram.");
+      setFeedbackMsg("Por favor, informe o Site oficial ou @Instagram.");
       setTimeout(() => setFeedbackMsg(null), 4000);
       return;
     }
@@ -208,7 +208,7 @@ export function CompetitorsDiagnosticView() {
                     type="text"
                     value={companyProfile.instagram}
                     onChange={(e) => setCompanyProfile({ instagram: e.target.value })}
-                    placeholder="Ex: @diogodefante ou @nome_do_creator"
+                    placeholder="@perfil"
                     className="w-full h-9.5 rounded-xl border border-purple-500/40 bg-black/50 pl-9.5 pr-3 text-xs text-white font-mono focus:border-purple-400 focus:outline-none"
                   />
                 </div>
@@ -225,7 +225,7 @@ export function CompetitorsDiagnosticView() {
                     type="text"
                     value={companyProfile.name}
                     onChange={(e) => setCompanyProfile({ name: e.target.value })}
-                    placeholder="Ex: Diogo Defante (ou deixe a IA deduzir)"
+                    placeholder="Nome do criador ou persona"
                     className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white focus:border-white/30 focus:outline-none"
                   />
                 </div>
@@ -242,7 +242,7 @@ export function CompetitorsDiagnosticView() {
                     type="text"
                     value={companyProfile.website}
                     onChange={(e) => setCompanyProfile({ website: e.target.value })}
-                    placeholder="Ex: linktr.ee/... ou deixe vazio"
+                    placeholder="https://link-bio.com (opcional)"
                     className="w-full h-9.5 rounded-xl border border-white/5 bg-black/40 pl-9.5 pr-3 text-xs text-zinc-300 font-mono focus:border-white/30 focus:outline-none"
                   />
                 </div>
@@ -257,7 +257,7 @@ export function CompetitorsDiagnosticView() {
                   type="text"
                   value={companyProfile.niche}
                   onChange={(e) => setCompanyProfile({ niche: e.target.value })}
-                  placeholder="Ex: Humor Caótico, Entretenimento, Podcast..."
+                  placeholder="Nicho ou categoria de conteúdo"
                   className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
                 />
               </div>
@@ -271,7 +271,7 @@ export function CompetitorsDiagnosticView() {
                   type="text"
                   value={companyProfile.products}
                   onChange={(e) => setCompanyProfile({ products: e.target.value })}
-                  placeholder="Ex: Publis de marcas, Shows, Canal no YouTube, Comunidade..."
+                  placeholder="Produtos, serviços ou formatos de monetização"
                   className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
                 />
               </div>
@@ -307,7 +307,7 @@ export function CompetitorsDiagnosticView() {
                         setCompanyProfile({ website: val });
                       }
                     }}
-                    placeholder="Ex: https://gofermetais.com.br"
+                    placeholder="https://suaempresa.com.br"
                     className="w-full h-9.5 rounded-xl border border-sky-500/30 bg-black/50 pl-9.5 pr-3 text-xs text-white font-mono focus:border-sky-400 focus:outline-none"
                   />
                 </div>
@@ -324,7 +324,7 @@ export function CompetitorsDiagnosticView() {
                     type="text"
                     value={companyProfile.name}
                     onChange={(e) => setCompanyProfile({ name: e.target.value })}
-                    placeholder="Ex: Gofer Metais (ou deixe o site preencher)"
+                    placeholder="Nome da empresa (ou deixe o scanner extrair)"
                     className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white focus:border-white/30 focus:outline-none"
                   />
                 </div>
@@ -341,7 +341,7 @@ export function CompetitorsDiagnosticView() {
                     type="text"
                     value={companyProfile.instagram}
                     onChange={(e) => setCompanyProfile({ instagram: e.target.value })}
-                    placeholder="Ex: @empresa (ou sugerido pela IA)"
+                    placeholder="@perfil"
                     className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 pl-9.5 pr-3 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
                   />
                 </div>
@@ -356,7 +356,7 @@ export function CompetitorsDiagnosticView() {
                   type="text"
                   value={companyProfile.niche}
                   onChange={(e) => setCompanyProfile({ niche: e.target.value })}
-                  placeholder="Ex: Estruturas Metálicas, Construção Civil, Saúde..."
+                  placeholder="Setor ou segmento de mercado"
                   className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
                 />
               </div>
@@ -370,7 +370,7 @@ export function CompetitorsDiagnosticView() {
                   type="text"
                   value={companyProfile.products}
                   onChange={(e) => setCompanyProfile({ products: e.target.value })}
-                  placeholder="Ex: Deixe vazio para a IA catalogar as soluções diretamente do site oficial"
+                  placeholder="Principais produtos e serviços (ou deixe a IA catalogar do site)"
                   className="w-full h-9.5 rounded-xl border border-white/10 bg-black/40 px-3.5 text-xs text-white focus:border-white/30 focus:outline-none"
                 />
               </div>

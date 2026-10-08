@@ -207,6 +207,36 @@ function synthesizeSlidesForPlan(
     : `O Segredo de **${rawHook}**`;
   const cta = plan.ctaText?.trim() || "Salve este carrossel para consultar na sua próxima sessão de planejamento.";
 
+  if (plan.format === "story") {
+    return [
+      {
+        tag: "STORY • GANCHO & PERGUNTA",
+        headline: hook,
+        bodyText: "Responda à enquete ou caixinha: como sua operação lida com esse desafio hoje?",
+      },
+      {
+        tag: "STORY • BASTIDORES",
+        headline: "O que Ninguém Mostra nos **Bastidores**",
+        bodyText: "A diferença entre operações que escalam e as que travam está na clareza dos processos.",
+      },
+      {
+        tag: "STORY • PRÓXIMA AÇÃO",
+        headline: "Envie **'DIRECT'** para Acessar",
+        bodyText: `${cta} Responda a este story agora para receber os detalhes ou acesse o link na bio de ${handle}!`,
+      },
+    ];
+  }
+
+  if (plan.format === "post") {
+    return [
+      {
+        tag: plan.funnelStage === "topo" ? "TESE EXECUTIVA" : "DIRETRIZ ESTRATÉGICA",
+        headline: hook,
+        bodyText: `Análise estratégica desenvolvida pela equipe da ${brand}. Salve esta diretriz para consultar com seu time e compartilhe com sua liderança.`,
+      },
+    ];
+  }
+
   if (isInfluencer) {
     return [
       {
@@ -394,11 +424,13 @@ export function BlackLinkCarouselStudio() {
     const brand = companyProfile.name?.trim() || "Black Link CRM";
     const handle = companyProfile.instagram?.trim() || "@blacklink.b2b";
 
+    const isStory = selectedPlanForCreation.format === "story";
     setTenantName(brand);
     setDesignConfig((prev) => ({
       ...prev,
       authorName: brand,
       authorHandle: handle,
+      aspectRatio: isStory ? "9:16" : prev.aspectRatio === "9:16" ? "1:1" : prev.aspectRatio,
     }));
 
     setAiTheme(selectedPlanForCreation.theme);
@@ -1237,18 +1269,34 @@ export function BlackLinkCarouselStudio() {
         </div>
       </div>
 
-      {/* Banner de Pauta Selecionada do Cronograma */}
+      {/* Banner de Briefing Ativo Carregado do Planejamento */}
       {selectedPlanForCreation && (
-        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 font-bold">
-              ✓
+        <div className="mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xl">
+          <div className="flex items-center gap-3.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30">
+              ⚡
             </span>
-            <div>
-              <span className="text-[10px] font-mono uppercase text-emerald-400 font-bold block">
-                Pauta Ativa do Cronograma ({selectedPlanForCreation.dayLabel})
-              </span>
-              <span className="text-white font-semibold">{selectedPlanForCreation.theme}</span>
+            <div className="space-y-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono uppercase text-sky-400 font-bold">
+                  Briefing Ativo • {selectedPlanForCreation.dayLabel}
+                  {selectedPlanForCreation.scheduledTime ? ` às ${selectedPlanForCreation.scheduledTime}` : ""}
+                </span>
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-white/10 text-white border border-white/10">
+                  {selectedPlanForCreation.format === "story" ? "Story (9:16)" : selectedPlanForCreation.format === "carousel" ? "Carrossel (1:1)" : "Post"}
+                </span>
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  {selectedPlanForCreation.funnelStage}
+                </span>
+              </div>
+              <h4 className="text-sm font-semibold text-white tracking-tight">
+                {selectedPlanForCreation.theme}
+              </h4>
+              {selectedPlanForCreation.hookHeadline && (
+                <p className="text-[11px] text-zinc-300 line-clamp-1 italic">
+                  Gancho: &ldquo;{selectedPlanForCreation.hookHeadline}&rdquo;
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -1263,35 +1311,16 @@ export function BlackLinkCarouselStudio() {
               <span>🪄 Regenerar com IA</span>
             </button>
             <button
-              onClick={() => {
-                setAiTheme(selectedPlanForCreation.theme);
-                setShowAIModal(true);
-              }}
-              className="px-3 py-1.5 rounded-lg bg-white/10 text-white font-semibold text-xs hover:bg-white/20 transition-colors cursor-pointer border border-white/15"
-            >
-              ⚙️ Opções de IA
-            </button>
-            <button
-              onClick={() => {
-                setStudioVisorSlideIdx(currentSlideIndex);
-                setShowStudioVisorModal(true);
-              }}
-              className="px-3 py-1.5 rounded-lg bg-white/10 text-white font-semibold text-xs hover:bg-white/20 transition-colors cursor-pointer border border-white/15 flex items-center gap-1"
-            >
-              <span>📱 Visor</span>
-            </button>
-            <button
               onClick={handleApproveArtAndGoToPreviews}
               className="px-3.5 py-1.5 rounded-lg bg-emerald-500 text-black font-bold text-xs hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
             >
-              <span>✓ Aprovar Arte &amp; Ver no Feed ➔</span>
+              <span>✓ Salvar Arte &amp; Ver no Feed ➔</span>
             </button>
             <button
               onClick={() => selectPlanForCreation(null)}
-              className="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white cursor-pointer"
-              title="Limpar seleção"
+              className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
             >
-              ✕
+              Fechar
             </button>
           </div>
         </div>

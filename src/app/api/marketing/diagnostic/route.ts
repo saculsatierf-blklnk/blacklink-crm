@@ -212,7 +212,7 @@ DADOS INFORMADOS:
 
 DIRETRIZES CRÍTICAS PARA CREATORS & INFLUENCERS:
 1. PERFIL SEM SITE OBRIGATÓRIO:
-   - Este perfil é de um INFLUENCER / CRIADOR DE CONTEÚDO (ex: Diogo Defante, criador de humor, entretenimento, fitness, moda, lifestyle, games, etc.).
+   - Este perfil é de um INFLUENCER / CRIADOR DE CONTEÚDO (ex: criadores de humor, entretenimento, negócios, tecnologia, fitness, moda, lifestyle, games, etc.).
    - NÃO tente tratar como uma empresa B2B tradicional de software a menos que o perfil seja especificamente de um criador do setor B2B.
 2. IDENTIDADE & PERSONA:
    - Identifique quem é essa figura pública ou perfil de criador no Instagram, qual é seu estilo autoral de comunicação, tom de voz e o que faz a audiência segui-lo.
@@ -1159,7 +1159,7 @@ ${brandSite}`;
           dayNumber: 4,
           dayLabel: "Terça • 14/Out",
           theme: "Canal Corporativo: Cotação Ágil para Grandes Demandas",
-          hookHeadline: "Precisa de aço para pronta-entrega? Veja como cotar em minutos com a equipe da Gofer.",
+          hookHeadline: `Precisa de matéria-prima para pronta-entrega? Veja como cotar em minutos com a equipe da ${brandName}.`,
           format: "carousel",
           funnelStage: "fundo",
           objective: "Conversão direta de compradores em orçamentos.",

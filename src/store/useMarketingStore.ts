@@ -166,6 +166,20 @@ export interface CompetitorsDiagnostic {
   lastAnalyzedAt: string | null;
 }
 
+export interface DailyActivityItem {
+  id: string;
+  time: string; // "08:30", "12:00", "18:00"
+  period: "manha" | "tarde" | "noite";
+  format: CreativeFormat; // "story" | "carousel" | "post"
+  theme: string;
+  hookHeadline: string;
+  objective: string;
+  ctaText: string;
+  funnelStage: "topo" | "meio" | "fundo";
+  status?: "planejado" | "em_producao" | "pronto";
+  briefingNotes?: string;
+}
+
 export interface EditorialPlanItem {
   id: string;
   dayNumber: number;
@@ -178,6 +192,8 @@ export interface EditorialPlanItem {
   viralAngle: string;
   ctaText: string;
   status: "planejado" | "em_producao" | "pronto";
+  scheduledTime?: string;
+  activities?: DailyActivityItem[];
 }
 
 export type FeedViewMode = "grid" | "feed" | "visor";
