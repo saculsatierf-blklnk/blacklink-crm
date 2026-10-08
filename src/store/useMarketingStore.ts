@@ -16,6 +16,7 @@ export interface CreativeSlide {
   imageUrl?: string;
   visualPrompt?: string;
   tag?: string;
+  blackLinkVariant?: "3d-sculpture" | "swiss-box" | "pure-monumental" | "clean-ice";
 }
 
 export interface CompetitorInsightData {
@@ -339,132 +340,237 @@ const INITIAL_FORM_DATA: MarketingFormData = {
 
 const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   {
-    id: "post-sch-01",
-    theme: "Os 5 Gargalos Ocultos do Funil B2B",
-    format: "carousel",
-    targetAudience: "Decisores B2B, CEOs e Diretores Comerciais",
-    scheduledDate: "Amanhã • 10:00",
-    status: "awaiting_approval",
-    hookHeadline: "Como Dominar os Gargalos Ocultos do Funil B2B sem Queimar Margem",
-    bodyCopy:
-      "A maioria das operações corporativas trava por falta de clareza nos gargalos de esteira.\n\nQuando alinhamos inteligência de dados, cadência de tarefas e blindagem de território, o ciclo médio de fechamento cai pela metade.\n\nConfira os 5 passos estratégicos neste carrossel para implementar agora na sua empresa.",
-    ctaText: "Salve este carrossel para consultar na sua próxima reunião de alinhamento comercial.",
-    hashtags: ["#VendasB2B", "#BlackLink", "#InteligenciaComercial", "#GestaoEnterprise"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "O Diagnóstico Real do Funil B2B",
-        bodyText: "Por que 80% das empresas continuam utilizando métodos obsoletos de prospecção e como virar o jogo.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=1&total=5&headline=O+Diagnostico+Real+do+Funil+B2B&body=Por+que+80+das+empresas+continuam+utilizando+metodos+obsoletos+de+prospeccao+e+como+virar+o+jogo.&format=carousel",
-      },
-      {
-        slideNumber: 2,
-        headline: "Ponto Crítico: Silos & Colisões",
-        bodyText: "Sem radar anti-colisão, seus hunters abordam os mesmos decisores, queimando a reputação corporativa.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=2&total=5&headline=Ponto+Critico+Silos+e+Colisoes&body=Sem+radar+anti-colisao+seus+hunters+abordam+os+mesmos+decisores.&format=carousel",
-      },
-      {
-        slideNumber: 3,
-        headline: "A Regra de Ouro da Cadência",
-        bodyText: "Follow-ups espaçados em estilo minimalista para garantir presença executiva sem invasão.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=3&total=5&headline=A+Regra+de+Ouro+da+Cadencia&body=Follow-ups+espacados+em+estilo+minimalista+para+garantir+presenca.&format=carousel",
-      },
-      {
-        slideNumber: 4,
-        headline: "Passagem de Bastão Blindada",
-        bodyText: "A transição entre o pré-vendas (SDR) e o Closer não pode perder telemetria de notas ou dores do cliente.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=4&total=5&headline=Passagem+de+Bastao+Blindada&body=A+transicao+entre+SDR+e+Closer+nao+pode+perder+telemetria.&format=carousel",
-      },
-      {
-        slideNumber: 5,
-        headline: "Próxima Ação Executiva",
-        bodyText: "Estruture sua máquina de conversão no Black Link CRM e escale suas operações de tráfego pago.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=5&total=5&headline=Proxima+Acao+Executiva&body=Estruture+sua+maquina+de+conversao+no+Black+Link+CRM.&format=carousel",
-      },
-    ],
-    imageUrls: [
-      "/api/marketing/render-slide?slide=1&total=5&headline=O+Diagnostico+Real+do+Funil+B2B&body=Por+que+80+das+empresas+continuam+utilizando+metodos+obsoletos+de+prospeccao+e+como+virar+o+jogo.&format=carousel",
-      "/api/marketing/render-slide?slide=2&total=5&headline=Ponto+Critico+Silos+e+Colisoes&body=Sem+radar+anti-colisao+seus+hunters+abordam+os+mesmos+decisores.&format=carousel",
-      "/api/marketing/render-slide?slide=3&total=5&headline=A+Regra+de+Ouro+da+Cadencia&body=Follow-ups+espacados+em+estilo+minimalista+para+garantir+presenca.&format=carousel",
-      "/api/marketing/render-slide?slide=4&total=5&headline=Passagem+de+Bastao+Blindada&body=A+transicao+entre+SDR+e+Closer+nao+pode+perder+telemetria.&format=carousel",
-      "/api/marketing/render-slide?slide=5&total=5&headline=Proxima+Acao+Executiva&body=Estruture+sua+maquina+de+conversao+no+Black+Link+CRM.&format=carousel",
-    ],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-sch-02",
-    theme: "O Fim das Planilhas de Prospecção Desalinhadas",
-    format: "story",
-    targetAudience: "Heads de Vendas e Diretores Comerciais",
-    scheduledDate: "Quarta • 15:00",
-    status: "scheduled",
-    hookHeadline: "A Verdade que Ninguém Conta sobre Planilhas Comerciais",
-    bodyCopy:
-      "Se o seu time comercial passa mais tempo preenchendo planilhas do que conversando com decisores, a sua operação está sangrando margem.\n\nToque no link da bio para entender como virar a chave hoje.",
-    ctaText: "Responda a este story com 'ESTRATÉGIA' para receber o diagnóstico no Direct.",
-    hashtags: ["#OperacaoComercial", "#VendasB2B", "#BlackLink", "#Produtividade"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "Pare de perder contas qualificadas.",
-        bodyText: "O mercado corporativo mudou. O controle em planilhas gera pontos cegos críticos.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=1&total=3&headline=Pare+de+perder+contas+qualificadas&body=O+mercado+corporativo+mudou.+Controle+em+planilhas+gera+pontos+cegos.&format=story",
-      },
-      {
-        slideNumber: 2,
-        headline: "Cadência Diária em Ação",
-        bodyText: "Execute tarefas pontuais com hora marcada direto na esteira de prospecção.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=2&total=3&headline=Cadencia+Diaria+em+Acao&body=Execute+tarefas+pontuais+com+hora+marcada+direto+na+esteira.&format=story",
-      },
-      {
-        slideNumber: 3,
-        headline: "Pipeline Blindado",
-        bodyText: "Fale diretamente com os especialistas do ecossistema Black Link.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=3&total=3&headline=Pipeline+Blindado&body=Fale+diretamente+com+os+especialistas+do+ecossistema+Black+Link.&format=story",
-      },
-    ],
-    imageUrls: [
-      "/api/marketing/render-slide?slide=1&total=3&headline=Pare+de+perder+contas+qualificadas&body=O+mercado+corporativo+mudou.+Controle+em+planilhas+gera+pontos+cegos.&format=story",
-      "/api/marketing/render-slide?slide=2&total=3&headline=Cadencia+Diaria+em+Acao&body=Execute+tarefas+pontuais+com+hora+marcada+direto+na+esteira.&format=story",
-      "/api/marketing/render-slide?slide=3&total=3&headline=Pipeline+Blindado&body=Fale+diretamente+com+os+especialistas+do+ecossistema+Black+Link.&format=story",
-    ],
-    metaPostId: "meta_ig_agendado_984712",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-sch-03",
-    theme: "Dossiê Executivo de Conversão Enterprise",
+    id: "post-bl-01",
+    theme: "Arquitetura de Escala Comercial",
     format: "post",
-    targetAudience: "Diretores Financeiros (CFOs) e CEOs",
-    scheduledDate: "Sexta • 09:30",
-    status: "reformulation_requested",
-    hookHeadline: "Dossiê Estratégico: O Retorno Real sobre CAC em Contas Enterprise",
+    targetAudience: "Diretores Comerciais, VPs de Vendas e CEOs B2B",
+    scheduledDate: "Segunda • 09:00",
+    status: "scheduled",
+    hookHeadline: "Arquitetura de Escala Comercial",
     bodyCopy:
-      "Em mercados corporativos altamente competitivos, o que separa os líderes dos retardatários não é o volume de leads brutos, mas a densidade da qualificação.\n\nAo focar em contas estratégicas, construímos um funil previsível onde cada reunião possui fit real.",
-    ctaText: "Comente 'ESCALA' para receber o dossiê executivo completo.",
-    hashtags: ["#FinanceiroB2B", "#CAC", "#BlackLink", "#EnterpriseGrowth"],
-    reformulationFeedback:
-      "Troque o foco de pré-vendas para alinhamento com Diretores Financeiros (CFO) e enfatize retorno sobre investimento comprovado.",
+      "A diferença entre operações que escalam e as que travam está na ausência de atrito no pipeline comercial.\n\nConstruímos a Black Link para substituir planilhas lentas por telemetria preditiva e velocidade executiva.\n\nBem-vindo à fundação da inteligência comercial autônoma.",
+    postCaption:
+      "A diferença entre operações que escalam e as que travam está na ausência de atrito no pipeline comercial.\n\nConstruímos a Black Link para substituir planilhas lentas por telemetria preditiva e velocidade executiva.\n\nSiga @blacklink.com.br e acompanhe a evolução das vendas corporativas.\n\n#BlackLink #VendasB2B #InteligenciaComercial #SaaS #Escala",
+    ctaText: "Acompanhe nossa tese no perfil.",
+    hashtags: ["#BlackLink", "#VendasB2B", "#InteligenciaComercial"],
     slides: [
       {
         slideNumber: 1,
-        headline: "Retorno sobre Investimento Enterprise",
-        bodyText: "Como mitigar o risco de aquisição de clientes com telemetria preditiva de negócios.",
-        imageUrl:
-          "/api/marketing/render-slide?slide=1&total=1&headline=Retorno+sobre+Investimento+Enterprise&body=Como+mitigar+o+risco+de+aquisicao+de+clientes+com+telemetria+preditiva.&format=post",
+        headline: "ARQUITETURA DE ESCALA COMERCIAL",
+        bodyText: "Eliminamos o atrito invisível entre a primeira abordagem e o fechamento corporativo.",
+        tag: "01 // ESTRATÉGIA",
+        blackLinkVariant: "3d-sculpture",
       },
     ],
-    imageUrls: [
-      "/api/marketing/render-slide?slide=1&total=1&headline=Retorno+sobre+Investimento+Enterprise&body=Como+mitigar+o+risco+de+aquisicao+de+clientes+com+telemetria+preditiva.&format=post",
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-02",
+    theme: "O Fim dos CRMs Legados",
+    format: "post",
+    targetAudience: "Líderes Comerciais e Empreendedores B2B",
+    scheduledDate: "Terça • 12:00",
+    status: "scheduled",
+    hookHeadline: "O Fim dos CRMs Legados",
+    bodyCopy:
+      "CRMs legados viraram cemitérios de dados lentos e burocráticos. Eles não ajudam a vender, apenas registram o passado.\n\nO novo padrão corporativo exige sistemas que pensem antes da equipe de vendas.",
+    postCaption:
+      "CRMs legados viraram cemitérios de dados lentos e burocráticos. Eles não ajudam a vender, apenas registram o passado.\n\nO novo padrão corporativo exige sistemas que pensem antes da equipe de vendas.\n\n#CRMB2B #BlackLink #TransformacaoDigital #B2B",
+    ctaText: "Descubra o novo padrão da Black Link.",
+    hashtags: ["#CRMB2B", "#BlackLink", "#TransformacaoDigital"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "O FIM DOS CRMs LEGADOS",
+        bodyText: "Sistemas legados registram o passado. O Black Link pensa antes da sua equipe comercial.",
+        tag: "02 // MANIFESTO",
+        blackLinkVariant: "swiss-box",
+      },
     ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-03",
+    theme: "Zero Atrito. Máxima Conversão.",
+    format: "post",
+    targetAudience: "Heads de Vendas e Closers de Elite",
+    scheduledDate: "Quarta • 15:30",
+    status: "scheduled",
+    hookHeadline: "Zero Atrito. Máxima Conversão.",
+    bodyCopy:
+      "Menos burocracia interna e mais presença diante de decisores de alto ticket. Essa é a regra de ouro das operações B2B de alta densidade.",
+    postCaption:
+      "Menos burocracia interna e mais presença diante de decisores de alto ticket. Essa é a regra de ouro das operações B2B de alta densidade.\n\n#VendasCorporativas #AltaConversao #BlackLink",
+    ctaText: "Veja como blindar sua esteira comercial.",
+    hashtags: ["#VendasCorporativas", "#AltaConversao", "#BlackLink"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "ZERO ATRITO. MÁXIMA CONVERSÃO.",
+        bodyText: "Menos burocracia interna e mais presença diante de decisores de alto ticket.",
+        tag: "03 // TESE",
+        blackLinkVariant: "pure-monumental",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-04",
+    theme: "How It Works: Telemetria Preditiva",
+    format: "post",
+    targetAudience: "CTOs, Diretores de Operações e RevOps",
+    scheduledDate: "Quinta • 10:00",
+    status: "scheduled",
+    hookHeadline: "How It Works: Telemetria Preditiva",
+    bodyCopy:
+      "Como a Black Link monitora o momentum de negociação de cada conta enterprise e dispara ações antes do lead esfriar.",
+    postCaption:
+      "Como a Black Link monitora o momentum de negociação de cada conta enterprise e dispara ações antes do lead esfriar.\n\n#RevOps #Telemetria #BlackLink #B2BGrowth",
+    ctaText: "Acesse os detalhes no link da bio.",
+    hashtags: ["#RevOps", "#Telemetria", "#BlackLink"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "HOW IT WORKS // TELEMETRIA",
+        bodyText: "Monitoramento contínuo de momentum comercial para antecipar gargalos antes do lead esfriar.",
+        tag: "04 // PROCESSO",
+        blackLinkVariant: "clean-ice",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-05",
+    theme: "Black Link OS: O Núcleo do Sistema",
+    format: "post",
+    targetAudience: "Decisores B2B Globais",
+    scheduledDate: "Sexta • 18:00",
+    status: "scheduled",
+    hookHeadline: "Black Link OS: O Núcleo do Sistema",
+    bodyCopy:
+      "O elo definitivo entre inteligência de dados, automação de cadência e conversão comercial previsível.",
+    postCaption:
+      "O elo definitivo entre inteligência de dados, automação de cadência e conversão comercial previsível.\n\n#BlackLinkOS #Enterprise #InteligenciaArtificial #VendasB2B",
+    ctaText: "Conheça o ecossistema Black Link.",
+    hashtags: ["#BlackLinkOS", "#Enterprise", "#VendasB2B"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "BLACK LINK OS",
+        bodyText: "O elo definitivo entre inteligência de dados, automação de cadência e conversão previsível.",
+        tag: "05 // CORE",
+        blackLinkVariant: "3d-sculpture",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-06",
+    theme: "Qualificação em Tempo Real",
+    format: "post",
+    targetAudience: "Líderes de SDRs e BDRs",
+    scheduledDate: "Sábado • 11:00",
+    status: "scheduled",
+    hookHeadline: "Qualificação em Tempo Real",
+    bodyCopy:
+      "Tolerância zero a leads desqualificados drenando a energia dos seus closers. Saiba como blindar seu pipeline.",
+    postCaption:
+      "Tolerância zero a leads desqualificados drenando a energia dos seus closers. Saiba como blindar seu pipeline.\n\n#QualificacaoB2B #SDR #BlackLink #Pipeline",
+    ctaText: "Blindagem de pipeline ativa.",
+    hashtags: ["#QualificacaoB2B", "#SDR", "#BlackLink"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "QUALIFICAÇÃO EM TEMPO REAL",
+        bodyText: "Tolerância zero a leads desqualificados drenando o tempo dos seus consultores seniores.",
+        tag: "06 // VELOCIDADE",
+        blackLinkVariant: "pure-monumental",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-07",
+    theme: "Dossiê Executivo de Escala",
+    format: "post",
+    targetAudience: "CFOs e Diretores Financeiros",
+    scheduledDate: "Segunda • 09:30",
+    status: "scheduled",
+    hookHeadline: "Dossiê Executivo de Escala",
+    bodyCopy:
+      "O retorno real sobre aquisição de contas enterprise em mercados altamente competitivos.",
+    postCaption:
+      "O retorno real sobre aquisição de contas enterprise em mercados altamente competitivos.\n\n#CFO #FinanceiroB2B #CAC #BlackLink",
+    ctaText: "Receba o dossiê completo.",
+    hashtags: ["#CFO", "#FinanceiroB2B", "#CAC"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "DOSSIÊ EXECUTIVO DE ESCALA",
+        bodyText: "Retorno consistente sobre custo de aquisição e proteção de margem operacional.",
+        tag: "07 // INTELIGÊNCIA",
+        blackLinkVariant: "swiss-box",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-08",
+    theme: "3.4x Mais Velocidade no Ciclo Comercial",
+    format: "post",
+    targetAudience: "CEOs e Heads de Growth",
+    scheduledDate: "Quarta • 14:00",
+    status: "scheduled",
+    hookHeadline: "3.4x Mais Velocidade no Ciclo Comercial",
+    bodyCopy:
+      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.",
+    postCaption:
+      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\n#GrowthB2B #Metricas #BlackLink #VelocidadeComercial",
+    ctaText: "Acelere seu ciclo de vendas.",
+    hashtags: ["#GrowthB2B", "#Metricas", "#BlackLink"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "3.4X MAIS VELOCIDADE NO PIPELINE",
+        bodyText: "Redução comprovada do tempo entre o primeiro toque e a assinatura de contrato.",
+        tag: "08 // RESULTADO",
+        blackLinkVariant: "clean-ice",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-09",
+    theme: "Membro Fundador Black Link",
+    format: "post",
+    targetAudience: "Toda a Comunidade B2B",
+    scheduledDate: "Sexta • 17:00",
+    status: "scheduled",
+    hookHeadline: "Membro Fundador Black Link",
+    bodyCopy:
+      "Siga @blacklink.com.br e acompanhe a revolução da inteligência comercial B2B desde o primeiro dia.",
+    postCaption:
+      "Siga @blacklink.com.br e acompanhe a revolução da inteligência comercial B2B desde o primeiro dia.\n\n#MembroFundador #BlackLink #ComunidadeB2B",
+    ctaText: "Siga o perfil oficial.",
+    hashtags: ["#MembroFundador", "#BlackLink", "#ComunidadeB2B"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "BEM-VINDO AO NOVO PADRÃO",
+        bodyText: "Acompanhe a revolução da inteligência comercial B2B desde o primeiro dia.",
+        tag: "09 // CONEXÃO",
+        blackLinkVariant: "pure-monumental",
+      },
+    ],
+    imageUrls: [],
     createdAt: new Date().toISOString(),
   },
 ];

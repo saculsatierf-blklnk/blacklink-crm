@@ -64,6 +64,8 @@ export type AspectRatio = "1:1" | "4:5" | "9:16";
 
 export type SlidePattern = "solid-mesh" | "dots" | "grid" | "noise";
 
+export type BlackLinkStyleVariant = "3d-sculpture" | "swiss-box" | "pure-monumental" | "clean-ice";
+
 export interface SlideData {
   id?: string;
   headline: string;
@@ -72,6 +74,7 @@ export interface SlideData {
   tag?: string;
   chartData?: { label: string; value: number }[];
   kpiHighlight?: string;
+  blackLinkVariant?: BlackLinkStyleVariant;
 }
 
 export type GlassDimensionMode = "3d-slab" | "3d-monolith" | "floating-glass";
@@ -92,6 +95,7 @@ export interface SlideDesignConfig {
   bgOpacity?: number;
   screenshotImage?: string;
   glassDimensionMode?: GlassDimensionMode;
+  blackLinkVariant?: BlackLinkStyleVariant;
 }
 
 export interface LayoutProps {
