@@ -3,16 +3,15 @@ import { LayoutProps } from "./layoutTypes";
 
 /**
  * Template Antigravity — Black Link (1.0)
- * Monólito de Vidro Titânio e Liquid Glass de Alta Densidade (0% Saturação)
+ * Glassmorphism Hiper-Realista 3D Monocromático (0% Saturação)
  *
- * Conceito & Rigor:
- * - Direto. Discreto. Escultural.
- * - Zero imagem colada (sem logos ou correntes coladas na tela).
- * - A própria superfície do monólito carrega a materialidade da marca:
- *   densidade física, chanfro óptico duplo, refração interna,
- *   reflexos especulares de estúdio e textura tátil micro-porosa de titânio forjado.
- * - Zero interferência com a interface nativa do Instagram (topo e base limpos).
- * - Margens de 80px imutáveis.
+ * Filosofia & Padrão de Estúdio Internacional:
+ * - DIRETO. DISCRETO. SOBERANO.
+ * - Fundo com Escultura Arquitetônica 3D de Titânio Forjado e Vidro Líquido (Zero saturação).
+ * - Monólito de Vidro Acrílico de Alta Densidade com Refração Óptica Física sobre a cena.
+ * - Margens de 80px imutáveis do Design System.
+ * - Safe Zone 100% limpa (sem interferência com a UI nativa do Instagram no topo e rodapé).
+ * - Tipografia Monumental Clash Display + Inter sem cortes de texto.
  */
 export function BlackLinkGlassLayout({
   slide,
@@ -24,7 +23,7 @@ export function BlackLinkGlassLayout({
   const isCover = currentSlide === 1;
   const isCta = currentSlide === totalSlides && totalSlides > 1;
 
-  // Conteúdo das Lâminas (Texto 100% íntegro, sem cortes de palavras)
+  // Conteúdo das Lâminas (Texto 100% íntegro)
   const rawHeadline = (slide.headline || "").trim();
   const rawBody = (slide.bodyText || "").trim();
   const rawTag = (slide.tag || (isCover ? "MARCO ZERO" : isCta ? "DIRETRIZ" : "TESE")).trim().toUpperCase();
@@ -39,28 +38,31 @@ export function BlackLinkGlassLayout({
   const is916 = config.aspectRatio === "9:16";
   const is45 = config.aspectRatio === "4:5";
 
+  // Imagem de Fundo de Estúdio 3D Oficial da Black Link (Escultura Titânio + Vidro Líquido)
+  const bgImageSrc = is916 ? "/brand/blacklink-bg-story.jpg" : "/brand/blacklink-bg-square.jpg";
+
   // Dimensionamento Dinâmico Proporcional da Headline (Resolução Nativa 1080px)
   const headlineLen = rawHeadline.length;
   const headlineStyle = (() => {
     if (is916) {
-      if (headlineLen <= 35) return { fontSize: "62px", lineHeight: "1.12" };
+      if (headlineLen <= 35) return { fontSize: "64px", lineHeight: "1.12" };
       if (headlineLen <= 65) return { fontSize: "52px", lineHeight: "1.15" };
       if (headlineLen <= 95) return { fontSize: "44px", lineHeight: "1.18" };
       return { fontSize: "36px", lineHeight: "1.22" };
     }
     if (isCover) {
-      if (headlineLen <= 35) return { fontSize: "56px", lineHeight: "1.12" };
+      if (headlineLen <= 35) return { fontSize: "58px", lineHeight: "1.12" };
       if (headlineLen <= 65) return { fontSize: "48px", lineHeight: "1.15" };
       if (headlineLen <= 90) return { fontSize: "40px", lineHeight: "1.18" };
       return { fontSize: "34px", lineHeight: "1.22" };
     }
-    if (headlineLen <= 40) return { fontSize: "50px", lineHeight: "1.14" };
-    if (headlineLen <= 70) return { fontSize: "42px", lineHeight: "1.16" };
+    if (headlineLen <= 40) return { fontSize: "52px", lineHeight: "1.14" };
+    if (headlineLen <= 70) return { fontSize: "44px", lineHeight: "1.16" };
     if (headlineLen <= 95) return { fontSize: "36px", lineHeight: "1.20" };
     return { fontSize: "32px", lineHeight: "1.24" };
   })();
 
-  // Renderizador de Destaque Monocromático de Alta Fidelidade (Brilho Especular em Branco Puro)
+  // Renderizador de Destaque Monocromático de Alta Fidelidade (Luz Especular Pura)
   const renderMonoHighlight = (text: string) => {
     if (!text) return null;
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -70,7 +72,7 @@ export function BlackLinkGlassLayout({
         return (
           <span
             key={index}
-            className="text-white font-black underline decoration-white/50 underline-offset-[12px] drop-shadow-[0_0_28px_rgba(255,255,255,0.7)] inline"
+            className="text-white font-black underline decoration-white/60 underline-offset-[12px] drop-shadow-[0_0_30px_rgba(255,255,255,0.7)] inline"
           >
             {clean}
           </span>
@@ -83,66 +85,33 @@ export function BlackLinkGlassLayout({
   return (
     <div className="relative w-full h-full flex flex-col justify-center items-center overflow-hidden select-none bg-[#020204] text-white">
       {/* ================================================================== */}
-      {/* 1. SHADER SVG DE TEXTURA TÁTIL & DISPERSÃO DE TITÂNIO/VIDRO        */}
-      {/* ================================================================== */}
-      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
-        <defs>
-          <filter id="blacklink-tactile-grain" x="0%" y="0%" width="100%" height="100%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.75"
-              numOctaves="4"
-              stitchTiles="stitch"
-              result="noise"
-            />
-            <feColorMatrix
-              type="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.08 0"
-              in="noise"
-              result="coloredNoise"
-            />
-            <feComposite operator="in" in2="SourceGraphic" result="monoNoise" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* ================================================================== */}
-      {/* 2. AMBIENTE DE ESTÚDIO ESCURO COM ILUMINAÇÃO VOLUMÉTRICA DE RECORTE */}
+      {/* 1. FUNDO DE ESTÚDIO 3D REAL (TITÂNIO FORJADO + VIDRO LÍQUIDO)     */}
       {/* ================================================================== */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Vinheta de Estúdio Ultra-Profunda */}
+        {/* Render 3D de Estúdio Cinematográfico Monocromático */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
+          style={{
+            backgroundImage: `url('${bgImageSrc}')`,
+            filter: "contrast(115%) brightness(65%) grayscale(100%)",
+            transform: is916 ? "scale(1.08)" : "scale(1.05)",
+          }}
+        />
+
+        {/* Vinheta Óptica de Profundidade de Campo */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(circle at 50% 45%, rgba(20, 22, 30, 0.55) 0%, rgba(5, 5, 8, 0.92) 55%, rgba(1, 1, 3, 1) 100%)",
+              "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(0, 0, 0, 0.45) 0%, rgba(2, 2, 4, 0.85) 65%, rgba(0, 0, 1, 0.98) 100%)",
           }}
         />
 
-        {/* Softbox Zenital Traseiro (Gera a Refração Luminosa das Bordas) */}
+        {/* Luz Zenital Suave de Softbox */}
         <div
-          className="absolute -top-40 inset-x-0 h-[640px] blur-[150px] opacity-30 pointer-events-none"
+          className="absolute -top-32 inset-x-0 h-[500px] blur-[120px] opacity-35 pointer-events-none"
           style={{
-            background:
-              "radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.45) 0%, rgba(150, 155, 175, 0.2) 45%, transparent 80%)",
-          }}
-        />
-
-        {/* Glow de Sustentação Inferior */}
-        <div
-          className="absolute -bottom-32 inset-x-12 h-64 blur-[120px] opacity-20 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.3) 0%, transparent 70%)",
-          }}
-        />
-
-        {/* Textura Tátil Micro-Jateada de Fundo */}
-        <div
-          className="absolute inset-0 opacity-[0.04] mix-blend-screen pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 1px)`,
-            backgroundSize: "24px 24px",
+            background: "radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.35) 0%, transparent 75%)",
           }}
         />
 
@@ -152,7 +121,7 @@ export function BlackLinkGlassLayout({
       </div>
 
       {/* ================================================================== */}
-      {/* 3. O MONÓLITO DE VIDRO TITÂNIO (LIQUID GLASS 3D DE ALTA DENSIDADE)  */}
+      {/* 2. O MONÓLITO DE VIDRO ACÍLICO 3D (REFRAÇÃO E DENSIDADE FÍSICA)    */}
       {/* ================================================================== */}
       <div
         className={`relative z-10 w-full px-[80px] flex flex-col justify-center items-center ${
@@ -172,45 +141,36 @@ export function BlackLinkGlassLayout({
               : "min-h-[820px] flex flex-col justify-between"
           }`}
           style={{
-            // Densidade Física do Vidro Negro de Titânio
+            // Refração do Vidro Fumê com Reflexo da Escultura 3D de Fundo
             background:
-              "linear-gradient(160deg, rgba(28, 30, 42, 0.86) 0%, rgba(13, 14, 20, 0.92) 45%, rgba(5, 6, 9, 0.97) 100%)",
-            backdropFilter: "blur(60px) saturate(160%) contrast(115%)",
-            WebkitBackdropFilter: "blur(60px) saturate(160%) contrast(115%)",
+              "linear-gradient(160deg, rgba(22, 24, 34, 0.72) 0%, rgba(10, 11, 17, 0.84) 50%, rgba(3, 4, 7, 0.92) 100%)",
+            backdropFilter: "blur(55px) saturate(180%) contrast(125%)",
+            WebkitBackdropFilter: "blur(55px) saturate(180%) contrast(125%)",
             
-            // Borda Óptica com Chanfro Especular Contínuo
-            border: "1.5px solid rgba(255, 255, 255, 0.18)",
-            borderTop: "2.5px solid rgba(255, 255, 255, 0.75)",
+            // Borda Óptica de Vidro com Chanfro Especular
+            border: "1.5px solid rgba(255, 255, 255, 0.22)",
+            borderTop: "2.5px solid rgba(255, 255, 255, 0.85)",
             
-            // Cascata de Sombras 3D: Oclusão de Ambiente + Espessura Interna de 15mm
+            // Cascata de Sombras 3D: Oclusão + Espessura de Borda
             boxShadow:
-              "0 60px 120px -25px rgba(0, 0, 0, 0.98), 0 30px 60px -15px rgba(0, 0, 0, 0.95), 0 0 90px rgba(255, 255, 255, 0.035), inset 0 2px 3px rgba(255, 255, 255, 0.65), inset 0 -4px 10px rgba(0, 0, 0, 0.85), inset 2px 0 4px rgba(255, 255, 255, 0.18), inset -2px 0 4px rgba(0, 0, 0, 0.7)",
+              "0 50px 120px -20px rgba(0, 0, 0, 0.98), 0 25px 60px -10px rgba(0, 0, 0, 0.9), inset 0 2px 2px rgba(255, 255, 255, 0.65), inset 0 -4px 8px rgba(0, 0, 0, 0.8), inset 2px 0 3px rgba(255, 255, 255, 0.2), inset -2px 0 3px rgba(0, 0, 0, 0.6)",
           }}
         >
-          {/* Chanfro de Reflexo Zenital Superior de Corte Óptico */}
+          {/* Chanfro de Reflexo Zenital Superior de Corte a Laser */}
           <div
             className="absolute inset-x-0 top-0 h-[2.5px] pointer-events-none"
             style={{
               background:
-                "linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.7) 25%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.7) 75%, transparent 95%)",
+                "linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.8) 25%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.8) 75%, transparent 95%)",
             }}
           />
 
           {/* Faixa Diagonal de Reflexo Especular de Estúdio (Softbox Sheen) */}
           <div
-            className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] pointer-events-none opacity-30 mix-blend-screen"
+            className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] pointer-events-none opacity-25 mix-blend-screen"
             style={{
               background:
-                "linear-gradient(135deg, transparent 38%, rgba(255, 255, 255, 0.28) 47%, rgba(255, 255, 255, 0.06) 53%, transparent 64%)",
-            }}
-          />
-
-          {/* Textura Micro-Porosa de Titânio Acetinado Aplicada Diretamente no Vidro */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-[0.05] mix-blend-overlay"
-            style={{
-              backgroundImage: `radial-gradient(circle, rgba(255,255,255,1) 1px, transparent 1px)`,
-              backgroundSize: "16px 16px",
+                "linear-gradient(135deg, transparent 38%, rgba(255, 255, 255, 0.3) 48%, rgba(255, 255, 255, 0.05) 54%, transparent 64%)",
             }}
           />
 
@@ -219,16 +179,16 @@ export function BlackLinkGlassLayout({
           {/* ============================================================== */}
           <div className="relative z-10 p-14 md:p-18 flex flex-col justify-between flex-1 text-left space-y-10">
             
-            {/* Topo do Monólito: Marcador Técnico Silencioso */}
+            {/* Topo do Monólito: Pill de Vidro com Marcador Técnico */}
             <div className="flex items-center justify-between pb-6 border-b border-white/[0.12]">
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
-                <span className="font-mono text-sm font-black tracking-[0.35em] text-zinc-300 uppercase">
-                  // {rawTag}
+              <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.08] border border-white/20 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]">
+                <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,1)]" />
+                <span className="font-mono text-xs font-black tracking-[0.3em] text-white uppercase">
+                  {rawTag}
                 </span>
               </div>
 
-              {/* Paginação Monolítica Discreta */}
+              {/* Paginação Discreta em Vidro */}
               <div className="font-mono text-sm font-bold tracking-[0.25em] text-zinc-400">
                 {String(currentSlide).padStart(2, "0")} / {String(totalSlides).padStart(2, "0")}
               </div>
@@ -248,7 +208,7 @@ export function BlackLinkGlassLayout({
                 {renderMonoHighlight(rawHeadline)}
               </h1>
 
-              {/* Incisão de Corte a Laser (Linha de Titânio) */}
+              {/* Incisão de Corte de Vidro (Linha Translúcida) */}
               <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
 
               {/* CORPO DE TEXTO CIRÚRGICO (INTER DIRETO) */}
@@ -267,16 +227,16 @@ export function BlackLinkGlassLayout({
             {detectedKpi ? (
               <div className="pt-6 border-t border-white/[0.12]">
                 <div
-                  className="p-6 rounded-3xl border border-white/15 flex items-center justify-between"
+                  className="p-6 rounded-3xl border border-white/20 flex items-center justify-between"
                   style={{
-                    background: "rgba(0, 0, 0, 0.45)",
-                    boxShadow: "inset 0 3px 12px rgba(0, 0, 0, 0.85)",
+                    background: "rgba(0, 0, 0, 0.5)",
+                    boxShadow: "inset 0 3px 12px rgba(0, 0, 0, 0.9)",
                   }}
                 >
                   <span className="font-mono text-xs uppercase tracking-[0.3em] text-zinc-400 font-bold">
                     DADO QUANTITATIVO
                   </span>
-                  <span className="font-clash text-3xl font-black text-white tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+                  <span className="font-clash text-3xl font-black text-white tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
                     {detectedKpi}
                   </span>
                 </div>
