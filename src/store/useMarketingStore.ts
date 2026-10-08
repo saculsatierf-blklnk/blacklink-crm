@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
 
 export type CreativeFormat = "carousel" | "story" | "post";
 
@@ -16,7 +17,7 @@ export interface CreativeSlide {
   imageUrl?: string;
   visualPrompt?: string;
   tag?: string;
-  blackLinkVariant?: "3d-sculpture" | "swiss-box" | "pure-monumental" | "clean-ice";
+  blackLinkVariant?: BlackLinkStyleVariant;
 }
 
 export interface CompetitorInsightData {
@@ -342,12 +343,12 @@ const INITIAL_FORM_DATA: MarketingFormData = {
 const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   {
     id: "post-bl-01",
-    theme: "Arquitetura de Escala Comercial",
+    theme: "Estratégia B2B",
     format: "post",
     targetAudience: "Diretores Comerciais, VPs de Vendas e CEOs B2B",
     scheduledDate: "Segunda • 09:00",
     status: "scheduled",
-    hookHeadline: "Arquitetura de Escala Comercial",
+    hookHeadline: "Estratégia B2B",
     bodyCopy:
       "A diferença entre operações que escalam e as que travam está na ausência de atrito no pipeline comercial.\n\nConstruímos a Black Link para substituir planilhas lentas por telemetria preditiva e velocidade executiva.\n\nBem-vindo à fundação da inteligência comercial autônoma.",
     postCaption:
@@ -357,35 +358,9 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
     slides: [
       {
         slideNumber: 1,
-        headline: "ARQUITETURA DE ESCALA COMERCIAL",
-        bodyText: "Eliminamos o atrito invisível entre a primeira abordagem e o fechamento corporativo.",
-        tag: "01 // ESTRATÉGIA",
-        blackLinkVariant: "3d-sculpture",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-02",
-    theme: "O Fim dos CRMs Legados",
-    format: "post",
-    targetAudience: "Líderes Comerciais e Empreendedores B2B",
-    scheduledDate: "Terça • 12:00",
-    status: "scheduled",
-    hookHeadline: "O Fim dos CRMs Legados",
-    bodyCopy:
-      "CRMs legados viraram cemitérios de dados lentos e burocráticos. Eles não ajudam a vender, apenas registram o passado.\n\nO novo padrão corporativo exige sistemas que pensem antes da equipe de vendas.",
-    postCaption:
-      "CRMs legados viraram cemitérios de dados lentos e burocráticos. Eles não ajudam a vender, apenas registram o passado.\n\nO novo padrão corporativo exige sistemas que pensem antes da equipe de vendas.\n\n#CRMB2B #BlackLink #TransformacaoDigital #B2B",
-    ctaText: "Descubra o novo padrão da Black Link.",
-    hashtags: ["#CRMB2B", "#BlackLink", "#TransformacaoDigital"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "O FIM DOS CRMs LEGADOS",
-        bodyText: "Sistemas legados registram o passado. O Black Link pensa antes da sua equipe comercial.",
-        tag: "02 // MANIFESTO",
+        headline: "ESTRATÉGIA B2B",
+        bodyText: "Arquitetura de dados e esteira de fechamento corporativo.",
+        tag: "01 // FRAMEWORK",
         blackLinkVariant: "swiss-box",
       },
     ],
@@ -393,11 +368,63 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
     createdAt: new Date().toISOString(),
   },
   {
+    id: "post-bl-02",
+    theme: "Arquitetura de Reputação",
+    format: "post",
+    targetAudience: "Líderes Comerciais e Empreendedores B2B",
+    scheduledDate: "Terça • 12:00",
+    status: "scheduled",
+    hookHeadline: "Arquitetura de Reputação",
+    bodyCopy:
+      "A percepção de valor define o limite do seu ticket médio corporativo.\n\nQuando sua presença transmite autoridade inegociável, o fechamento deixa de ser uma negociação e passa a ser uma adesão.",
+    postCaption:
+      "A percepção de valor define o limite do seu ticket médio corporativo.\n\nQuando sua presença transmite autoridade inegociável, o fechamento deixa de ser uma negociação e passa a ser uma adesão.\n\n#BlackLink #DesignSistemico #HighTicket #BrandingB2B",
+    ctaText: "Conheça o sistema Black Link.",
+    hashtags: ["#BlackLink", "#DesignSistemico", "#HighTicket"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "ARQUITETURA DE REPUTAÇÃO",
+        bodyText: "A percepção de autoridade define o limite do seu ticket médio.",
+        tag: "02 // DESIGN SISTÊMICO",
+        blackLinkVariant: "3d-keycap",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
     id: "post-bl-03",
+    theme: "Sistema de Marca",
+    format: "post",
+    targetAudience: "CEOs e Fundadores de SaaS Enterprise",
+    scheduledDate: "Quarta • 15:30",
+    status: "scheduled",
+    hookHeadline: "Sistema de Marca",
+    bodyCopy:
+      "Solidez institucional construída para resistir à volatilidade e dominar categorias de alto valor.\n\nUm sistema visual e estratégico impenetrável.",
+    postCaption:
+      "Solidez institucional construída para resistir à volatilidade e dominar categorias de alto valor.\n\nUm sistema visual e estratégico impenetrável.\n\n#SistemaDeMarca #BlackLink #EnterpriseB2B #Monolito",
+    ctaText: "Explore a fundação Black Link.",
+    hashtags: ["#SistemaDeMarca", "#BlackLink", "#EnterpriseB2B"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "SISTEMA DE MARCA",
+        bodyText: "Solidez institucional construída para resistir à volatilidade.",
+        tag: "03 // MONÓLITO",
+        blackLinkVariant: "3d-crystal",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-04",
     theme: "Zero Atrito. Máxima Conversão.",
     format: "post",
     targetAudience: "Heads de Vendas e Closers de Elite",
-    scheduledDate: "Quarta • 15:30",
+    scheduledDate: "Quinta • 10:00",
     status: "scheduled",
     hookHeadline: "Zero Atrito. Máxima Conversão.",
     bodyCopy:
@@ -409,9 +436,9 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
     slides: [
       {
         slideNumber: 1,
-        headline: "ZERO ATRITO. MÁXIMA CONVERSÃO.",
-        bodyText: "Menos burocracia interna e mais presença diante de decisores de alto ticket.",
-        tag: "03 // TESE",
+        headline: "ZERO ATRITO.\nMÁXIMA CONVERSÃO.",
+        bodyText: "Menos burocracia interna e mais presença diante de decisores.",
+        tag: "04 // MANIFESTO",
         blackLinkVariant: "pure-monumental",
       },
     ],
@@ -419,13 +446,39 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: "post-bl-04",
-    theme: "How It Works: Telemetria Preditiva",
+    id: "post-bl-05",
+    theme: "Black Link OS",
+    format: "post",
+    targetAudience: "Decisores B2B Globais",
+    scheduledDate: "Sexta • 18:00",
+    status: "scheduled",
+    hookHeadline: "Black Link OS",
+    bodyCopy:
+      "O centro nevrálgico da sua operação de vendas enterprise.\n\nO elo definitivo entre inteligência de dados, cadência autônoma e conversão comercial previsível.",
+    postCaption:
+      "O centro nevrálgico da sua operação de vendas enterprise.\n\nO elo definitivo entre inteligência de dados, cadência autônoma e conversão comercial previsível.\n\n#BlackLinkOS #Enterprise #InteligenciaArtificial #VendasB2B",
+    ctaText: "Conheça o ecossistema Black Link.",
+    hashtags: ["#BlackLinkOS", "#Enterprise", "#VendasB2B"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "BLACK LINK OS",
+        bodyText: "O centro nevrálgico da sua operação de vendas enterprise.",
+        tag: "05 // TELEMETRIA B2B",
+        blackLinkVariant: "3d-cursor",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-06",
+    theme: "Telemetria em Tempo Real",
     format: "post",
     targetAudience: "CTOs, Diretores de Operações e RevOps",
-    scheduledDate: "Quinta • 10:00",
+    scheduledDate: "Sábado • 11:00",
     status: "scheduled",
-    hookHeadline: "How It Works: Telemetria Preditiva",
+    hookHeadline: "Telemetria em Tempo Real",
     bodyCopy:
       "Como a Black Link monitora o momentum de negociação de cada conta enterprise e dispara ações antes do lead esfriar.",
     postCaption:
@@ -435,62 +488,10 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
     slides: [
       {
         slideNumber: 1,
-        headline: "HOW IT WORKS // TELEMETRIA",
-        bodyText: "Monitoramento contínuo de momentum comercial para antecipar gargalos antes do lead esfriar.",
-        tag: "04 // PROCESSO",
-        blackLinkVariant: "clean-ice",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-05",
-    theme: "Black Link OS: O Núcleo do Sistema",
-    format: "post",
-    targetAudience: "Decisores B2B Globais",
-    scheduledDate: "Sexta • 18:00",
-    status: "scheduled",
-    hookHeadline: "Black Link OS: O Núcleo do Sistema",
-    bodyCopy:
-      "O elo definitivo entre inteligência de dados, automação de cadência e conversão comercial previsível.",
-    postCaption:
-      "O elo definitivo entre inteligência de dados, automação de cadência e conversão comercial previsível.\n\n#BlackLinkOS #Enterprise #InteligenciaArtificial #VendasB2B",
-    ctaText: "Conheça o ecossistema Black Link.",
-    hashtags: ["#BlackLinkOS", "#Enterprise", "#VendasB2B"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "BLACK LINK OS",
-        bodyText: "O elo definitivo entre inteligência de dados, automação de cadência e conversão previsível.",
-        tag: "05 // CORE",
-        blackLinkVariant: "3d-sculpture",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-06",
-    theme: "Qualificação em Tempo Real",
-    format: "post",
-    targetAudience: "Líderes de SDRs e BDRs",
-    scheduledDate: "Sábado • 11:00",
-    status: "scheduled",
-    hookHeadline: "Qualificação em Tempo Real",
-    bodyCopy:
-      "Tolerância zero a leads desqualificados drenando a energia dos seus closers. Saiba como blindar seu pipeline.",
-    postCaption:
-      "Tolerância zero a leads desqualificados drenando a energia dos seus closers. Saiba como blindar seu pipeline.\n\n#QualificacaoB2B #SDR #BlackLink #Pipeline",
-    ctaText: "Blindagem de pipeline ativa.",
-    hashtags: ["#QualificacaoB2B", "#SDR", "#BlackLink"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "QUALIFICAÇÃO EM TEMPO REAL",
-        bodyText: "Tolerância zero a leads desqualificados drenando o tempo dos seus consultores seniores.",
-        tag: "06 // VELOCIDADE",
-        blackLinkVariant: "pure-monumental",
+        headline: "TELEMETRIA EM TEMPO REAL",
+        bodyText: "Monitoramento contínuo de momentum para agir antes do lead esfriar.",
+        tag: "06 // FLUIDEZ",
+        blackLinkVariant: "3d-liquid",
       },
     ],
     imageUrls: [],
@@ -498,25 +499,25 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   },
   {
     id: "post-bl-07",
-    theme: "Dossiê Executivo de Escala",
+    theme: "Cases & Números",
     format: "post",
-    targetAudience: "CFOs e Diretores Financeiros",
+    targetAudience: "CEOs e Heads de Growth",
     scheduledDate: "Segunda • 09:30",
     status: "scheduled",
-    hookHeadline: "Dossiê Executivo de Escala",
+    hookHeadline: "Cases & Números",
     bodyCopy:
-      "O retorno real sobre aquisição de contas enterprise em mercados altamente competitivos.",
+      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\nEficiência mensurável em operações complexas de alta densidade.",
     postCaption:
-      "O retorno real sobre aquisição de contas enterprise em mercados altamente competitivos.\n\n#CFO #FinanceiroB2B #CAC #BlackLink",
-    ctaText: "Receba o dossiê completo.",
-    hashtags: ["#CFO", "#FinanceiroB2B", "#CAC"],
+      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\nEficiência mensurável em operações complexas de alta densidade.\n\n#GrowthB2B #Metricas #BlackLink #Cases",
+    ctaText: "Veja os números na íntegra.",
+    hashtags: ["#GrowthB2B", "#Metricas", "#BlackLink"],
     slides: [
       {
         slideNumber: 1,
-        headline: "DOSSIÊ EXECUTIVO DE ESCALA",
-        bodyText: "Retorno consistente sobre custo de aquisição e proteção de margem operacional.",
-        tag: "07 // INTELIGÊNCIA",
-        blackLinkVariant: "swiss-box",
+        headline: "CASES & NÚMEROS",
+        bodyText: "Eficiência mensurável em operações complexas de alta densidade.",
+        tag: "07 // MÉTRICAS",
+        blackLinkVariant: "clean-ice-box",
       },
     ],
     imageUrls: [],
@@ -524,25 +525,25 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   },
   {
     id: "post-bl-08",
-    theme: "3.4x Mais Velocidade no Ciclo Comercial",
+    theme: "Qualificação de Alto Ticket",
     format: "post",
-    targetAudience: "CEOs e Heads de Growth",
+    targetAudience: "Líderes de SDRs e BDRs",
     scheduledDate: "Quarta • 14:00",
     status: "scheduled",
-    hookHeadline: "3.4x Mais Velocidade no Ciclo Comercial",
+    hookHeadline: "Qualificação de Alto Ticket",
     bodyCopy:
-      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.",
+      "Tolerância zero a leads desqualificados drenando a energia dos seus closers seniores.\n\nSaiba como blindar seu pipeline com filtragem preditiva.",
     postCaption:
-      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\n#GrowthB2B #Metricas #BlackLink #VelocidadeComercial",
-    ctaText: "Acelere seu ciclo de vendas.",
-    hashtags: ["#GrowthB2B", "#Metricas", "#BlackLink"],
+      "Tolerância zero a leads desqualificados drenando a energia dos seus closers seniores.\n\nSaiba como blindar seu pipeline com filtragem preditiva.\n\n#QualificacaoB2B #SDR #BlackLink #Pipeline",
+    ctaText: "Blindagem de pipeline ativa.",
+    hashtags: ["#QualificacaoB2B", "#SDR", "#BlackLink"],
     slides: [
       {
         slideNumber: 1,
-        headline: "3.4X MAIS VELOCIDADE NO PIPELINE",
-        bodyText: "Redução comprovada do tempo entre o primeiro toque e a assinatura de contrato.",
-        tag: "08 // RESULTADO",
-        blackLinkVariant: "clean-ice",
+        headline: "QUALIFICAÇÃO DE ALTO TICKET",
+        bodyText: "Tolerância zero a oportunidades mornas drenando os closers seniores.",
+        tag: "08 // PIPELINE",
+        blackLinkVariant: "3d-sculpture",
       },
     ],
     imageUrls: [],
@@ -550,25 +551,25 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   },
   {
     id: "post-bl-09",
-    theme: "Membro Fundador Black Link",
+    theme: "Dossiê Executivo de Escala",
     format: "post",
-    targetAudience: "Toda a Comunidade B2B",
+    targetAudience: "CFOs e Diretores Financeiros",
     scheduledDate: "Sexta • 17:00",
     status: "scheduled",
-    hookHeadline: "Membro Fundador Black Link",
+    hookHeadline: "Dossiê Executivo de Escala",
     bodyCopy:
-      "Siga @blacklink.com.br e acompanhe a revolução da inteligência comercial B2B desde o primeiro dia.",
+      "O framework definitivo para líderes que negociam no topo do mercado.\n\nRetorno consistente sobre custo de aquisição e proteção de margem operacional.",
     postCaption:
-      "Siga @blacklink.com.br e acompanhe a revolução da inteligência comercial B2B desde o primeiro dia.\n\n#MembroFundador #BlackLink #ComunidadeB2B",
-    ctaText: "Siga o perfil oficial.",
-    hashtags: ["#MembroFundador", "#BlackLink", "#ComunidadeB2B"],
+      "O framework definitivo para líderes que negociam no topo do mercado.\n\nRetorno consistente sobre custo de aquisição e proteção de margem operacional.\n\n#CFO #FinanceiroB2B #CAC #BlackLink",
+    ctaText: "Receba o dossiê completo.",
+    hashtags: ["#CFO", "#FinanceiroB2B", "#CAC"],
     slides: [
       {
         slideNumber: 1,
-        headline: "BEM-VINDO AO NOVO PADRÃO",
-        bodyText: "Acompanhe a revolução da inteligência comercial B2B desde o primeiro dia.",
-        tag: "09 // CONEXÃO",
-        blackLinkVariant: "pure-monumental",
+        headline: "DOSSIÊ EXECUTIVO DE ESCALA",
+        bodyText: "O framework definitivo para líderes que negociam no topo do mercado.",
+        tag: "09 // INTELIGÊNCIA",
+        blackLinkVariant: "clean-ice",
       },
     ],
     imageUrls: [],
@@ -1957,8 +1958,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v5",
-      version: 5,
+      name: "blacklink-marketing-storage-v6",
+      version: 6,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

@@ -64,7 +64,16 @@ export type AspectRatio = "1:1" | "4:5" | "9:16";
 
 export type SlidePattern = "solid-mesh" | "dots" | "grid" | "noise";
 
-export type BlackLinkStyleVariant = "3d-sculpture" | "swiss-box" | "pure-monumental" | "clean-ice";
+export type BlackLinkStyleVariant =
+  | "swiss-box"
+  | "3d-keycap"
+  | "3d-crystal"
+  | "pure-monumental"
+  | "3d-cursor"
+  | "3d-liquid"
+  | "clean-ice-box"
+  | "3d-sculpture"
+  | "clean-ice";
 
 export interface SlideData {
   id?: string;

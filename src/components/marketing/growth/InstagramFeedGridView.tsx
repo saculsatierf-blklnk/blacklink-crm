@@ -44,28 +44,58 @@ const VARIANT_OPTIONS: Array<{
   desc: string;
 }> = [
   {
-    id: "3d-sculpture",
-    label: "3D Sculpture",
-    badge: "🗿 3D",
-    desc: "Titânio & Vidro Líquido no centro",
-  },
-  {
     id: "swiss-box",
     label: "Swiss Box",
-    badge: "📐 Swiss",
-    desc: "Bounding Box Técnica & Seta ↗",
+    badge: "📐 Swiss Box",
+    desc: "Bounding box técnica com handles",
+  },
+  {
+    id: "3d-keycap",
+    label: "3D Keycap",
+    badge: "⌨️ 3D Keycap",
+    desc: "Tecla ESC de vidro óptico cáustico",
+  },
+  {
+    id: "3d-crystal",
+    label: "3D Crystal",
+    badge: "💎 3D Crystal",
+    desc: "Cristal negro e correntes no fundo claro",
   },
   {
     id: "pure-monumental",
-    label: "Pure Monumental",
+    label: "Monumental",
     badge: "🏛️ Monumental",
-    desc: "Tipografia Colossal no preto",
+    desc: "Tipografia monumental pura no preto",
+  },
+  {
+    id: "3d-cursor",
+    label: "3D Cursor",
+    badge: "🖱️ 3D Cursor",
+    desc: "Seta cromada líquida em perspectiva",
+  },
+  {
+    id: "3d-liquid",
+    label: "3D Liquid",
+    badge: "🌊 3D Liquid",
+    desc: "Fita de platina líquida e título inferior",
+  },
+  {
+    id: "clean-ice-box",
+    label: "Ice Box",
+    badge: "❄️ Ice Box",
+    desc: "Bounding box técnica no fundo claro",
+  },
+  {
+    id: "3d-sculpture",
+    label: "3D Monolith",
+    badge: "🗿 3D Monolith",
+    desc: "Monólito de titânio escovado",
   },
   {
     id: "clean-ice",
     label: "Clean Ice",
-    badge: "❄️ Ice",
-    desc: "Invertido Claro Acetinado",
+    badge: "❄️ Clean Ice",
+    desc: "Invertido claro acetinado brutalista",
   },
 ];
 
@@ -442,9 +472,14 @@ export function InstagramFeedGridView() {
               const firstSlide = post.slides[0];
               const totalSlides = post.slides.length || 1;
               const fallbackVariants: BlackLinkStyleVariant[] = [
-                "3d-sculpture",
                 "swiss-box",
+                "3d-keycap",
+                "3d-crystal",
                 "pure-monumental",
+                "3d-cursor",
+                "3d-liquid",
+                "clean-ice-box",
+                "3d-sculpture",
                 "clean-ice",
               ];
               const variant =
@@ -772,7 +807,7 @@ export function InstagramFeedGridView() {
                 <label className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
                   Variação Rítmica do Feed
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {VARIANT_OPTIONS.map((opt) => {
                     const currentVar = visorActivePost.slides[0]?.blackLinkVariant || "3d-sculpture";
                     const isSelected = currentVar === opt.id;
@@ -788,14 +823,14 @@ export function InstagramFeedGridView() {
                           };
                           updateScheduledPost(visorActivePost.id, { slides: updatedSlides });
                         }}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
-                            ? "bg-white/15 border-white text-white font-semibold"
+                            ? "bg-white/15 border-white text-white font-semibold shadow-inner"
                             : "bg-white/[0.02] border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.05]"
                         }`}
                       >
-                        <div className="text-xs font-bold font-mono">{opt.badge}</div>
-                        <div className="text-[9px] text-zinc-400 line-clamp-1">{opt.desc}</div>
+                        <div className="text-[11px] font-bold font-mono truncate">{opt.badge}</div>
+                        <div className="text-[8px] text-zinc-500 line-clamp-1">{opt.desc}</div>
                       </button>
                     );
                   })}
@@ -1193,7 +1228,7 @@ export function InstagramFeedGridView() {
                         <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
                           Variação Rítmica de Design
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {VARIANT_OPTIONS.map((opt) => (
                             <button
                               key={opt.id}
@@ -1206,7 +1241,7 @@ export function InstagramFeedGridView() {
                               }`}
                             >
                               <div className="text-xs font-bold font-mono">{opt.badge}</div>
-                              <div className="text-[10px] text-zinc-400">{opt.desc}</div>
+                              <div className="text-[10px] text-zinc-400 line-clamp-1">{opt.desc}</div>
                             </button>
                           ))}
                         </div>

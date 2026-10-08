@@ -91,6 +91,11 @@ export function PostSlideDisplay({
 
   const variant: BlackLinkStyleVariant = slide?.blackLinkVariant || "3d-sculpture";
 
+  const isLight =
+    variant === "clean-ice" ||
+    variant === "clean-ice-box" ||
+    variant === "3d-crystal";
+
   const slideConfig: SlideDesignConfig = {
     theme: "dark-industrial",
     font: "clash-display",
@@ -98,7 +103,7 @@ export function PostSlideDisplay({
     aspectRatio,
     pattern: "solid-mesh",
     fontSizeScale: 1.0,
-    bgColor: variant === "clean-ice" ? "#ececec" : "#030305",
+    bgColor: isLight ? "#ececec" : "#030305",
     accentColor: "#ffffff",
     authorName,
     authorHandle,
@@ -118,8 +123,8 @@ export function PostSlideDisplay({
     slide: slideData,
     config: slideConfig,
     scale: 1,
-    isLight: variant === "clean-ice",
-    textPrimaryClass: variant === "clean-ice" ? "text-black" : "text-white",
+    isLight,
+    textPrimaryClass: isLight ? "text-black" : "text-white",
     textSecondaryClass: "text-zinc-400",
     textMutedClass: "text-zinc-500",
     borderClass: "border-white/10",

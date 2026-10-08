@@ -1251,10 +1251,25 @@ function buildSynchronizedFeedPosts(
     const slideHeadline = item.hookHeadline;
     const cleanTag = brandName.replace(/[^a-zA-Z0-9]/g, "");
 
-    const variants: ("3d-sculpture" | "swiss-box" | "pure-monumental" | "clean-ice")[] = [
-      "3d-sculpture",
+    const variants: (
+      | "swiss-box"
+      | "3d-keycap"
+      | "3d-crystal"
+      | "pure-monumental"
+      | "3d-cursor"
+      | "3d-liquid"
+      | "clean-ice-box"
+      | "3d-sculpture"
+      | "clean-ice"
+    )[] = [
       "swiss-box",
+      "3d-keycap",
+      "3d-crystal",
       "pure-monumental",
+      "3d-cursor",
+      "3d-liquid",
+      "clean-ice-box",
+      "3d-sculpture",
       "clean-ice",
     ];
     const assignedVariant = variants[idx % variants.length];
