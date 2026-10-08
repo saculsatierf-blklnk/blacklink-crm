@@ -515,30 +515,27 @@ export function InstagramFeedGridView() {
                     totalSlides={totalSlides}
                   />
 
-                  {/* Badge de Variação Rítmica no Canto Inferior Esquerdo */}
-                  <div className="absolute bottom-3 left-3 pointer-events-none">
-                    <span className="rounded-full bg-black/75 px-2.5 py-1 text-[9px] font-mono font-bold text-white backdrop-blur-md border border-white/15">
-                      {variantInfo.badge}
-                    </span>
-                  </div>
-
-                  {/* Badge de Data no Canto Superior Esquerdo */}
-                  <div className="absolute top-3 left-3 pointer-events-none">
-                    <span className="rounded-full bg-black/75 px-2.5 py-0.5 text-[9px] font-mono font-semibold text-zinc-300 backdrop-blur-md border border-white/15">
-                      {post.scheduledDate}
-                    </span>
-                  </div>
-
-                  {/* Ícone de Carrossel no Canto Superior Direito se tiver mais de 1 lâmina */}
+                  {/* Ícone sutil de Carrossel no Canto Superior Direito se tiver mais de 1 lâmina */}
                   {totalSlides > 1 && (
-                    <div className="absolute top-3 right-3 rounded-md bg-black/75 p-1.5 backdrop-blur-md border border-white/15 text-white shadow-md pointer-events-none">
+                    <div className="absolute top-3 right-3 rounded-md bg-black/60 p-1.5 backdrop-blur-md border border-white/15 text-white/80 shadow-md pointer-events-none">
                       <Layers className="h-3.5 w-3.5" />
                     </div>
                   )}
 
-                  {/* Overlay com Ações no Hover */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white font-semibold backdrop-blur-sm">
-                    <div className="flex items-center gap-5 text-sm">
+                  {/* Overlay Editorial no Hover (Revela Informações de Curadoria) */}
+                  <div className="absolute inset-0 flex flex-col justify-between p-4 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-white backdrop-blur-sm">
+                    {/* Topo do Hover: Data e Variação */}
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[9px] font-mono font-semibold text-zinc-300 border border-white/15 backdrop-blur-md">
+                        {post.scheduledDate}
+                      </span>
+                      <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[9px] font-mono font-bold text-white border border-white/20">
+                        {variantInfo.badge}
+                      </span>
+                    </div>
+
+                    {/* Centro do Hover: Métricas */}
+                    <div className="flex items-center justify-center gap-5 text-sm font-semibold">
                       <div className="flex items-center gap-1.5">
                         <Heart className="h-4 w-4 fill-white" />
                         <span>428</span>
@@ -548,9 +545,13 @@ export function InstagramFeedGridView() {
                         <span>39</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono text-zinc-300 uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/20">
-                      Editar Arte &amp; Copy ➔
-                    </span>
+
+                    {/* Base do Hover: Botão de Edição */}
+                    <div className="flex justify-center">
+                      <span className="text-[10px] font-mono text-zinc-200 uppercase tracking-widest bg-white/15 hover:bg-white/25 px-3 py-1 rounded-full border border-white/20 transition-colors">
+                        Editar Arte &amp; Copy ➔
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
