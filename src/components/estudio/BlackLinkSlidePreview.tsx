@@ -13,6 +13,7 @@ import {
   CtaLayout,
   LayoutProps,
   BlackLinkGlassLayout,
+  GlassDimensionMode,
 } from "./layouts";
 
 export type {
@@ -23,6 +24,7 @@ export type {
   SlidePattern,
   SlideData,
   SlideDesignConfig,
+  GlassDimensionMode,
 };
 
 export interface BlackLinkSlidePreviewProps {

@@ -11,6 +11,7 @@ import {
   AspectRatio,
   SlidePattern,
   isLightColor,
+  GlassDimensionMode,
 } from "./BlackLinkSlidePreview";
 import * as htmlToImage from "html-to-image";
 import JSZip from "jszip";
@@ -28,6 +29,7 @@ const BRAND_STORAGE_KEY = "blacklink_studio_brand_memory";
 const DEFAULT_CONFIG: SlideDesignConfig = {
   theme: "dark-industrial",
   layout: "black-link",
+  glassDimensionMode: "3d-slab",
   font: "clash-display",
   aspectRatio: "1:1",
   pattern: "noise",
@@ -1515,6 +1517,7 @@ export function BlackLinkCarouselStudio() {
                         bgColor: "#030304",
                         accentColor: "#ffffff",
                         pattern: "noise",
+                        glassDimensionMode: designConfig.glassDimensionMode || "3d-slab",
                       });
                     }}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1.5 ${
@@ -1526,6 +1529,92 @@ export function BlackLinkCarouselStudio() {
                     <span>{designConfig.layout === "black-link" ? "✓ Template Ativo" : "✦ Aplicar Template Black Link"}</span>
                   </button>
                 </div>
+
+                {/* Seletor de Dimensão Física 3D / Glassmorphism Black Link */}
+                {designConfig.layout === "black-link" && (
+                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/15 backdrop-blur-xl shadow-lg space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">💎</span>
+                        <span className="text-[11px] font-bold text-white uppercase tracking-wider font-mono">
+                          Dimensão Espacial & Acabamento 3D
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-mono text-zinc-400 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
+                        {designConfig.glassDimensionMode === "3d-monolith"
+                          ? "Chanfrado 45°"
+                          : designConfig.glassDimensionMode === "floating-glass"
+                          ? "Vidro 4K Zenital"
+                          : "Placa 3D Acrílica"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        {
+                          id: "3d-slab" as GlassDimensionMode,
+                          name: "Placa 3D Acrílica",
+                          badge: "Efeito Imagem 4",
+                          desc: "Bordas ópticas chanfradas, halo luminoso e botões táteis",
+                          icon: "✦",
+                        },
+                        {
+                          id: "3d-monolith" as GlassDimensionMode,
+                          name: "Monólito Chanfrado",
+                          badge: "Efeito Imagem 5",
+                          desc: "Facetas físicas a 45°, cavidade escavada e relevo",
+                          icon: "⬡",
+                        },
+                        {
+                          id: "floating-glass" as GlassDimensionMode,
+                          name: "Vidro Flutuante 4K",
+                          badge: "Efeito Imagens 1-3",
+                          desc: "Refração zenital, blur profundo e emblema 4K",
+                          icon: "◈",
+                        },
+                      ].map((dim) => {
+                        const isSelected =
+                          (designConfig.glassDimensionMode || "3d-slab") === dim.id;
+                        return (
+                          <button
+                            key={dim.id}
+                            type="button"
+                            onClick={() =>
+                              updateDesignConfig({ glassDimensionMode: dim.id })
+                            }
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                              isSelected
+                                ? "bg-white text-black border-white shadow-lg shadow-white/10"
+                                : "bg-black/40 text-zinc-300 border-white/10 hover:border-white/30 hover:bg-white/[0.06]"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs font-bold flex items-center gap-1 font-clash">
+                                <span>{dim.icon}</span> {dim.name}
+                              </span>
+                              <span
+                                className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded ${
+                                  isSelected
+                                    ? "bg-black text-white"
+                                    : "bg-white/10 text-zinc-400"
+                                }`}
+                              >
+                                {dim.badge}
+                              </span>
+                            </div>
+                            <p
+                              className={`text-[10px] leading-tight ${
+                                isSelected ? "text-zinc-800" : "text-zinc-400"
+                              }`}
+                            >
+                              {dim.desc}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Categorias dos Layouts (Filtros Rápidos) */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-thin">

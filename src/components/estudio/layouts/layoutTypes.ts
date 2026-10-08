@@ -74,6 +74,8 @@ export interface SlideData {
   kpiHighlight?: string;
 }
 
+export type GlassDimensionMode = "3d-slab" | "3d-monolith" | "floating-glass";
+
 export interface SlideDesignConfig {
   theme: SlideTheme;
   layout: SlideLayout;
@@ -89,6 +91,7 @@ export interface SlideDesignConfig {
   bgImage?: string;
   bgOpacity?: number;
   screenshotImage?: string;
+  glassDimensionMode?: GlassDimensionMode;
 }
 
 export interface LayoutProps {
