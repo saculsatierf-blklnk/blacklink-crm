@@ -3,6 +3,8 @@ import React from "react";
 export type SlideTheme = "dark-industrial" | "light-minimal" | "neon-accent";
 
 export type SlideLayout =
+  // 0: Template Oficial Antigravity (Black Link 1.0)
+  | "black-link"
   // 1-5: Tech & Código
   | "brutalista"
   | "terminal"
@@ -31,6 +33,8 @@ export type SlideLayout =
   | "apple-mockup";
 
 export type SlideFont =
+  // Tipografia Oficial Black Link
+  | "clash-display"
   // Tech / Código
   | "space-grotesk"
   | "fira-code"

@@ -80,8 +80,11 @@ export function renderHighlightedText(text: string, accentColor: string) {
   });
 }
 
-// Mapeamento das 20 Famílias Tipográficas
+// Mapeamento das 21 Famílias Tipográficas
 const FONT_CLASS_MAP: Record<SlideFont, string> = {
+  // Tipografia Oficial Black Link
+  "clash-display": "font-clash",
+
   // Tech / Código
   "space-grotesk": "font-space-grotesk",
   "fira-code": "font-fira-code",

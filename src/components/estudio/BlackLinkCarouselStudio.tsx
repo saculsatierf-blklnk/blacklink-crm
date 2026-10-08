@@ -27,14 +27,14 @@ const BRAND_STORAGE_KEY = "blacklink_studio_brand_memory";
 
 const DEFAULT_CONFIG: SlideDesignConfig = {
   theme: "dark-industrial",
-  layout: "brutalista",
-  font: "space-grotesk",
+  layout: "black-link",
+  font: "clash-display",
   aspectRatio: "1:1",
-  pattern: "dots",
+  pattern: "noise",
   fontSizeScale: 1.0,
-  bgColor: "#09090b",
-  accentColor: "#38bdf8",
-  authorName: "Black Link CRM",
+  bgColor: "#030304",
+  accentColor: "#ffffff",
+  authorName: "Black Link",
   authorHandle: "@blacklink.b2b",
   authorAvatar: "",
   bgImage: "",
@@ -42,6 +42,12 @@ const DEFAULT_CONFIG: SlideDesignConfig = {
 };
 
 const B2B_PALETTES = [
+  {
+    name: "Black Link Mono",
+    bgColor: "#030304",
+    accentColor: "#ffffff",
+    description: "Template Oficial Antigravity 1.0 • 0% Saturação",
+  },
   {
     name: "Midnight Blue",
     bgColor: "#0b1329",
@@ -80,7 +86,7 @@ const B2B_PALETTES = [
   },
 ];
 
-// Definição dos 20 Modelos de Layout com Categorias e Ícones
+// Definição dos Modelos de Layout com Categorias e Ícones
 const LAYOUT_DEFINITIONS: Array<{
   id: SlideLayout;
   label: string;
@@ -88,6 +94,15 @@ const LAYOUT_DEFINITIONS: Array<{
   category: "tech" | "editorial" | "social" | "saas";
   icon: string;
 }> = [
+  // 0: Template Estrela Oficial Antigravity (Black Link 1.0)
+  {
+    id: "black-link",
+    label: "Black Link",
+    desc: "Antigravity 1.0 • Glassmorphism 4K Monocromático Tátil",
+    category: "saas",
+    icon: "✦",
+  },
+
   // Tech & Dev (5)
   { id: "brutalista", label: "Brutalista", desc: "Tipografia Colossal", category: "tech", icon: "⚡" },
   { id: "terminal", label: "Terminal", desc: "macOS Dev Shell", category: "tech", icon: "❯" },
@@ -119,13 +134,16 @@ const LAYOUT_DEFINITIONS: Array<{
   { id: "apple-mockup", label: "Apple Mockup", desc: "Device Enveloping", category: "saas", icon: "🖥️" },
 ];
 
-// Definição das 20 Famílias Tipográficas
+// Definição das Famílias Tipográficas
 const FONT_DEFINITIONS: Array<{
   id: SlideFont;
   label: string;
   style: string;
   category: "tech" | "modern" | "editorial";
 }> = [
+  // Tipografia Oficial Black Link
+  { id: "clash-display", label: "Clash Display", style: "Design System Black Link", category: "modern" },
+
   // Tech / Código (5)
   { id: "space-grotesk", label: "Space Grotesk", style: "Brutalista Tech", category: "tech" },
   { id: "fira-code", label: "Fira Code", style: "Mono Ligaduras", category: "tech" },
@@ -154,6 +172,23 @@ const FONT_DEFINITIONS: Array<{
   { id: "crimson-pro", label: "Crimson Pro", style: "Publicação Literária", category: "editorial" },
 ];
 
+/**
+ * Funções Utilitárias para Garantia dos Limites Absolutos (Design System Black Link 1.0)
+ * Headline: Máx 65 caracteres
+ * BodyText: Máx 140 caracteres
+ */
+export function clampHeadline(text: string, max = 65): string {
+  const clean = (text || "").trim();
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max - 3).trim() + "...";
+}
+
+export function clampBody(text: string, max = 140): string {
+  const clean = (text || "").trim();
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max - 3).trim() + "...";
+}
+
 const INITIAL_SLIDES: SlideData[] = [
   {
     tag: "DIAGNÓSTICO B2B",
@@ -165,7 +200,7 @@ const INITIAL_SLIDES: SlideData[] = [
     tag: "O ERRO CRÍTICO",
     headline: "Planilhas e CRMs lentos **destroem o tempo de resposta**.",
     bodyText:
-      "Empresas de alto crescimento não toleram atrito operacional. O tempo entre o primeiro clique e a abordagem comercial define a taxa de vitória.",
+      "Empresas de alto crescimento não toleram atrito. O tempo entre o primeiro clique e o contato comercial define a taxa de vitória.",
   },
   {
     tag: "A ARQUITETURA",
@@ -175,7 +210,7 @@ const INITIAL_SLIDES: SlideData[] = [
   },
   {
     tag: "RESULTADOS",
-    headline: "Redução de **64% no ciclo de fechamento** das contas corporativas.",
+    headline: "Redução de **64% no ciclo** das contas corporativas.",
     bodyText:
       "A Black Link entrega visibilidade holística e controle rigoroso sobre cada etapa do pipeline comercial.",
   },
@@ -207,135 +242,144 @@ function synthesizeSlidesForPlan(
     : `O Segredo de **${rawHook}**`;
   const cta = plan.ctaText?.trim() || "Salve este carrossel para consultar na sua próxima sessão de planejamento.";
 
-  if (plan.format === "story") {
+  const rawSlides: SlideData[] = (() => {
+    if (plan.format === "story") {
+      return [
+        {
+          tag: "STORY • GANCHO & PERGUNTA",
+          headline: hook,
+          bodyText: "Responda à enquete ou caixinha: como sua operação lida com esse desafio hoje?",
+        },
+        {
+          tag: "STORY • BASTIDORES",
+          headline: "O que Ninguém Mostra nos **Bastidores**",
+          bodyText: "A diferença entre operações que escalam e as que travam está na clareza dos processos.",
+        },
+        {
+          tag: "STORY • PRÓXIMA AÇÃO",
+          headline: "Envie **'DIRECT'** para Acessar",
+          bodyText: `${cta} Responda a este story agora para receber os detalhes ou acesse o link na bio de ${handle}!`,
+        },
+      ];
+    }
+
+    if (plan.format === "post") {
+      return [
+        {
+          tag: plan.funnelStage === "topo" ? "TESE EXECUTIVA" : "DIRETRIZ ESTRATÉGICA",
+          headline: hook,
+          bodyText: `Análise estratégica desenvolvida pela equipe da ${brand}. Salve esta diretriz para consultar com seu time e compartilhe com sua liderança.`,
+        },
+      ];
+    }
+
+    if (isInfluencer) {
+      return [
+        {
+          tag: plan.funnelStage === "topo" ? "GANCHO VIRAL" : plan.funnelStage === "meio" ? "BASTIDORES" : "INTERAÇÃO",
+          headline: hook,
+          bodyText: `Relato autoral e bastidores reais de ${brand}. Arraste para o lado para conferir como tudo aconteceu.`,
+        },
+        {
+          tag: "O PONTO DE VIRADA",
+          headline: "O Momento em que **Tudo Fugiu do Controle**",
+          bodyText: "Quando você acha que tudo está correndo no padrão, acontece aquele imprevisto que muda o rumo de tudo.",
+        },
+        {
+          tag: "A REVELAÇÃO",
+          headline: "A Regra Oculta que **Poucos Entendem**",
+          bodyText: "Por trás de cada post viral existe muito mais teste, erro e insistência do que perfeição planejada.",
+        },
+        {
+          tag: "O APRENDIZADO",
+          headline: "O que Ficou de **Lição Real**",
+          bodyText: "Manter sua autenticidade e conexão com quem te acompanha vale mais do que qualquer fórmula pronta de engajamento.",
+        },
+        {
+          tag: "INTERAÇÃO DIRETA",
+          headline: "Comente Aqui: O que **Você Faria**?",
+          bodyText: `${cta} Siga ${handle} para acompanhar os bastidores e os próximos conteúdos sem filtro!`,
+        },
+      ];
+    }
+
+    const contextStr = ((profile.niche || "") + " " + (profile.products || "") + " " + brand + " " + cleanTheme).toLowerCase();
+    const isMetalOrIndustry =
+      contextStr.includes("metal") ||
+      contextStr.includes("aço") ||
+      contextStr.includes("aco") ||
+      contextStr.includes("estrutur") ||
+      contextStr.includes("obra") ||
+      contextStr.includes("galpão") ||
+      contextStr.includes("fabricação") ||
+      contextStr.includes("indústria");
+
+    if (isMetalOrIndustry) {
+      return [
+        {
+          tag: "DIAGNÓSTICO TÉCNICO",
+          headline: hook,
+          bodyText: `Por que fornecedores sem controle dimensional rigoroso causam atrasos em cadeia e como a ${brand} blinda sua operação.`,
+        },
+        {
+          tag: "O RISCO CRÍTICO",
+          headline: "A Armadilha do **Preço Aparente vs Custo Real**",
+          bodyText: "Economizar na fase inicial com fornecimento sem rastreabilidade pode dobrar o custo total com retrabalho no terreno.",
+        },
+        {
+          tag: "ENGENHARIA DE PRECISÃO",
+          headline: "Padronização e **Tolerância Zero a Falhas**",
+          bodyText: "Processos fabris com checagem milimétrica garantem que cada peça chegue pronta para montagem limpa e sem adaptações.",
+        },
+        {
+          tag: "CRONOGRAMA BLINDADO",
+          headline: "Execução no Terreno com **Prazo Assegurado**",
+          bodyText: "Alinhamento contínuo entre produção industrial e equipes de campo para que o cronograma seja rigorosamente cumprido.",
+        },
+        {
+          tag: "SOLUÇÃO CORPORATIVA",
+          headline: `Conecte-se com os Especialistas da **${brand}**`,
+          bodyText: `${cta} Fale com nossos engenheiros pelo link da bio em ${handle} e receba um orçamento corporativo estruturado.`,
+        },
+      ];
+    }
+
+    // Padrão Corporativo B2B
     return [
       {
-        tag: "STORY • GANCHO & PERGUNTA",
+        tag: plan.funnelStage === "topo" ? "TESE CENTRAL" : plan.funnelStage === "meio" ? "FRAMEWORK" : "CONVERSÃO",
         headline: hook,
-        bodyText: "Responda à enquete ou caixinha: como sua operação lida com esse desafio hoje?",
+        bodyText: `Diretrizes estratégicas elaboradas para decisores corporativos pela equipe da ${brand}.`,
       },
       {
-        tag: "STORY • BASTIDORES",
-        headline: "O que Ninguém Mostra nos **Bastidores**",
-        bodyText: "A diferença entre operações que escalam e as que travam está na clareza dos processos.",
+        tag: "O GARGALO OCULTO",
+        headline: "Onde a Maioria Comete o **Erro Fatal**",
+        bodyText: "Processos manuais e ausência de alinhamento estratégico criam atrito silencioso e drenam a rentabilidade do negócio.",
       },
       {
-        tag: "STORY • PRÓXIMA AÇÃO",
-        headline: "Envie **'DIRECT'** para Acessar",
-        bodyText: `${cta} Responda a este story agora para receber os detalhes ou acesse o link na bio de ${handle}!`,
+        tag: "A ARQUITETURA",
+        headline: "O Método Superior de **Alta Performance**",
+        bodyText: "Substitua o improviso por uma esteira estruturada: dados centralizados, automação inteligente e foco no que gera retorno real.",
+      },
+      {
+        tag: "EXECUÇÃO CIRÚRGICA",
+        headline: "Implementação Rápida no **Terreno**",
+        bodyText: `Aplique o objetivo desta pauta (${plan.objective}) através de etapas acionáveis que sua equipe consegue executar hoje mesmo.`,
+      },
+      {
+        tag: "CALL TO ACTION",
+        headline: `Pronto para Escalar com a **${brand}**?`,
+        bodyText: `${cta} Siga ${handle} e compartilhe este carrossel com sua diretoria para acelerar seus resultados.`,
       },
     ];
-  }
+  })();
 
-  if (plan.format === "post") {
-    return [
-      {
-        tag: plan.funnelStage === "topo" ? "TESE EXECUTIVA" : "DIRETRIZ ESTRATÉGICA",
-        headline: hook,
-        bodyText: `Análise estratégica desenvolvida pela equipe da ${brand}. Salve esta diretriz para consultar com seu time e compartilhe com sua liderança.`,
-      },
-    ];
-  }
-
-  if (isInfluencer) {
-    return [
-      {
-        tag: plan.funnelStage === "topo" ? "GANCHO VIRAL" : plan.funnelStage === "meio" ? "BASTIDORES" : "INTERAÇÃO",
-        headline: hook,
-        bodyText: `Relato autoral e bastidores reais de ${brand}. Arraste para o lado para conferir como tudo aconteceu.`,
-      },
-      {
-        tag: "O PONTO DE VIRADA",
-        headline: "O Momento em que **Tudo Fugiu do Controle**",
-        bodyText: "Quando você acha que tudo está correndo no padrão, acontece aquele imprevisto que muda o rumo de tudo.",
-      },
-      {
-        tag: "A REVELAÇÃO",
-        headline: "A Regra Oculta que **Poucos Entendem**",
-        bodyText: "Por trás de cada post viral existe muito mais teste, erro e insistência do que perfeição planejada.",
-      },
-      {
-        tag: "O APRENDIZADO",
-        headline: "O que Ficou de **Lição Real**",
-        bodyText: "Manter sua autenticidade e conexão com quem te acompanha vale mais do que qualquer fórmula pronta de engajamento.",
-      },
-      {
-        tag: "INTERAÇÃO DIRETA",
-        headline: "Comente Aqui: O que **Você Faria**?",
-        bodyText: `${cta} Siga ${handle} para acompanhar os bastidores e os próximos conteúdos sem filtro!`,
-      },
-    ];
-  }
-
-  const contextStr = ((profile.niche || "") + " " + (profile.products || "") + " " + brand + " " + cleanTheme).toLowerCase();
-  const isMetalOrIndustry =
-    contextStr.includes("metal") ||
-    contextStr.includes("aço") ||
-    contextStr.includes("aco") ||
-    contextStr.includes("estrutur") ||
-    contextStr.includes("obra") ||
-    contextStr.includes("galpão") ||
-    contextStr.includes("fabricação") ||
-    contextStr.includes("indústria");
-
-  if (isMetalOrIndustry) {
-    return [
-      {
-        tag: "DIAGNÓSTICO TÉCNICO",
-        headline: hook,
-        bodyText: `Por que fornecedores sem controle dimensional rigoroso causam atrasos em cadeia e como a ${brand} blinda sua operação.`,
-      },
-      {
-        tag: "O RISCO CRÍTICO",
-        headline: "A Armadilha do **Preço Aparente vs Custo Real**",
-        bodyText: "Economizar na fase inicial com fornecimento sem rastreabilidade pode dobrar o custo total com retrabalho no terreno.",
-      },
-      {
-        tag: "ENGENHARIA DE PRECISÃO",
-        headline: "Padronização e **Tolerância Zero a Falhas**",
-        bodyText: "Processos fabris com checagem milimétrica garantem que cada peça chegue pronta para montagem limpa e sem adaptações.",
-      },
-      {
-        tag: "CRONOGRAMA BLINDADO",
-        headline: "Execução no Terreno com **Prazo Assegurado**",
-        bodyText: "Alinhamento contínuo entre produção industrial e equipes de campo para que o cronograma seja rigorosamente cumprido.",
-      },
-      {
-        tag: "SOLUÇÃO CORPORATIVA",
-        headline: `Conecte-se com os Especialistas da **${brand}**`,
-        bodyText: `${cta} Fale com nossos engenheiros pelo link da bio em ${handle} e receba um orçamento corporativo estruturado.`,
-      },
-    ];
-  }
-
-  // Padrão Corporativo B2B
-  return [
-    {
-      tag: plan.funnelStage === "topo" ? "TESE CENTRAL" : plan.funnelStage === "meio" ? "FRAMEWORK" : "CONVERSÃO",
-      headline: hook,
-      bodyText: `Diretrizes estratégicas elaboradas para decisores corporativos pela equipe da ${brand}.`,
-    },
-    {
-      tag: "O GARGALO OCULTO",
-      headline: "Onde a Maioria Comete o **Erro Fatal**",
-      bodyText: "Processos manuais e ausência de alinhamento estratégico criam atrito silencioso e drenam a rentabilidade do negócio.",
-    },
-    {
-      tag: "A ARQUITETURA",
-      headline: "O Método Superior de **Alta Performance**",
-      bodyText: "Substitua o improviso por uma esteira estruturada: dados centralizados, automação inteligente e foco no que gera retorno real.",
-    },
-    {
-      tag: "EXECUÇÃO CIRÚRGICA",
-      headline: "Implementação Rápida no **Terreno**",
-      bodyText: `Aplique o objetivo desta pauta (${plan.objective}) através de etapas acionáveis que sua equipe consegue executar hoje mesmo.`,
-    },
-    {
-      tag: "CALL TO ACTION",
-      headline: `Pronto para Escalar com a **${brand}**?`,
-      bodyText: `${cta} Siga ${handle} e compartilhe este carrossel com sua diretoria para acelerar seus resultados.`,
-    },
-  ];
+  // Garante que todas as lâminas nasçam respeitando rigorosamente os hard limits (65 / 140)
+  return rawSlides.map((s) => ({
+    ...s,
+    headline: clampHeadline(s.headline, 65),
+    bodyText: clampBody(s.bodyText, 140),
+  }));
 }
 
 export function BlackLinkCarouselStudio() {
@@ -467,14 +511,18 @@ export function BlackLinkCarouselStudio() {
             : idx === matching.slides.length - 1
             ? "CTA"
             : `LÂMINA ${idx + 1}`),
-        headline:
+        headline: clampHeadline(
           s.headline?.trim() ||
           selectedPlanForCreation.theme ||
           `Lâmina ${idx + 1}`,
-        bodyText:
+          65
+        ),
+        bodyText: clampBody(
           s.bodyText?.trim() ||
           selectedPlanForCreation.objective ||
           "Diretrizes e dados essenciais desta lâmina.",
+          140
+        ),
       }));
       setSlides(formatted);
       setCurrentSlideIndex(0);
@@ -747,8 +795,8 @@ export function BlackLinkCarouselStudio() {
       if (Array.isArray(incomingSlides) && incomingSlides.length > 0) {
         const formatted: SlideData[] = incomingSlides.map((s: any, idx: number) => ({
           tag: s.tag || (idx === 0 ? "GANCHO" : idx === incomingSlides.length - 1 ? "CTA" : `LÂMINA ${idx + 1}`),
-          headline: s.headline || s.title || `Insight ${idx + 1}`,
-          bodyText: s.bodyText || s.body || s.content || "",
+          headline: clampHeadline(s.headline || s.title || `Insight ${idx + 1}`, 65),
+          bodyText: clampBody(s.bodyText || s.body || s.content || "", 140),
         }));
         setSlides(formatted);
         setCurrentSlideIndex(0);
@@ -1406,6 +1454,43 @@ export function BlackLinkCarouselStudio() {
                   </span>
                 </div>
 
+                {/* Banner Hero do Template Oficial: Black Link (Antigravity 1.0) */}
+                <div className="p-4 rounded-2xl border border-white/20 bg-gradient-to-br from-white/10 via-black to-black backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl mb-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-white text-black text-[9px] font-mono font-extrabold uppercase shadow-sm">
+                        ★ OFICIAL
+                      </span>
+                      <span className="text-xs font-bold text-white font-clash tracking-wide">
+                        Template Black Link (Antigravity 1.0)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">
+                      Glassmorphism 4K tátil, paleta 100% monocromática (0% saturação), tipografia Clash Display + Inter e margens imutáveis de 80px.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateDesignConfig({
+                        layout: "black-link",
+                        font: "clash-display",
+                        bgColor: "#030304",
+                        accentColor: "#ffffff",
+                        pattern: "noise",
+                      });
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1.5 ${
+                      designConfig.layout === "black-link"
+                        ? "bg-white text-black border border-white"
+                        : "bg-white/10 hover:bg-white text-white hover:text-black border border-white/20"
+                    }`}
+                  >
+                    <span>{designConfig.layout === "black-link" ? "✓ Template Ativo" : "✦ Aplicar Template Black Link"}</span>
+                  </button>
+                </div>
+
                 {/* Categorias dos Layouts (Filtros Rápidos) */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2.5 scrollbar-thin">
                   {[
@@ -1930,6 +2015,69 @@ export function BlackLinkCarouselStudio() {
                     placeholder="Insira o texto explicativo deste slide..."
                     className="w-full px-3 py-2 rounded-xl bg-black/60 border border-white/10 text-xs text-white focus:outline-none leading-relaxed"
                   />
+                </div>
+
+                {/* MEDIDOR & AJUSTE DOS HARD LIMITS (DESIGN SYSTEM BLACK LINK 1.0) */}
+                <div className="p-3 rounded-xl bg-black/60 border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-zinc-400 font-bold uppercase flex items-center gap-1.5">
+                      <span className="text-white">✦</span>
+                      <span>Limites Absolutos (Hard Limits):</span>
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">
+                      Antigravity 1.0 Spec
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div
+                      className={`p-2 rounded-lg border ${
+                        (slides[currentSlideIndex]?.headline?.length || 0) <= 65
+                          ? "bg-white/[0.04] border-white/10 text-zinc-300"
+                          : "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                      }`}
+                    >
+                      <span className="text-[10px] text-zinc-400 block mb-0.5">Título (Máx 65):</span>
+                      <span className="font-bold">
+                        {slides[currentSlideIndex]?.headline?.length || 0} / 65
+                      </span>
+                      {(slides[currentSlideIndex]?.headline?.length || 0) > 65 && (
+                        <span className="text-[9px] block text-amber-400 mt-0.5">⚠️ Excede limite</span>
+                      )}
+                    </div>
+
+                    <div
+                      className={`p-2 rounded-lg border ${
+                        (slides[currentSlideIndex]?.bodyText?.length || 0) <= 140
+                          ? "bg-white/[0.04] border-white/10 text-zinc-300"
+                          : "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                      }`}
+                    >
+                      <span className="text-[10px] text-zinc-400 block mb-0.5">Corpo (Máx 140):</span>
+                      <span className="font-bold">
+                        {slides[currentSlideIndex]?.bodyText?.length || 0} / 140
+                      </span>
+                      {(slides[currentSlideIndex]?.bodyText?.length || 0) > 140 && (
+                        <span className="text-[9px] block text-amber-400 mt-0.5">⚠️ Excede limite</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {((slides[currentSlideIndex]?.headline?.length || 0) > 65 ||
+                    (slides[currentSlideIndex]?.bodyText?.length || 0) > 140) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const h = slides[currentSlideIndex]?.headline || "";
+                        const b = slides[currentSlideIndex]?.bodyText || "";
+                        updateCurrentSlide("headline", h.length > 65 ? h.slice(0, 62).trim() + "..." : h);
+                        updateCurrentSlide("bodyText", b.length > 140 ? b.slice(0, 137).trim() + "..." : b);
+                      }}
+                      className="w-full py-1.5 px-3 rounded-lg bg-white text-black font-bold text-xs hover:bg-zinc-200 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <span>⚡ Ajustar Automaticamente aos Hard Limits (65 / 140 carac.)</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* TOOLBAR FLUTUANTE DO COPILOTO DE MICRO-EDIÇÃO IA */}

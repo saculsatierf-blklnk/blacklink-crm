@@ -30,11 +30,16 @@ import {
   BentoGridLayout,
   AppleMockupLayout,
 } from "./DashboardLayouts";
+import { BlackLinkGlassLayout } from "./BlackLinkGlassLayout";
 
 export * from "./layoutTypes";
 export * from "./CtaLayout";
+export * from "./BlackLinkGlassLayout";
 
 export const LAYOUT_REGISTRY: Record<SlideLayout, React.FC<LayoutProps>> = {
+  // 0: Template Oficial Antigravity (Black Link 1.0)
+  "black-link": BlackLinkGlassLayout,
+
   // 1-5: Tech & Dev
   brutalista: BrutalistaLayout,
   terminal: TerminalLayout,
