@@ -3,15 +3,14 @@ import { LayoutProps } from "./layoutTypes";
 
 /**
  * Template Antigravity — Black Link (1.0)
- * Glassmorphism Hiper-Realista 3D Monocromático (0% Saturação)
+ * Pôster Editorial Suíço Brutalista (Inspirado no Pinterest / High-Fashion Tech)
  *
- * Filosofia & Padrão de Estúdio Internacional:
- * - DIRETO. DISCRETO. SOBERANO.
- * - Fundo com Escultura Arquitetônica 3D de Titânio Forjado e Vidro Líquido (Zero saturação).
- * - Monólito de Vidro Acrílico de Alta Densidade com Refração Óptica Física sobre a cena.
- * - Margens de 80px imutáveis do Design System.
- * - Safe Zone 100% limpa (sem interferência com a UI nativa do Instagram no topo e rodapé).
- * - Tipografia Monumental Clash Display + Inter sem cortes de texto.
+ * Características:
+ * - Escultura 3D Monocromática de Estúdio (Titânio e Vidro Líquido no fundo com profundidade de campo)
+ * - Bounding Box Técnica de Design com pontos de ancoragem nos cantos e centro
+ * - Tipografia Soberana em Clash Display (Kerning -0.04em)
+ * - Micro-detalhes suíços: Metadados discretos nos cantos (BLACK LINK // 2026) e setinha diagonal ↗
+ * - Zero ruído, zero firulas de aplicativo, 100% elegância editorial
  */
 export function BlackLinkGlassLayout({
   slide,
@@ -23,10 +22,10 @@ export function BlackLinkGlassLayout({
   const isCover = currentSlide === 1;
   const isCta = currentSlide === totalSlides && totalSlides > 1;
 
-  // Conteúdo das Lâminas (Texto 100% íntegro)
+  // Conteúdo (100% íntegro)
   const rawHeadline = (slide.headline || "").trim();
   const rawBody = (slide.bodyText || "").trim();
-  const rawTag = (slide.tag || (isCover ? "MARCO ZERO" : isCta ? "DIRETRIZ" : "TESE")).trim().toUpperCase();
+  const rawTag = (slide.tag || (isCover ? "ESTRATÉGIA" : isCta ? "DIRETRIZ" : "TESE")).trim().toUpperCase();
 
   // Detecção de KPI / Métrica Numérica
   const kpiMatch =
@@ -38,31 +37,25 @@ export function BlackLinkGlassLayout({
   const is916 = config.aspectRatio === "9:16";
   const is45 = config.aspectRatio === "4:5";
 
-  // Imagem de Fundo de Estúdio 3D Oficial da Black Link (Escultura Titânio + Vidro Líquido)
+  // Imagem de Fundo de Estúdio 3D Oficial da Black Link
   const bgImageSrc = is916 ? "/brand/blacklink-bg-story.jpg" : "/brand/blacklink-bg-square.jpg";
 
-  // Dimensionamento Dinâmico Proporcional da Headline (Resolução Nativa 1080px)
+  // Dimensionamento Dinâmico em 1080px Nativo
   const headlineLen = rawHeadline.length;
   const headlineStyle = (() => {
     if (is916) {
-      if (headlineLen <= 35) return { fontSize: "64px", lineHeight: "1.12" };
-      if (headlineLen <= 65) return { fontSize: "52px", lineHeight: "1.15" };
-      if (headlineLen <= 95) return { fontSize: "44px", lineHeight: "1.18" };
+      if (headlineLen <= 35) return { fontSize: "62px", lineHeight: "1.10" };
+      if (headlineLen <= 65) return { fontSize: "50px", lineHeight: "1.14" };
+      if (headlineLen <= 95) return { fontSize: "42px", lineHeight: "1.18" };
       return { fontSize: "36px", lineHeight: "1.22" };
     }
-    if (isCover) {
-      if (headlineLen <= 35) return { fontSize: "58px", lineHeight: "1.12" };
-      if (headlineLen <= 65) return { fontSize: "48px", lineHeight: "1.15" };
-      if (headlineLen <= 90) return { fontSize: "40px", lineHeight: "1.18" };
-      return { fontSize: "34px", lineHeight: "1.22" };
-    }
-    if (headlineLen <= 40) return { fontSize: "52px", lineHeight: "1.14" };
-    if (headlineLen <= 70) return { fontSize: "44px", lineHeight: "1.16" };
-    if (headlineLen <= 95) return { fontSize: "36px", lineHeight: "1.20" };
-    return { fontSize: "32px", lineHeight: "1.24" };
+    if (headlineLen <= 35) return { fontSize: "58px", lineHeight: "1.10" };
+    if (headlineLen <= 65) return { fontSize: "48px", lineHeight: "1.14" };
+    if (headlineLen <= 95) return { fontSize: "40px", lineHeight: "1.18" };
+    return { fontSize: "34px", lineHeight: "1.22" };
   })();
 
-  // Renderizador de Destaque Monocromático de Alta Fidelidade (Luz Especular Pura)
+  // Renderizador de Destaque Monocromático (0% saturação)
   const renderMonoHighlight = (text: string) => {
     if (!text) return null;
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -72,7 +65,7 @@ export function BlackLinkGlassLayout({
         return (
           <span
             key={index}
-            className="text-white font-black underline decoration-white/60 underline-offset-[12px] drop-shadow-[0_0_30px_rgba(255,255,255,0.7)] inline"
+            className="text-white font-black underline decoration-white/50 underline-offset-[12px] drop-shadow-[0_0_24px_rgba(255,255,255,0.6)] inline"
           >
             {clean}
           </span>
@@ -83,179 +76,128 @@ export function BlackLinkGlassLayout({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-center items-center overflow-hidden select-none bg-[#020204] text-white">
+    <div className="relative w-full h-full flex flex-col justify-between overflow-hidden select-none bg-[#030305] text-white">
       {/* ================================================================== */}
-      {/* 1. FUNDO DE ESTÚDIO 3D REAL (TITÂNIO FORJADO + VIDRO LÍQUIDO)     */}
+      {/* 1. FUNDO MONOCROMÁTICO COM ESCULTURA 3D DE ESTÚDIO (0% SATURAÇÃO) */}
       {/* ================================================================== */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Render 3D de Estúdio Cinematográfico Monocromático */}
+        {/* Render 3D de Estúdio com Escultura de Vidro Líquido e Titânio */}
         <div
           className="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
           style={{
             backgroundImage: `url('${bgImageSrc}')`,
-            filter: "contrast(115%) brightness(65%) grayscale(100%)",
-            transform: is916 ? "scale(1.08)" : "scale(1.05)",
+            filter: "contrast(110%) brightness(55%) grayscale(100%)",
+            transform: is916 ? "scale(1.05)" : "scale(1.03)",
           }}
         />
 
-        {/* Vinheta Óptica de Profundidade de Campo */}
+        {/* Vinheta Cinematográfica de Profundidade */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 90% 80% at 50% 50%, rgba(0, 0, 0, 0.45) 0%, rgba(2, 2, 4, 0.85) 65%, rgba(0, 0, 1, 0.98) 100%)",
+              "radial-gradient(circle at 50% 50%, rgba(3, 3, 5, 0.4) 0%, rgba(2, 2, 4, 0.82) 60%, rgba(1, 1, 2, 0.98) 100%)",
           }}
         />
 
-        {/* Luz Zenital Suave de Softbox */}
-        <div
-          className="absolute -top-32 inset-x-0 h-[500px] blur-[120px] opacity-35 pointer-events-none"
-          style={{
-            background: "radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.35) 0%, transparent 75%)",
-          }}
-        />
-
-        {/* Linhas Guias Imutáveis de 80px (Safe Area Oficial) */}
+        {/* Linhas Guias de Margem Imutável (80px) */}
         <div className="absolute top-0 bottom-0 left-[80px] w-px bg-white/[0.04]" />
         <div className="absolute top-0 bottom-0 right-[80px] w-px bg-white/[0.04]" />
       </div>
 
       {/* ================================================================== */}
-      {/* 2. O MONÓLITO DE VIDRO ACÍLICO 3D (REFRAÇÃO E DENSIDADE FÍSICA)    */}
+      {/* 2. CABEÇALHO EDITORIAL SUÍÇO (DISCRETO E ELEGANTE)                 */}
       {/* ================================================================== */}
-      <div
-        className={`relative z-10 w-full px-[80px] flex flex-col justify-center items-center ${
-          is916
-            ? "my-auto py-28"
-            : is45
-            ? "my-auto py-16"
-            : "my-auto py-12"
-        }`}
-      >
-        <div
-          className={`relative w-full overflow-hidden transition-all duration-300 rounded-[44px] ${
-            is916
-              ? "min-h-[1260px] flex flex-col justify-between"
-              : is45
-              ? "min-h-[1020px] flex flex-col justify-between"
-              : "min-h-[820px] flex flex-col justify-between"
-          }`}
-          style={{
-            // Refração do Vidro Fumê com Reflexo da Escultura 3D de Fundo
-            background:
-              "linear-gradient(160deg, rgba(22, 24, 34, 0.72) 0%, rgba(10, 11, 17, 0.84) 50%, rgba(3, 4, 7, 0.92) 100%)",
-            backdropFilter: "blur(55px) saturate(180%) contrast(125%)",
-            WebkitBackdropFilter: "blur(55px) saturate(180%) contrast(125%)",
-            
-            // Borda Óptica de Vidro com Chanfro Especular
-            border: "1.5px solid rgba(255, 255, 255, 0.22)",
-            borderTop: "2.5px solid rgba(255, 255, 255, 0.85)",
-            
-            // Cascata de Sombras 3D: Oclusão + Espessura de Borda
-            boxShadow:
-              "0 50px 120px -20px rgba(0, 0, 0, 0.98), 0 25px 60px -10px rgba(0, 0, 0, 0.9), inset 0 2px 2px rgba(255, 255, 255, 0.65), inset 0 -4px 8px rgba(0, 0, 0, 0.8), inset 2px 0 3px rgba(255, 255, 255, 0.2), inset -2px 0 3px rgba(0, 0, 0, 0.6)",
-          }}
-        >
-          {/* Chanfro de Reflexo Zenital Superior de Corte a Laser */}
-          <div
-            className="absolute inset-x-0 top-0 h-[2.5px] pointer-events-none"
-            style={{
-              background:
-                "linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.8) 25%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.8) 75%, transparent 95%)",
-            }}
-          />
-
-          {/* Faixa Diagonal de Reflexo Especular de Estúdio (Softbox Sheen) */}
-          <div
-            className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] pointer-events-none opacity-25 mix-blend-screen"
-            style={{
-              background:
-                "linear-gradient(135deg, transparent 38%, rgba(255, 255, 255, 0.3) 48%, rgba(255, 255, 255, 0.05) 54%, transparent 64%)",
-            }}
-          />
-
-          {/* ============================================================== */}
-          {/* CONTEÚDO INTEGRAL DENTRO DO MONÓLITO                           */}
-          {/* ============================================================== */}
-          <div className="relative z-10 p-14 md:p-18 flex flex-col justify-between flex-1 text-left space-y-10">
-            
-            {/* Topo do Monólito: Pill de Vidro com Marcador Técnico */}
-            <div className="flex items-center justify-between pb-6 border-b border-white/[0.12]">
-              <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.08] border border-white/20 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]">
-                <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,1)]" />
-                <span className="font-mono text-xs font-black tracking-[0.3em] text-white uppercase">
-                  {rawTag}
-                </span>
-              </div>
-
-              {/* Paginação Discreta em Vidro */}
-              <div className="font-mono text-sm font-bold tracking-[0.25em] text-zinc-400">
-                {String(currentSlide).padStart(2, "0")} / {String(totalSlides).padStart(2, "0")}
-              </div>
-            </div>
-
-            {/* Núcleo Central: Headline Monumental + Divisória + Corpo */}
-            <div className="space-y-8 my-auto">
-              {/* TÍTULO PRINCIPAL (CLASH DISPLAY SOBERANO, SEM NENHUM CORTE) */}
-              <h1
-                className="font-clash font-extrabold text-white tracking-tight text-left drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]"
-                style={{
-                  fontSize: headlineStyle.fontSize,
-                  lineHeight: headlineStyle.lineHeight,
-                  letterSpacing: "-0.04em",
-                }}
-              >
-                {renderMonoHighlight(rawHeadline)}
-              </h1>
-
-              {/* Incisão de Corte de Vidro (Linha Translúcida) */}
-              <div className="w-full h-[1.5px] bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-
-              {/* CORPO DE TEXTO CIRÚRGICO (INTER DIRETO) */}
-              <p
-                className="font-inter font-normal text-zinc-200 text-left"
-                style={{
-                  fontSize: is916 ? "30px" : "28px",
-                  lineHeight: "1.68",
-                }}
-              >
-                {renderMonoHighlight(rawBody)}
-              </p>
-            </div>
-
-            {/* Base do Monólito: Métrica em Baixo-Relevo (Se houver dado numérico relevante) */}
-            {detectedKpi ? (
-              <div className="pt-6 border-t border-white/[0.12]">
-                <div
-                  className="p-6 rounded-3xl border border-white/20 flex items-center justify-between"
-                  style={{
-                    background: "rgba(0, 0, 0, 0.5)",
-                    boxShadow: "inset 0 3px 12px rgba(0, 0, 0, 0.9)",
-                  }}
-                >
-                  <span className="font-mono text-xs uppercase tracking-[0.3em] text-zinc-400 font-bold">
-                    DADO QUANTITATIVO
-                  </span>
-                  <span className="font-clash text-3xl font-black text-white tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                    {detectedKpi}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              // Assinatura Silenciosa de Precisão na Base do Monólito
-              <div className="pt-4 flex items-center justify-between text-xs font-mono text-zinc-400 border-t border-white/[0.08]">
-                <span className="tracking-[0.25em] uppercase font-bold text-zinc-300">
-                  BLACK LINK
-                </span>
-                <span className="tracking-widest">
-                  PRECISÃO // B2B
-                </span>
-              </div>
-            )}
-
-          </div>
+      <header className={`relative z-10 w-full px-[80px] flex items-center justify-between text-xs font-mono tracking-[0.25em] text-zinc-400 ${is916 ? "pt-24" : is45 ? "pt-16" : "pt-14"}`}>
+        <div className="flex items-center gap-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
+          <span className="font-bold text-white uppercase tracking-[0.3em]">
+            BLACK LINK
+          </span>
         </div>
-      </div>
+
+        <div className="font-bold tracking-widest text-zinc-400">
+          2026 // {String(currentSlide).padStart(2, "0")}
+        </div>
+      </header>
+
+      {/* ================================================================== */}
+      {/* 3. NÚCLEO EDITORIAL (A BOUNDING BOX SUÍÇA + TIPOGRAFIA MONUMENTAL) */}
+      {/* ================================================================== */}
+      <main className={`relative z-10 w-full px-[80px] my-auto flex flex-col justify-center items-center text-center ${is916 ? "py-16" : is45 ? "py-10" : "py-8"}`}>
+        
+        {/* A BOUNDING BOX DE DESIGN SUÍÇO COM PONTOS DE ANCORAGEM (REFERÊNCIA PINTEREST) */}
+        <div className="relative inline-block px-10 py-5 mb-8">
+          {/* Borda Fina da Bounding Box */}
+          <div className="absolute inset-0 border border-white/35 backdrop-blur-[2px] bg-white/[0.02]" />
+
+          {/* Pontos de Ancoragem (Vetor Handles) nos 4 Cantos e Meios */}
+          <span className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-white border border-black shadow-sm" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-white border border-black shadow-sm" />
+          <span className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-white border border-black shadow-sm" />
+          <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-white border border-black shadow-sm" />
+          <span className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 bg-white/70" />
+          <span className="absolute top-1/2 -right-1 -translate-y-1/2 w-2 h-2 bg-white/70" />
+
+          {/* Tag de Impacto Central */}
+          <span className="relative z-10 font-clash text-2xl md:text-3xl font-extrabold uppercase tracking-[0.2em] text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+            {rawTag}
+          </span>
+        </div>
+
+        {/* TÍTULO PRINCIPAL MONUMENTAL (HEADLINE EM CLASH DISPLAY) */}
+        <div className="max-w-[920px] w-full space-y-6">
+          <h1
+            className="font-clash font-extrabold text-white tracking-tight uppercase leading-[1.08] drop-shadow-[0_4px_30px_rgba(0,0,0,0.95)]"
+            style={{
+              fontSize: headlineStyle.fontSize,
+              lineHeight: headlineStyle.lineHeight,
+              letterSpacing: "-0.04em",
+            }}
+          >
+            {renderMonoHighlight(rawHeadline)}
+          </h1>
+
+          {/* Linha Divisória de Precisão */}
+          <div className="w-24 h-[1.5px] bg-white/40 mx-auto my-6" />
+
+          {/* TESE DIRETA / CORPO EM INTER (SEM ENROLAÇÃO) */}
+          {rawBody && (
+            <p
+              className="font-inter font-normal text-zinc-300 max-w-2xl mx-auto leading-relaxed"
+              style={{
+                fontSize: is916 ? "28px" : "24px",
+                lineHeight: "1.65",
+              }}
+            >
+              {renderMonoHighlight(rawBody)}
+            </p>
+          )}
+
+          {/* Bloco de Métrica Quantitativa (Se existir dado numérico) */}
+          {detectedKpi && (
+            <div className="pt-4">
+              <span className="font-clash text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]">
+                {detectedKpi}
+              </span>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ================================================================== */}
+      {/* 4. RODAPÉ EDITORIAL SUÍÇO (A SETINHA DISCRETA ↗ DA REFERÊNCIA)     */}
+      {/* ================================================================== */}
+      <footer className={`relative z-10 w-full px-[80px] flex items-center justify-between text-xs font-mono text-zinc-400 ${is916 ? "pb-24" : is45 ? "pb-16" : "pb-14"}`}>
+        <div className="tracking-[0.25em] uppercase font-bold text-zinc-300">
+          DIRETRIZ DE ELITE
+        </div>
+
+        {/* A Setinha Diagonal Minimalista Suíça do Pinterest */}
+        <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white text-lg font-bold hover:bg-white hover:text-black transition-all">
+          ↗
+        </div>
+      </footer>
     </div>
   );
 }
