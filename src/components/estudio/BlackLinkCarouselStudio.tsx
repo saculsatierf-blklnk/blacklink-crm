@@ -179,16 +179,16 @@ const FONT_DEFINITIONS: Array<{
  * Headline: Máx 65 caracteres
  * BodyText: Máx 140 caracteres
  */
-export function clampHeadline(text: string, max = 65): string {
+export function clampHeadline(text: string, max = 180): string {
   const clean = (text || "").trim();
   if (clean.length <= max) return clean;
-  return clean.slice(0, max - 3).trim() + "...";
+  return clean.slice(0, max).trim();
 }
 
-export function clampBody(text: string, max = 140): string {
+export function clampBody(text: string, max = 350): string {
   const clean = (text || "").trim();
   if (clean.length <= max) return clean;
-  return clean.slice(0, max - 3).trim() + "...";
+  return clean.slice(0, max).trim();
 }
 
 const INITIAL_SLIDES: SlideData[] = [
@@ -412,11 +412,10 @@ function synthesizeSlidesForPlan(
     ];
   })();
 
-  // Garante que todas as lâminas nasçam respeitando rigorosamente os hard limits (65 / 140)
   return rawSlides.map((s) => ({
     ...s,
-    headline: clampHeadline(s.headline, 65),
-    bodyText: clampBody(s.bodyText, 140),
+    headline: clampHeadline(s.headline),
+    bodyText: clampBody(s.bodyText),
   }));
 }
 
@@ -552,14 +551,12 @@ export function BlackLinkCarouselStudio() {
         headline: clampHeadline(
           s.headline?.trim() ||
           selectedPlanForCreation.theme ||
-          `Lâmina ${idx + 1}`,
-          65
+          `Lâmina ${idx + 1}`
         ),
         bodyText: clampBody(
           s.bodyText?.trim() ||
           selectedPlanForCreation.objective ||
-          "Diretrizes e dados essenciais desta lâmina.",
-          140
+          "Diretrizes e dados essenciais desta lâmina."
         ),
       }));
       setSlides(formatted);
@@ -833,8 +830,8 @@ export function BlackLinkCarouselStudio() {
       if (Array.isArray(incomingSlides) && incomingSlides.length > 0) {
         const formatted: SlideData[] = incomingSlides.map((s: any, idx: number) => ({
           tag: s.tag || (idx === 0 ? "GANCHO" : idx === incomingSlides.length - 1 ? "CTA" : `LÂMINA ${idx + 1}`),
-          headline: clampHeadline(s.headline || s.title || `Insight ${idx + 1}`, 65),
-          bodyText: clampBody(s.bodyText || s.body || s.content || "", 140),
+          headline: clampHeadline(s.headline || s.title || `Insight ${idx + 1}`),
+          bodyText: clampBody(s.bodyText || s.body || s.content || ""),
         }));
         setSlides(formatted);
         setCurrentSlideIndex(0);
