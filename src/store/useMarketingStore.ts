@@ -551,24 +551,24 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   },
   {
     id: "post-bl-09",
-    theme: "Cases & Números",
+    theme: "Engenharia da Ausência",
     format: "post",
-    targetAudience: "CFOs e Diretores Financeiros",
+    targetAudience: "Fundadores e Líderes B2B",
     scheduledDate: "Sexta • 17:00",
     status: "scheduled",
-    hookHeadline: "Cases & Números",
+    hookHeadline: "Engenharia da Ausência",
     bodyCopy:
-      "Métricas auditadas de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.",
+      "Criamos a infraestrutura que sua autoridade merece. Simplificamos sua tecnologia e elevamos sua estética para que você foque apenas no que faz de melhor. Assuma o comando sem ruídos.",
     postCaption:
-      "Métricas auditadas de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\n#Cases #Metricas #BlackLink",
-    ctaText: "Receba o dossiê completo.",
-    hashtags: ["#Cases", "#Metricas", "#BlackLink"],
+      "Criamos a infraestrutura que sua autoridade merece.\n\nSimplificamos sua tecnologia e elevamos sua estética para que sua liderança foque apenas no que faz de melhor.\n\nSua infraestrutura. Sua soberania. Assuma o comando sem ruídos.\n\n→ Inicie seu projeto ou simule sua arquitetura em blklnk.com\n\n#EngenhariaDaAusencia #BlackLink #SoberaniaDigital #HighTicket",
+    ctaText: "Inicie seu projeto em blklnk.com",
+    hashtags: ["#EngenhariaDaAusencia", "#BlackLink", "#SoberaniaDigital"],
     slides: [
       {
         slideNumber: 1,
-        headline: "CASES & NÚMEROS",
-        bodyText: "Métricas reais de tração comercial corporativa.",
-        tag: "09 // MÉTRICAS",
+        headline: "ENGENHARIA DA AUSÊNCIA",
+        bodyText: "Criamos a infraestrutura que sua autoridade merece. Assuma o comando sem ruídos.",
+        tag: "09 // SOBERANIA",
         blackLinkVariant: "clean-ice-box",
       },
     ],
@@ -1968,8 +1968,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v10",
-      version: 10,
+      name: "blacklink-marketing-storage-v11",
+      version: 11,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

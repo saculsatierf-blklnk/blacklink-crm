@@ -25,6 +25,7 @@ import {
   X,
   Check,
   RefreshCw,
+  Target,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -33,6 +34,7 @@ import {
   type CreativeSlide,
 } from "@/store/useMarketingStore";
 import { ManualAssetUploadModal } from "@/components/marketing/ManualAssetUploadModal";
+import { BLACKLINK_PRODUCTS } from "@/lib/marketing/blacklinkBrandBrain";
 import { PostSlideDisplay } from "./PostSlideDisplay";
 import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
 import * as htmlToImage from "html-to-image";
@@ -119,7 +121,7 @@ export function InstagramFeedGridView() {
   const [copiedFeedback, setCopiedFeedback] = useState<string | null>(null);
 
   // Estados de edição completa no Modal
-  const [modalTab, setModalTab] = useState<"creative" | "caption">("creative");
+  const [modalTab, setModalTab] = useState<"creative" | "caption" | "audit">("creative");
   const [editingCaption, setEditingCaption] = useState<string>("");
   const [editingHeadline, setEditingHeadline] = useState<string>("");
   const [editingBodyText, setEditingBodyText] = useState<string>("");
@@ -127,6 +129,20 @@ export function InstagramFeedGridView() {
   const [editingVariant, setEditingVariant] = useState<BlackLinkStyleVariant>("3d-sculpture");
   const [isCopilotLoading, setIsCopilotLoading] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+
+  // Estados do Auditor de Viralidade & Conversão da Black Link
+  const [selectedProductId, setSelectedProductId] = useState<string>("crm-os");
+  const [isAuditingViral, setIsAuditingViral] = useState<boolean>(false);
+  const [viralAuditResult, setViralAuditResult] = useState<{
+    viralScore: number;
+    conversionScore: number;
+    critique: string;
+    optimizedHeadline: string;
+    optimizedBodyText: string;
+    optimizedTag: string;
+    optimizedCaption: string;
+    targetProductName: string;
+  } | null>(null);
 
   // Estados do Feed Vertical & Visor
   const [expandedFeedCaptions, setExpandedFeedCaptions] = useState<Record<string, boolean>>({});
@@ -364,6 +380,81 @@ export function InstagramFeedGridView() {
     } finally {
       setIsCopilotLoading(false);
     }
+  };
+
+  const handleAuditViralWithGemini = async () => {
+    setIsAuditingViral(true);
+    setModalFeedback("Diretor de IA avaliando potencial viral e de conversão...");
+    try {
+      const res = await fetch("/api/marketing/audit-viral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          headline: editingHeadline,
+          bodyText: editingBodyText,
+          tag: editingTag,
+          caption: editingCaption,
+          productId: selectedProductId,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setViralAuditResult(data);
+        setModalFeedback("✨ Auditoria de Viralidade & Conversão concluída!");
+      } else {
+        setModalFeedback(data.error || "Não foi possível auditar a copy no momento.");
+      }
+    } catch (e) {
+      console.error(e);
+      setModalFeedback("Erro ao auditar copy.");
+    } finally {
+      setIsAuditingViral(false);
+      setTimeout(() => setModalFeedback(null), 3500);
+    }
+  };
+
+  const handleApplyViralOptimization = () => {
+    if (!viralAuditResult || !selectedFeedPost) return;
+
+    const optHeadline = viralAuditResult.optimizedHeadline || editingHeadline;
+    const optBodyText = viralAuditResult.optimizedBodyText || editingBodyText;
+    const optTag = viralAuditResult.optimizedTag || editingTag;
+    const optCaption = viralAuditResult.optimizedCaption || editingCaption;
+
+    setEditingHeadline(optHeadline);
+    setEditingBodyText(optBodyText);
+    setEditingTag(optTag);
+    setEditingCaption(optCaption);
+
+    const updatedSlides = [...selectedFeedPost.slides];
+    const s = updatedSlides[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+    updatedSlides[activeSlideIdx] = {
+      ...s,
+      headline: optHeadline,
+      bodyText: optBodyText,
+      tag: optTag,
+    };
+
+    setSelectedFeedPost({
+      ...selectedFeedPost,
+      slides: updatedSlides,
+      postCaption: optCaption,
+      hookHeadline: optHeadline,
+    });
+
+    updateScheduledPost(selectedFeedPost.id, {
+      slides: updatedSlides,
+      postCaption: optCaption,
+      hookHeadline: optHeadline,
+    });
+
+    setCopiedFeedback("✨ Copy viral e legenda alinhadas aos produtos Black Link!");
+    setModalFeedback("✨ Post atualizado com sucesso!");
+    setTimeout(() => {
+      setCopiedFeedback(null);
+      setModalFeedback(null);
+    }, 3500);
   };
 
   const handleDownloadHd = async (post: ScheduledPost) => {
@@ -1451,30 +1542,43 @@ export function InstagramFeedGridView() {
 
                 {/* Coluna Direita: Editor de Copy & Variação Visual */}
                 <div className="lg:col-span-6 space-y-5">
-                  {/* Seletor de Abas (Arte Gráfica vs Legenda) */}
+                  {/* Seletor de Abas (Arte Gráfica vs Legenda vs Auditoria) */}
                   <div className="flex items-center gap-2 border-b border-white/10 pb-2">
                     <button
                       type="button"
                       onClick={() => setModalTab("creative")}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         modalTab === "creative"
-                          ? "bg-white text-black shadow-md"
+                          ? "bg-white text-black shadow-md font-bold"
                           : "text-zinc-400 hover:text-white hover:bg-white/5"
                       }`}
                     >
-                      Arte Gráfica (Criativo)
+                      Arte Gráfica
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setModalTab("caption")}
-                      className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         modalTab === "caption"
-                          ? "bg-white text-black shadow-md"
+                          ? "bg-white text-black shadow-md font-bold"
                           : "text-zinc-400 hover:text-white hover:bg-white/5"
                       }`}
                     >
-                      Legenda do Instagram
+                      Legenda Instagram
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalTab("audit")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        modalTab === "audit"
+                          ? "bg-sky-400 text-black shadow-md font-bold"
+                          : "text-sky-300 hover:text-white hover:bg-sky-500/10"
+                      }`}
+                    >
+                      <Target className="h-3.5 w-3.5" />
+                      <span>Auditoria & Viral IA</span>
                     </button>
                   </div>
 
@@ -1627,7 +1731,7 @@ export function InstagramFeedGridView() {
                         />
                         {/* Pílulas rápidas de tag estilo Canva */}
                         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                          {["01 // ESTRATÉGIA", "DIRETRIZ B2B", "CASE STUDY", "ALTO TICKET"].map((pill) => (
+                          {["01 // ESTRATÉGIA", "DIRETRIZ B2B", "09 // SOBERANIA", "ALTO TICKET"].map((pill) => (
                             <button
                               key={pill}
                               type="button"
@@ -1723,6 +1827,212 @@ export function InstagramFeedGridView() {
                       <div className="text-[11px] font-mono text-zinc-500">
                         {editingCaption.length} caracteres • Quebras de linha executivas mantidas.
                       </div>
+                    </div>
+                  )}
+
+                  {/* ABA 3: AUDITORIA & VIRAL IA (DIRETOR DE GROWTH BLACK LINK) */}
+                  {modalTab === "audit" && (
+                    <div className="space-y-5 animate-in fade-in duration-200">
+                      {/* Context Header */}
+                      <div className="rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-950/20 via-black/40 to-transparent p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-sky-400">
+                          <Target className="h-4 w-4" />
+                          <span className="text-xs font-mono font-bold uppercase tracking-wider">
+                            Diretor de Growth & Conversão IA (Gemini 3.8 Flash)
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-300 leading-relaxed">
+                          Treinado nas teses de <strong className="text-white">Engenharia da Ausência</strong> (blklnk.com), catálogo de produtos do CRM e estética de alto ticket. Zero cases de terceiros — foco em quebrar o padrão do feed e gerar demanda real.
+                        </p>
+                      </div>
+
+                      {/* Seletor do Produto Alvo */}
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                          Qual produto da Black Link este post deve vender?
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {BLACKLINK_PRODUCTS.map((prod) => {
+                            const isSelected = selectedProductId === prod.id;
+                            return (
+                              <button
+                                key={prod.id}
+                                type="button"
+                                onClick={() => setSelectedProductId(prod.id)}
+                                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                  isSelected
+                                    ? "bg-sky-500/15 border-sky-400 text-white shadow-lg ring-1 ring-sky-400/30"
+                                    : "bg-white/[0.02] border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.05]"
+                                }`}
+                              >
+                                <div>
+                                  <div className="flex items-center justify-between gap-1 mb-1">
+                                    <span className="text-xs font-bold text-white line-clamp-1">{prod.name}</span>
+                                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-sky-300 border border-white/10">
+                                      {prod.id}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-zinc-400 line-clamp-2 leading-snug">
+                                    {prod.shortDesc}
+                                  </p>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-white/5 text-[10px] font-mono text-zinc-500 flex items-center justify-between">
+                                  <span>Dor: {prod.painResolved.slice(0, 32)}...</span>
+                                  {isSelected && <Check className="h-3 w-3 text-sky-400" />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Botão de Disparo da Auditoria */}
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          disabled={isAuditingViral}
+                          onClick={handleAuditViralWithGemini}
+                          className="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-black font-bold text-xs uppercase tracking-wider shadow-lg hover:shadow-sky-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {isAuditingViral ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 animate-spin text-black" />
+                              <span>Auditando Copy & Potencial de Conversão...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-4 w-4 text-black" />
+                              <span>Auditar e Otimizar para Viralização & Vendas</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Resultados da Auditoria */}
+                      {viralAuditResult && (
+                        <div className="space-y-4 pt-2 border-t border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          {/* Métricas: Viral Score & Conversion Score */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">
+                                  Potencial Viral
+                                </span>
+                                <span
+                                  className={`text-sm font-mono font-black ${
+                                    viralAuditResult.viralScore >= 80
+                                      ? "text-emerald-400"
+                                      : viralAuditResult.viralScore >= 60
+                                      ? "text-amber-400"
+                                      : "text-red-400"
+                                  }`}
+                                >
+                                  {viralAuditResult.viralScore}/100
+                                </span>
+                              </div>
+                              <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${
+                                    viralAuditResult.viralScore >= 80
+                                      ? "bg-emerald-400"
+                                      : viralAuditResult.viralScore >= 60
+                                      ? "bg-amber-400"
+                                      : "bg-red-400"
+                                  }`}
+                                  style={{ width: `${Math.min(100, Math.max(0, viralAuditResult.viralScore))}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-zinc-500">Parada de feed & retenção visual</p>
+                            </div>
+
+                            <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">
+                                  Taxa de Conversão
+                                </span>
+                                <span
+                                  className={`text-sm font-mono font-black ${
+                                    viralAuditResult.conversionScore >= 80
+                                      ? "text-emerald-400"
+                                      : viralAuditResult.conversionScore >= 60
+                                      ? "text-amber-400"
+                                      : "text-red-400"
+                                  }`}
+                                >
+                                  {viralAuditResult.conversionScore}/100
+                                </span>
+                              </div>
+                              <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-500 ${
+                                    viralAuditResult.conversionScore >= 80
+                                      ? "bg-emerald-400"
+                                      : viralAuditResult.conversionScore >= 60
+                                      ? "bg-amber-400"
+                                      : "bg-red-400"
+                                  }`}
+                                  style={{ width: `${Math.min(100, Math.max(0, viralAuditResult.conversionScore))}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-zinc-500">Desejo de consumo e ação B2B</p>
+                            </div>
+                          </div>
+
+                          {/* Parecer do Diretor Executivo */}
+                          <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] space-y-1.5">
+                            <div className="flex items-center gap-1.5 text-amber-400 text-xs font-mono font-bold uppercase">
+                              <Sparkles className="h-3.5 w-3.5" />
+                              <span>Diagnóstico do Diretor de Criação</span>
+                            </div>
+                            <p className="text-xs text-zinc-300 leading-relaxed italic">
+                              "{viralAuditResult.critique}"
+                            </p>
+                          </div>
+
+                          {/* Proposta Otimizada */}
+                          <div className="rounded-xl border border-sky-400/30 bg-sky-950/20 p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">
+                                Versão Otimizada para o Produto: {viralAuditResult.targetProductName || "Black Link"}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2 text-xs">
+                              <div className="p-2.5 rounded-lg bg-black/40 border border-white/10">
+                                <span className="text-[10px] font-mono text-zinc-500 block uppercase">Headline Sugerida</span>
+                                <span className="text-white font-bold font-mono text-sm">{viralAuditResult.optimizedHeadline}</span>
+                              </div>
+
+                              <div className="p-2.5 rounded-lg bg-black/40 border border-white/10">
+                                <span className="text-[10px] font-mono text-zinc-500 block uppercase">Tese / Subtítulo</span>
+                                <span className="text-zinc-200">{viralAuditResult.optimizedBodyText}</span>
+                              </div>
+
+                              <div className="p-2.5 rounded-lg bg-black/40 border border-white/10">
+                                <span className="text-[10px] font-mono text-zinc-500 block uppercase">Tag Editorial</span>
+                                <span className="text-sky-300 font-mono text-xs">{viralAuditResult.optimizedTag}</span>
+                              </div>
+
+                              <div className="p-2.5 rounded-lg bg-black/40 border border-white/10">
+                                <span className="text-[10px] font-mono text-zinc-500 block uppercase">Preview da Legenda</span>
+                                <p className="text-zinc-300 line-clamp-3 text-[11px] leading-relaxed mt-1">
+                                  {viralAuditResult.optimizedCaption}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Botão de Aplicação Imediata */}
+                            <button
+                              type="button"
+                              onClick={handleApplyViralOptimization}
+                              className="w-full py-3 rounded-xl bg-white hover:bg-zinc-200 text-black font-bold text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-black" />
+                              <span>Aplicar Esta Versão Otimizada ao Post</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

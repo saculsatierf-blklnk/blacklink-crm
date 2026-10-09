@@ -41,7 +41,7 @@ function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): strin
       return "DOSSIÊ EXECUTIVO\nDE ESCALA";
 
     case "clean-ice-box":
-      return "CASES & NÚMEROS";
+      return "ENGENHARIA DA\nAUSÊNCIA";
 
     default:
       return "BLACK LINK OS";
