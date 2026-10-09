@@ -142,20 +142,26 @@ export function InstagramFeedGridView() {
   const [generatingPostId, setGeneratingPostId] = useState<string | null>(null);
   const [isGeneratingCollection, setIsGeneratingCollection] = useState<boolean>(false);
   const [collectionProgress, setCollectionProgress] = useState<string | null>(null);
+  const [modalFeedback, setModalFeedback] = useState<string | null>(null);
 
-  const handleGenerateImageWithGemini = async (post: ScheduledPost, slideIndex: number = 0) => {
+  const handleGenerateImageWithGemini = async (
+    post: ScheduledPost,
+    slideIndex: number = 0,
+    overrideVariant?: BlackLinkStyleVariant
+  ) => {
     setIsGeneratingImage(true);
     setGeneratingPostId(post.id);
+    setModalFeedback("Disparando motor de IA para criar nova arte...");
     try {
       const targetSlide = post.slides[slideIndex] || post.slides[0];
-      const variant = targetSlide?.blackLinkVariant || "3d-sculpture";
+      const variant = overrideVariant || editingVariant || targetSlide?.blackLinkVariant || "3d-sculpture";
 
       const res = await fetch("/api/marketing/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           variant,
-          theme: post.theme,
+          theme: editingHeadline || post.theme,
         }),
       });
 
@@ -173,21 +179,33 @@ export function InstagramFeedGridView() {
           slides: updatedSlides,
         });
 
-        setCopiedFeedback(
-          data.source === "gemini-ai"
-            ? `✨ Nova arte gerada com Gemini IA (${data.modelUsed})!`
-            : `✨ Arte de estúdio física atualizada com sucesso!`
-        );
+        // Atualiza imediatamente o post ativo no modal para troca instantânea de arte
+        if (selectedFeedPost?.id === post.id) {
+          setSelectedFeedPost({
+            ...selectedFeedPost,
+            slides: updatedSlides,
+          });
+          setEditingVariant(variant);
+        }
+
+        const msg = data.modelUsed
+          ? `✨ Nova arte gerada com sucesso via ${data.modelUsed}!`
+          : `✨ Nova arte de alta fidelidade renderizada!`;
+        setCopiedFeedback(msg);
+        setModalFeedback(msg);
       } else {
-        setCopiedFeedback("Não foi possível gerar a arte no momento.");
+        setModalFeedback("Não foi possível gerar a arte no momento.");
       }
     } catch (err) {
-      console.error("Erro ao gerar arte com Gemini:", err);
-      setCopiedFeedback("Erro de conexão ao gerar arte.");
+      console.error("Erro ao gerar arte com IA:", err);
+      setModalFeedback("Erro de conexão ao gerar arte.");
     } finally {
       setIsGeneratingImage(false);
       setGeneratingPostId(null);
-      setTimeout(() => setCopiedFeedback(null), 3500);
+      setTimeout(() => {
+        setCopiedFeedback(null);
+        setModalFeedback(null);
+      }, 4000);
     }
   };
 
@@ -1363,7 +1381,7 @@ export function InstagramFeedGridView() {
                   <button
                     type="button"
                     disabled={isGeneratingImage}
-                    onClick={() => handleGenerateImageWithGemini(selectedFeedPost, activeSlideIdx)}
+                    onClick={() => handleGenerateImageWithGemini(selectedFeedPost, activeSlideIdx, editingVariant)}
                     className="w-full py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-xs font-semibold text-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
                   >
                     {isGeneratingImage && generatingPostId === selectedFeedPost.id ? (
@@ -1377,6 +1395,12 @@ export function InstagramFeedGridView() {
                         : "✨ Regenerar Arte desta Lâmina com Gemini IA"}
                     </span>
                   </button>
+
+                  {modalFeedback && (
+                    <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-2 text-center text-xs font-mono text-sky-300 animate-in fade-in duration-200">
+                      {modalFeedback}
+                    </div>
+                  )}
 
                   <div className="text-[11px] font-mono text-zinc-500 text-center">
                     Visualização renderizada em tempo real na proporção 1:1 (1080x1080px)
@@ -1425,7 +1449,23 @@ export function InstagramFeedGridView() {
                             <button
                               key={opt.id}
                               type="button"
-                              onClick={() => setEditingVariant(opt.id)}
+                              onClick={() => {
+                                setEditingVariant(opt.id);
+                                if (selectedFeedPost) {
+                                  const updatedSlides = [...selectedFeedPost.slides];
+                                  const s = updatedSlides[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                  updatedSlides[activeSlideIdx] = {
+                                    ...s,
+                                    blackLinkVariant: opt.id,
+                                    imageUrl: undefined,
+                                  };
+                                  setSelectedFeedPost({
+                                    ...selectedFeedPost,
+                                    slides: updatedSlides,
+                                  });
+                                  updateScheduledPost(selectedFeedPost.id, { slides: updatedSlides });
+                                }
+                              }}
                               className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                                 editingVariant === opt.id
                                   ? "bg-white/15 border-white text-white font-semibold shadow-inner"

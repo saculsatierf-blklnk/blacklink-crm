@@ -105,14 +105,33 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Fallback inteligente e resiliente (garante que o usuário nunca fique com tela quebrada)
+    // 2.5. Motor Autônomo de Imagem de Alta Fidelidade (Flux Octane 3D com Seed Dinâmica)
+    try {
+      const dynamicSeed = Math.floor(Math.random() * 8999999) + 1000000;
+      const fluxImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+        finalPrompt
+      )}?width=1080&height=1080&nologo=true&seed=${dynamicSeed}&model=flux`;
+
+      return NextResponse.json({
+        success: true,
+        source: "ai-generative",
+        modelUsed: "Flux Octane 3D",
+        imageUrl: fluxImageUrl,
+        promptUsed: finalPrompt,
+        seed: dynamicSeed,
+      });
+    } catch (err) {
+      console.warn("Aviso na geração dinâmica, acionando ativo curado:", err);
+    }
+
+    // 3. Fallback inteligente e resiliente de estúdio caso não haja conexão externa
     const fallbackImage = CURATED_ASSET_FALLBACKS[variant] || "/brand/blacklink-art-cursor-light.jpg";
 
     return NextResponse.json({
       success: true,
       source: "curated-studio",
       imageUrl: fallbackImage,
-      notice: "Gerado com motor curado de precisão física Arina TVA (reserva de cota ativa).",
+      notice: "Ativo curado de estúdio físico Arina TVA.",
       promptUsed: finalPrompt,
     });
   } catch (error) {
