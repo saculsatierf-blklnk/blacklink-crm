@@ -45,9 +45,9 @@ const VARIANT_OPTIONS: Array<{
 }> = [
   {
     id: "swiss-box",
-    label: "Swiss Box",
+    label: "Swiss Gradient",
     badge: "📐 Swiss Box",
-    desc: "Bounding box técnica com handles",
+    desc: "Gradiente atmosférico com Bounding Box",
   },
   {
     id: "3d-keycap",
@@ -57,45 +57,45 @@ const VARIANT_OPTIONS: Array<{
   },
   {
     id: "3d-crystal",
-    label: "3D Crystal",
-    badge: "💎 3D Crystal",
-    desc: "Cristal negro e correntes no fundo claro",
+    label: "Chrome Pins",
+    badge: "⛓️ Chrome Pins",
+    desc: "Alfinetes de cromo e correntes no fundo claro",
   },
   {
     id: "pure-monumental",
-    label: "Monumental",
-    badge: "🏛️ Monumental",
-    desc: "Tipografia monumental pura no preto",
+    label: "Editorial Model",
+    badge: "👤 Editorial",
+    desc: "Retrato editorial masculino alta moda",
   },
   {
     id: "3d-cursor",
-    label: "3D Cursor",
+    label: "Chrome Cursor",
     badge: "🖱️ 3D Cursor",
-    desc: "Seta cromada líquida em perspectiva",
+    desc: "Seta cromada sobre estúdio de porcelana",
   },
   {
     id: "3d-liquid",
-    label: "3D Liquid",
-    badge: "🌊 3D Liquid",
-    desc: "Fita de platina líquida e título inferior",
+    label: "Fluted Glass",
+    badge: "🕶️ Fluted Glass",
+    desc: "Modelo através de vidro canelado texturizado",
+  },
+  {
+    id: "3d-sculpture",
+    label: "Macro Glass",
+    badge: "🌊 Macro Glass",
+    desc: "Fita fluida de vidro e mercúrio óptico",
+  },
+  {
+    id: "clean-ice",
+    label: "Obsidian Geode",
+    badge: "💎 Obsidian",
+    desc: "Geodo negro com correntes e alfinetes de cromo",
   },
   {
     id: "clean-ice-box",
     label: "Ice Box",
     badge: "❄️ Ice Box",
-    desc: "Bounding box técnica no fundo claro",
-  },
-  {
-    id: "3d-sculpture",
-    label: "3D Monolith",
-    badge: "🗿 3D Monolith",
-    desc: "Monólito de titânio escovado",
-  },
-  {
-    id: "clean-ice",
-    label: "Clean Ice",
-    badge: "❄️ Clean Ice",
-    desc: "Invertido claro acetinado brutalista",
+    desc: "Bounding box técnica no fundo gelo",
   },
 ];
 

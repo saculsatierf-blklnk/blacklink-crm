@@ -3,8 +3,8 @@ import { LayoutProps, BlackLinkStyleVariant } from "./layoutTypes";
 
 /**
  * Função de Destilação Editorial de Alto Luxo:
- * Converte qualquer texto (mesmo perguntas longas geradas por IA)
- * nos termos conceituais concisos de 1 a 3 palavras das referências da Arina TVA / Design Atum.
+ * Converte qualquer texto nos termos conceituais concisos de 1 a 3 palavras
+ * das referências da Arina TVA / Design Atum.
  */
 function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): string {
   const text = (rawText || "").replace(/["'”]/g, "").trim();
@@ -12,7 +12,6 @@ function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): strin
   // Se o usuário digitou um título customizado curto (até 4 palavras e até 28 caracteres), preserva
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length > 0 && words.length <= 4 && text.length <= 28) {
-    // Se for 2 a 3 palavras, divide em até 2 linhas para manter o ritmo
     if (words.length >= 3 && variant !== "swiss-box" && variant !== "clean-ice-box") {
       const mid = Math.ceil(words.length / 2);
       return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")].join("\n").toUpperCase();
@@ -40,14 +39,14 @@ function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): strin
     case "3d-liquid":
       return "TELEMETRIA EM\nTEMPO REAL";
 
-    case "clean-ice-box":
-      return "CASES & NÚMEROS";
-
     case "3d-sculpture":
       return "QUALIFICAÇÃO DE\nALTO TICKET";
 
     case "clean-ice":
       return "DOSSIÊ EXECUTIVO\nDE ESCALA";
+
+    case "clean-ice-box":
+      return "CASES & NÚMEROS";
 
     default:
       return "BLACK LINK OS";
@@ -58,8 +57,7 @@ function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): strin
  * Template Antigravity — Black Link (1.0)
  * Pôster Editorial Suíço Brutalista de Alta Moda / Branding Internacional
  * Inspirado fielmente nas coleções de referências:
- * - @ARINA_TVA | IG @DESIGN_ATUM (Objetos 3D Octane, Bounding boxes técnicas com handles, setas ↗)
- * - @kunsllu • design (Grades modulares, ritmo de contraste claro/escuro)
+ * - @ARINA_TVA | IG @DESIGN_ATUM (Objetos 3D Octane, Bounding boxes técnicas com handles, fotografias editoriais)
  */
 export function BlackLinkGlassLayout({
   slide,
@@ -80,27 +78,36 @@ export function BlackLinkGlassLayout({
   const is916 = config.aspectRatio === "9:16";
   const is45 = config.aspectRatio === "4:5";
 
-  // Checa se o fundo é claro (Ice)
+  // Fundos claros (Porcelana / Gelo) na grade 3x3:
+  // Post 3 (Pins cromados), Post 5 (Cursor cromado central) e Post 9 (Ice box)
   const isLightBackground =
     variant === "3d-crystal" ||
-    variant === "clean-ice-box" ||
-    variant === "clean-ice";
+    variant === "3d-cursor" ||
+    variant === "clean-ice-box";
 
-  // Imagens de fundo oficiais para as variações 3D
+  // Imagens de fundo oficiais para as variações de Alta Moda (Arina TVA)
   const bgImageSrc = (() => {
     switch (variant) {
-      case "3d-cursor":
-        return "/brand/blacklink-3d-cursor.jpg";
+      case "swiss-box":
+        return "/brand/blacklink-art-gradient.jpg";
       case "3d-keycap":
         return "/brand/blacklink-3d-keycap.jpg";
       case "3d-crystal":
-        return "/brand/blacklink-3d-crystal.jpg";
+        return "/brand/blacklink-art-pins.jpg";
+      case "pure-monumental":
+        return "/brand/blacklink-art-portrait.jpg";
+      case "3d-cursor":
+        return "/brand/blacklink-art-cursor-light.jpg";
       case "3d-liquid":
-        return "/brand/blacklink-3d-liquid.jpg";
+        return "/brand/blacklink-art-glass-model.jpg";
       case "3d-sculpture":
-        return is916 ? "/brand/blacklink-bg-story.jpg" : "/brand/blacklink-bg-square.jpg";
-      default:
+        return "/brand/blacklink-art-macro-glass.jpg";
+      case "clean-ice":
+        return "/brand/blacklink-art-obsidian-dark.jpg";
+      case "clean-ice-box":
         return null;
+      default:
+        return "/brand/blacklink-art-cursor-light.jpg";
     }
   })();
 
@@ -136,7 +143,7 @@ export function BlackLinkGlassLayout({
       style={{ width: "1080px", height: is916 ? "1920px" : is45 ? "1350px" : "1080px" }}
     >
       {/* ================================================================== */}
-      {/* 1. CAMADA DE FUNDO / IMAGEM 3D                                     */}
+      {/* 1. CAMADA DE FUNDO / IMAGEM DE ARTE EDITORIAL                      */}
       {/* ================================================================== */}
       {bgImageSrc && (
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -144,19 +151,22 @@ export function BlackLinkGlassLayout({
             className="w-full h-full bg-cover bg-center transition-all duration-700"
             style={{
               backgroundImage: `url('${bgImageSrc}')`,
-              filter:
-                variant === "3d-crystal"
-                  ? "contrast(104%) brightness(99%)"
-                  : "contrast(112%) brightness(96%)",
+              filter: isLightBackground
+                ? "contrast(102%) brightness(100%)"
+                : variant === "pure-monumental" || variant === "3d-liquid"
+                ? "contrast(110%) brightness(95%)"
+                : "contrast(108%) brightness(98%)",
             }}
           />
-          {/* Vinheta atmosférica suave apenas para posts escuros com 3D */}
-          {!isLightBackground && (
+          {/* Vinheta atmosférica suave apenas para posts fotográficos ou escuros */}
+          {!isLightBackground && variant !== "swiss-box" && (
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  "radial-gradient(circle at 50% 50%, rgba(3, 3, 5, 0.05) 0%, rgba(2, 2, 4, 0.45) 70%, rgba(1, 1, 2, 0.8) 100%)",
+                  variant === "pure-monumental" || variant === "3d-liquid"
+                    ? "linear-gradient(to top, rgba(3, 3, 5, 0.75) 0%, rgba(3, 3, 5, 0.15) 50%, rgba(3, 3, 5, 0.4) 100%)"
+                    : "radial-gradient(circle at 50% 50%, rgba(3, 3, 5, 0.05) 0%, rgba(2, 2, 4, 0.4) 70%, rgba(1, 1, 2, 0.8) 100%)",
               }}
             />
           )}
@@ -182,7 +192,7 @@ export function BlackLinkGlassLayout({
       {/* ================================================================== */}
       <header
         className={`relative z-10 w-full px-[60px] flex items-center justify-between text-xs font-mono tracking-[0.25em] ${
-          isLightBackground ? "text-black/50" : "text-white/50"
+          isLightBackground ? "text-black/60" : "text-white/60"
         } ${is916 ? "pt-24" : is45 ? "pt-16" : "pt-12"}`}
       >
         <span className="font-bold uppercase tracking-[0.28em] text-[12px]">
@@ -200,17 +210,16 @@ export function BlackLinkGlassLayout({
 
       {/* ------------------------------------------------------------------ */}
       {/* VARIAÇÃO A: SWISS BOX & CLEAN ICE BOX (BOUNDING BOX COM 8 HANDLES) */}
-      {/* Exatamente como 'СТРАТЕГИИ' e 'КЕЙСЫ' na referência da Arina TVA   */}
       {/* ------------------------------------------------------------------ */}
       {(variant === "swiss-box" || variant === "clean-ice-box") && (
         <main className="relative z-10 w-full px-[60px] my-auto flex flex-col justify-center items-center text-center">
           <div className="relative inline-block px-12 py-5 max-w-[820px]">
-            {/* Contorno fino */}
+            {/* Contorno fino com fundo de vidro fosco */}
             <div
               className={`absolute inset-0 border ${
                 variant === "clean-ice-box"
                   ? "border-black/60 bg-black/[0.02]"
-                  : "border-white/50 backdrop-blur-[2px] bg-white/[0.03]"
+                  : "border-white/50 backdrop-blur-[4px] bg-white/[0.04]"
               }`}
             />
             {/* 4 Handles nos 4 cantos */}
@@ -269,13 +278,12 @@ export function BlackLinkGlassLayout({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO B: OBJETOS 3D (3D CURSOR, 3D KEYCAP, 3D CRYSTAL, 3D SCULPTURE) */}
-      {/* Título editorial compacto no canto superior esquerdo com respiro total */}
+      {/* VARIAÇÃO B: 3D KEYCAP, 3D CRYSTAL (PINS), 3D CURSOR                */}
+      {/* Título editorial compacto no canto superior esquerdo com respiro    */}
       {/* ------------------------------------------------------------------ */}
       {(variant === "3d-cursor" ||
         variant === "3d-keycap" ||
-        variant === "3d-crystal" ||
-        variant === "3d-sculpture") && (
+        variant === "3d-crystal") && (
         <main className="relative z-10 w-full px-[60px] mt-2 mb-auto flex flex-col justify-start items-start text-left">
           <div className="max-w-[440px]">
             <h1
@@ -297,13 +305,22 @@ export function BlackLinkGlassLayout({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO C: 3D LIQUID (TÍTULO NO CANTO INFERIOR ESQUERDO)          */}
+      {/* VARIAÇÃO C: FOTOGRAFIA EDITORIAL & ESCULTURAS MACRO                */}
+      {/* (PORTRAIT, FLUTED GLASS, MACRO GLASS, OBSIDIAN DARK)               */}
+      {/* Título editorial no canto inferior esquerdo com respiro            */}
       {/* ------------------------------------------------------------------ */}
-      {variant === "3d-liquid" && (
+      {(variant === "pure-monumental" ||
+        variant === "3d-liquid" ||
+        variant === "3d-sculpture" ||
+        variant === "clean-ice") && (
         <main className="relative z-10 w-full px-[60px] mt-auto mb-4 flex flex-col justify-end items-start text-left">
           <div className="max-w-[460px]">
             <h1
-              className="font-clash font-extrabold uppercase leading-[1.12] text-white whitespace-pre-line tracking-tight drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
+              className={`font-clash font-extrabold uppercase leading-[1.12] whitespace-pre-line tracking-tight ${
+                isLightBackground
+                  ? "text-black"
+                  : "text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
+              }`}
               style={{
                 fontSize: "34px",
                 letterSpacing: "-0.02em",
@@ -312,34 +329,6 @@ export function BlackLinkGlassLayout({
               {renderHighlight(displayHeadline)}
               <span className="text-xl align-super ml-1 opacity-70">©</span>
             </h1>
-          </div>
-        </main>
-      )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO D: PURE MONUMENTAL & CLEAN ICE (TIPOGRAFIA CENTRAL PURA)   */}
-      {/* ------------------------------------------------------------------ */}
-      {(variant === "pure-monumental" || variant === "clean-ice") && (
-        <main className="relative z-10 w-full px-[60px] my-auto flex flex-col justify-center items-start text-left">
-          <div className="max-w-[760px] space-y-5">
-            <h1
-              className={`font-clash font-black tracking-tight uppercase leading-[1.06] whitespace-pre-line ${
-                isLightBackground ? "text-black" : "text-white"
-              }`}
-              style={{
-                fontSize: "46px",
-                letterSpacing: "-0.03em",
-              }}
-            >
-              {renderHighlight(displayHeadline)}
-            </h1>
-
-            {/* Linha Divisória de Precisão */}
-            <div
-              className={`w-16 h-[1.5px] ${
-                isLightBackground ? "bg-black/35" : "bg-white/35"
-              }`}
-            />
           </div>
         </main>
       )}

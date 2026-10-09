@@ -92,9 +92,9 @@ export function PostSlideDisplay({
   const variant: BlackLinkStyleVariant = slide?.blackLinkVariant || "3d-sculpture";
 
   const isLight =
-    variant === "clean-ice" ||
     variant === "clean-ice-box" ||
-    variant === "3d-crystal";
+    variant === "3d-crystal" ||
+    variant === "3d-cursor";
 
   const slideConfig: SlideDesignConfig = {
     theme: "dark-industrial",

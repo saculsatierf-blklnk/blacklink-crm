@@ -499,50 +499,24 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   },
   {
     id: "post-bl-07",
-    theme: "Cases & Números",
+    theme: "Fluidez de Alto Ticket",
     format: "post",
     targetAudience: "CEOs e Heads de Growth",
     scheduledDate: "Segunda • 09:30",
     status: "scheduled",
-    hookHeadline: "Cases & Números",
+    hookHeadline: "Fluidez de Alto Ticket",
     bodyCopy:
-      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\nEficiência mensurável em operações complexas de alta densidade.",
+      "A fluidez entre o primeiro ponto de contato e a proposta técnica elimina qualquer fricção de negociação em contas de alta complexidade.",
     postCaption:
-      "Métricas reais de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\nEficiência mensurável em operações complexas de alta densidade.\n\n#GrowthB2B #Metricas #BlackLink #Cases",
-    ctaText: "Veja os números na íntegra.",
-    hashtags: ["#GrowthB2B", "#Metricas", "#BlackLink"],
+      "A fluidez entre o primeiro ponto de contato e a proposta técnica elimina qualquer fricção de negociação em contas de alta complexidade.\n\n#Fluidez #BlackLink #EnterpriseB2B",
+    ctaText: "Veja os detalhes no perfil.",
+    hashtags: ["#Fluidez", "#BlackLink", "#EnterpriseB2B"],
     slides: [
       {
         slideNumber: 1,
-        headline: "CASES & NÚMEROS",
-        bodyText: "Eficiência mensurável em operações complexas de alta densidade.",
-        tag: "07 // MÉTRICAS",
-        blackLinkVariant: "clean-ice-box",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-08",
-    theme: "Qualificação de Alto Ticket",
-    format: "post",
-    targetAudience: "Líderes de SDRs e BDRs",
-    scheduledDate: "Quarta • 14:00",
-    status: "scheduled",
-    hookHeadline: "Qualificação de Alto Ticket",
-    bodyCopy:
-      "Tolerância zero a leads desqualificados drenando a energia dos seus closers seniores.\n\nSaiba como blindar seu pipeline com filtragem preditiva.",
-    postCaption:
-      "Tolerância zero a leads desqualificados drenando a energia dos seus closers seniores.\n\nSaiba como blindar seu pipeline com filtragem preditiva.\n\n#QualificacaoB2B #SDR #BlackLink #Pipeline",
-    ctaText: "Blindagem de pipeline ativa.",
-    hashtags: ["#QualificacaoB2B", "#SDR", "#BlackLink"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "QUALIFICAÇÃO DE ALTO TICKET",
-        bodyText: "Tolerância zero a oportunidades mornas drenando os closers seniores.",
-        tag: "08 // PIPELINE",
+        headline: "FLUIDEZ DE ALTO TICKET",
+        bodyText: "Eliminação total de atrito em contas de alta densidade.",
+        tag: "07 // FLUIDEZ",
         blackLinkVariant: "3d-sculpture",
       },
     ],
@@ -550,26 +524,52 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
     createdAt: new Date().toISOString(),
   },
   {
+    id: "post-bl-08",
+    theme: "Qualificação de Elite",
+    format: "post",
+    targetAudience: "Líderes de SDRs e BDRs",
+    scheduledDate: "Quarta • 14:00",
+    status: "scheduled",
+    hookHeadline: "Qualificação de Elite",
+    bodyCopy:
+      "Tolerância zero a oportunidades mornas drenando a energia dos seus closers seniores. Blindagem de pipeline com telemetria preditiva.",
+    postCaption:
+      "Tolerância zero a oportunidades mornas drenando a energia dos seus closers seniores. Blindagem de pipeline com telemetria preditiva.\n\n#QualificacaoDeElite #BlackLink #Pipeline",
+    ctaText: "Blindagem de pipeline ativa.",
+    hashtags: ["#QualificacaoDeElite", "#BlackLink", "#Pipeline"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "QUALIFICAÇÃO DE ELITE",
+        bodyText: "Tolerância zero a oportunidades mornas drenando a equipe.",
+        tag: "08 // QUALIFICAÇÃO",
+        blackLinkVariant: "clean-ice",
+      },
+    ],
+    imageUrls: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
     id: "post-bl-09",
-    theme: "Dossiê Executivo de Escala",
+    theme: "Cases & Números",
     format: "post",
     targetAudience: "CFOs e Diretores Financeiros",
     scheduledDate: "Sexta • 17:00",
     status: "scheduled",
-    hookHeadline: "Dossiê Executivo de Escala",
+    hookHeadline: "Cases & Números",
     bodyCopy:
-      "O framework definitivo para líderes que negociam no topo do mercado.\n\nRetorno consistente sobre custo de aquisição e proteção de margem operacional.",
+      "Métricas auditadas de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.",
     postCaption:
-      "O framework definitivo para líderes que negociam no topo do mercado.\n\nRetorno consistente sobre custo de aquisição e proteção de margem operacional.\n\n#CFO #FinanceiroB2B #CAC #BlackLink",
+      "Métricas auditadas de tração comercial e redução drástica no tempo de fechamento de contratos corporativos.\n\n#Cases #Metricas #BlackLink",
     ctaText: "Receba o dossiê completo.",
-    hashtags: ["#CFO", "#FinanceiroB2B", "#CAC"],
+    hashtags: ["#Cases", "#Metricas", "#BlackLink"],
     slides: [
       {
         slideNumber: 1,
-        headline: "DOSSIÊ EXECUTIVO DE ESCALA",
-        bodyText: "O framework definitivo para líderes que negociam no topo do mercado.",
-        tag: "09 // INTELIGÊNCIA",
-        blackLinkVariant: "clean-ice",
+        headline: "CASES & NÚMEROS",
+        bodyText: "Métricas reais de tração comercial corporativa.",
+        tag: "09 // MÉTRICAS",
+        blackLinkVariant: "clean-ice-box",
       },
     ],
     imageUrls: [],
@@ -1958,8 +1958,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v7",
-      version: 7,
+      name: "blacklink-marketing-storage-v8",
+      version: 8,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage
