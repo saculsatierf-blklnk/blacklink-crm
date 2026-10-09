@@ -156,15 +156,31 @@ export function InstagramFeedGridView() {
       const targetSlide = post.slides[slideIndex] || post.slides[0];
       const variant = overrideVariant || editingVariant || targetSlide?.blackLinkVariant || "3d-sculpture";
 
+      // NUNCA envia strings base64 pesadas de megabytes na requisição POST
+      const safeCurrentImageUrl =
+        targetSlide?.imageUrl && !targetSlide.imageUrl.startsWith("data:")
+          ? targetSlide.imageUrl
+          : undefined;
+
+      const controller = new AbortController();
+      const clientTimeout = setTimeout(() => controller.abort(), 20000);
+
       const res = await fetch("/api/marketing/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           variant,
           theme: editingHeadline || post.theme,
-          currentImageUrl: targetSlide?.imageUrl,
+          currentImageUrl: safeCurrentImageUrl,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(clientTimeout);
+
+      if (!res.ok) {
+        throw new Error(`Servidor respondeu com código ${res.status}`);
+      }
 
       const data = await res.json();
       if (data.success && data.imageUrl) {
@@ -198,9 +214,13 @@ export function InstagramFeedGridView() {
       } else {
         setModalFeedback("Não foi possível gerar a arte no momento.");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Erro ao gerar arte com IA:", err);
-      setModalFeedback("Erro de conexão ao gerar arte.");
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      const errMsg = isAbort
+        ? "Tempo limite esgotado. Tente novamente."
+        : "Instabilidade temporária na rede. Clique novamente para gerar.";
+      setModalFeedback(errMsg);
     } finally {
       setIsGeneratingImage(false);
       setGeneratingPostId(null);

@@ -108,69 +108,56 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.GEMINI_API_KEY?.trim();
 
-    // 2. Tenta gerar via modelos oficiais da Google (Gemini Image API)
+    // 2. Tenta gerar via modelo oficial ultrarrápido da Google (gemini-2.5-flash-image)
     if (apiKey) {
-      const candidateModels = [
-        "gemini-2.5-flash-image",
-        "gemini-3.1-flash-image",
-        "gemini-3-pro-image",
-      ];
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
 
-      const apiErrors: string[] = [];
+        // Timeout estrito de 8.5 segundos para garantir resposta antes do limite serverless do Netlify
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8500);
 
-      for (const model of candidateModels) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: finalPrompt }] }],
+            generationConfig: {
+              responseModalities: ["image", "text"],
+            },
+          }),
+          signal: controller.signal,
+        });
 
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 18000);
+        clearTimeout(timeoutId);
 
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: finalPrompt }] }],
-              generationConfig: {
-                responseModalities: ["image", "text"],
-              },
-            }),
-            signal: controller.signal,
-          });
+        if (response.ok) {
+          const data = await response.json();
+          const candidateParts = data?.candidates?.[0]?.content?.parts || [];
 
-          clearTimeout(timeoutId);
+          for (const part of candidateParts) {
+            if (part?.inlineData?.data) {
+              const mimeType = part.inlineData.mimeType || "image/png";
+              const base64Data = part.inlineData.data;
+              const imageUrl = `data:${mimeType};base64,${base64Data}`;
 
-          if (response.ok) {
-            const data = await response.json();
-            const candidateParts = data?.candidates?.[0]?.content?.parts || [];
-
-            for (const part of candidateParts) {
-              if (part?.inlineData?.data) {
-                const mimeType = part.inlineData.mimeType || "image/png";
-                const base64Data = part.inlineData.data;
-                const imageUrl = `data:${mimeType};base64,${base64Data}`;
-
-                return NextResponse.json({
-                  success: true,
-                  source: "gemini-ai",
-                  modelUsed: model,
-                  imageUrl,
-                  promptUsed: finalPrompt,
-                });
-              }
+              return NextResponse.json({
+                success: true,
+                source: "gemini-ai",
+                modelUsed: "gemini-2.5-flash-image",
+                imageUrl,
+                promptUsed: finalPrompt,
+              });
             }
-          } else {
-            const errBody = await response.text().catch(() => "");
-            apiErrors.push(`${model}: HTTP ${response.status} - ${errBody.slice(0, 150)}`);
-            console.error(`[Gemini API Error] ${model} (${response.status}):`, errBody);
           }
-        } catch (fetchErr: unknown) {
-          const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-          apiErrors.push(`${model}: ${msg}`);
-          console.error(`[Gemini Fetch Exception] ${model}:`, msg);
+        } else {
+          const errBody = await response.text().catch(() => "");
+          console.error(`[Gemini API Error] (${response.status}):`, errBody);
         }
+      } catch (fetchErr: unknown) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        console.warn("[Gemini API Timeout/Exception - aplicando ativo de estúdio]:", msg);
       }
-
-      console.warn("[Gemini API Fallback] Falha em todos os modelos. Detalhes:", apiErrors);
     }
 
     // 3. Seleção inteligente do Pool Curado de Estúdio (alterna para uma nova variação real)
