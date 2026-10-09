@@ -189,9 +189,10 @@ export function InstagramFeedGridView() {
           setEditingVariant(variant);
         }
 
-        const msg = data.modelUsed
-          ? `✨ Nova arte gerada com sucesso via ${data.modelUsed}!`
-          : `✨ Nova arte de alta fidelidade renderizada!`;
+        const msg =
+          data.source === "gemini-ai"
+            ? `✨ Nova arte inédita gerada via Gemini IA (${data.modelUsed})!`
+            : `✨ Ativo curado Arina TVA atualizado com sucesso!`;
         setCopiedFeedback(msg);
         setModalFeedback(msg);
       } else {

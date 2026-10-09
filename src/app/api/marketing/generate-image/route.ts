@@ -65,6 +65,9 @@ const VARIANT_ASSET_POOLS: Record<BlackLinkStyleVariant, string[]> = {
   ],
 };
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -78,9 +81,9 @@ export async function POST(req: Request) {
     const contextualAddon = theme ? `, inspired by theme "${theme}"` : "";
     const finalPrompt = `${basePrompt}${contextualAddon}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
 
-    // 2. Tenta gerar via modelos oficiais da Google (Gemini Image API) se a cota estiver ativa
+    // 2. Tenta gerar via modelos oficiais da Google (Gemini Image API)
     if (apiKey) {
       const candidateModels = [
         "gemini-2.5-flash-image",
@@ -88,12 +91,14 @@ export async function POST(req: Request) {
         "gemini-3-pro-image",
       ];
 
+      const apiErrors: string[] = [];
+
       for (const model of candidateModels) {
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 12000);
+          const timeoutId = setTimeout(() => controller.abort(), 18000);
 
           const response = await fetch(url, {
             method: "POST",
@@ -115,7 +120,7 @@ export async function POST(req: Request) {
 
             for (const part of candidateParts) {
               if (part?.inlineData?.data) {
-                const mimeType = part.inlineData.mimeType || "image/jpeg";
+                const mimeType = part.inlineData.mimeType || "image/png";
                 const base64Data = part.inlineData.data;
                 const imageUrl = `data:${mimeType};base64,${base64Data}`;
 
@@ -128,11 +133,19 @@ export async function POST(req: Request) {
                 });
               }
             }
+          } else {
+            const errBody = await response.text().catch(() => "");
+            apiErrors.push(`${model}: HTTP ${response.status} - ${errBody.slice(0, 150)}`);
+            console.error(`[Gemini API Error] ${model} (${response.status}):`, errBody);
           }
-        } catch {
-          // Continua para o pool curado
+        } catch (fetchErr: unknown) {
+          const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+          apiErrors.push(`${model}: ${msg}`);
+          console.error(`[Gemini Fetch Exception] ${model}:`, msg);
         }
       }
+
+      console.warn("[Gemini API Fallback] Falha em todos os modelos. Detalhes:", apiErrors);
     }
 
     // 3. Seleção inteligente do Pool Curado de Estúdio (alterna para uma nova variação real)
