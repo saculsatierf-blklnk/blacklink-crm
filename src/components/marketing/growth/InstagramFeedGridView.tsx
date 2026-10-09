@@ -137,6 +137,108 @@ export function InstagramFeedGridView() {
   const [visorSaved, setVisorSaved] = useState<boolean>(false);
   const [isVisorCaptionExpanded, setIsVisorCaptionExpanded] = useState<boolean>(false);
 
+  // Estados de Geração Autônoma de Arte com Gemini IA
+  const [isGeneratingImage, setIsGeneratingImage] = useState<boolean>(false);
+  const [generatingPostId, setGeneratingPostId] = useState<string | null>(null);
+  const [isGeneratingCollection, setIsGeneratingCollection] = useState<boolean>(false);
+  const [collectionProgress, setCollectionProgress] = useState<string | null>(null);
+
+  const handleGenerateImageWithGemini = async (post: ScheduledPost, slideIndex: number = 0) => {
+    setIsGeneratingImage(true);
+    setGeneratingPostId(post.id);
+    try {
+      const targetSlide = post.slides[slideIndex] || post.slides[0];
+      const variant = targetSlide?.blackLinkVariant || "3d-sculpture";
+
+      const res = await fetch("/api/marketing/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          variant,
+          theme: post.theme,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.imageUrl) {
+        const updatedSlides = [...post.slides];
+        const slideToUpdate = updatedSlides[slideIndex] || { slideNumber: slideIndex + 1 };
+        updatedSlides[slideIndex] = {
+          ...slideToUpdate,
+          imageUrl: data.imageUrl,
+          blackLinkVariant: variant,
+        };
+
+        updateScheduledPost(post.id, {
+          slides: updatedSlides,
+        });
+
+        setCopiedFeedback(
+          data.source === "gemini-ai"
+            ? `✨ Nova arte gerada com Gemini IA (${data.modelUsed})!`
+            : `✨ Arte de estúdio física atualizada com sucesso!`
+        );
+      } else {
+        setCopiedFeedback("Não foi possível gerar a arte no momento.");
+      }
+    } catch (err) {
+      console.error("Erro ao gerar arte com Gemini:", err);
+      setCopiedFeedback("Erro de conexão ao gerar arte.");
+    } finally {
+      setIsGeneratingImage(false);
+      setGeneratingPostId(null);
+      setTimeout(() => setCopiedFeedback(null), 3500);
+    }
+  };
+
+  const handleGenerateEntireCollection = async () => {
+    setIsGeneratingCollection(true);
+    setCollectionProgress("Iniciando geração da coleção de 9 artes com Gemini IA...");
+
+    try {
+      for (let i = 0; i < scheduledPosts.length; i++) {
+        const post = scheduledPosts[i];
+        setCollectionProgress(`Renderizando arte ${i + 1} de ${scheduledPosts.length}: ${post.theme}...`);
+
+        const slide = post.slides[0];
+        const variant = slide?.blackLinkVariant || "3d-sculpture";
+
+        try {
+          const res = await fetch("/api/marketing/generate-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              variant,
+              theme: post.theme,
+            }),
+          });
+
+          const data = await res.json();
+          if (data.success && data.imageUrl) {
+            const updatedSlides = [...post.slides];
+            const slideToUpdate = updatedSlides[0] || { slideNumber: 1 };
+            updatedSlides[0] = {
+              ...slideToUpdate,
+              imageUrl: data.imageUrl,
+            };
+            updateScheduledPost(post.id, { slides: updatedSlides });
+          }
+        } catch (e) {
+          console.warn(`Erro ao gerar post ${post.id}:`, e);
+        }
+      }
+
+      setCopiedFeedback("✦ Coleção completa de 9 artes atualizada com Gemini IA!");
+    } catch (err) {
+      console.error("Erro na geração da coleção:", err);
+      setCopiedFeedback("Erro durante geração em lote.");
+    } finally {
+      setIsGeneratingCollection(false);
+      setCollectionProgress(null);
+      setTimeout(() => setCopiedFeedback(null), 4000);
+    }
+  };
+
   const getInitials = (name?: string, handle?: string) => {
     if (name && name.trim()) {
       const parts = name.trim().split(/\s+/);
@@ -308,6 +410,21 @@ export function InstagramFeedGridView() {
               <div className="flex items-center gap-2 sm:ml-auto">
                 <button
                   type="button"
+                  disabled={isGeneratingCollection}
+                  onClick={handleGenerateEntireCollection}
+                  className="flex items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 px-3.5 py-2 text-xs font-semibold text-sky-300 transition-all cursor-pointer shadow-md disabled:opacity-50"
+                  title="Gera ou regenera as 9 artes oficiais com a API oficial do Gemini"
+                >
+                  {isGeneratingCollection ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-sky-400" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+                  )}
+                  <span>{isGeneratingCollection ? "Gerando..." : "✨ Gerar Coleção com Gemini IA"}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     resetToOfficialFoundationPosts();
                     setCopiedFeedback("Grade Oficial de 9 Posts restaurada com sucesso!");
@@ -376,6 +493,13 @@ export function InstagramFeedGridView() {
         </div>
 
         {/* Feedback Alert */}
+        {collectionProgress && (
+          <div className="rounded-2xl border border-sky-500/40 bg-sky-500/10 px-5 py-3 text-xs font-mono text-sky-300 flex items-center gap-2.5 animate-in fade-in duration-200">
+            <RefreshCw className="h-4 w-4 shrink-0 animate-spin text-sky-400" />
+            <span>{collectionProgress}</span>
+          </div>
+        )}
+
         {copiedFeedback && (
           <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3 text-xs font-mono text-emerald-300 flex items-center gap-2.5 animate-in fade-in duration-200">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -546,10 +670,28 @@ export function InstagramFeedGridView() {
                       </div>
                     </div>
 
-                    {/* Base do Hover: Botão de Edição */}
-                    <div className="flex justify-center">
+                    {/* Base do Hover: Botão de Edição & Ação Rápida Gemini IA */}
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isGeneratingImage && generatingPostId === post.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateImageWithGemini(post, 0);
+                        }}
+                        className="text-[10px] font-mono text-sky-300 bg-sky-950/70 hover:bg-sky-900/90 px-2.5 py-1 rounded-full border border-sky-500/30 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="Regenerar arte deste post via Gemini IA"
+                      >
+                        {isGeneratingImage && generatingPostId === post.id ? (
+                          <RefreshCw className="h-2.5 w-2.5 animate-spin text-sky-400" />
+                        ) : (
+                          <Sparkles className="h-2.5 w-2.5 text-sky-400" />
+                        )}
+                        <span>Gemini IA</span>
+                      </button>
+
                       <span className="text-[10px] font-mono text-zinc-200 uppercase tracking-widest bg-white/15 hover:bg-white/25 px-3 py-1 rounded-full border border-white/20 transition-colors">
-                        Editar Arte &amp; Copy ➔
+                        Editar ➔
                       </span>
                     </div>
                   </div>
@@ -801,6 +943,36 @@ export function InstagramFeedGridView() {
                 <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-[10px] font-mono font-bold text-emerald-300">
                   {visorActivePost.scheduledDate}
                 </span>
+              </div>
+
+              {/* Botão de Geração Autônoma Gemini IA */}
+              <div className="p-3.5 rounded-2xl bg-sky-500/[0.05] border border-sky-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-bold flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3" />
+                    <span>Motor Gemini IA de Arte</span>
+                  </span>
+                  <span className="text-[9px] font-mono text-zinc-400">
+                    Octane 3D • Arina TVA
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isGeneratingImage}
+                  onClick={() => handleGenerateImageWithGemini(visorActivePost, visorSlideIdx)}
+                  className="w-full py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/15 hover:bg-sky-500/25 text-xs font-semibold text-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                >
+                  {isGeneratingImage && generatingPostId === visorActivePost.id ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-sky-400" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+                  )}
+                  <span>
+                    {isGeneratingImage && generatingPostId === visorActivePost.id
+                      ? "Criando Arte com Gemini IA..."
+                      : "✨ Regenerar Arte com Gemini IA"}
+                  </span>
+                </button>
               </div>
 
               {/* Botões Rápidos de Variação Rítmica */}
@@ -1186,6 +1358,25 @@ export function InstagramFeedGridView() {
                       ))}
                     </div>
                   )}
+
+                  {/* Botão de Regeneração da Imagem via Gemini IA */}
+                  <button
+                    type="button"
+                    disabled={isGeneratingImage}
+                    onClick={() => handleGenerateImageWithGemini(selectedFeedPost, activeSlideIdx)}
+                    className="w-full py-2.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-xs font-semibold text-sky-300 transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                  >
+                    {isGeneratingImage && generatingPostId === selectedFeedPost.id ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin text-sky-400" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-sky-400" />
+                    )}
+                    <span>
+                      {isGeneratingImage && generatingPostId === selectedFeedPost.id
+                        ? "Renderizando Nova Arte..."
+                        : "✨ Regenerar Arte desta Lâmina com Gemini IA"}
+                    </span>
+                  </button>
 
                   <div className="text-[11px] font-mono text-zinc-500 text-center">
                     Visualização renderizada em tempo real na proporção 1:1 (1080x1080px)

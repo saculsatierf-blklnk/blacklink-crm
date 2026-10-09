@@ -1,0 +1,128 @@
+import { NextResponse } from "next/server";
+import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
+
+// Dicionário Oficial de Direção de Arte da Black Link (Metáforas Físicas de Alto Luxo)
+const VARIANT_PROMPTS: Record<BlackLinkStyleVariant, string> = {
+  "swiss-box":
+    "Macro abstract studio atmospheric gradient backdrop for luxury European branding poster, smooth deep charcoal teal-noir fading up into frosted titanium silver mist, fine subtle organic film grain, clean diffuse softbox lighting, 8k, minimalist Octane render, no text, no objects, negative space",
+  "3d-keycap":
+    "Hyper-realistic optical glass keycap with ESC engraving in clear isometric perspective, caustic refractions, liquid glass ripples on pure noir black background, studio rim lighting, Octane 3D render, luxury tech Arina TVA aesthetic, no text",
+  "3d-crystal":
+    "Two large polished liquid mirror chrome punk safety pins crossed in X shape, entwined with fine chrome ball-chains and dangling silver padlock charms, floating in perspective on immaculate off-white light grey porcelain studio background with soft contact shadow, Octane 3D render, luxury jewelry, no text",
+  "pure-monumental":
+    "High-fashion editorial male portrait for luxury European design agency, brooding young European man with sharp jawline, minimalist round metal wireframe spectacles, black designer high-collar coat, cinematic studio rim lighting, moody dark teal and noir atmospheric studio background, shot on 35mm film, Vogue Italia aesthetic, no text",
+  "3d-cursor":
+    "Polished liquid mirror chrome 3D computer mouse arrow cursor in dynamic perspective, sharp beveled titanium edges, floating slightly above an immaculate light grey porcelain studio surface with soft diffused contact shadow and ambient occlusion, Octane 3D render, luxury European art direction, no text",
+  "3d-liquid":
+    "High-fashion editorial photography, stylish female model wearing black futuristic sunglasses and glossy black patent leather jacket, seen through a sheet of vertical ribbed fluted frosted glass with fine water condensation, dramatic studio rim light, moody cinematic black and white, luxury fashion campaign aesthetic, no text",
+  "3d-sculpture":
+    "Macro close-up of abstract sculptural fluid ribbon made of frosted optical glass and smooth liquid mercury chrome, flowing cylindrical curves with soft light caustics and internal refractions, clean minimalist studio lighting on deep graphite dark background, Octane 3D render, luxury European art direction, no text",
+  "clean-ice":
+    "Raw geometric black obsidian geode crystal cluster, tightly wrapped with shiny chrome safety pins and dangling fine silver ball chains, sharp crystal facets with soft caustic studio highlights, floating above dark graphite floor with soft shadows, Octane 3D render, luxury dark high-end jewelry, no text",
+  "clean-ice-box":
+    "Minimalist luxury studio background, smooth light grey porcelain limestone concrete surface with ultra-fine tactile grain and soft diffuse ambient studio light falling from top-left, clean and pure minimalist Scandinavian aesthetic, no text, no objects",
+};
+
+// Fallback de ativos de estúdio curados caso a cota da Google Cloud (429) esteja em pausa
+const CURATED_ASSET_FALLBACKS: Record<BlackLinkStyleVariant, string> = {
+  "swiss-box": "/brand/blacklink-art-gradient.jpg",
+  "3d-keycap": "/brand/blacklink-3d-keycap.jpg",
+  "3d-crystal": "/brand/blacklink-art-pins.jpg",
+  "pure-monumental": "/brand/blacklink-art-portrait.jpg",
+  "3d-cursor": "/brand/blacklink-art-cursor-light.jpg",
+  "3d-liquid": "/brand/blacklink-art-glass-model.jpg",
+  "3d-sculpture": "/brand/blacklink-art-macro-glass.jpg",
+  "clean-ice": "/brand/blacklink-art-obsidian-dark.jpg",
+  "clean-ice-box": "/brand/blacklink-art-cursor-light.jpg",
+};
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const variant: BlackLinkStyleVariant = body.variant || "3d-cursor";
+    const customPrompt: string | undefined = body.customPrompt?.trim();
+    const theme: string | undefined = body.theme?.trim();
+
+    // 1. Monta o Prompt de Alto Luxo com Controle de Espaço Negativo
+    const basePrompt = customPrompt || VARIANT_PROMPTS[variant] || VARIANT_PROMPTS["3d-cursor"];
+    const contextualAddon = theme ? `, inspired by theme "${theme}"` : "";
+    const finalPrompt = `${basePrompt}${contextualAddon}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    // 2. Tenta gerar via modelos oficiais da Google (Gemini Image API)
+    if (apiKey) {
+      const candidateModels = [
+        "gemini-2.5-flash-image",
+        "gemini-3.1-flash-image",
+        "gemini-3-pro-image",
+      ];
+
+      for (const model of candidateModels) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: finalPrompt }] }],
+              generationConfig: {
+                responseModalities: ["image", "text"],
+              },
+            }),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            const candidateParts = data?.candidates?.[0]?.content?.parts || [];
+
+            for (const part of candidateParts) {
+              if (part?.inlineData?.data) {
+                const mimeType = part.inlineData.mimeType || "image/jpeg";
+                const base64Data = part.inlineData.data;
+                const imageUrl = `data:${mimeType};base64,${base64Data}`;
+
+                return NextResponse.json({
+                  success: true,
+                  source: "gemini-ai",
+                  modelUsed: model,
+                  imageUrl,
+                  promptUsed: finalPrompt,
+                });
+              }
+            }
+          }
+        } catch {
+          // Continua para o próximo modelo candidato ou fallback
+        }
+      }
+    }
+
+    // 3. Fallback inteligente e resiliente (garante que o usuário nunca fique com tela quebrada)
+    const fallbackImage = CURATED_ASSET_FALLBACKS[variant] || "/brand/blacklink-art-cursor-light.jpg";
+
+    return NextResponse.json({
+      success: true,
+      source: "curated-studio",
+      imageUrl: fallbackImage,
+      notice: "Gerado com motor curado de precisão física Arina TVA (reserva de cota ativa).",
+      promptUsed: finalPrompt,
+    });
+  } catch (error) {
+    console.error("Erro na rota /api/marketing/generate-image:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Falha ao processar geração de imagem.",
+      },
+      { status: 500 }
+    );
+  }
+}

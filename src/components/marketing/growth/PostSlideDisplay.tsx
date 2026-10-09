@@ -63,32 +63,6 @@ export function PostSlideDisplay({
     return () => observer.disconnect();
   }, [canvasWidth, exportMode]);
 
-  const [imageError, setImageError] = useState<boolean>(false);
-
-  // Considera imagem apenas se for upload real do usuário (http, data, blob) e não rota de SVG legado
-  const isRealUserImage = Boolean(
-    slide?.imageUrl &&
-    !slide.imageUrl.includes("render-slide") &&
-    !slide.imageUrl.includes("api/marketing") &&
-    (slide.imageUrl.startsWith("http") ||
-      slide.imageUrl.startsWith("data:") ||
-      slide.imageUrl.startsWith("blob:") ||
-      slide.imageUrl.startsWith("/uploads/"))
-  );
-
-  if (isRealUserImage && !imageError) {
-    return (
-      <div className={`relative w-full h-full overflow-hidden select-none bg-black ${className}`}>
-        <img
-          src={slide!.imageUrl}
-          alt={slide?.headline || "Black Link Creative"}
-          className="w-full h-full object-cover select-none pointer-events-none"
-          onError={() => setImageError(true)}
-        />
-      </div>
-    );
-  }
-
   const variant: BlackLinkStyleVariant = slide?.blackLinkVariant || "3d-sculpture";
 
   const isLight =
@@ -109,6 +83,7 @@ export function PostSlideDisplay({
     authorHandle,
     authorAvatar: "",
     blackLinkVariant: variant,
+    bgImage: slide?.imageUrl,
   };
 
   const slideData: SlideData = {
@@ -117,6 +92,7 @@ export function PostSlideDisplay({
     bodyText: slide?.bodyText || "Eliminamos o atrito invisível no pipeline comercial.",
     tag: slide?.tag || "ESTRATÉGIA",
     blackLinkVariant: variant,
+    imageUrl: slide?.imageUrl,
   };
 
   const dummyLayoutProps = {

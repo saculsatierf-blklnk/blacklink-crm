@@ -84,6 +84,7 @@ export interface SlideData {
   chartData?: { label: string; value: number }[];
   kpiHighlight?: string;
   blackLinkVariant?: BlackLinkStyleVariant;
+  imageUrl?: string;
 }
 
 export type GlassDimensionMode = "3d-slab" | "3d-monolith" | "floating-glass";

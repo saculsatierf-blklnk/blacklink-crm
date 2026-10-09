@@ -87,6 +87,12 @@ export function BlackLinkGlassLayout({
 
   // Imagens de fundo oficiais para as variações de Alta Moda (Arina TVA)
   const bgImageSrc = (() => {
+    if (slide.imageUrl && !slide.imageUrl.includes("render-slide")) {
+      return slide.imageUrl;
+    }
+    if (config.bgImage && !config.bgImage.includes("render-slide")) {
+      return config.bgImage;
+    }
     switch (variant) {
       case "swiss-box":
         return "/brand/blacklink-art-gradient.jpg";
