@@ -675,7 +675,7 @@ export function InstagramFeedGridView() {
           {[
             { label: "Black Link OS", icon: "⚡" },
             { label: "Grade 3x3", icon: "📐" },
-            { label: "Cases B2B", icon: "📈" },
+            { label: "Automações", icon: "⚙️" },
             { label: "Diretrizes", icon: "💎" },
             { label: "Telemetria", icon: "🔬" },
           ].map((hl) => (
@@ -765,9 +765,9 @@ export function InstagramFeedGridView() {
                 "pure-monumental",
                 "3d-cursor",
                 "3d-liquid",
-                "clean-ice-box",
                 "3d-sculpture",
                 "clean-ice",
+                "clean-ice-box",
               ];
               const variant =
                 firstSlide?.blackLinkVariant ||

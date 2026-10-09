@@ -163,11 +163,11 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
   "suggestedUpdates": [
     {
       "postId": "<ID exato do post, ex: 'post-bl-01'>",
-      "headline": "<nova headline monumental em MAIÚSCULAS>",
-      "bodyText": "<nova tese de apoio direta>",
+      "headline": "<nova headline monumental de NO MÁXIMO 2 A 4 PALAVRAS em MAIÚSCULAS, padrão suíço limpo Arina TVA (ex: 'SOBERANIA B2B', 'TELEMETRIA TOTAL', 'BLACK LINK OS'). NUNCA crie frases longas ou orações inteiras com ponto final!>",
+      "bodyText": "<apoio ultra-curto de 1 frase concisa de até 8 a 10 palavras>",
       "tag": "<tag suíça, ex: '01 // TELEMETRIA'>",
       "caption": "<legenda completa para o Instagram com quebras de linha e CTA>",
-      "blackLinkVariant": "<variante estética opcional se aplicável>",
+      "blackLinkVariant": "<MANTENHA RIGOROSAMENTE A VARIANTE ORIGINAL DO POST a menos que o usuário peça explicitamente para trocar>",
       "rationale": "<1 frase explicando a melhoria>"
     }
   ],

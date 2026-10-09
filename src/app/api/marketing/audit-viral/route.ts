@@ -52,8 +52,8 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto extra fora das chav
   "viralScore": <número inteiro de 0 a 100>,
   "conversionScore": <número inteiro de 0 a 100>,
   "critique": "<análise cirúrgica e sem rodeios de 2 a 3 frases: o que está fraco, o que está forte e por que precisa de mais tração>",
-  "optimizedHeadline": "<título monumental de 2 a 5 palavras em MAIÚSCULAS, padrão suíço brutalista de alto impacto>",
-  "optimizedBodyText": "<subtítulo de 1 a 2 frases com tese lógica cirúrgica conectada ao problema>",
+  "optimizedHeadline": "<título monumental de NO MÁXIMO 2 A 4 PALAVRAS em MAIÚSCULAS, padrão suíço limpo Arina TVA (ex: 'SOBERANIA B2B', 'TELEMETRIA TOTAL', 'ENGENHARIA DA AUSÊNCIA'). NUNCA frases longas ou orações inteiras com ponto final!>",
+  "optimizedBodyText": "<apoio ultra-curto de 1 frase concisa de até 8 a 10 palavras conectada ao problema>",
   "optimizedTag": "<tag no formato '0X // CONCEITO', ex: '01 // SOBERANIA' ou '03 // INFRAESTRUTURA'>",
   "optimizedCaption": "<legenda completa e magnética para o Instagram com quebras de linha elegantes, sem clichês, apresentando a tese, aprofundando a dor, apresentando a solução da Black Link e finalizando com um CTA imperativo e elegante para o link da bio ou Direct>",
   "targetProductName": "${selectedProduct.name}"
