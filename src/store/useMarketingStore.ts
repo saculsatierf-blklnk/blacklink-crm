@@ -1968,8 +1968,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v9",
-      version: 9,
+      name: "blacklink-marketing-storage-v10",
+      version: 10,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

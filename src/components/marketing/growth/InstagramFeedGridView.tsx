@@ -162,6 +162,7 @@ export function InstagramFeedGridView() {
         body: JSON.stringify({
           variant,
           theme: editingHeadline || post.theme,
+          currentImageUrl: targetSlide?.imageUrl,
         }),
       });
 

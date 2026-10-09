@@ -87,10 +87,18 @@ export function BlackLinkGlassLayout({
 
   // Imagens de fundo oficiais para as variações de Alta Moda (Arina TVA)
   const bgImageSrc = (() => {
-    if (slide.imageUrl && !slide.imageUrl.includes("render-slide")) {
+    if (
+      slide.imageUrl &&
+      !slide.imageUrl.includes("render-slide") &&
+      !slide.imageUrl.includes("pollinations.ai")
+    ) {
       return slide.imageUrl;
     }
-    if (config.bgImage && !config.bgImage.includes("render-slide")) {
+    if (
+      config.bgImage &&
+      !config.bgImage.includes("render-slide") &&
+      !config.bgImage.includes("pollinations.ai")
+    ) {
       return config.bgImage;
     }
     switch (variant) {
