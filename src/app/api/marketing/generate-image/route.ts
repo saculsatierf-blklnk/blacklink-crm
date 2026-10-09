@@ -76,12 +76,35 @@ export async function POST(req: Request) {
     const theme: string | undefined = body.theme?.trim();
     const currentImageUrl: string | undefined = body.currentImageUrl;
 
-    // 1. Monta o Prompt de Alto Luxo com Diretriz Inegociável de Diversidade da Black Link
+    // 1. Monta o Prompt de Alto Luxo com Controle Inteligente de Figuras Humanas
     const basePrompt = customPrompt || VARIANT_PROMPTS[variant] || VARIANT_PROMPTS["3d-cursor"];
     const contextualAddon = theme ? `, inspired by theme "${theme}"` : "";
-    const castingRule =
-      "MANDATORY CASTING RULE: Any human model, person, or portrait depicted MUST EXCLUSIVELY be a deep dark-skinned Black person (pele negra retinta, rich dark ebony melanin complexion). Never portray light-skinned, Caucasian, or non-Black models.";
-    const finalPrompt = `${basePrompt}${contextualAddon}. ${castingRule}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
+
+    // Determina se este criativo deve conter figuras humanas:
+    // Apenas se a variante for de retrato editorial ("pure-monumental" ou "3d-liquid")
+    // OU se o usuário especificou pessoas/modelos no prompt ou tema customizado.
+    const isHumanVariant = variant === "pure-monumental" || variant === "3d-liquid";
+    const humanKeywordsRegex =
+      /\b(pessoa|pessoas|modelo|modelos|homem|homens|mulher|mulheres|person|people|model|models|man|men|woman|women|portrait|human|face|rosto)\b/i;
+    const mentionsHuman =
+      (customPrompt && humanKeywordsRegex.test(customPrompt)) ||
+      (theme && humanKeywordsRegex.test(theme));
+
+    const shouldIncludeHuman = isHumanVariant || Boolean(mentionsHuman);
+
+    let specificDirective = "";
+    if (shouldIncludeHuman) {
+      // Regra de Ouro da Black Link: Sempre que houver pessoas, DEVEM ser exclusivamente pessoas negras retintas.
+      specificDirective =
+        "MANDATORY CASTING RULE: Any human model, person, or portrait depicted MUST EXCLUSIVELY be a deep dark-skinned Black person (pele negra retinta, rich dark ebony melanin complexion). Never portray light-skinned, Caucasian, or non-Black individuals.";
+    } else {
+      // Para todos os outros casos (3d-cursor, 3d-keycap, 3d-crystal, 3d-sculpture, obsidian, swiss-box, etc.):
+      // Estritamente OBJETOS 3D abstratos, tipografia e matérias-primas físicas de luxo — NENHUMA pessoa humana!
+      specificDirective =
+        "STRICT NO-HUMANS CONSTRAINT: Absolutely NO human models, no people, no portraits, no faces, no hands, no human figures. Strictly focus purely on inanimate luxury 3D objects, polished metals, optical glass, materials, studio lighting, and negative space.";
+    }
+
+    const finalPrompt = `${basePrompt}${contextualAddon}. ${specificDirective}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
 
     const apiKey = process.env.GEMINI_API_KEY?.trim();
 
