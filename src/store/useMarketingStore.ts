@@ -1177,8 +1177,8 @@ export const DEFAULT_WEEKLY_AGENDA: AgendaDay[] = [
 export const useMarketingStore = create<MarketingState>()(
   persist(
     (set, get) => ({
-      // Jornada de Growth Marketing B2B (5 Etapas)
-      activeGrowthTab: "diagnostico",
+      // Jornada de Marketing Black Link (3 Pilares: Feed, Cronograma, Diagnóstico)
+      activeGrowthTab: "feed",
       setActiveGrowthTab: (tab) => set({ activeGrowthTab: tab }),
 
       // 1. Diagnóstico da Empresa & Concorrentes
@@ -1299,9 +1299,19 @@ export const useMarketingStore = create<MarketingState>()(
       },
       selectedPlanForCreation: null,
       selectPlanForCreation: (plan) => {
+        const state = get();
+        const matchingPost = plan
+          ? state.scheduledPosts.find(
+              (p) =>
+                p.theme.toLowerCase().trim() === plan.theme.toLowerCase().trim() ||
+                p.id === plan.id
+            )
+          : null;
+
         set({
           selectedPlanForCreation: plan,
-          activeGrowthTab: "estudio",
+          selectedFeedPost: matchingPost || state.scheduledPosts[0] || null,
+          activeGrowthTab: "feed",
         });
         if (plan) {
           get().setFormData({
@@ -1958,8 +1968,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v8",
-      version: 8,
+      name: "blacklink-marketing-storage-v9",
+      version: 9,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

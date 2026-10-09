@@ -1588,24 +1588,6 @@ export function InstagramFeedGridView() {
                       <Download className="h-3.5 w-3.5" />
                       <span>{isDownloading ? "Renderizando..." : "Baixar Arte 1080p"}</span>
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const matchingPlan = editorialPlan.find(
-                          (p) =>
-                            p.theme.toLowerCase().trim() === selectedFeedPost.theme.toLowerCase().trim() ||
-                            p.id === selectedFeedPost.id
-                        );
-                        selectPlanForCreation(matchingPlan || null);
-                        setSelectedFeedPost(null);
-                        setActiveGrowthTab("estudio");
-                      }}
-                      className="w-full sm:w-auto py-2.5 px-4 rounded-xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.08] text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      <span>Estúdio</span>
-                    </button>
                   </div>
                 </div>
               </div>
