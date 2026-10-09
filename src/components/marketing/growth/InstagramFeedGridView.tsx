@@ -26,6 +26,7 @@ import {
   Check,
   RefreshCw,
   Target,
+  Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -34,6 +35,7 @@ import {
   type CreativeSlide,
 } from "@/store/useMarketingStore";
 import { ManualAssetUploadModal } from "@/components/marketing/ManualAssetUploadModal";
+import { MarketingAgentDrawer } from "./MarketingAgentDrawer";
 import { BLACKLINK_PRODUCTS } from "@/lib/marketing/blacklinkBrandBrain";
 import { PostSlideDisplay } from "./PostSlideDisplay";
 import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
@@ -119,6 +121,7 @@ export function InstagramFeedGridView() {
   const [activeSlideIdx, setActiveSlideIdx] = useState<number>(0);
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
   const [copiedFeedback, setCopiedFeedback] = useState<string | null>(null);
+  const [isAgentDrawerOpen, setIsAgentDrawerOpen] = useState<boolean>(false);
 
   // Estados de edição completa no Modal
   const [modalTab, setModalTab] = useState<"creative" | "caption" | "audit">("creative");
@@ -558,6 +561,16 @@ export function InstagramFeedGridView() {
               </span>
 
               <div className="flex items-center gap-2 sm:ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsAgentDrawerOpen(true)}
+                  className="flex items-center gap-1.5 rounded-xl border border-sky-400/40 bg-gradient-to-r from-sky-500/20 to-indigo-600/20 hover:from-sky-500/30 hover:to-indigo-600/30 px-3.5 py-2 text-xs font-bold text-white transition-all cursor-pointer shadow-md ring-1 ring-sky-400/20"
+                  title="Abrir o Diretor Executivo de Growth IA da Black Link"
+                >
+                  <Bot className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
+                  <span>✦ Diretor IA</span>
+                </button>
+
                 <button
                   type="button"
                   disabled={isGeneratingCollection}
@@ -2118,6 +2131,12 @@ export function InstagramFeedGridView() {
           );
         })}
       </div>
+
+      {/* Drawer do Diretor Executivo de Growth IA (Black Link) */}
+      <MarketingAgentDrawer
+        isOpen={isAgentDrawerOpen}
+        onClose={() => setIsAgentDrawerOpen(false)}
+      />
     </div>
   );
 }

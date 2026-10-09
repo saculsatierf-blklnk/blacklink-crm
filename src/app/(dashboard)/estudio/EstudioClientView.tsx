@@ -8,6 +8,7 @@ import {
   Target,
   UploadCloud,
   Sparkles,
+  Bot,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMarketingStore, type GrowthTab } from "@/store/useMarketingStore";
@@ -15,6 +16,7 @@ import { CompetitorsDiagnosticView } from "@/components/marketing/growth/Competi
 import { EditorialPlanningView } from "@/components/marketing/growth/EditorialPlanningView";
 import { InstagramFeedGridView } from "@/components/marketing/growth/InstagramFeedGridView";
 import { ManualAssetUploadModal } from "@/components/marketing/ManualAssetUploadModal";
+import { MarketingAgentDrawer } from "@/components/marketing/growth/MarketingAgentDrawer";
 
 export function EstudioClientView() {
   const {
@@ -25,6 +27,7 @@ export function EstudioClientView() {
   } = useMarketingStore();
 
   const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
+  const [isAgentDrawerOpen, setIsAgentDrawerOpen] = useState(false);
   const [globalFeedbackMsg, setGlobalFeedbackMsg] = useState<string | null>(null);
 
   // 3 Pilares Naturais do Marketing: Vitrine 3x3 (Home), Cronograma de Datas e Diagnóstico Estratégico
@@ -69,6 +72,18 @@ export function EstudioClientView() {
 
         {/* Ações Rápidas */}
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsAgentDrawerOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-sky-400/40 bg-gradient-to-r from-sky-500/20 to-indigo-600/20 hover:from-sky-500/30 hover:to-indigo-600/30 px-3.5 py-2 text-xs font-bold text-white transition-all duration-200 cursor-pointer shadow-lg shadow-sky-500/10 ring-1 ring-sky-400/20"
+          >
+            <Bot className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
+            <span>✦ Diretor de Growth IA</span>
+            <span className="hidden sm:inline-block rounded-full bg-sky-400/20 text-sky-300 px-1.5 py-0.2 text-[9px] font-mono">
+              Black Link
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsManualUploadOpen(true)}
@@ -167,6 +182,12 @@ export function EstudioClientView() {
           setGlobalFeedbackMsg("Ativo manual inserido com sucesso na grade do Instagram!");
           setTimeout(() => setGlobalFeedbackMsg(null), 4000);
         }}
+      />
+
+      {/* Drawer do Diretor Executivo de Growth IA (Black Link) */}
+      <MarketingAgentDrawer
+        isOpen={isAgentDrawerOpen}
+        onClose={() => setIsAgentDrawerOpen(false)}
       />
     </div>
   );

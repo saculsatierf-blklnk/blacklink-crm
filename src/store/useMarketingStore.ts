@@ -662,12 +662,12 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
 const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   name: "Black Link",
   instagram: "@blacklink.tech",
-  website: "https://blacklink.com.br",
-  niche: "Inteligência Comercial & Gestão B2B",
-  products: "Plataforma de CRM Autônomo, Telemetria & Automação Comercial",
-  targetAudience: "Fundadores, Diretores Comerciais e Operações de Vendas B2B",
-  bio: "A nova arquitetura de velocidade comercial para equipes de alta performance.",
-  tagline: "Engenharia de Receita & Velocidade Comercial",
+  website: "https://blklnk.com",
+  niche: "Engenharia da Ausência & Inteligência Comercial B2B",
+  products: "Black Link CRM OS, Automações & I.A. Operacional, Marketing & Branding Soberano, Protocolo Black Link (blklnk.com/protocolo), Captação Cinematográfica",
+  targetAudience: "Fundadores, CEOs, Diretores Comerciais e Holdings de Alto Padrão",
+  bio: "Engenharia da Ausência: Simplificando a tecnologia e elevando a estética corporativa.",
+  tagline: "Engenharia da Ausência | blklnk.com",
   profileType: "company",
   accountStage: "lancamento_zero",
 };
@@ -1968,8 +1968,8 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v11",
-      version: 11,
+      name: "blacklink-marketing-storage-v12",
+      version: 12,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage
