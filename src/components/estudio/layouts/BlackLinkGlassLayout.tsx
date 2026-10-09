@@ -9,17 +9,12 @@ import { LayoutProps, BlackLinkStyleVariant } from "./layoutTypes";
 function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): string {
   const text = (rawText || "").replace(/["'”]/g, "").trim();
 
-  // Se o usuário digitou um título customizado curto (até 4 palavras e até 28 caracteres), preserva
-  const words = text.split(/\s+/).filter(Boolean);
-  if (words.length > 0 && words.length <= 4 && text.length <= 28) {
-    if (words.length >= 3 && variant !== "swiss-box" && variant !== "clean-ice-box") {
-      const mid = Math.ceil(words.length / 2);
-      return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")].join("\n").toUpperCase();
-    }
+  // Se o usuário digitou qualquer título customizado, RESPEITA 100% o texto do usuário (estilo Canva)
+  if (text) {
     return text.toUpperCase();
   }
 
-  // Mapeamentos oficiais por variante idênticos ao padrão Arina TVA / Design Atum
+  // Mapeamentos oficiais por variante idênticos ao padrão Arina TVA / Design Atum (somente se vazio)
   switch (variant) {
     case "swiss-box":
       return "ESTRATÉGIA B2B";
@@ -161,10 +156,13 @@ export function BlackLinkGlassLayout({
       {/* ================================================================== */}
       {bgImageSrc && (
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <div
-            className="w-full h-full bg-cover bg-center transition-all duration-700"
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bgImageSrc}
+            alt="Arte de Fundo Black Link"
+            crossOrigin="anonymous"
+            className="w-full h-full object-cover transition-all duration-700 pointer-events-none select-none"
             style={{
-              backgroundImage: `url('${bgImageSrc}')`,
               filter: isLightBackground
                 ? "contrast(102%) brightness(100%)"
                 : variant === "pure-monumental" || variant === "3d-liquid"
@@ -175,7 +173,7 @@ export function BlackLinkGlassLayout({
           {/* Vinheta atmosférica suave apenas para posts fotográficos ou escuros */}
           {!isLightBackground && variant !== "swiss-box" && (
             <div
-              className="absolute inset-0"
+              className="absolute inset-0 pointer-events-none"
               style={{
                 background:
                   variant === "pure-monumental" || variant === "3d-liquid"
@@ -227,7 +225,7 @@ export function BlackLinkGlassLayout({
       {/* ------------------------------------------------------------------ */}
       {(variant === "swiss-box" || variant === "clean-ice-box") && (
         <main className="relative z-10 w-full px-[60px] my-auto flex flex-col justify-center items-center text-center">
-          <div className="relative inline-block px-12 py-5 max-w-[820px]">
+          <div className="relative inline-block px-10 py-6 max-w-[840px]">
             {/* Contorno fino com fundo de vidro fosco */}
             <div
               className={`absolute inset-0 border ${
@@ -279,14 +277,39 @@ export function BlackLinkGlassLayout({
               }`}
             />
 
+            {/* Tag Editorial Suíça opcional */}
+            {slide.tag && (
+              <div
+                className={`relative z-10 text-[11px] font-mono uppercase tracking-[0.25em] font-bold pb-2 ${
+                  variant === "clean-ice-box" ? "text-black/60" : "text-white/60"
+                }`}
+              >
+                {slide.tag}
+              </div>
+            )}
+
             {/* Termo Principal dentro da Bounding Box */}
             <h1
-              className={`relative z-10 font-clash font-bold uppercase tracking-[0.22em] text-2xl md:text-3xl whitespace-nowrap leading-none py-1 ${
+              className={`relative z-10 font-clash font-bold uppercase tracking-[0.18em] leading-tight py-1 ${
                 variant === "clean-ice-box" ? "text-black" : "text-white"
               }`}
+              style={{
+                fontSize: displayHeadline.length > 40 ? "24px" : displayHeadline.length > 25 ? "28px" : "32px",
+              }}
             >
               {displayHeadline}
             </h1>
+
+            {/* Tese / Linha de Apoio opcional */}
+            {slide.bodyText && (
+              <p
+                className={`relative z-10 text-xs md:text-sm font-sans max-w-[560px] mx-auto pt-2.5 leading-relaxed tracking-normal ${
+                  variant === "clean-ice-box" ? "text-zinc-700" : "text-zinc-300"
+                }`}
+              >
+                {slide.bodyText}
+              </p>
+            )}
           </div>
         </main>
       )}
@@ -299,21 +322,43 @@ export function BlackLinkGlassLayout({
         variant === "3d-keycap" ||
         variant === "3d-crystal") && (
         <main className="relative z-10 w-full px-[60px] mt-2 mb-auto flex flex-col justify-start items-start text-left">
-          <div className="max-w-[440px]">
+          <div className="max-w-[560px] space-y-2.5">
+            {slide.tag && (
+              <div
+                className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-[0.25em] font-semibold ${
+                  isLightBackground
+                    ? "border-black/20 text-black/70 bg-black/[0.03]"
+                    : "border-white/20 text-white/70 bg-white/[0.05]"
+                }`}
+              >
+                {slide.tag}
+              </div>
+            )}
             <h1
-              className={`font-clash font-extrabold uppercase leading-[1.12] whitespace-pre-line tracking-tight ${
+              className={`font-clash font-extrabold uppercase leading-[1.08] whitespace-pre-line tracking-tight ${
                 isLightBackground
                   ? "text-black"
                   : "text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
               }`}
               style={{
-                fontSize: "34px",
+                fontSize: displayHeadline.length > 50 ? "26px" : displayHeadline.length > 30 ? "30px" : "36px",
                 letterSpacing: "-0.02em",
               }}
             >
               {renderHighlight(displayHeadline)}
               <span className="text-xl align-super ml-1 opacity-70">©</span>
             </h1>
+            {slide.bodyText && (
+              <p
+                className={`text-sm font-sans leading-relaxed tracking-normal max-w-[480px] font-medium pt-0.5 ${
+                  isLightBackground
+                    ? "text-zinc-700"
+                    : "text-zinc-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]"
+                }`}
+              >
+                {slide.bodyText}
+              </p>
+            )}
           </div>
         </main>
       )}
@@ -328,21 +373,43 @@ export function BlackLinkGlassLayout({
         variant === "3d-sculpture" ||
         variant === "clean-ice") && (
         <main className="relative z-10 w-full px-[60px] mt-auto mb-4 flex flex-col justify-end items-start text-left">
-          <div className="max-w-[460px]">
+          <div className="max-w-[580px] space-y-2.5">
+            {slide.tag && (
+              <div
+                className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-[0.25em] font-semibold ${
+                  isLightBackground
+                    ? "border-black/20 text-black/70 bg-black/[0.03]"
+                    : "border-white/20 text-white/70 bg-white/[0.05]"
+                }`}
+              >
+                {slide.tag}
+              </div>
+            )}
             <h1
-              className={`font-clash font-extrabold uppercase leading-[1.12] whitespace-pre-line tracking-tight ${
+              className={`font-clash font-extrabold uppercase leading-[1.08] whitespace-pre-line tracking-tight ${
                 isLightBackground
                   ? "text-black"
                   : "text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
               }`}
               style={{
-                fontSize: "34px",
+                fontSize: displayHeadline.length > 50 ? "26px" : displayHeadline.length > 30 ? "30px" : "36px",
                 letterSpacing: "-0.02em",
               }}
             >
               {renderHighlight(displayHeadline)}
               <span className="text-xl align-super ml-1 opacity-70">©</span>
             </h1>
+            {slide.bodyText && (
+              <p
+                className={`text-sm font-sans leading-relaxed tracking-normal max-w-[480px] font-medium pt-0.5 ${
+                  isLightBackground
+                    ? "text-zinc-700"
+                    : "text-zinc-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]"
+                }`}
+              >
+                {slide.bodyText}
+              </p>
+            )}
           </div>
         </main>
       )}

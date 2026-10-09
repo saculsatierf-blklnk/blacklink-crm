@@ -348,20 +348,39 @@ export function InstagramFeedGridView() {
 
   const handleDownloadHd = async (post: ScheduledPost) => {
     setIsDownloading(true);
+    setCopiedFeedback("Renderizando arte completa em 1080p...");
     try {
       const offscreenNode = document.getElementById(`export-canvas-${post.id}`);
       if (offscreenNode) {
+        // Aguarda todas as imagens dentro do nó completarem o carregamento
+        const imgElements = Array.from(offscreenNode.querySelectorAll("img"));
+        await Promise.all(
+          imgElements.map(
+            (img) =>
+              new Promise((resolve) => {
+                if (img.complete && img.naturalWidth > 0) return resolve(true);
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(true);
+                setTimeout(() => resolve(true), 2500);
+              })
+          )
+        );
+
+        // Micro-pausa de 120ms para estabilização de fontes e camadas gráficas
+        await new Promise((r) => setTimeout(r, 120));
+
         const dataUrl = await htmlToImage.toPng(offscreenNode, {
           pixelRatio: 1.0,
           width: 1080,
           height: 1080,
-          cacheBust: true,
+          cacheBust: false, // CRUCIAL: cacheBust: true corrompe base64 e omite a imagem de fundo
+          backgroundColor: "#030305",
         });
         const link = document.createElement("a");
         link.href = dataUrl;
         link.download = `blacklink_${post.id}.png`;
         link.click();
-        setCopiedFeedback("Arte 1080p baixada em alta resolução!");
+        setCopiedFeedback("✨ Arte 1080p com fundo e copy baixada com sucesso!");
       } else {
         const slide = post.slides[activeSlideIdx] || post.slides[0];
         if (slide?.imageUrl) {
@@ -1404,8 +1423,9 @@ export function InstagramFeedGridView() {
                     </div>
                   )}
 
-                  <div className="text-[11px] font-mono text-zinc-500 text-center">
-                    Visualização renderizada em tempo real na proporção 1:1 (1080x1080px)
+                  <div className="flex items-center justify-center gap-2 text-[11px] font-mono text-zinc-400 text-center">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Edição ao vivo estilo Canva ativa • 1080x1080px</span>
                   </div>
                 </div>
 
@@ -1487,16 +1507,45 @@ export function InstagramFeedGridView() {
                           <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
                             Headline Monumental (Clash Display)
                           </label>
-                          <span className="text-[10px] font-mono text-zinc-500">
-                            {editingHeadline.length} carac.
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const upper = editingHeadline.toUpperCase();
+                                setEditingHeadline(upper);
+                                if (selectedFeedPost) {
+                                  const updated = [...selectedFeedPost.slides];
+                                  const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                  updated[activeSlideIdx] = { ...s, headline: upper };
+                                  setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                                  updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                                }
+                              }}
+                              className="px-1.5 py-0.5 rounded text-[9px] font-mono border border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white cursor-pointer"
+                            >
+                              AA
+                            </button>
+                            <span className="text-[10px] font-mono text-zinc-500">
+                              {editingHeadline.length} carac.
+                            </span>
+                          </div>
                         </div>
                         <input
                           type="text"
                           value={editingHeadline}
-                          onChange={(e) => setEditingHeadline(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingHeadline(val);
+                            if (selectedFeedPost) {
+                              const updated = [...selectedFeedPost.slides];
+                              const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                              updated[activeSlideIdx] = { ...s, headline: val };
+                              setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                              updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                            }
+                          }}
                           placeholder="Ex: ARQUITETURA DE ESCALA COMERCIAL"
-                          className="w-full rounded-xl border border-white/10 bg-black/50 p-3 text-xs text-white font-bold font-heading uppercase focus:border-white/30 focus:outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-black/50 p-3 text-xs text-white font-bold font-heading uppercase focus:border-white/30 focus:outline-none transition-colors"
                         />
                       </div>
 
@@ -1513,24 +1562,71 @@ export function InstagramFeedGridView() {
                         <textarea
                           rows={3}
                           value={editingBodyText}
-                          onChange={(e) => setEditingBodyText(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingBodyText(val);
+                            if (selectedFeedPost) {
+                              const updated = [...selectedFeedPost.slides];
+                              const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                              updated[activeSlideIdx] = { ...s, bodyText: val };
+                              setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                              updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                            }
+                          }}
                           placeholder="Ex: Eliminamos o atrito invisível entre a abordagem e o fechamento corporativo."
-                          className="w-full rounded-xl border border-white/10 bg-black/50 p-3 text-xs text-zinc-200 leading-relaxed font-sans focus:border-white/30 focus:outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-black/50 p-3 text-xs text-zinc-200 leading-relaxed font-sans focus:border-white/30 focus:outline-none transition-colors"
                         />
                       </div>
 
                       {/* Tag Editorial Suíça */}
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
-                          Tag Editorial Suíça
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                            Tag Editorial Suíça
+                          </label>
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            {editingTag.length} carac.
+                          </span>
+                        </div>
                         <input
                           type="text"
                           value={editingTag}
-                          onChange={(e) => setEditingTag(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingTag(val);
+                            if (selectedFeedPost) {
+                              const updated = [...selectedFeedPost.slides];
+                              const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                              updated[activeSlideIdx] = { ...s, tag: val };
+                              setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                              updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                            }
+                          }}
                           placeholder="Ex: 01 // ESTRATÉGIA"
-                          className="w-full rounded-xl border border-white/10 bg-black/50 p-2.5 text-xs text-white font-mono uppercase focus:border-white/30 focus:outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-black/50 p-2.5 text-xs text-white font-mono uppercase focus:border-white/30 focus:outline-none transition-colors"
                         />
+                        {/* Pílulas rápidas de tag estilo Canva */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          {["01 // ESTRATÉGIA", "DIRETRIZ B2B", "CASE STUDY", "ALTO TICKET"].map((pill) => (
+                            <button
+                              key={pill}
+                              type="button"
+                              onClick={() => {
+                                setEditingTag(pill);
+                                if (selectedFeedPost) {
+                                  const updated = [...selectedFeedPost.slides];
+                                  const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                  updated[activeSlideIdx] = { ...s, tag: pill };
+                                  setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                                  updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                                }
+                              }}
+                              className="px-2 py-0.5 rounded-full text-[9px] font-mono border border-white/10 bg-white/[0.02] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+                            >
+                              {pill}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Micro-Copiloto IA */}
@@ -1648,16 +1744,31 @@ export function InstagramFeedGridView() {
         }}
       />
 
-      {/* Contêineres offscreen ocultos para renderização em HD 1080px */}
-      <div className="fixed -left-[9999px] -top-[9999px] pointer-events-none opacity-0 select-none">
+      {/* Contêineres offscreen para renderização em HD 1080px (sem opacity-0 para preservar render de imagens e base64) */}
+      <div
+        style={{
+          position: "fixed",
+          left: "-9999px",
+          top: "-9999px",
+          width: "1080px",
+          height: "1080px",
+          overflow: "hidden",
+          pointerEvents: "none",
+          visibility: "visible",
+          zIndex: -100,
+        }}
+      >
         {scheduledPosts.map((p, pIdx) => {
-          const s = p.slides[0];
+          const isCurrentlyEditing = selectedFeedPost?.id === p.id;
+          const s = isCurrentlyEditing
+            ? selectedFeedPost.slides[activeSlideIdx] || p.slides[0]
+            : p.slides[0];
           const sanitized = {
             ...s,
-            headline: s?.headline || p.theme,
-            bodyText: s?.bodyText || p.hookHeadline,
-            tag: s?.tag || `0${pIdx + 1} // DIRETRIZ`,
-            blackLinkVariant: s?.blackLinkVariant || "3d-sculpture",
+            headline: isCurrentlyEditing ? editingHeadline : (s?.headline || p.theme),
+            bodyText: isCurrentlyEditing ? editingBodyText : (s?.bodyText || p.hookHeadline),
+            tag: isCurrentlyEditing ? editingTag : (s?.tag || `0${pIdx + 1} // DIRETRIZ`),
+            blackLinkVariant: isCurrentlyEditing ? editingVariant : (s?.blackLinkVariant || "3d-sculpture"),
             imageUrl:
               s?.imageUrl && !s.imageUrl.includes("render-slide")
                 ? s.imageUrl

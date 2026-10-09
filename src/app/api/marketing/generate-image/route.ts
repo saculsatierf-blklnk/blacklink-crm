@@ -10,11 +10,11 @@ const VARIANT_PROMPTS: Record<BlackLinkStyleVariant, string> = {
   "3d-crystal":
     "Two large polished liquid mirror chrome punk safety pins crossed in X shape, entwined with fine chrome ball-chains and dangling silver padlock charms, floating in perspective on immaculate off-white light grey porcelain studio background with soft contact shadow, Octane 3D render, luxury jewelry, no text",
   "pure-monumental":
-    "High-fashion editorial male portrait for luxury European design agency, brooding young European man with sharp jawline, minimalist round metal wireframe spectacles, black designer high-collar coat, cinematic studio rim lighting, moody dark teal and noir atmospheric studio background, shot on 35mm film, Vogue Italia aesthetic, no text",
+    "High-fashion editorial portrait of an elegant deep dark-skinned Black male model (pele negra retinta, deep obsidian melanin skin tone), sharp sculpted cheekbones and jawline, minimalist round metal wireframe spectacles, black designer high-collar coat, cinematic studio rim lighting, moody dark teal and noir atmospheric studio background, shot on 35mm film, Vogue Italia aesthetic, authentic Black representation, no text",
   "3d-cursor":
     "Polished liquid mirror chrome 3D computer mouse arrow cursor in dynamic perspective, sharp beveled titanium edges, floating slightly above an immaculate light grey porcelain studio surface with soft diffused contact shadow and ambient occlusion, Octane 3D render, luxury European art direction, no text",
   "3d-liquid":
-    "High-fashion editorial photography, stylish female model wearing black futuristic sunglasses and glossy black patent leather jacket, seen through a sheet of vertical ribbed fluted frosted glass with fine water condensation, dramatic studio rim light, moody cinematic black and white, luxury fashion campaign aesthetic, no text",
+    "High-fashion editorial photography of an elegant deep dark-skinned Black female model (pele negra retinta, rich dark melanin skin tone), stylish futuristic sunglasses and glossy black patent leather jacket, seen through a sheet of vertical ribbed fluted frosted glass with fine water condensation, dramatic studio rim light, moody cinematic black and white, luxury fashion campaign aesthetic, authentic Black representation, no text",
   "3d-sculpture":
     "Macro close-up of abstract sculptural fluid ribbon made of frosted optical glass and smooth liquid mercury chrome, flowing cylindrical curves with soft light caustics and internal refractions, clean minimalist studio lighting on deep graphite dark background, Octane 3D render, luxury European art direction, no text",
   "clean-ice":
@@ -76,10 +76,12 @@ export async function POST(req: Request) {
     const theme: string | undefined = body.theme?.trim();
     const currentImageUrl: string | undefined = body.currentImageUrl;
 
-    // 1. Monta o Prompt de Alto Luxo com Controle de Espaço Negativo
+    // 1. Monta o Prompt de Alto Luxo com Diretriz Inegociável de Diversidade da Black Link
     const basePrompt = customPrompt || VARIANT_PROMPTS[variant] || VARIANT_PROMPTS["3d-cursor"];
     const contextualAddon = theme ? `, inspired by theme "${theme}"` : "";
-    const finalPrompt = `${basePrompt}${contextualAddon}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
+    const castingRule =
+      "MANDATORY CASTING RULE: Any human model, person, or portrait depicted MUST EXCLUSIVELY be a deep dark-skinned Black person (pele negra retinta, rich dark ebony melanin complexion). Never portray light-skinned, Caucasian, or non-Black models.";
+    const finalPrompt = `${basePrompt}${contextualAddon}. ${castingRule}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
 
     const apiKey = process.env.GEMINI_API_KEY?.trim();
 
