@@ -49,6 +49,24 @@ function distillHeadline(rawText: string, variant: BlackLinkStyleVariant): strin
 }
 
 /**
+ * Escala tipográfica monumental suíça (Arina TVA / High-Fashion Brutalism):
+ * Proporciona impacto monumental em títulos curtos e reduz gradualmente
+ * para garantir que o layout nunca estoure.
+ */
+function computeHeadlineFontSize(length: number, isBox: boolean): string {
+  if (isBox) {
+    if (length <= 15) return "36px";
+    if (length <= 25) return "30px";
+    if (length <= 40) return "26px";
+    return "22px";
+  }
+  if (length <= 15) return "46px";
+  if (length <= 30) return "38px";
+  if (length <= 50) return "32px";
+  return "26px";
+}
+
+/**
  * Template Antigravity — Black Link (1.0)
  * Pôster Editorial Suíço Brutalista de Alta Moda / Branding Internacional
  * Inspirado fielmente nas coleções de referências:
@@ -160,7 +178,6 @@ export function BlackLinkGlassLayout({
           <img
             src={bgImageSrc}
             alt="Arte de Fundo Black Link"
-            crossOrigin="anonymous"
             className="w-full h-full object-cover transition-all duration-700 pointer-events-none select-none"
             style={{
               filter: isLightBackground
@@ -294,7 +311,7 @@ export function BlackLinkGlassLayout({
                 variant === "clean-ice-box" ? "text-black" : "text-white"
               }`}
               style={{
-                fontSize: displayHeadline.length > 40 ? "24px" : displayHeadline.length > 25 ? "28px" : "32px",
+                fontSize: computeHeadlineFontSize(displayHeadline.length, true),
               }}
             >
               {displayHeadline}
@@ -341,7 +358,7 @@ export function BlackLinkGlassLayout({
                   : "text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
               }`}
               style={{
-                fontSize: displayHeadline.length > 50 ? "26px" : displayHeadline.length > 30 ? "30px" : "36px",
+                fontSize: computeHeadlineFontSize(displayHeadline.length, false),
                 letterSpacing: "-0.02em",
               }}
             >
@@ -392,7 +409,7 @@ export function BlackLinkGlassLayout({
                   : "text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
               }`}
               style={{
-                fontSize: displayHeadline.length > 50 ? "26px" : displayHeadline.length > 30 ? "30px" : "36px",
+                fontSize: computeHeadlineFontSize(displayHeadline.length, false),
                 letterSpacing: "-0.02em",
               }}
             >

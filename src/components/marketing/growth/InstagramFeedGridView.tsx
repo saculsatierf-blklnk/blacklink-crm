@@ -40,6 +40,11 @@ import { BLACKLINK_PRODUCTS } from "@/lib/marketing/blacklinkBrandBrain";
 import { PostSlideDisplay } from "./PostSlideDisplay";
 import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
 import * as htmlToImage from "html-to-image";
+import {
+  exportSlideToPng,
+  exportSlidesToZip,
+  type SlideRenderPayload,
+} from "@/lib/marketing/blacklinkRenderEngine";
 
 const VARIANT_OPTIONS: Array<{
   id: BlackLinkStyleVariant;
@@ -102,6 +107,63 @@ const VARIANT_OPTIONS: Array<{
     desc: "Bounding box técnica no fundo gelo",
   },
 ];
+
+export const OFFICIAL_VARIANTS: BlackLinkStyleVariant[] = [
+  "swiss-box",
+  "3d-keycap",
+  "3d-crystal",
+  "pure-monumental",
+  "3d-cursor",
+  "3d-liquid",
+  "3d-sculpture",
+  "clean-ice",
+  "clean-ice-box",
+];
+
+export function getPostVariant(
+  post: ScheduledPost | null | undefined,
+  postIdx: number,
+  slideIdx = 0
+): BlackLinkStyleVariant {
+  if (!post) return OFFICIAL_VARIANTS[0];
+  const slide = post.slides?.[slideIdx];
+  if (slide?.blackLinkVariant) return slide.blackLinkVariant;
+  const idx = postIdx >= 0 ? postIdx : 0;
+  return OFFICIAL_VARIANTS[idx % OFFICIAL_VARIANTS.length];
+}
+
+async function inlineImagesToDataUrls(container: HTMLElement): Promise<void> {
+  const imgElements = Array.from(container.querySelectorAll("img"));
+  await Promise.all(
+    imgElements.map(async (img) => {
+      if (!img.src || img.src.startsWith("data:")) return;
+
+      try {
+        const fullUrl = img.src.startsWith("/")
+          ? window.location.origin + img.src
+          : img.src;
+
+        const res = await fetch(fullUrl, { cache: "no-cache" });
+        if (!res.ok) return;
+        const blob = await res.blob();
+
+        await new Promise<void>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (typeof reader.result === "string") {
+              img.src = reader.result;
+            }
+            resolve();
+          };
+          reader.onerror = () => resolve();
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.warn("Não foi possível embutir imagem em base64:", err);
+      }
+    })
+  );
+}
 
 export function InstagramFeedGridView() {
   const {
@@ -260,7 +322,7 @@ export function InstagramFeedGridView() {
         setCollectionProgress(`Renderizando arte ${i + 1} de ${scheduledPosts.length}: ${post.theme}...`);
 
         const slide = post.slides[0];
-        const variant = slide?.blackLinkVariant || "3d-sculpture";
+        const variant = getPostVariant(post, i, 0);
 
         try {
           const res = await fetch("/api/marketing/generate-image", {
@@ -316,11 +378,14 @@ export function InstagramFeedGridView() {
     setActiveSlideIdx(0);
     setEditingCaption(post.postCaption || post.bodyCopy || "");
 
+    const postIdx = scheduledPosts.findIndex((p) => p.id === post.id);
+    const variant = getPostVariant(post, postIdx, 0);
+
     const firstSlide = post.slides[0];
     setEditingHeadline(firstSlide?.headline || post.theme || "");
     setEditingBodyText(firstSlide?.bodyText || post.hookHeadline || "");
-    setEditingTag(firstSlide?.tag || "01 // ESTRATÉGIA");
-    setEditingVariant(firstSlide?.blackLinkVariant || "3d-sculpture");
+    setEditingTag(firstSlide?.tag || `0${(postIdx >= 0 ? postIdx : 0) + 1} // DIRETRIZ`);
+    setEditingVariant(variant);
     setModalTab("creative");
   };
 
@@ -460,58 +525,86 @@ export function InstagramFeedGridView() {
     }, 3500);
   };
 
-  const handleDownloadHd = async (post: ScheduledPost) => {
+  const handleDownloadHd = async (post: ScheduledPost, slideIdx: number = 0) => {
     setIsDownloading(true);
-    setCopiedFeedback("Renderizando arte completa em 1080p...");
+    setCopiedFeedback("Renderizando arte 1080p em estúdio isolado (Zero-Artifact Engine)...");
     try {
-      const offscreenNode = document.getElementById(`export-canvas-${post.id}`);
-      if (offscreenNode) {
-        // Aguarda todas as imagens dentro do nó completarem o carregamento
-        const imgElements = Array.from(offscreenNode.querySelectorAll("img"));
-        await Promise.all(
-          imgElements.map(
-            (img) =>
-              new Promise((resolve) => {
-                if (img.complete && img.naturalWidth > 0) return resolve(true);
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(true);
-                setTimeout(() => resolve(true), 2500);
-              })
-          )
-        );
+      const postIdx = scheduledPosts.findIndex((p) => p.id === post.id);
+      const isCurrentlyEditing = selectedFeedPost?.id === post.id;
+      const targetSlide = post.slides[slideIdx] || post.slides[0];
+      const variant = isCurrentlyEditing ? editingVariant : getPostVariant(post, postIdx, slideIdx);
 
-        // Micro-pausa de 120ms para estabilização de fontes e camadas gráficas
-        await new Promise((r) => setTimeout(r, 120));
+      const payload: SlideRenderPayload = {
+        headline: isCurrentlyEditing ? editingHeadline : (targetSlide?.headline || post.theme),
+        bodyText: isCurrentlyEditing ? editingBodyText : (targetSlide?.bodyText || post.hookHeadline),
+        tag: isCurrentlyEditing ? editingTag : (targetSlide?.tag || `0${(postIdx >= 0 ? postIdx : 0) + 1} // DIRETRIZ`),
+        blackLinkVariant: variant,
+        imageUrl:
+          targetSlide?.imageUrl && !targetSlide.imageUrl.includes("render-slide")
+            ? targetSlide.imageUrl
+            : undefined,
+        aspectRatio: "1:1",
+      };
 
-        const dataUrl = await htmlToImage.toPng(offscreenNode, {
-          pixelRatio: 1.0,
-          width: 1080,
-          height: 1080,
-          cacheBust: false, // CRUCIAL: cacheBust: true corrompe base64 e omite a imagem de fundo
-          backgroundColor: "#030305",
-        });
-        const link = document.createElement("a");
-        link.href = dataUrl;
-        link.download = `blacklink_${post.id}.png`;
-        link.click();
-        setCopiedFeedback("✨ Arte 1080p com fundo e copy baixada com sucesso!");
-      } else {
-        const slide = post.slides[activeSlideIdx] || post.slides[0];
-        if (slide?.imageUrl) {
-          const link = document.createElement("a");
-          link.href = slide.imageUrl;
-          link.download = `blacklink_${post.id}.png`;
-          link.target = "_blank";
-          link.click();
-          setCopiedFeedback("Arte baixada com sucesso!");
-        }
-      }
+      await exportSlideToPng(
+        payload,
+        { name: companyProfile.name, handle: companyProfile.instagram },
+        slideIdx + 1,
+        post.slides.length,
+        `blacklink_${post.id}_slide_${slideIdx + 1}.png`
+      );
+
+      setCopiedFeedback("✨ Arte 1080p exportada com fidelidade de estúdio e fundo nítido!");
     } catch (err) {
-      console.error(err);
+      console.error("[BlackLinkEngine] Erro ao exportar slide:", err);
       setCopiedFeedback("Erro ao renderizar imagem.");
     } finally {
       setIsDownloading(false);
-      setTimeout(() => setCopiedFeedback(null), 3000);
+      setTimeout(() => setCopiedFeedback(null), 3500);
+    }
+  };
+
+  const handleDownloadCollectionZip = async () => {
+    setIsDownloading(true);
+    setCopiedFeedback("Iniciando exportação em lote da coleção 3x3...");
+    try {
+      const slidesToExport = scheduledPosts.map((post, postIdx) => {
+        const firstSlide = post.slides[0];
+        const variant = getPostVariant(post, postIdx, 0);
+        return {
+          payload: {
+            headline: firstSlide?.headline || post.theme,
+            bodyText: firstSlide?.bodyText || post.hookHeadline,
+            tag: firstSlide?.tag || `0${postIdx + 1} // DIRETRIZ`,
+            blackLinkVariant: variant,
+            imageUrl:
+              firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide")
+                ? firstSlide.imageUrl
+                : undefined,
+            aspectRatio: "1:1" as const,
+          },
+          fileName: `blacklink_post_${postIdx + 1}_${post.id}.png`,
+          slideNumber: 1,
+          totalSlides: post.slides?.length || 1,
+        };
+      });
+
+      await exportSlidesToZip(
+        slidesToExport,
+        { name: companyProfile.name, handle: companyProfile.instagram },
+        "blacklink_colecao_feed_9posts_hd.zip",
+        (current, total, label) => {
+          setCopiedFeedback(`[${current}/${total}] ${label}`);
+        }
+      );
+
+      setCopiedFeedback("✨ Coleção completa de 9 artes em HD 1080p baixada em ZIP!");
+    } catch (err) {
+      console.error("[BlackLinkEngine] Erro ao exportar ZIP:", err);
+      setCopiedFeedback("Erro ao exportar coleção em ZIP.");
+    } finally {
+      setIsDownloading(false);
+      setTimeout(() => setCopiedFeedback(null), 4000);
     }
   };
 
@@ -740,7 +833,7 @@ export function InstagramFeedGridView() {
       {/* MODO 1: GRADE 3x3 DO PERFIL (VISUAL HARMONY MACRO) */}
       {feedViewMode === "grid" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between px-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2">
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
                 Grade de Lançamento Black Link (Mosaico 3x3)
@@ -749,31 +842,29 @@ export function InstagramFeedGridView() {
                 Clique em qualquer post para editar a copy do criativo, a legenda ou trocar o ritmo visual.
               </p>
             </div>
-            <span className="text-[11px] font-mono text-zinc-500">
-              9 Posts Oficiais de Fundação
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleDownloadCollectionZip}
+                disabled={isDownloading}
+                className="px-3.5 py-2 rounded-xl border border-white/20 bg-white/[0.08] hover:bg-white/[0.15] text-xs font-semibold text-white transition-all cursor-pointer flex items-center gap-2 shadow-sm disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5 text-sky-400" />
+                <span>{isDownloading ? "Processando..." : "Baixar 9 Artes (ZIP HD)"}</span>
+              </button>
+              <span className="text-[11px] font-mono text-zinc-500 hidden sm:inline">
+                9 Posts Oficiais
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {scheduledPosts.map((post, postIdx) => {
               const firstSlide = post.slides[0];
-              const totalSlides = post.slides.length || 1;
-              const fallbackVariants: BlackLinkStyleVariant[] = [
-                "swiss-box",
-                "3d-keycap",
-                "3d-crystal",
-                "pure-monumental",
-                "3d-cursor",
-                "3d-liquid",
-                "3d-sculpture",
-                "clean-ice",
-                "clean-ice-box",
-              ];
-              const variant =
-                firstSlide?.blackLinkVariant ||
-                fallbackVariants[postIdx % fallbackVariants.length];
+              const variant = getPostVariant(post, postIdx, 0);
               const variantInfo =
                 VARIANT_OPTIONS.find((v) => v.id === variant) || VARIANT_OPTIONS[0];
+              const totalSlides = post.slides?.length || 1;
 
               const sanitizedSlide = {
                 ...firstSlide,
@@ -833,7 +924,7 @@ export function InstagramFeedGridView() {
                       </div>
                     </div>
 
-                    {/* Base do Hover: Botão de Edição & Ação Rápida Gemini IA */}
+                    {/* Base do Hover: Botão de Edição & Ação Rápida Gemini IA & Download HD */}
                     <div className="flex items-center justify-center gap-2">
                       <button
                         type="button"
@@ -851,6 +942,20 @@ export function InstagramFeedGridView() {
                           <Sparkles className="h-2.5 w-2.5 text-sky-400" />
                         )}
                         <span>Gemini IA</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadHd(post, 0);
+                        }}
+                        className="text-[10px] font-mono text-zinc-200 bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full border border-white/20 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="Baixar arte 1080p deste post"
+                      >
+                        <Download className="h-2.5 w-2.5" />
+                        <span>HD</span>
                       </button>
 
                       <span className="text-[10px] font-mono text-zinc-200 uppercase tracking-widest bg-white/15 hover:bg-white/25 px-3 py-1 rounded-full border border-white/20 transition-colors">
@@ -1206,7 +1311,7 @@ export function InstagramFeedGridView() {
 
                 <button
                   type="button"
-                  onClick={() => handleDownloadHd(visorActivePost)}
+                  onClick={() => handleDownloadHd(visorActivePost, visorSlideIdx)}
                   disabled={isDownloading}
                   className="w-full sm:flex-1 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
                 >
@@ -1417,7 +1522,7 @@ export function InstagramFeedGridView() {
 
                     <button
                       type="button"
-                      onClick={() => handleDownloadHd(post)}
+                      onClick={() => handleDownloadHd(post, feedSlideIndexes[post.id] || 0)}
                       className="text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
                     >
                       <Download className="h-3 w-3" />
@@ -2063,7 +2168,7 @@ export function InstagramFeedGridView() {
                     <button
                       type="button"
                       disabled={isDownloading}
-                      onClick={() => handleDownloadHd(selectedFeedPost)}
+                      onClick={() => handleDownloadHd(selectedFeedPost, activeSlideIdx)}
                       className="w-full sm:flex-1 py-2.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] px-4 text-xs font-semibold text-white transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -2086,51 +2191,6 @@ export function InstagramFeedGridView() {
           setTimeout(() => setCopiedFeedback(null), 3000);
         }}
       />
-
-      {/* Contêineres offscreen para renderização em HD 1080px (sem opacity-0 para preservar render de imagens e base64) */}
-      <div
-        style={{
-          position: "fixed",
-          left: "-9999px",
-          top: "-9999px",
-          width: "1080px",
-          height: "1080px",
-          overflow: "hidden",
-          pointerEvents: "none",
-          visibility: "visible",
-          zIndex: -100,
-        }}
-      >
-        {scheduledPosts.map((p, pIdx) => {
-          const isCurrentlyEditing = selectedFeedPost?.id === p.id;
-          const s = isCurrentlyEditing
-            ? selectedFeedPost.slides[activeSlideIdx] || p.slides[0]
-            : p.slides[0];
-          const sanitized = {
-            ...s,
-            headline: isCurrentlyEditing ? editingHeadline : (s?.headline || p.theme),
-            bodyText: isCurrentlyEditing ? editingBodyText : (s?.bodyText || p.hookHeadline),
-            tag: isCurrentlyEditing ? editingTag : (s?.tag || `0${pIdx + 1} // DIRETRIZ`),
-            blackLinkVariant: isCurrentlyEditing ? editingVariant : (s?.blackLinkVariant || "3d-sculpture"),
-            imageUrl:
-              s?.imageUrl && !s.imageUrl.includes("render-slide")
-                ? s.imageUrl
-                : undefined,
-          };
-          return (
-            <PostSlideDisplay
-              key={p.id}
-              id={`export-canvas-${p.id}`}
-              slide={sanitized}
-              authorName={companyProfile.name}
-              authorHandle={companyProfile.instagram}
-              slideNumber={1}
-              totalSlides={p.slides.length}
-              exportMode={true}
-            />
-          );
-        })}
-      </div>
 
       {/* Drawer do Diretor Executivo de Growth IA (Black Link) */}
       <MarketingAgentDrawer
