@@ -85,6 +85,7 @@ export interface SlideData {
   kpiHighlight?: string;
   blackLinkVariant?: BlackLinkStyleVariant;
   imageUrl?: string;
+  seamlessBleed?: boolean;
 }
 
 export type GlassDimensionMode = "3d-slab" | "3d-monolith" | "floating-glass";
@@ -106,6 +107,7 @@ export interface SlideDesignConfig {
   screenshotImage?: string;
   glassDimensionMode?: GlassDimensionMode;
   blackLinkVariant?: BlackLinkStyleVariant;
+  seamlessBleed?: boolean;
 }
 
 export interface LayoutProps {

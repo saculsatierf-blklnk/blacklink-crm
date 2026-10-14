@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   Eye,
   Camera,
+  Activity,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -379,6 +380,26 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
               {/* Pílulas de Ações Rápidas */}
               <div className="p-3 border-b border-white/10 bg-white/[0.01] overflow-x-auto">
                 <div className="flex items-center gap-2 min-w-max pb-1">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleSendMessage("Analise os gargalos de leads e gere uma campanha completa de 9 posts coordenada com a telemetria do CRM.", "generate_campaign_from_telemetry")}
+                    className="px-3 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-md ring-1 ring-amber-500/30"
+                  >
+                    <Activity className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+                    <span>⚡ Gerar Campanha da Telemetria (9 Posts)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleSendMessage("Sincronize as narrativas do feed com as dores e a telemetria real do pipeline do CRM.", "sync_crm_telemetry")}
+                    className="px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                  >
+                    <Activity className="h-3.5 w-3.5 text-amber-400" />
+                    <span>📊 Diagnóstico do Pipeline</span>
+                  </button>
+
                   <button
                     type="button"
                     disabled={isLoading}

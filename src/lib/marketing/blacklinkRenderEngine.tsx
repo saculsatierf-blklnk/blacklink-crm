@@ -4,6 +4,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import * as htmlToImage from "html-to-image";
 import JSZip from "jszip";
+import { jsPDF } from "jspdf";
 import { saveAs } from "file-saver";
 import { PostSlideDisplay } from "@/components/marketing/growth/PostSlideDisplay";
 import { type BlackLinkStyleVariant, type AspectRatio } from "@/components/estudio/layouts/layoutTypes";
@@ -389,3 +390,346 @@ export async function exportSlidesToZip(
   saveAs(content, zipFileName);
   return content;
 }
+
+/**
+ * Exporta carrossel corporativo multi-lâminas como documento PDF de alta fidelidade
+ * (Formato Oficial LinkedIn Document Posts / Instagram Carousel).
+ */
+export async function exportCarouselToPdf(
+  slides: Array<{
+    payload: SlideRenderPayload;
+    slideNumber: number;
+    totalSlides: number;
+  }>,
+  authorInfo: AuthorInfo = { name: "Black Link", handle: "@blacklink.com.br" },
+  pdfFileName: string = "blacklink_carrossel_linkedin.pdf",
+  onProgress?: (current: number, total: number, label: string) => void
+): Promise<Blob> {
+  const is45 = slides[0]?.payload.aspectRatio === "4:5";
+  const is916 = slides[0]?.payload.aspectRatio === "9:16";
+  const canvasWidth = 1080;
+  const canvasHeight = is916 ? 1920 : is45 ? 1350 : 1080;
+
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "px",
+    format: [canvasWidth, canvasHeight],
+    hotfixes: ["px_scaling"],
+    compress: true,
+  });
+
+  for (let i = 0; i < slides.length; i++) {
+    const item = slides[i];
+    if (onProgress) {
+      onProgress(i + 1, slides.length, `Renderizando página ${i + 1} de ${slides.length} para o PDF corporativo...`);
+    }
+
+    const exportViewport = document.createElement("div");
+    exportViewport.className = "blacklink-export-isolated-viewport";
+    exportViewport.style.position = "fixed";
+    exportViewport.style.left = "-99999px";
+    exportViewport.style.top = "-99999px";
+    exportViewport.style.width = `${canvasWidth}px`;
+    exportViewport.style.height = `${canvasHeight}px`;
+    exportViewport.style.overflow = "hidden";
+    exportViewport.style.zIndex = "-1000";
+    exportViewport.style.visibility = "visible";
+    exportViewport.style.background = "#030305";
+
+    document.body.appendChild(exportViewport);
+    const root = createRoot(exportViewport);
+
+    try {
+      await new Promise<void>((resolve) => {
+        root.render(
+          <PostSlideDisplay
+            slide={item.payload}
+            aspectRatio={item.payload.aspectRatio || (is45 ? "4:5" : "1:1")}
+            authorName={authorInfo.name}
+            authorHandle={authorInfo.handle}
+            slideNumber={item.slideNumber}
+            totalSlides={item.totalSlides}
+            exportMode={true}
+          />
+        );
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((r) => setTimeout(r, 100));
+
+      await inlineSlideAssets(exportViewport);
+
+      const headings = Array.from(exportViewport.querySelectorAll<HTMLElement>("h1"));
+      headings.forEach((h1) => {
+        const parent = h1.parentElement;
+        if (parent) {
+          fitTextElement(h1, parent.clientWidth || 560, parent.clientHeight || 300, 36, 18, 54);
+        }
+      });
+
+      await new Promise((r) => setTimeout(r, 60));
+
+      const dataUrl = await htmlToImage.toPng(exportViewport, {
+        width: canvasWidth,
+        height: canvasHeight,
+        canvasWidth,
+        canvasHeight,
+        pixelRatio: 1,
+        cacheBust: false,
+        skipFonts: true,
+        backgroundColor: "#030305",
+      });
+
+      if (i > 0) {
+        doc.addPage([canvasWidth, canvasHeight], "portrait");
+      }
+      doc.addImage(dataUrl, "PNG", 0, 0, canvasWidth, canvasHeight, undefined, "FAST");
+    } finally {
+      root.unmount();
+      exportViewport.remove();
+    }
+  }
+
+  if (onProgress) {
+    onProgress(slides.length, slides.length, "Finalizando arquivo PDF executivo...");
+  }
+
+  const pdfBlob = doc.output("blob");
+  saveAs(pdfBlob, pdfFileName);
+  return pdfBlob;
+}
+
+/**
+ * ============================================================================
+ * PILLAR 4: BRUTALIST MOTION POSTER ENGINE (5s HIGH-DEFINITION VIDEO LOOP)
+ * ============================================================================
+ * Gera um loop cinematográfico de 5 segundos (150 frames a 30 FPS) com:
+ * 1. Respiração / zoom sutil orgânico (1.0 -> 1.025 -> 1.0)
+ * 2. Feixe óptico de luz cromada varrendo o layout a 45 graus
+ * 3. Telemetria e scanlines brutalistas (REC 4K 60FPS)
+ * 4. Gravação de vídeo nativa via MediaRecorder e Canvas Stream (WebM/MP4)
+ * ============================================================================
+ */
+export async function exportSlideToMotionPoster(
+  payload: SlideRenderPayload,
+  authorInfo: AuthorInfo = { name: "Black Link", handle: "@blacklink.com.br" },
+  outputFileName: string = "blacklink_motion_poster.webm",
+  onProgress?: (currentFrame: number, totalFrames: number, label: string) => void
+): Promise<Blob> {
+  const is45 = payload.aspectRatio === "4:5";
+  const is916 = payload.aspectRatio === "9:16";
+  const canvasWidth = 1080;
+  const canvasHeight = is916 ? 1920 : is45 ? 1350 : 1080;
+
+  if (onProgress) {
+    onProgress(0, 150, "Renderizando base visual de altíssima definição...");
+  }
+
+  // 1. Snapshot da base estática 1080p
+  const exportViewport = document.createElement("div");
+  exportViewport.className = "blacklink-export-isolated-viewport";
+  exportViewport.style.position = "fixed";
+  exportViewport.style.left = "-99999px";
+  exportViewport.style.top = "-99999px";
+  exportViewport.style.width = `${canvasWidth}px`;
+  exportViewport.style.height = `${canvasHeight}px`;
+  exportViewport.style.overflow = "hidden";
+  exportViewport.style.zIndex = "-1000";
+  exportViewport.style.visibility = "visible";
+  exportViewport.style.background = "#030305";
+
+  document.body.appendChild(exportViewport);
+  const root = createRoot(exportViewport);
+
+  let baseImageDataUrl = "";
+
+  try {
+    await new Promise<void>((resolve) => {
+      root.render(
+        <PostSlideDisplay
+          slide={payload}
+          aspectRatio={payload.aspectRatio || (is45 ? "4:5" : "1:1")}
+          authorName={authorInfo.name}
+          authorHandle={authorInfo.handle}
+          slideNumber={1}
+          totalSlides={1}
+          exportMode={true}
+        />
+      );
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+    await new Promise((r) => setTimeout(r, 100));
+
+    await inlineSlideAssets(exportViewport);
+
+    const headings = Array.from(exportViewport.querySelectorAll<HTMLElement>("h1"));
+    headings.forEach((h1) => {
+      const parent = h1.parentElement;
+      if (parent) {
+        fitTextElement(h1, parent.clientWidth || 560, parent.clientHeight || 300, 36, 18, 54);
+      }
+    });
+
+    await new Promise((r) => setTimeout(r, 60));
+
+    baseImageDataUrl = await htmlToImage.toPng(exportViewport, {
+      width: canvasWidth,
+      height: canvasHeight,
+      canvasWidth,
+      canvasHeight,
+      pixelRatio: 1,
+      cacheBust: false,
+      skipFonts: true,
+      backgroundColor: "#030305",
+    });
+  } finally {
+    root.unmount();
+    exportViewport.remove();
+  }
+
+  // 2. Carrega a imagem base no elemento Image
+  const baseImg = new Image();
+  baseImg.src = baseImageDataUrl;
+  await new Promise<void>((resolve, reject) => {
+    baseImg.onload = () => resolve();
+    baseImg.onerror = reject;
+  });
+
+  // 3. Cria Canvas de Renderização para o MediaRecorder
+  const canvas = document.createElement("canvas");
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Não foi possível inicializar o contexto 2D do Canvas.");
+  }
+
+  // 4. Configura Stream e MediaRecorder
+  const fps = 30;
+  const durationSec = 5;
+  const totalFrames = fps * durationSec; // 150 frames
+  const frameIntervalMs = 1000 / fps;
+
+  const stream = canvas.captureStream ? canvas.captureStream(fps) : null;
+  if (!stream) {
+    throw new Error("Seu navegador não suporta captura de vídeo a partir de Canvas (captureStream).");
+  }
+
+  let mimeType = "video/webm;codecs=vp9";
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
+  }
+
+  const recordedChunks: Blob[] = [];
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: 8000000, // 8 Mbps para fidelidade 4K/1080p
+  });
+
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) {
+      recordedChunks.push(e.data);
+    }
+  };
+
+  const recordingPromise = new Promise<Blob>((resolve, reject) => {
+    recorder.onstop = () => {
+      const videoBlob = new Blob(recordedChunks, { type: mimeType });
+      resolve(videoBlob);
+    };
+    recorder.onerror = reject;
+  });
+
+  recorder.start();
+
+  // 5. Loop de Renderização dos 150 Frames
+  for (let k = 0; k < totalFrames; k++) {
+    const progress = k / totalFrames; // 0.0 a 1.0
+    const timeSec = progress * durationSec;
+
+    if (onProgress && k % 5 === 0) {
+      const pct = Math.round(progress * 100);
+      onProgress(k + 1, totalFrames, `Renderizando frame ${k + 1}/${totalFrames} (${pct}% do Motion Poster)...`);
+    }
+
+    // A. Fundo escuro
+    ctx.fillStyle = "#030305";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // B. Respiração sutil de escala orgânica
+    const scale = 1.0 + 0.025 * Math.sin(progress * 2 * Math.PI);
+    const w = canvasWidth * scale;
+    const h = canvasHeight * scale;
+    const x = (canvasWidth - w) / 2;
+    const y = (canvasHeight - h) / 2;
+    ctx.drawImage(baseImg, x, y, w, h);
+
+    // C. Feixe óptico de luz cromada (sweep diagonal a 45 graus)
+    const sweepProgress = (progress * 1.4) % 1.0;
+    const sheenX = sweepProgress * (canvasWidth * 2) - canvasWidth * 0.5;
+    const sheenGrad = ctx.createLinearGradient(
+      sheenX - 280,
+      0,
+      sheenX + 280,
+      canvasHeight
+    );
+    sheenGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    sheenGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.12)");
+    sheenGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = sheenGrad;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.restore();
+
+    // D. Scanlines técnicas brutalistas sutis
+    ctx.fillStyle = "rgba(0, 0, 0, 0.035)";
+    for (let sy = 0; sy < canvasHeight; sy += 6) {
+      ctx.fillRect(0, sy, canvasWidth, 1);
+    }
+
+    // E. HUD de Telemetria e Gravação (Brutalist Technical Overlay)
+    ctx.save();
+    // Ponto piscante de gravação (REC)
+    const dotAlpha = 0.4 + 0.6 * Math.sin(progress * 4 * Math.PI);
+    ctx.fillStyle = `rgba(239, 68, 68, ${dotAlpha})`;
+    ctx.beginPath();
+    ctx.arc(canvasWidth - 270, 52, 4.5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Timestamp digital
+    const secStr = String(Math.floor(timeSec)).padStart(2, "0");
+    const msStr = String(Math.floor((timeSec % 1) * 100)).padStart(2, "0");
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.font = "bold 11px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText(`REC [00:${secStr}:${msStr}] // 4K 60FPS // DESIGN.BLACKLINK`, canvasWidth - 255, 56);
+    ctx.restore();
+
+    // Espera o tempo de frame para sincronia do MediaRecorder
+    await new Promise((r) => setTimeout(r, frameIntervalMs * 0.7));
+  }
+
+  if (onProgress) {
+    onProgress(totalFrames, totalFrames, "Finalizando codificação de vídeo 4K...");
+  }
+
+  recorder.stop();
+  const videoBlob = await recordingPromise;
+
+  saveAs(videoBlob, outputFileName);
+  return videoBlob;
+}
+

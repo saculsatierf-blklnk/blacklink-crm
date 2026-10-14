@@ -16,6 +16,7 @@ interface PostSlideDisplayProps {
     tag?: string;
     imageUrl?: string;
     blackLinkVariant?: BlackLinkStyleVariant;
+    seamlessBleed?: boolean;
   };
   aspectRatio?: AspectRatio;
   authorName?: string;
@@ -25,6 +26,7 @@ interface PostSlideDisplayProps {
   className?: string;
   id?: string;
   exportMode?: boolean;
+  seamlessBleed?: boolean;
 }
 
 export function PostSlideDisplay({
@@ -37,6 +39,7 @@ export function PostSlideDisplay({
   className = "",
   id,
   exportMode = false,
+  seamlessBleed,
 }: PostSlideDisplayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number>(0.32);
@@ -70,6 +73,8 @@ export function PostSlideDisplay({
     variant === "3d-crystal" ||
     variant === "3d-cursor";
 
+  const isSeamlessBleed = seamlessBleed ?? slide?.seamlessBleed ?? true;
+
   const slideConfig: SlideDesignConfig = {
     theme: "dark-industrial",
     font: "clash-display",
@@ -84,6 +89,7 @@ export function PostSlideDisplay({
     authorAvatar: "",
     blackLinkVariant: variant,
     bgImage: slide?.imageUrl,
+    seamlessBleed: isSeamlessBleed,
   };
 
   const slideData: SlideData = {
@@ -93,6 +99,7 @@ export function PostSlideDisplay({
     tag: slide?.tag || "ESTRATÉGIA",
     blackLinkVariant: variant,
     imageUrl: slide?.imageUrl,
+    seamlessBleed: isSeamlessBleed,
   };
 
   const dummyLayoutProps = {

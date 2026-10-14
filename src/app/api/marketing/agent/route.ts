@@ -5,6 +5,8 @@ import {
   BLACKLINK_PRODUCTS,
   BLACKLINK_BRAND_PROMPT_CONTEXT,
 } from "@/lib/marketing/blacklinkBrandBrain";
+import { db } from "@/db";
+import { leads } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -109,8 +111,40 @@ export async function POST(req: NextRequest) {
       .map((m: any) => `${m.role === "user" ? "USUÁRIO" : "DIRETOR IA"}: ${m.content}`)
       .join("\n");
 
+    let crmTelemetryContext = "";
+    try {
+      const realLeads = await db.select().from(leads).limit(25);
+      const totalLeads = realLeads.length;
+      const inNegotiation = realLeads.filter((l) => l.status === "negotiation").length;
+      const newLeads = realLeads.filter((l) => l.status === "new").length;
+      const closedLeads = realLeads.filter((l) => l.status === "closed").length;
+      const avgScore = totalLeads > 0 ? Math.round(realLeads.reduce((acc, l) => acc + (l.dealScore || 0), 0) / totalLeads) : 50;
+
+      const leadInsights = realLeads.map((l) => {
+        const notesText = Array.isArray(l.notes) ? (l.notes as any[]).map((n) => n.text).join(" | ") : "";
+        return `- Lead: "${l.leadName}" (Origem: ${l.origin || "Inbound"}, Status: ${l.status}, Deal Score: ${l.dealScore}/100). ${notesText ? `Notas: ${notesText.slice(0, 100)}` : ""}`;
+      }).join("\n");
+
+      crmTelemetryContext = `
+DADOS VIVOS DA TELEMETRIA DO CRM (BANCO DE DADOS EM TEMPO REAL):
+- Volume de Leads Recentes no Pipeline: ${totalLeads}
+- Leads Novos Aguardando Qualificação: ${newLeads}
+- Negociações Ativas no Pipeline: ${inNegotiation}
+- Negócios Fechados: ${closedLeads}
+- Média de Deal Score (Qualificação Comercial): ${avgScore}/100
+- Amostra Real de Negócios no Pipeline:
+${leadInsights || "Pipeline em fase inicial de atração de leads."}
+`;
+    } catch (err) {
+      console.warn("Telemetria do CRM não pôde ser lida no momento:", err);
+    }
+
     let actionDirective = "";
-    if (action === "align_crm_os") {
+    if (action === "sync_crm_telemetry") {
+      actionDirective = "AÇÃO EXPRESSA: SINCRONIZAÇÃO COM A TELEMETRIA VIVA DO CRM. Conecte as pautas e copys do marketing às dores e negócios reais presentes no pipeline do CRM. Use os dados de leads e deal score para propor um ataque comercial focado em destravar o pipeline com os produtos digitais da Black Link (CRM OS, Automações com IA, Branding Soberano). Mostre que o marketing foi moldado com base no comportamento do funil de vendas.";
+    } else if (action === "generate_campaign_from_telemetry") {
+      actionDirective = "AÇÃO EXPRESSA: GERAÇÃO DE CAMPANHA COMPLETA BASEADA NA TELEMETRIA DO CRM. Analise minuciosamente os gargalos do pipeline (leads travados, deal scores baixos ou altos, atritos registrados nas notas). Gere no array 'suggestedUpdates' exatamente 9 atualizações coordenadas para TODOS os posts da grade (de 'post-bl-01' a 'post-bl-09'). Cada post deve atacar uma objeção real e direcionar para uma solução digital concreta da Black Link (CRM OS, Automações, Branding, Protocolo). Headlines de 2 a 4 palavras em maiúsculas rigorosas no padrão suíço.";
+    } else if (action === "align_crm_os") {
       actionDirective = "AÇÃO EXPRESSA: Realinhe os posts prioritários da grade para venderem o 'Black Link CRM OS' (Software Sob Medida e Telemetria B2B). Foco prático: eliminar planilhas, organizar pipeline e dar telemetria a holdings e empresas B2B.";
     } else if (action === "align_automacoes") {
       actionDirective = "AÇÃO EXPRESSA: Realinhe os posts prioritários da grade para venderem a 'Engenharia de Automações & I.A. Operacional', mostrando que trabalho braçal e mensagens manuais atrasadas custam receita e margem.";
@@ -124,6 +158,7 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `
 ${BLACKLINK_BRAND_PROMPT_CONTEXT}
+${crmTelemetryContext}
 
 SUA MISSÃO & CONDUTA:
 Você é o Assistente Executivo e Estrategista de Marketing da Black Link (blklnk.com).

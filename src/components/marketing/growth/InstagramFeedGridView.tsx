@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Target,
   Bot,
+  Video,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,13 +37,19 @@ import {
 } from "@/store/useMarketingStore";
 import { ManualAssetUploadModal } from "@/components/marketing/ManualAssetUploadModal";
 import { MarketingAgentDrawer } from "./MarketingAgentDrawer";
-import { BLACKLINK_PRODUCTS } from "@/lib/marketing/blacklinkBrandBrain";
+import {
+  BLACKLINK_PRODUCTS,
+  BLACKLINK_CAMPAIGN_PRESETS,
+  type BlackLinkCampaignPreset,
+} from "@/lib/marketing/blacklinkBrandBrain";
 import { PostSlideDisplay } from "./PostSlideDisplay";
 import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
 import * as htmlToImage from "html-to-image";
 import {
   exportSlideToPng,
   exportSlidesToZip,
+  exportCarouselToPdf,
+  exportSlideToMotionPoster,
   type SlideRenderPayload,
 } from "@/lib/marketing/blacklinkRenderEngine";
 
@@ -608,6 +615,187 @@ export function InstagramFeedGridView() {
     }
   };
 
+  const handleDownloadCarouselPdf = async (post: ScheduledPost) => {
+    setIsDownloading(true);
+    setCopiedFeedback("Gerando documento PDF de alta fidelidade para LinkedIn...");
+    try {
+      const slidesToExport = post.slides.map((s, idx) => {
+        const postIdx = scheduledPosts.findIndex((p) => p.id === post.id);
+        const variant = s.blackLinkVariant || getPostVariant(post, postIdx, idx);
+        return {
+          payload: {
+            headline: s.headline || post.theme,
+            bodyText: s.bodyText || post.hookHeadline,
+            tag: s.tag || `0${idx + 1} // DIRETRIZ`,
+            blackLinkVariant: variant,
+            imageUrl:
+              s.imageUrl && !s.imageUrl.includes("render-slide")
+                ? s.imageUrl
+                : undefined,
+            aspectRatio: "1:1" as const,
+          },
+          slideNumber: idx + 1,
+          totalSlides: post.slides.length,
+        };
+      });
+
+      await exportCarouselToPdf(
+        slidesToExport,
+        { name: companyProfile.name, handle: companyProfile.instagram },
+        `blacklink_carrossel_${post.id}_linkedin.pdf`,
+        (current, total, label) => {
+          setCopiedFeedback(`[${current}/${total}] ${label}`);
+        }
+      );
+
+      setCopiedFeedback("✨ Carrossel corporativo exportado em PDF para LinkedIn!");
+    } catch (err) {
+      console.error("[BlackLinkEngine] Erro ao exportar carrossel em PDF:", err);
+      setCopiedFeedback("Erro ao exportar carrossel em PDF.");
+    } finally {
+      setIsDownloading(false);
+      setTimeout(() => setCopiedFeedback(null), 4000);
+    }
+  };
+
+  const handleDownloadCarouselZip = async (post: ScheduledPost) => {
+    setIsDownloading(true);
+    setCopiedFeedback("Gerando arquivo ZIP com todas as lâminas HD...");
+    try {
+      const slidesToExport = post.slides.map((s, idx) => {
+        const postIdx = scheduledPosts.findIndex((p) => p.id === post.id);
+        const variant = s.blackLinkVariant || getPostVariant(post, postIdx, idx);
+        return {
+          payload: {
+            headline: s.headline || post.theme,
+            bodyText: s.bodyText || post.hookHeadline,
+            tag: s.tag || `0${idx + 1} // DIRETRIZ`,
+            blackLinkVariant: variant,
+            imageUrl:
+              s.imageUrl && !s.imageUrl.includes("render-slide")
+                ? s.imageUrl
+                : undefined,
+            aspectRatio: "1:1" as const,
+          },
+          fileName: `blacklink_${post.id}_slide_${idx + 1}.png`,
+          slideNumber: idx + 1,
+          totalSlides: post.slides.length,
+        };
+      });
+
+      await exportSlidesToZip(
+        slidesToExport,
+        { name: companyProfile.name, handle: companyProfile.instagram },
+        `blacklink_carrossel_${post.id}_laminas_hd.zip`,
+        (current, total, label) => {
+          setCopiedFeedback(`[${current}/${total}] ${label}`);
+        }
+      );
+
+      setCopiedFeedback("✨ Todas as lâminas do carrossel baixadas em ZIP HD!");
+    } catch (err) {
+      console.error("[BlackLinkEngine] Erro ao exportar carrossel em ZIP:", err);
+      setCopiedFeedback("Erro ao exportar lâminas em ZIP.");
+    } finally {
+      setIsDownloading(false);
+      setTimeout(() => setCopiedFeedback(null), 4000);
+    }
+  };
+
+  const handleDownloadMotionPoster = async (post: ScheduledPost, slideIdx = 0) => {
+    const slide = post.slides[slideIdx] || post.slides[0];
+    const postIdx = scheduledPosts.findIndex((p) => p.id === post.id);
+    const variant = slide.blackLinkVariant || getPostVariant(post, postIdx, slideIdx);
+
+    setIsDownloading(true);
+    setCopiedFeedback("Iniciando renderização de vídeo Motion Poster 4K...");
+
+    try {
+      const payload: SlideRenderPayload = {
+        headline: slide.headline || post.theme,
+        bodyText: slide.bodyText || post.hookHeadline,
+        tag: slide.tag || `0${slideIdx + 1} // DIRETRIZ`,
+        blackLinkVariant: variant,
+        imageUrl:
+          slide.imageUrl && !slide.imageUrl.includes("render-slide")
+            ? slide.imageUrl
+            : undefined,
+        aspectRatio: "1:1",
+      };
+
+      const fileName = `blacklink_motion_poster_${post.id}_slide_${slideIdx + 1}.webm`;
+
+      await exportSlideToMotionPoster(
+        payload,
+        { name: companyProfile.name, handle: companyProfile.instagram },
+        fileName,
+        (current, total, label) => {
+          setCopiedFeedback(`[${current}/${total}] ${label}`);
+        }
+      );
+
+      setCopiedFeedback("🎬 Motion Poster (Vídeo 5s) baixado com sucesso!");
+    } catch (err) {
+      console.error("[BlackLinkEngine] Erro ao exportar Motion Poster:", err);
+      setCopiedFeedback("Erro ao exportar Motion Poster: " + (err as Error).message);
+    } finally {
+      setIsDownloading(false);
+      setTimeout(() => setCopiedFeedback(null), 4000);
+    }
+  };
+
+  const handleLoadCampaignPreset = (preset: BlackLinkCampaignPreset) => {
+    preset.posts.forEach((presetPost) => {
+      updateScheduledPost(presetPost.id, {
+        theme: presetPost.theme,
+        hookHeadline: presetPost.hookHeadline,
+        bodyCopy: presetPost.bodyCopy,
+        postCaption: presetPost.postCaption,
+        ctaText: presetPost.ctaText,
+        hashtags: presetPost.hashtags,
+        scheduledDate: presetPost.scheduledDate,
+        slides: presetPost.slides.map((s) => ({
+          slideNumber: s.slideNumber,
+          headline: s.headline,
+          bodyText: s.bodyText,
+          tag: s.tag,
+          blackLinkVariant: s.blackLinkVariant,
+          seamlessBleed: s.seamlessBleed,
+        })),
+      });
+    });
+
+    setCopiedFeedback(`🎯 Campanha "${preset.name}" carregada com sucesso na grade!`);
+    setTimeout(() => setCopiedFeedback(null), 4000);
+  };
+
+  const handleAddSlideToCarousel = () => {
+    if (!selectedFeedPost) return;
+    const currentSlides = [...selectedFeedPost.slides];
+    const newIdx = currentSlides.length;
+    const postIdx = scheduledPosts.findIndex((p) => p.id === selectedFeedPost.id);
+    const nextVariant = OFFICIAL_VARIANTS[(postIdx + newIdx) % OFFICIAL_VARIANTS.length];
+
+    const newSlide: CreativeSlide = {
+      slideNumber: newIdx + 1,
+      headline: `TESE EXECUTIVA // PARTE 0${newIdx + 1}`,
+      bodyText: "Eliminamos o atrito no pipeline para garantir soberania operacional.",
+      tag: `0${newIdx + 1} // DESDOBRAMENTO`,
+      blackLinkVariant: nextVariant,
+    };
+
+    const updatedSlides = [...currentSlides, newSlide];
+    updateScheduledPost(selectedFeedPost.id, { slides: updatedSlides });
+    setSelectedFeedPost({ ...selectedFeedPost, slides: updatedSlides });
+    setActiveSlideIdx(newIdx);
+    setEditingHeadline(newSlide.headline || "");
+    setEditingBodyText(newSlide.bodyText || "");
+    setEditingTag(newSlide.tag || "");
+    setEditingVariant(nextVariant);
+    setCopiedFeedback(`Lâmina #${newIdx + 1} adicionada ao carrossel!`);
+    setTimeout(() => setCopiedFeedback(null), 3000);
+  };
+
   const toggleFeedCaption = (postId: string) => {
     setExpandedFeedCaptions((prev) => ({
       ...prev,
@@ -858,6 +1046,38 @@ export function InstagramFeedGridView() {
             </div>
           </div>
 
+          {/* Seletor de Campanhas Estratégicas por Produto (Black Link Sovereign Presets) */}
+          <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold text-white uppercase tracking-wider">
+                <Target className="h-4 w-4 text-sky-400" />
+                <span>Carregar Campanha Estratégica Oficial (9 Posts Mapeados)</span>
+              </div>
+              <span className="text-[10px] font-mono text-zinc-500">
+                5 Produtos Digitais de blklnk.com
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+              {BLACKLINK_CAMPAIGN_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleLoadCampaignPreset(preset)}
+                  className="p-2.5 rounded-xl border border-white/10 bg-black/40 hover:bg-white/10 hover:border-sky-400/50 text-left transition-all cursor-pointer group"
+                >
+                  <div className="text-xs font-bold font-mono text-zinc-200 group-hover:text-white flex items-center justify-between">
+                    <span>{preset.badge}</span>
+                    <span className="text-[9px] text-zinc-500 group-hover:text-sky-300">9 posts ➔</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 line-clamp-1 mt-1 group-hover:text-zinc-300 font-sans">
+                    {preset.headlineSummary}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {scheduledPosts.map((post, postIdx) => {
               const firstSlide = post.slides[0];
@@ -924,7 +1144,7 @@ export function InstagramFeedGridView() {
                       </div>
                     </div>
 
-                    {/* Base do Hover: Botão de Edição & Ação Rápida Gemini IA & Download HD */}
+                    {/* Base do Hover: Botão de Edição & Ação Rápida Gemini IA & Download HD & Motion Poster */}
                     <div className="flex items-center justify-center gap-2">
                       <button
                         type="button"
@@ -933,7 +1153,7 @@ export function InstagramFeedGridView() {
                           e.stopPropagation();
                           handleGenerateImageWithGemini(post, 0);
                         }}
-                        className="text-[10px] font-mono text-sky-300 bg-sky-950/70 hover:bg-sky-900/90 px-2.5 py-1 rounded-full border border-sky-500/30 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        className="text-[10px] font-mono text-sky-300 bg-sky-950/70 hover:bg-sky-900/90 px-2 py-1 rounded-full border border-sky-500/30 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         title="Regenerar arte deste post via Gemini IA"
                       >
                         {isGeneratingImage && generatingPostId === post.id ? (
@@ -941,7 +1161,21 @@ export function InstagramFeedGridView() {
                         ) : (
                           <Sparkles className="h-2.5 w-2.5 text-sky-400" />
                         )}
-                        <span>Gemini IA</span>
+                        <span>IA</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadMotionPoster(post, 0);
+                        }}
+                        className="text-[10px] font-mono text-purple-200 bg-purple-950/70 hover:bg-purple-900/90 px-2 py-1 rounded-full border border-purple-500/30 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="Gerar e baixar vídeo Motion Poster (5s) deste post"
+                      >
+                        <Video className="h-2.5 w-2.5 text-purple-400" />
+                        <span>Motion</span>
                       </button>
 
                       <button
@@ -951,14 +1185,14 @@ export function InstagramFeedGridView() {
                           e.stopPropagation();
                           handleDownloadHd(post, 0);
                         }}
-                        className="text-[10px] font-mono text-zinc-200 bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full border border-white/20 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        className="text-[10px] font-mono text-zinc-200 bg-white/15 hover:bg-white/25 px-2 py-1 rounded-full border border-white/20 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         title="Baixar arte 1080p deste post"
                       >
                         <Download className="h-2.5 w-2.5" />
                         <span>HD</span>
                       </button>
 
-                      <span className="text-[10px] font-mono text-zinc-200 uppercase tracking-widest bg-white/15 hover:bg-white/25 px-3 py-1 rounded-full border border-white/20 transition-colors">
+                      <span className="text-[10px] font-mono text-zinc-200 uppercase tracking-widest bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full border border-white/20 transition-colors">
                         Editar ➔
                       </span>
                     </div>
@@ -1311,6 +1545,17 @@ export function InstagramFeedGridView() {
 
                 <button
                   type="button"
+                  disabled={isDownloading}
+                  onClick={() => handleDownloadMotionPoster(visorActivePost, visorSlideIdx)}
+                  className="w-full sm:flex-1 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
+                  title="Exportar vídeo 5s em loop brutalista para Reels/Stories"
+                >
+                  <Video className="h-3.5 w-3.5 text-purple-300" />
+                  <span>Motion (5s)</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => handleDownloadHd(visorActivePost, visorSlideIdx)}
                   disabled={isDownloading}
                   className="w-full sm:flex-1 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
@@ -1520,14 +1765,28 @@ export function InstagramFeedGridView() {
                       <span>Editar Criativo &amp; Copy</span>
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadHd(post, feedSlideIndexes[post.id] || 0)}
-                      className="text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
-                    >
-                      <Download className="h-3 w-3" />
-                      <span>Baixar Arte 1080p</span>
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={() => handleDownloadMotionPoster(post, feedSlideIndexes[post.id] || 0)}
+                        className="text-purple-400 hover:text-purple-200 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="Baixar vídeo Motion Poster (5s) deste post"
+                      >
+                        <Video className="h-3 w-3" />
+                        <span>Motion (5s)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={() => handleDownloadHd(post, feedSlideIndexes[post.id] || 0)}
+                        className="text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>Baixar Arte 1080p</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1599,33 +1858,65 @@ export function InstagramFeedGridView() {
                     />
                   </div>
 
-                  {/* Seletor de Lâminas caso seja carrossel */}
-                  {selectedFeedPost.slides.length > 1 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                      {selectedFeedPost.slides.map((s, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setActiveSlideIdx(idx);
-                            setEditingHeadline(s.headline || "");
-                            setEditingBodyText(s.bodyText || "");
-                            setEditingTag(s.tag || `0${idx + 1} // DIRETRIZ`);
-                            setEditingVariant(s.blackLinkVariant || "3d-sculpture");
-                          }}
-                          className={`h-12 w-12 rounded-lg border overflow-hidden shrink-0 transition-all cursor-pointer ${
-                            idx === activeSlideIdx
-                              ? "border-sky-400 scale-105"
-                              : "border-white/10 opacity-60 hover:opacity-100"
-                          }`}
-                        >
-                          <div className="flex h-full w-full items-center justify-center bg-zinc-900 text-[10px] font-mono text-white">
-                            #{idx + 1}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {/* Seletor de Lâminas (Sempre visível para permitir transformar em Carrossel) */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {selectedFeedPost.slides.map((s, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setActiveSlideIdx(idx);
+                          setEditingHeadline(s.headline || "");
+                          setEditingBodyText(s.bodyText || "");
+                          setEditingTag(s.tag || `0${idx + 1} // DIRETRIZ`);
+                          setEditingVariant(s.blackLinkVariant || "3d-sculpture");
+                        }}
+                        className={`h-11 w-11 rounded-lg border overflow-hidden shrink-0 transition-all cursor-pointer flex items-center justify-center font-mono text-xs ${
+                          idx === activeSlideIdx
+                            ? "border-sky-400 bg-sky-500/20 text-white font-bold scale-105 shadow-sm"
+                            : "border-white/10 bg-zinc-900/80 text-zinc-400 hover:text-white hover:border-white/20"
+                        }`}
+                      >
+                        #{idx + 1}
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={handleAddSlideToCarousel}
+                      className="h-11 px-3 rounded-lg border border-dashed border-white/20 hover:border-sky-400/60 bg-white/[0.02] hover:bg-sky-500/10 text-zinc-400 hover:text-sky-300 text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                      title="Adicionar nova lâmina para transformar este post em carrossel"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>+ Lâmina (Carrossel)</span>
+                    </button>
+
+                    {selectedFeedPost.slides.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentSlide = selectedFeedPost.slides[activeSlideIdx] || selectedFeedPost.slides[0];
+                          const newBleed = !(currentSlide.seamlessBleed ?? true);
+                          const updatedSlides = selectedFeedPost.slides.map((s) => ({
+                            ...s,
+                            seamlessBleed: newBleed,
+                          }));
+                          updateScheduledPost(selectedFeedPost.id, { slides: updatedSlides });
+                          setSelectedFeedPost({ ...selectedFeedPost, slides: updatedSlides });
+                          setCopiedFeedback(newBleed ? "🔗 Bleed contínuo panorâmico ativado!" : "Fundo independente por lâmina.");
+                          setTimeout(() => setCopiedFeedback(null), 3000);
+                        }}
+                        className={`h-11 px-3 rounded-lg border text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                          (selectedFeedPost.slides[activeSlideIdx]?.seamlessBleed ?? true)
+                            ? "bg-sky-500/15 border-sky-400 text-sky-200 shadow-sm"
+                            : "bg-white/[0.02] border-white/10 text-zinc-400 hover:text-white"
+                        }`}
+                        title="Ativar/desativar fundo panorâmico contínuo entre as lâminas"
+                      >
+                        <span>🔗 Bleed Contínuo: {(selectedFeedPost.slides[activeSlideIdx]?.seamlessBleed ?? true) ? "ON" : "OFF"}</span>
+                      </button>
+                    )}
+                  </div>
 
                   {/* Botão de Regeneração da Imagem via Gemini IA */}
                   <button
@@ -2165,14 +2456,57 @@ export function InstagramFeedGridView() {
                       <span>Salvar Alterações</span>
                     </button>
 
+                    {selectedFeedPost.slides.length > 1 && (
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={() => handleDownloadCarouselPdf(selectedFeedPost)}
+                        className="w-full sm:flex-1 py-2.5 rounded-xl border border-sky-400/40 bg-sky-500/15 hover:bg-sky-500/25 px-3 text-xs font-bold text-sky-200 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+                        title="Baixar carrossel completo formatado para LinkedIn Document"
+                      >
+                        <Download className="h-3.5 w-3.5 text-sky-300" />
+                        <span>Carrossel PDF (LinkedIn)</span>
+                      </button>
+                    )}
+
+                    {selectedFeedPost.slides.length > 1 && (
+                      <button
+                        type="button"
+                        disabled={isDownloading}
+                        onClick={() => handleDownloadCarouselZip(selectedFeedPost)}
+                        className="w-full sm:flex-1 py-2.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] px-3 text-xs font-semibold text-white transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        title="Baixar todas as lâminas em arquivo ZIP"
+                      >
+                        <Layers className="h-3.5 w-3.5 text-zinc-300" />
+                        <span>Todas as Lâminas (ZIP)</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={isDownloading}
+                      onClick={() => handleDownloadMotionPoster(selectedFeedPost, activeSlideIdx)}
+                      className="w-full sm:flex-1 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/15 hover:bg-purple-500/25 px-3 text-xs font-bold text-purple-200 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
+                      title="Gerar e baixar vídeo de 5 segundos em loop brutalista para Reels/Stories/LinkedIn"
+                    >
+                      <Video className="h-3.5 w-3.5 text-purple-300" />
+                      <span>Motion (Vídeo 5s)</span>
+                    </button>
+
                     <button
                       type="button"
                       disabled={isDownloading}
                       onClick={() => handleDownloadHd(selectedFeedPost, activeSlideIdx)}
-                      className="w-full sm:flex-1 py-2.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] px-4 text-xs font-semibold text-white transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full sm:flex-1 py-2.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] px-3 text-xs font-semibold text-white transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       <Download className="h-3.5 w-3.5" />
-                      <span>{isDownloading ? "Renderizando..." : "Baixar Arte 1080p"}</span>
+                      <span>
+                        {isDownloading
+                          ? "Renderizando..."
+                          : selectedFeedPost.slides.length > 1
+                          ? `Lâmina #${activeSlideIdx + 1} (PNG)`
+                          : "Baixar Arte 1080p"}
+                      </span>
                     </button>
                   </div>
                 </div>

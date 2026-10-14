@@ -180,6 +180,16 @@ export function BlackLinkGlassLayout({
             alt="Arte de Fundo Black Link"
             className="w-full h-full object-cover transition-all duration-700 pointer-events-none select-none"
             style={{
+              ...(totalSlides > 1 && (slide.seamlessBleed ?? config.seamlessBleed ?? true)
+                ? {
+                    width: `${totalSlides * 100}%`,
+                    maxWidth: "none",
+                    position: "absolute",
+                    left: `-${(currentSlide - 1) * 100}%`,
+                    top: 0,
+                    height: "100%",
+                  }
+                : {}),
               filter: isLightBackground
                 ? "contrast(102%) brightness(100%)"
                 : variant === "pure-monumental" || variant === "3d-liquid"
@@ -216,6 +226,40 @@ export function BlackLinkGlassLayout({
         />
       </div>
 
+      {/* Marcador Técnico de Bleed Contínuo para Carrossel (3D Bleed Hook) */}
+      {totalSlides > 1 && (slide.seamlessBleed ?? config.seamlessBleed ?? true) && (
+        <div className="absolute inset-0 pointer-events-none z-10">
+          {/* Conexão com o próximo slide à direita */}
+          {currentSlide < totalSlides && (
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 flex items-center justify-center">
+              <div
+                className={`w-9 h-9 rounded-full border backdrop-blur-md flex items-center justify-center text-[10px] font-mono shadow-xl ${
+                  isLightBackground
+                    ? "bg-white/80 border-black/20 text-black/60"
+                    : "bg-black/80 border-white/20 text-white/60"
+                }`}
+              >
+                ➔
+              </div>
+            </div>
+          )}
+          {/* Conexão com o slide anterior à esquerda */}
+          {currentSlide > 1 && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 flex items-center justify-center">
+              <div
+                className={`w-9 h-9 rounded-full border backdrop-blur-md flex items-center justify-center text-[10px] font-mono shadow-xl ${
+                  isLightBackground
+                    ? "bg-white/80 border-black/20 text-black/60"
+                    : "bg-black/80 border-white/20 text-white/60"
+                }`}
+              >
+                ➔
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ================================================================== */}
       {/* 2. CABEÇALHO EDITORIAL SUÍÇO (DESIGN.BLACKLINK // 2026)            */}
       {/* ================================================================== */}
@@ -228,9 +272,22 @@ export function BlackLinkGlassLayout({
           DESIGN.BLACKLINK
         </span>
 
-        <span className="font-bold tracking-widest text-[12px]">
-          2026
-        </span>
+        <div className="flex items-center gap-3">
+          {totalSlides > 1 && (
+            <span
+              className={`px-2.5 py-0.5 rounded-full border text-[10px] font-mono tracking-widest font-bold ${
+                isLightBackground
+                  ? "border-black/25 text-black/80 bg-black/[0.04]"
+                  : "border-white/25 text-white/80 bg-white/[0.05]"
+              }`}
+            >
+              SLIDE 0{currentSlide} // 0{totalSlides}
+            </span>
+          )}
+          <span className="font-bold tracking-widest text-[12px]">
+            2026
+          </span>
+        </div>
       </header>
 
       {/* ================================================================== */}
@@ -432,13 +489,35 @@ export function BlackLinkGlassLayout({
       )}
 
       {/* ================================================================== */}
-      {/* 4. RODAPÉ EDITORIAL SUÍÇO (A SETINHA MINIMALISTA ↗ DA REFERÊNCIA)  */}
+      {/* 4. RODAPÉ EDITORIAL SUÍÇO (BARRA DE PROGRESSO & SETINHA ↗)         */}
       {/* ================================================================== */}
       <footer
-        className={`relative z-10 w-full px-[60px] flex items-center justify-end ${
+        className={`relative z-10 w-full px-[60px] flex items-center justify-between ${
           is916 ? "pb-24" : is45 ? "pb-16" : "pb-12"
         }`}
       >
+        {/* Barra de Progresso Segmentada Suíça para Carrosséis */}
+        {totalSlides > 1 ? (
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i + 1 === currentSlide
+                    ? isLightBackground
+                      ? "w-8 bg-black shadow-sm"
+                      : "w-8 bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)]"
+                    : isLightBackground
+                    ? "w-2.5 bg-black/20"
+                    : "w-2.5 bg-white/25"
+                }`}
+              />
+            ))}
+          </div>
+        ) : (
+          <div />
+        )}
+
         {/* A Setinha Minimalista Suíça do Pinterest (não exibe nos boxes puros) */}
         {variant !== "swiss-box" && variant !== "clean-ice-box" && (
           <div

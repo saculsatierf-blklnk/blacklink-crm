@@ -18,6 +18,7 @@ export interface CreativeSlide {
   visualPrompt?: string;
   tag?: string;
   blackLinkVariant?: BlackLinkStyleVariant;
+  seamlessBleed?: boolean;
 }
 
 export interface CompetitorInsightData {
