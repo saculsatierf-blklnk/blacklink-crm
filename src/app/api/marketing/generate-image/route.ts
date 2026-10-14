@@ -116,9 +116,9 @@ export async function POST(req: Request) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
 
-        // Timeout estrito de 25 segundos para alta resolução com segurança
+        // Timeout resiliente de 12 segundos para ambientes serverless
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
 
         const response = await fetch(url, {
           method: "POST",
@@ -140,38 +140,41 @@ export async function POST(req: Request) {
 
           for (const part of candidateParts) {
             if (part?.inlineData?.data) {
-              const mimeType = part.inlineData.mimeType || "image/png";
               const base64Data = part.inlineData.data;
+              const safeId = (postId || variant || "art").replace(/[^a-zA-Z0-9_-]/g, "");
+              const fileName = `bl_${safeId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
 
-              // Salva em disco em public/generated-creatives/ para URL leve sem estourar o localStorage
+              // 1. Grava no /tmp (sempre gravável em ambientes serverless / Netlify / Lambda)
               try {
-                const outputDir = path.join(process.cwd(), "public", "generated-creatives");
-                if (!fs.existsSync(outputDir)) {
-                  fs.mkdirSync(outputDir, { recursive: true });
+                const tmpDir = path.join("/tmp", "generated-creatives");
+                if (!fs.existsSync(tmpDir)) {
+                  fs.mkdirSync(tmpDir, { recursive: true });
                 }
-                const safeId = (postId || variant || "art").replace(/[^a-zA-Z0-9_-]/g, "");
-                const fileName = `bl_${safeId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
-                const filePath = path.join(outputDir, fileName);
-                fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
-
-                const relativeUrl = `/generated-creatives/${fileName}`;
-                return NextResponse.json({
-                  success: true,
-                  source: "gemini-ai",
-                  modelUsed: "gemini-2.5-flash-image",
-                  imageUrl: relativeUrl,
-                  promptUsed: finalPrompt,
-                });
-              } catch (fsErr) {
-                console.warn("[FS Warning] Não foi possível salvar em disco, retornando base64:", fsErr);
-                return NextResponse.json({
-                  success: true,
-                  source: "gemini-ai",
-                  modelUsed: "gemini-2.5-flash-image",
-                  imageUrl: `data:${mimeType};base64,${base64Data}`,
-                  promptUsed: finalPrompt,
-                });
+                fs.writeFileSync(path.join(tmpDir, fileName), Buffer.from(base64Data, "base64"));
+              } catch (tmpErr) {
+                console.warn("[Serverless /tmp Warning]:", tmpErr);
               }
+
+              // 2. Grava em public/generated-creatives (desenvolvimento local)
+              try {
+                const pubDir = path.join(process.cwd(), "public", "generated-creatives");
+                if (!fs.existsSync(pubDir)) {
+                  fs.mkdirSync(pubDir, { recursive: true });
+                }
+                fs.writeFileSync(path.join(pubDir, fileName), Buffer.from(base64Data, "base64"));
+              } catch {
+                // Silenciosamente ignorado em sistemas somente-leitura
+              }
+
+              // Retorna URL de endpoint leve (sempre segura e sem inchar o localStorage com megabytes)
+              const relativeUrl = `/api/marketing/generated-image/${fileName}`;
+              return NextResponse.json({
+                success: true,
+                source: "gemini-ai",
+                modelUsed: "gemini-2.5-flash-image",
+                imageUrl: relativeUrl,
+                promptUsed: finalPrompt,
+              });
             }
           }
         } else {

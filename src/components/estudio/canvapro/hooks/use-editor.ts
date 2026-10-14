@@ -43,6 +43,8 @@ function resolveFallbackImage(variant: string): string {
       return "/brand/blacklink-art-macro-glass.jpg";
     case "clean-ice":
       return "/brand/blacklink-art-obsidian-dark.jpg";
+    case "clean-ice-box":
+      return "/brand/blacklink-art-cursor-light.jpg";
     default:
       return "/brand/blacklink-art-portrait.jpg";
   }

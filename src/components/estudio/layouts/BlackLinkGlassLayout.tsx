@@ -163,7 +163,7 @@ export function BlackLinkGlassLayout({
       case "clean-ice":
         return "/brand/blacklink-art-obsidian-dark.jpg";
       case "clean-ice-box":
-        return null;
+        return "/brand/blacklink-art-cursor-light.jpg";
       default:
         return "/brand/blacklink-art-cursor-light.jpg";
     }

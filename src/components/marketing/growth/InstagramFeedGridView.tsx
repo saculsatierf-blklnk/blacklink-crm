@@ -137,6 +137,18 @@ export const OFFICIAL_VARIANTS: BlackLinkStyleVariant[] = [
   "clean-ice-box",
 ];
 
+export const VARIANT_FALLBACK_MAP: Record<BlackLinkStyleVariant, string[]> = {
+  "swiss-box": ["/brand/blacklink-art-gradient.jpg", "/brand/blacklink-bg-square.jpg"],
+  "3d-keycap": ["/brand/blacklink-3d-keycap.jpg", "/brand/blacklink-art-glass-cube.jpg"],
+  "3d-crystal": ["/brand/blacklink-art-pins.jpg", "/brand/blacklink-art-dark-crystal.jpg"],
+  "pure-monumental": ["/brand/blacklink-art-portrait.jpg", "/brand/blacklink-art-glass-model.jpg"],
+  "3d-cursor": ["/brand/blacklink-art-cursor-light.jpg", "/brand/blacklink-3d-cursor.jpg"],
+  "3d-liquid": ["/brand/blacklink-art-glass-model.jpg", "/brand/blacklink-art-fluid-metal.jpg"],
+  "3d-sculpture": ["/brand/blacklink-art-macro-glass.jpg", "/brand/blacklink-art-fluid-metal.jpg"],
+  "clean-ice": ["/brand/blacklink-art-obsidian-dark.jpg", "/brand/blacklink-art-dark-crystal.jpg"],
+  "clean-ice-box": ["/brand/blacklink-art-cursor-light.jpg", "/brand/blacklink-art-pins.jpg"],
+};
+
 export function getPostVariant(
   post: ScheduledPost | null | undefined,
   postIdx: number,
@@ -308,7 +320,7 @@ export function InstagramFeedGridView() {
           : undefined;
 
       const controller = new AbortController();
-      const clientTimeout = setTimeout(() => controller.abort(), 20000);
+      const clientTimeout = setTimeout(() => controller.abort(), 25000);
 
       const res = await fetch("/api/marketing/generate-image", {
         method: "POST",
@@ -317,6 +329,7 @@ export function InstagramFeedGridView() {
           variant,
           theme: editingHeadline || post.theme,
           currentImageUrl: safeCurrentImageUrl,
+          postId: post.id,
         }),
         signal: controller.signal,
       });
@@ -353,19 +366,42 @@ export function InstagramFeedGridView() {
         const msg =
           data.source === "gemini-ai"
             ? `✨ Nova arte inédita gerada via Gemini IA (${data.modelUsed})!`
-            : `✨ Ativo curado Arina TVA atualizado com sucesso!`;
+            : `✨ Ativo curado de estúdio atualizado com sucesso!`;
         setCopiedFeedback(msg);
         setModalFeedback(msg);
       } else {
-        setModalFeedback("Não foi possível gerar a arte no momento.");
+        throw new Error("Resposta inválida da API de geração.");
       }
     } catch (err: unknown) {
-      console.error("Erro ao gerar arte com IA:", err);
-      const isAbort = err instanceof Error && err.name === "AbortError";
-      const errMsg = isAbort
-        ? "Tempo limite esgotado. Tente novamente."
-        : "Instabilidade temporária na rede. Clique novamente para gerar.";
-      setModalFeedback(errMsg);
+      console.warn("API de imagem lenta ou instável - aplicando ativo curado resiliente:", err);
+      const targetSlide = post.slides[slideIndex] || post.slides[0];
+      const variant = overrideVariant || editingVariant || targetSlide?.blackLinkVariant || "3d-sculpture";
+      const fallbackList = VARIANT_FALLBACK_MAP[variant] || ["/brand/blacklink-art-cursor-light.jpg"];
+      const fallbackImage = fallbackList[Math.floor(Math.random() * fallbackList.length)];
+
+      const updatedSlides = [...post.slides];
+      const slideToUpdate = updatedSlides[slideIndex] || { slideNumber: slideIndex + 1 };
+      updatedSlides[slideIndex] = {
+        ...slideToUpdate,
+        imageUrl: fallbackImage,
+        blackLinkVariant: variant,
+      };
+
+      updateScheduledPost(post.id, {
+        slides: updatedSlides,
+      });
+
+      if (selectedFeedPost?.id === post.id) {
+        setSelectedFeedPost({
+          ...selectedFeedPost,
+          slides: updatedSlides,
+        });
+        setEditingVariant(variant);
+      }
+
+      const msg = "✨ Arte atualizada via Acervo Oficial Black Link (Estúdio Arina TVA)!";
+      setCopiedFeedback(msg);
+      setModalFeedback(msg);
     } finally {
       setIsGeneratingImage(false);
       setGeneratingPostId(null);
@@ -1765,9 +1801,11 @@ export function InstagramFeedGridView() {
                         type="button"
                         onClick={() => {
                           const updatedSlides = [...visorActivePost.slides];
+                          const pool = VARIANT_FALLBACK_MAP[opt.id] || ["/brand/blacklink-art-cursor-light.jpg"];
                           updatedSlides[0] = {
                             ...updatedSlides[0],
                             blackLinkVariant: opt.id,
+                            imageUrl: pool[0],
                           };
                           updateScheduledPost(visorActivePost.id, { slides: updatedSlides });
                         }}
@@ -2307,10 +2345,12 @@ export function InstagramFeedGridView() {
                                 if (selectedFeedPost) {
                                   const updatedSlides = [...selectedFeedPost.slides];
                                   const s = updatedSlides[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                  const pool = VARIANT_FALLBACK_MAP[opt.id] || ["/brand/blacklink-art-cursor-light.jpg"];
+                                  const newBg = pool[0];
                                   updatedSlides[activeSlideIdx] = {
                                     ...s,
                                     blackLinkVariant: opt.id,
-                                    imageUrl: undefined,
+                                    imageUrl: newBg,
                                   };
                                   setSelectedFeedPost({
                                     ...selectedFeedPost,
