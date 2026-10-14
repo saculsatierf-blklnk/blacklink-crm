@@ -75,6 +75,13 @@ export type BlackLinkStyleVariant =
   | "3d-sculpture"
   | "clean-ice";
 
+export type CopyPosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "center";
+
 export interface SlideData {
   id?: string;
   headline: string;
@@ -87,7 +94,7 @@ export interface SlideData {
   imageUrl?: string;
   seamlessBleed?: boolean;
   contrastMode?: "auto" | "light" | "dark";
-  copyPosition?: "top-left" | "bottom-left" | "center";
+  copyPosition?: CopyPosition;
   hasScrimBackdrop?: boolean;
 }
 

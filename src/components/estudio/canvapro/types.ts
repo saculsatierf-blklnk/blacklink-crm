@@ -1,5 +1,8 @@
 import { fabric } from "fabric";
 import { ITextboxOptions } from "fabric/fabric-impl";
+import { CopyPosition } from "../layouts/layoutTypes";
+
+export type { CopyPosition };
 
 export const JSON_KEYS = [
   "name",
@@ -161,6 +164,8 @@ export type BuildEditorProps = {
   setStrokeColor: (value: string) => void;
   setStrokeWidth: (value: number) => void;
   setFontFamily: (value: string) => void;
+  copyPosition: CopyPosition;
+  setCopyPositionState: (pos: CopyPosition) => void;
 };
 
 export interface Editor {
@@ -225,6 +230,8 @@ export interface Editor {
   addTriangle: () => void;
   addInverseTriangle: () => void;
   loadExactSlideLayout: (data: ExactSlideLayoutProps) => Promise<void>;
+  setCopyPosition: (position: CopyPosition) => void;
+  getActiveCopyPosition: () => CopyPosition;
   canvas: fabric.Canvas;
   getActiveFillColor: () => string;
   getActiveStrokeColor: () => string;
@@ -240,5 +247,5 @@ export interface ExactSlideLayoutProps {
   imageUrl?: string;
   variant?: any;
   contrastMode?: "auto" | "light" | "dark";
-  copyPosition?: "top-left" | "bottom-left" | "center";
+  copyPosition?: CopyPosition;
 }

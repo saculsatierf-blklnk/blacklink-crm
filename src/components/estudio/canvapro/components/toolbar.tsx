@@ -21,6 +21,7 @@ import {
 import { ActiveTool, Editor, FONT_SIZE } from "../types";
 import { isTextType } from "../utils";
 import { FontSizeInput } from "./font-size-input";
+import { CopyPositionSelector } from "./copy-position-selector";
 
 interface ToolbarProps {
   editor: Editor | undefined;
@@ -226,6 +227,11 @@ export const Toolbar = ({
               <AlignRight className="h-3.5 w-3.5" />
             </button>
           </div>
+
+          <div className="h-4 w-px bg-white/10 mx-0.5" />
+
+          {/* Posicionamento Automático da Copy (5 Modos) */}
+          <CopyPositionSelector editor={editor} />
         </div>
       )}
 
@@ -348,6 +354,11 @@ export const Toolbar = ({
               </button>
             ))}
           </div>
+
+          <div className="h-4 w-px bg-white/10" />
+
+          {/* Posicionamento Automático da Copy (5 Modos) */}
+          <CopyPositionSelector editor={editor} />
         </div>
       )}
 

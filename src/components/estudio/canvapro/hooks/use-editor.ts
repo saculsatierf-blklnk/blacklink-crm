@@ -16,6 +16,7 @@ import {
   FONT_SIZE,
   JSON_KEYS,
   ExactSlideLayoutProps,
+  CopyPosition,
 } from "../types";
 import { useHistory } from "./use-history";
 import { useClipboard } from "./use-clipboard";
@@ -68,6 +69,8 @@ const buildEditor = ({
   selectedObjects,
   strokeDashArray,
   setStrokeDashArray,
+  copyPosition,
+  setCopyPositionState,
 }: BuildEditorProps): Editor => {
   const getWorkspace = () => {
     return canvas
@@ -681,10 +684,12 @@ const buildEditor = ({
         return variant === "3d-crystal" || variant === "3d-cursor" || variant === "clean-ice-box";
       })();
 
-      const copyPos = (() => {
+      const copyPos: CopyPosition = (() => {
         if (data.copyPosition === "center") return "center";
         if (data.copyPosition === "bottom-left") return "bottom-left";
+        if (data.copyPosition === "bottom-right") return "bottom-right";
         if (data.copyPosition === "top-left") return "top-left";
+        if (data.copyPosition === "top-right") return "top-right";
         if (
           variant === "pure-monumental" ||
           variant === "3d-liquid" ||
@@ -695,6 +700,8 @@ const buildEditor = ({
         }
         return "top-left";
       })();
+
+      setCopyPositionState(copyPos);
 
       // 3. Carrega Imagem de Fundo cobrindo perfeitamente o workspace
       const imageSrc =
@@ -761,8 +768,12 @@ const buildEditor = ({
       canvas.add(headerYear);
 
       // 5. Rodapé: Seta Suíça ↗
+      const isArrowLeft = copyPos === "bottom-right";
+      const arrowLeft = isArrowLeft ? wsLeft + 60 : wsLeft + w - 60 - 44;
+      const arrowTextLeft = isArrowLeft ? wsLeft + 60 + 22 : wsLeft + w - 60 - 22;
+
       const arrowBg = new fabric.Circle({
-        left: wsLeft + w - 60 - 44,
+        left: arrowLeft,
         top: wsTop + h - 48 - 44,
         radius: 22,
         fill: isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.6)",
@@ -772,7 +783,7 @@ const buildEditor = ({
         name: "slide-footer-arrow-bg",
       });
       const arrowText = new fabric.Text("↗", {
-        left: wsLeft + w - 60 - 22,
+        left: arrowTextLeft,
         top: wsTop + h - 48 - 22,
         originX: "center",
         originY: "center",
@@ -791,25 +802,32 @@ const buildEditor = ({
       const len = headlineRaw.length;
       const headlineFontSize = len <= 15 ? 46 : len <= 30 ? 38 : len <= 50 ? 32 : 26;
 
+      const hasTag = Boolean(data.tag);
+      const hasBody = Boolean(data.bodyText);
+      const estHeadlineLines = Math.max(1, Math.ceil(headlineRaw.length / 22));
+      const estHeadlineHeight = estHeadlineLines * (headlineFontSize * 1.15);
+      const estTotalHeight = (hasTag ? 38 : 0) + estHeadlineHeight + (hasBody ? 54 : 0);
+
       let startTop = 148;
-      if (copyPos === "bottom-left") {
-        const hasTag = Boolean(data.tag);
-        const hasBody = Boolean(data.bodyText);
-        const estHeadlineLines = Math.max(1, Math.ceil(headlineRaw.length / 22));
-        const estHeadlineHeight = estHeadlineLines * (headlineFontSize * 1.15);
-        const estTotalHeight = (hasTag ? 38 : 0) + estHeadlineHeight + (hasBody ? 54 : 0);
+      if (copyPos === "bottom-left" || copyPos === "bottom-right") {
         startTop = Math.max(148, h - 110 - estTotalHeight);
       } else if (copyPos === "center") {
-        startTop = 380;
+        startTop = Math.max(148, (h - estTotalHeight) / 2);
       }
+
+      const isRight = copyPos === "top-right" || copyPos === "bottom-right";
+      const isCenter = copyPos === "center";
+      const originX: "left" | "center" | "right" = isCenter ? "center" : isRight ? "right" : "left";
+      const textAlign: "left" | "center" | "right" = isCenter ? "center" : isRight ? "right" : "left";
+      const posX = isCenter ? wsLeft + w / 2 : isRight ? wsLeft + w - 60 : wsLeft + 60;
 
       // Tag
       if (data.tag) {
         const tagObj = new fabric.Textbox(data.tag.toUpperCase(), {
-          left: copyPos === "center" ? wsLeft + w / 2 : wsLeft + 60,
+          left: posX,
           top: wsTop + startTop,
-          originX: copyPos === "center" ? "center" : "left",
-          textAlign: copyPos === "center" ? "center" : "left",
+          originX: originX,
+          textAlign: textAlign,
           fontSize: 11,
           fontFamily: "'JetBrains Mono', monospace",
           fontWeight: "700",
@@ -827,10 +845,10 @@ const buildEditor = ({
 
       // Headline (com sombra volumétrica idêntica à BlackLinkGlassLayout)
       const headlineObj = new fabric.Textbox(headlineRaw, {
-        left: copyPos === "center" ? wsLeft + w / 2 : wsLeft + 60,
+        left: posX,
         top: wsTop + startTop,
-        originX: copyPos === "center" ? "center" : "left",
-        textAlign: copyPos === "center" ? "center" : "left",
+        originX: originX,
+        textAlign: textAlign,
         width: 620,
         fontSize: headlineFontSize,
         fontFamily: "'Clash Display', sans-serif",
@@ -852,10 +870,10 @@ const buildEditor = ({
       // Body Text
       if (data.bodyText) {
         const bodyObj = new fabric.Textbox(data.bodyText, {
-          left: copyPos === "center" ? wsLeft + w / 2 : wsLeft + 60,
+          left: posX,
           top: wsTop + startTop,
-          originX: copyPos === "center" ? "center" : "left",
-          textAlign: copyPos === "center" ? "center" : "left",
+          originX: originX,
+          textAlign: textAlign,
           width: 500,
           fontSize: 15,
           fontFamily: "Inter, sans-serif",
@@ -879,6 +897,89 @@ const buildEditor = ({
       autoZoom();
       save();
     },
+    setCopyPosition: (pos: CopyPosition) => {
+      setCopyPositionState(pos);
+
+      const workspace = getWorkspace();
+      const w = workspace?.width || 1080;
+      const h = workspace?.height || 1080;
+      const wsLeft = workspace?.left ?? 0;
+      const wsTop = workspace?.top ?? 0;
+
+      // Procura os objetos editoriais do slide
+      const tagObj = canvas.getObjects().find((obj) => obj.name === "slide-tag") as fabric.Textbox | undefined;
+      const headlineObj = canvas.getObjects().find((obj) => obj.name === "slide-headline") as fabric.Textbox | undefined;
+      const bodyObj = canvas.getObjects().find((obj) => obj.name === "slide-body") as fabric.Textbox | undefined;
+      const arrowBg = canvas.getObjects().find((obj) => obj.name === "slide-footer-arrow-bg") as fabric.Circle | undefined;
+      const arrowText = canvas.getObjects().find((obj) => obj.name === "slide-footer-arrow") as fabric.Text | undefined;
+
+      const textGroup: fabric.Textbox[] = [];
+      if (tagObj) textGroup.push(tagObj);
+      if (headlineObj) textGroup.push(headlineObj);
+      if (bodyObj) textGroup.push(bodyObj);
+
+      if (textGroup.length === 0) {
+        // Fallback: seleciona textos no canvas
+        const texts = (selectedObjects.length > 0 ? selectedObjects : canvas.getObjects())
+          .filter((obj) => isTextType(obj.type)) as fabric.Textbox[];
+        if (texts.length > 0) {
+          texts.sort((a, b) => (a.top ?? 0) - (b.top ?? 0));
+          textGroup.push(...texts);
+        }
+      }
+
+      if (textGroup.length === 0) return;
+
+      // Calcula a altura acumulada
+      let totalHeight = 0;
+      textGroup.forEach((t, idx) => {
+        const itemH = t.getScaledHeight ? t.getScaledHeight() : (t.height || 40);
+        totalHeight += itemH + (idx < textGroup.length - 1 ? 14 : 0);
+      });
+
+      const isRight = pos === "top-right" || pos === "bottom-right";
+      const isCenter = pos === "center";
+      const originX: "left" | "center" | "right" = isCenter ? "center" : isRight ? "right" : "left";
+      const textAlign: "left" | "center" | "right" = isCenter ? "center" : isRight ? "right" : "left";
+      const targetX = isCenter ? wsLeft + w / 2 : isRight ? wsLeft + w - 60 : wsLeft + 60;
+
+      let startTop = wsTop + 148;
+      if (pos === "bottom-left" || pos === "bottom-right") {
+        startTop = wsTop + Math.max(148, h - 110 - totalHeight);
+      } else if (pos === "center") {
+        startTop = wsTop + Math.max(148, (h - totalHeight) / 2);
+      }
+
+      let currentTop = startTop;
+      textGroup.forEach((item) => {
+        item.set({
+          left: targetX,
+          top: currentTop,
+          originX: originX,
+          textAlign: textAlign,
+        });
+        item.setCoords();
+        const itemH = item.getScaledHeight ? item.getScaledHeight() : (item.height || 40);
+        currentTop += itemH + 14;
+      });
+
+      // Reposiciona a seta do rodapé se necessário
+      if (arrowBg && arrowText) {
+        if (pos === "bottom-right") {
+          arrowBg.set({ left: wsLeft + 60 });
+          arrowText.set({ left: wsLeft + 60 + 22 });
+        } else {
+          arrowBg.set({ left: wsLeft + w - 60 - 44 });
+          arrowText.set({ left: wsLeft + w - 60 - 22 });
+        }
+        arrowBg.setCoords();
+        arrowText.setCoords();
+      }
+
+      canvas.requestRenderAll();
+      save();
+    },
+    getActiveCopyPosition: () => copyPosition,
     canvas,
     getActiveFontWeight: () => {
       const selectedObject = selectedObjects[0];
@@ -938,6 +1039,8 @@ export const useEditor = ({
   const [strokeWidth, setStrokeWidth] = useState(STROKE_WIDTH);
   const [strokeDashArray, setStrokeDashArray] =
     useState<number[]>(STROKE_DASH_ARRAY);
+  const [copyPosition, setCopyPositionState] =
+    useState<CopyPosition>("top-left");
 
   const {
     save,
@@ -998,6 +1101,8 @@ export const useEditor = ({
         setStrokeDashArray,
         fontFamily,
         setFontFamily,
+        copyPosition,
+        setCopyPositionState,
       });
     }
     return undefined;
@@ -1017,6 +1122,7 @@ export const useEditor = ({
     selectedObjects,
     strokeDashArray,
     fontFamily,
+    copyPosition,
   ]);
 
   const init = useCallback(

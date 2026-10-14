@@ -161,7 +161,7 @@ Sua missão é inspecionar friamente:
    - Forneça em 'suggestedUpdates' o 'contrastMode' ('dark' para texto preto sobre fundo claro, 'light' para texto branco sobre fundo escuro).
 3. POSICIONAMENTO DA COPY (copyPosition):
    - Avalie onde o objeto 3D ou modelo principal está para que a copy nunca tampe o elemento visual.
-   - Atribua 'copyPosition' para cada post ('top-left', 'bottom-left' ou 'center').
+   - Atribua 'copyPosition' para cada post ('top-left', 'top-right', 'bottom-left', 'bottom-right' ou 'center').
 4. CONCISÃO DAS HEADLINES:
    - Títulos de no máximo 2 A 4 PALAVRAS em MAIÚSCULAS rigorosas (ex: 'SOBERANIA B2B', 'TELEMETRIA TOTAL', 'BLACK LINK OS'). Sem frases longas nem pontuação!
 5. Preencha 'gridAudit' com notas e diagnósticos detalhados para cada uma das 9 posições da grade.`;
@@ -247,7 +247,7 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
         "variant": "<variante gráfica>",
         "tone": "<'Claro (Porcelana)' ou 'Escuro (Noir)'>",
         "contrastStatus": "<'Perfeito' ou 'Corrigido com Scrim'>",
-        "copyPosition": "<'top-left' | 'bottom-left' | 'center'>",
+        "copyPosition": "<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'>",
         "status": "<'Harmonizado' ou 'Ajustado'>"
       }
     ]
@@ -262,7 +262,7 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
       "linkedinPostText": "<artigo executivo thought leadership estruturado para LinkedIn B2B (tese clara, desafio de negócio, sem jargões de afiliado, tom executivo de C-level, menção a blklnk.com)>",
       "blackLinkVariant": "<variante harmonizada: '3d-keycap' | '3d-crystal' | 'pure-monumental' | '3d-cursor' | '3d-liquid' | '3d-sculpture' | 'clean-ice'>",
       "contrastMode": "<'auto' | 'light' | 'dark'>",
-      "copyPosition": "<'top-left' | 'bottom-left' | 'center'>",
+      "copyPosition": "<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'>",
       "hasScrimBackdrop": false,
       "rationale": "<1 frase explicando a melhoria visual e estratégica>"
     }

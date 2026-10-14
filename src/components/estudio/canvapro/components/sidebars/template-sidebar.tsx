@@ -5,6 +5,7 @@ import { ActiveTool, Editor } from "../../types";
 import { ToolSidebarClose } from "../tool-sidebar-close";
 import { ToolSidebarHeader } from "../tool-sidebar-header";
 import { LayoutTemplate } from "lucide-react";
+import { COPY_POSITIONS } from "../copy-position-selector";
 
 interface TemplateSidebarProps {
   editor: Editor | undefined;
@@ -100,7 +101,50 @@ export const TemplateSidebar = ({
         description="Aplique a diagramação e arte das referências internacionais"
         onClose={onClose}
       />
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Posicionamento Automático da Copy */}
+        <div className="space-y-2 p-3 bg-white/[0.02] border border-white/10 rounded-xl">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-300 block">
+            Posição da Copy (Layout Rápido)
+          </span>
+          <p className="text-[10px] text-zinc-400 font-sans leading-tight">
+            Clique para reorganizar automaticamente o título, tag e texto no slide:
+          </p>
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            {COPY_POSITIONS.map((pos) => {
+              const isSelected = editor?.getActiveCopyPosition() === pos.id;
+              return (
+                <button
+                  key={pos.id}
+                  type="button"
+                  onClick={() => editor?.setCopyPosition(pos.id)}
+                  className={`p-2 rounded-lg text-left border transition-all cursor-pointer flex items-center gap-2 ${
+                    isSelected
+                      ? "border-sky-400 bg-sky-500/20 text-sky-300 shadow"
+                      : "border-white/10 bg-white/[0.03] text-zinc-300 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <span className="text-sm font-sans">{pos.icon}</span>
+                  <div className="min-w-0">
+                    <span className="text-[11px] font-mono font-bold block truncate">
+                      {pos.label}
+                    </span>
+                    <span className="text-[9px] text-zinc-500 block truncate">
+                      {pos.title.split(" (")[0]}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 block px-1">
+            Presets de Arte & Diagramação
+          </span>
+        </div>
+
         {TEMPLATES.map((tmpl) => (
           <button
             key={tmpl.id}

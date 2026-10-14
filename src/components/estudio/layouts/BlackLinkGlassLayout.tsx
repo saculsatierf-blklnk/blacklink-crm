@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutProps, BlackLinkStyleVariant } from "./layoutTypes";
+import { LayoutProps, BlackLinkStyleVariant, CopyPosition } from "./layoutTypes";
 
 /**
  * Função de Destilação Editorial de Alto Luxo:
@@ -105,11 +105,13 @@ export function BlackLinkGlassLayout({
   })();
 
   // Posicionamento dinâmico e inteligente da Copy:
-  // "top-left" | "bottom-left" | "center"
-  const copyPos: "top-left" | "bottom-left" | "center" = (() => {
+  // "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center"
+  const copyPos: CopyPosition = (() => {
     if (slide.copyPosition === "center") return "center";
     if (slide.copyPosition === "bottom-left") return "bottom-left";
+    if (slide.copyPosition === "bottom-right") return "bottom-right";
     if (slide.copyPosition === "top-left") return "top-left";
+    if (slide.copyPosition === "top-right") return "top-right";
     // Padrão editorial brutalista suíço da Black Link:
     // Retratos (pure-monumental, 3d-liquid), Macro Glass e Obsidian: Base (bottom-left)
     // Objetos 3D (3d-cursor, 3d-keycap, 3d-crystal) e composições: Topo (top-left)
@@ -382,16 +384,25 @@ export function BlackLinkGlassLayout({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO B & C: NÚCLEO EDITORIAL (TOP-LEFT OU BOTTOM-LEFT)        */}
+      {/* ------------------------------------------------------------------ */}
+      {/* VARIAÇÃO B & C: NÚCLEO EDITORIAL (TOP-LEFT, TOP-RIGHT, BOTTOM-LEFT, BOTTOM-RIGHT) */}
       {/* ------------------------------------------------------------------ */}
       {copyPos !== "center" && (
         <main
-          className={`relative z-10 w-full px-[60px] flex flex-col justify-start items-start text-left ${
-            copyPos === "top-left" ? "mt-4 mb-auto" : "mt-auto mb-4"
+          className={`relative z-10 w-full px-[60px] flex flex-col transition-all duration-300 ${
+            copyPos === "top-left"
+              ? "mt-4 mb-auto items-start text-left"
+              : copyPos === "top-right"
+              ? "mt-4 mb-auto items-end text-right"
+              : copyPos === "bottom-right"
+              ? "mt-auto mb-4 items-end text-right"
+              : "mt-auto mb-4 items-start text-left"
           }`}
         >
           <div
-            className={`max-w-[620px] space-y-3 transition-all duration-300 ${
+            className={`max-w-[620px] space-y-3 transition-all duration-300 flex flex-col ${
+              copyPos === "top-right" || copyPos === "bottom-right" ? "items-end text-right" : "items-start text-left"
+            } ${
               slide.hasScrimBackdrop
                 ? isLightBackground
                   ? "p-6 rounded-2xl backdrop-blur-[12px] bg-white/70 border border-black/10 shadow-sm"
@@ -444,6 +455,8 @@ export function BlackLinkGlassLayout({
       {/* ================================================================== */}
       <footer
         className={`relative z-10 w-full px-[60px] flex items-center justify-between ${
+          copyPos === "bottom-right" ? "flex-row-reverse" : "flex-row"
+        } ${
           is916 ? "pb-24" : is45 ? "pb-16" : "pb-12"
         }`}
       >

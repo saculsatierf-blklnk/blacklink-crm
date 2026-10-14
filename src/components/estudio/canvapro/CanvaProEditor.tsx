@@ -160,6 +160,7 @@ export function CanvaProEditor({
     if (onSaveToFeed) {
       onSaveToFeed(renderedUrl, {
         imageUrl: renderedUrl,
+        copyPosition: editor.getActiveCopyPosition(),
         ...(headlineObj?.text ? { headline: headlineObj.text } : {}),
         ...(bodyObj?.text ? { bodyText: bodyObj.text } : {}),
         ...(tagObj?.text ? { tag: tagObj.text } : {}),

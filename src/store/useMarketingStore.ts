@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
+import { type BlackLinkStyleVariant, type CopyPosition } from "@/components/estudio/layouts/layoutTypes";
 
 export type CreativeFormat = "carousel" | "story" | "post";
 
@@ -20,7 +20,7 @@ export interface CreativeSlide {
   blackLinkVariant?: BlackLinkStyleVariant;
   seamlessBleed?: boolean;
   contrastMode?: "auto" | "light" | "dark";
-  copyPosition?: "top-left" | "bottom-left" | "center";
+  copyPosition?: CopyPosition;
   hasScrimBackdrop?: boolean;
 }
 

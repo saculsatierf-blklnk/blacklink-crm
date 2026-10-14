@@ -62,7 +62,7 @@ interface AgentMessage {
     linkedinPostText?: string;
     blackLinkVariant?: any;
     contrastMode?: "auto" | "light" | "dark";
-    copyPosition?: "top-left" | "bottom-left" | "center";
+    copyPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
     hasScrimBackdrop?: boolean;
     rationale?: string;
   }>;

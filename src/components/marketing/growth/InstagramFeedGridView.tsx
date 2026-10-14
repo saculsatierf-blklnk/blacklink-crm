@@ -2445,11 +2445,13 @@ export function InstagramFeedGridView() {
                           <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
                             Posição da Copy
                           </label>
-                          <div className="grid grid-cols-3 gap-1">
+                          <div className="grid grid-cols-5 gap-1">
                             {[
-                              { id: "top-left", label: "Topo" },
-                              { id: "center", label: "Centro" },
-                              { id: "bottom-left", label: "Base" },
+                              { id: "top-left", icon: "↖", label: "Esq. Cima", title: "Esquerda Superior" },
+                              { id: "top-right", icon: "↗", label: "Dir. Cima", title: "Direita Superior" },
+                              { id: "center", icon: "▪", label: "Centro", title: "Centralizado" },
+                              { id: "bottom-left", icon: "↙", label: "Esq. Base", title: "Esquerda Inferior" },
+                              { id: "bottom-right", icon: "↘", label: "Dir. Base", title: "Direita Inferior" },
                             ].map((pos) => {
                               const currentPos = selectedFeedPost?.slides?.[activeSlideIdx]?.copyPosition || 
                                 ((editingVariant === "pure-monumental" || editingVariant === "3d-liquid" || editingVariant === "3d-sculpture" || editingVariant === "clean-ice") ? "bottom-left" : "top-left");
@@ -2467,13 +2469,15 @@ export function InstagramFeedGridView() {
                                       updateScheduledPost(selectedFeedPost.id, { slides: updated });
                                     }
                                   }}
-                                  className={`py-1.5 px-1.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                                  className={`py-1.5 px-0.5 rounded-lg text-[9px] font-mono font-bold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                                     isSelected
-                                      ? "bg-white text-black shadow"
+                                      ? "bg-white text-black shadow ring-1 ring-white/50"
                                       : "bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/10 border border-white/10"
                                   }`}
+                                  title={pos.title}
                                 >
-                                  {pos.label}
+                                  <span className="text-xs font-sans leading-none">{pos.icon}</span>
+                                  <span className="truncate leading-tight">{pos.label}</span>
                                 </button>
                               );
                             })}
