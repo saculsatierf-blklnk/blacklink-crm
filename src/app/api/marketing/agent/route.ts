@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
       focusedPostId,
       attachedImage,
       action = "chat",
+      companyProfile,
+      activeChannel = "instagram",
     } = body;
 
     const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -156,8 +158,19 @@ ${leadInsights || "Pipeline em fase inicial de atração de leads."}
 
     const hasVisualInput = imageParts.length > 0;
 
+    const digitalPresenceContext = `
+ATUAÇÃO DIGITAL REAL DA BLACK LINK (OBSERVADA VIA blklnk.com & REDES):
+- Website Oficial: ${companyProfile?.website || "https://blklnk.com"}
+- Instagram: ${companyProfile?.instagramUrl || "https://instagram.com/blacklink.tech"} (${companyProfile?.instagram || "@blacklink.tech"})
+- LinkedIn: ${companyProfile?.linkedinUrl || "https://linkedin.com/company/blacklink-holding"}
+- Síntese da Atuação Digital Atual:
+${companyProfile?.digitalFootprintNotes || "Holding de tecnologia e inteligência comercial para grandes contas B2B. Posicionamento minimalista brutalista ('Engenharia da Ausência'). Produtos principais: CRM OS proprietário, IA operacional sob medida, Captação de autoridade em megaeventos e feiras de negócios, Protocolo Comercial de Vendas Consultivas (blklnk.com/protocolo). Proibido jargões de marketing digital amador, promessas irreais ou depoimentos falsos."}
+- Canal Selecionado no Painel: ${String(activeChannel).toUpperCase()}
+`;
+
     const systemPrompt = `
 ${BLACKLINK_BRAND_PROMPT_CONTEXT}
+${digitalPresenceContext}
 ${crmTelemetryContext}
 
 SUA MISSÃO & CONDUTA:
@@ -172,6 +185,7 @@ INSTRUÇÕES DE CLAREZA E COMPORTAMENTO (IMPORTANTE):
    - Zero posts sobre "cases" de clientes ou depoimentos.
    - Se houver pessoas em artes ou prompts, apenas pessoas negras retintas.
    - Foco nos produtos reais da Black Link (CRM OS, Automações com IA, Branding, Protocolo e Megaeventos).
+   - Canais: se estiver gerando para Instagram, priorize impacto estético e headlines de 2 a 4 palavras; se estiver gerando para LinkedIn, priorize teses de negócios B2B e distribuição de carrosséis PDF.
 
 CATÁLOGO DE PRODUTOS DA BLACK LINK:
 ${productsCatalogText}
@@ -202,6 +216,7 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
       "bodyText": "<apoio ultra-curto de 1 frase concisa de até 8 a 10 palavras>",
       "tag": "<tag suíça, ex: '01 // TELEMETRIA'>",
       "caption": "<legenda completa para o Instagram com quebras de linha e CTA>",
+      "linkedinPostText": "<artigo executivo thought leadership estruturado para LinkedIn B2B (tese clara, desafio de negócio, sem jargões de afiliado, tom executivo de C-level, menção a blklnk.com)>",
       "blackLinkVariant": "<MANTENHA RIGOROSAMENTE A VARIANTE ORIGINAL DO POST a menos que o usuário peça explicitamente para trocar>",
       "rationale": "<1 frase explicando a melhoria>"
     }

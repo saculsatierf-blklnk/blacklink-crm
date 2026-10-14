@@ -41,6 +41,7 @@ interface AgentMessage {
     bodyText: string;
     tag: string;
     caption: string;
+    linkedinPostText?: string;
     blackLinkVariant?: any;
     rationale?: string;
   }>;
@@ -214,6 +215,7 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
       slides: currentSlides,
       postCaption: update.caption,
       bodyCopy: update.caption,
+      linkedinPostText: update.linkedinPostText || targetPost.linkedinPostText,
       hookHeadline: update.headline,
       theme: update.headline,
     });

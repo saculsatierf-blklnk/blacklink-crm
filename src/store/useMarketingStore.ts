@@ -64,6 +64,7 @@ export interface ScheduledPost {
   ctaText: string;
   hashtags: string[];
   postCaption?: string;
+  linkedinPostText?: string;
   slides: CreativeSlide[];
   imageUrls: string[];
   reformulationFeedback?: string;
@@ -137,6 +138,8 @@ export type InstagramAccountStage = "lancamento_zero" | "tracao" | "escala";
 export interface CompanyProfile {
   name: string;
   instagram: string;
+  instagramUrl?: string;
+  linkedinUrl?: string;
   website: string;
   niche: string;
   products: string;
@@ -145,6 +148,8 @@ export interface CompanyProfile {
   tagline?: string;
   profileType?: "company" | "influencer";
   accountStage?: InstagramAccountStage;
+  digitalFootprintNotes?: string;
+  lastPresenceSync?: string;
 }
 
 export interface CompetitorItem {
@@ -663,14 +668,18 @@ const BASE_CAMPAIGNS: AdPerformanceItem[] = [
 const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   name: "Black Link",
   instagram: "@blacklink.tech",
+  instagramUrl: "https://instagram.com/blacklink.tech",
+  linkedinUrl: "https://linkedin.com/company/blacklink-holding",
   website: "https://blklnk.com",
   niche: "Engenharia da Ausência & Inteligência Comercial B2B",
-  products: "Black Link CRM OS, Automações & I.A. Operacional, Marketing & Branding Soberano, Protocolo Black Link (blklnk.com/protocolo), Captação Cinematográfica",
+  products: "Black Link CRM OS, Automações & I.A. Operacional, Marketing & Branding Soberano, Protocolo Black Link (blklnk.com/protocolo), Captação Cinematográfica em Megaeventos",
   targetAudience: "Fundadores, CEOs, Diretores Comerciais e Holdings de Alto Padrão",
   bio: "Engenharia da Ausência: Simplificando a tecnologia e elevando a estética corporativa.",
   tagline: "Engenharia da Ausência | blklnk.com",
   profileType: "company",
   accountStage: "lancamento_zero",
+  digitalFootprintNotes: "Holding de tecnologia e inteligência comercial para grandes contas B2B. Posicionamento minimalista brutalista ('Engenharia da Ausência'). Produtos principais: CRM OS proprietário, IA operacional sob medida, Captação de autoridade em megaeventos e feiras de negócios, Protocolo Comercial de Vendas Consultivas (blklnk.com/protocolo). Proibido jargões de marketing digital amador, promessas irreais ou depoimentos falsos.",
+  lastPresenceSync: "2026-10-14T12:00:00.000Z",
 };
 
 const DEFAULT_DIAGNOSTIC: CompetitorsDiagnostic = {

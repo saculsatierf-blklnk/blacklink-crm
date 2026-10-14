@@ -27,8 +27,12 @@ import {
   RefreshCw,
   Target,
   Bot,
-  Video,
+  Globe,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { InstagramIcon, LinkedinIcon } from "./BrandIcons";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   useMarketingStore,
@@ -37,6 +41,7 @@ import {
 } from "@/store/useMarketingStore";
 import { ManualAssetUploadModal } from "@/components/marketing/ManualAssetUploadModal";
 import { MarketingAgentDrawer } from "./MarketingAgentDrawer";
+import { LinkedInFeedWorkspace } from "./LinkedInFeedWorkspace";
 import {
   BLACKLINK_PRODUCTS,
   BLACKLINK_CAMPAIGN_PRESETS,
@@ -49,7 +54,6 @@ import {
   exportSlideToPng,
   exportSlidesToZip,
   exportCarouselToPdf,
-  exportSlideToMotionPoster,
   type SlideRenderPayload,
 } from "@/lib/marketing/blacklinkRenderEngine";
 
@@ -176,6 +180,7 @@ export function InstagramFeedGridView() {
   const {
     scheduledPosts,
     companyProfile,
+    updateCompanyProfile,
     feedViewMode,
     setFeedViewMode,
     selectedFeedPost,
@@ -187,14 +192,59 @@ export function InstagramFeedGridView() {
     editorialPlan,
   } = useMarketingStore();
 
+  // Canais B2B: Instagram (Grade 3x3 & Visor) vs LinkedIn (Carrosséis PDF & Artigo Executivo)
+  const [activeChannelTab, setActiveChannelTab] = useState<"instagram" | "linkedin">("instagram");
+  const [isSyncingPresence, setIsSyncingPresence] = useState<boolean>(false);
+  const [showPresenceConfig, setShowPresenceConfig] = useState<boolean>(false);
+  const [presenceInstagramUrl, setPresenceInstagramUrl] = useState<string>(
+    companyProfile.instagramUrl || "https://instagram.com/blacklink.tech"
+  );
+  const [presenceLinkedinUrl, setPresenceLinkedinUrl] = useState<string>(
+    companyProfile.linkedinUrl || "https://linkedin.com/company/blacklink-holding"
+  );
+  const [presenceWebsiteUrl, setPresenceWebsiteUrl] = useState<string>(
+    companyProfile.website || "https://blklnk.com"
+  );
+
+  const handleSyncPresence = async () => {
+    setIsSyncingPresence(true);
+    setCopiedFeedback("Sincronizando atuação digital com blklnk.com e redes ativas...");
+    try {
+      const res = await fetch("/api/marketing/sync-presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          website: presenceWebsiteUrl || companyProfile.website || "https://blklnk.com",
+          instagramUrl: presenceInstagramUrl || companyProfile.instagramUrl || "https://instagram.com/blacklink.tech",
+          linkedinUrl: presenceLinkedinUrl || companyProfile.linkedinUrl || "https://linkedin.com/company/blacklink-holding",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.companyProfile) {
+        updateCompanyProfile(data.companyProfile);
+        setCopiedFeedback("● Atuação digital sincronizada com blklnk.com & redes ativas!");
+      } else {
+        setCopiedFeedback("● Atuação digital confirmada.");
+      }
+    } catch (e) {
+      console.error(e);
+      setCopiedFeedback("Erro ao sincronizar presença digital.");
+    } finally {
+      setIsSyncingPresence(false);
+      setTimeout(() => setCopiedFeedback(null), 4000);
+    }
+  };
+
   const [activeSlideIdx, setActiveSlideIdx] = useState<number>(0);
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
   const [copiedFeedback, setCopiedFeedback] = useState<string | null>(null);
   const [isAgentDrawerOpen, setIsAgentDrawerOpen] = useState<boolean>(false);
 
   // Estados de edição completa no Modal
-  const [modalTab, setModalTab] = useState<"creative" | "caption" | "audit">("creative");
+  const [modalTab, setModalTab] = useState<"creative" | "caption" | "linkedin" | "audit">("creative");
   const [editingCaption, setEditingCaption] = useState<string>("");
+  const [editingLinkedInPostText, setEditingLinkedInPostText] = useState<string>("");
   const [editingHeadline, setEditingHeadline] = useState<string>("");
   const [editingBodyText, setEditingBodyText] = useState<string>("");
   const [editingTag, setEditingTag] = useState<string>("");
@@ -393,6 +443,12 @@ export function InstagramFeedGridView() {
     setEditingBodyText(firstSlide?.bodyText || post.hookHeadline || "");
     setEditingTag(firstSlide?.tag || `0${(postIdx >= 0 ? postIdx : 0) + 1} // DIRETRIZ`);
     setEditingVariant(variant);
+
+    const defaultLinkedInText =
+      post.linkedinPostText ||
+      `${(post.theme || "ENGENHARIA DA AUSÊNCIA").toUpperCase()} // DIRETRIZ EXECUTIVA B2B\n\n${post.bodyCopy || post.postCaption || ""}\n\nNa Black Link (blklnk.com), operamos sob o princípio da Engenharia da Ausência: eliminamos ruído operacional e simplificamos a infraestrutura para que sua liderança foque estritamente em fechamento e expansão de margem.\n\n• Solução: ${post.theme || "Software Sob Medida"}\n• Diretriz: 0${(postIdx >= 0 ? postIdx : 0) + 1} // SISTEMA PROPRIETÁRIO\n• Ação: Conheça a demonstração executiva em blklnk.com ou solicite o dossiê via mensagem direta.\n\n#BlackLink #EnterpriseB2B #EngenhariaDaAusencia #LiderancaB2B #HighTicket`;
+    setEditingLinkedInPostText(defaultLinkedInText);
+
     setModalTab("creative");
   };
 
@@ -420,9 +476,20 @@ export function InstagramFeedGridView() {
       blackLinkVariant: editingVariant,
     };
 
+    setSelectedFeedPost({
+      ...selectedFeedPost,
+      postCaption: editingCaption,
+      bodyCopy: editingCaption,
+      linkedinPostText: editingLinkedInPostText,
+      hookHeadline: editingHeadline,
+      theme: activeSlideIdx === 0 ? editingHeadline : selectedFeedPost.theme,
+      slides: currentSlides,
+    });
+
     updateScheduledPost(selectedFeedPost.id, {
       postCaption: editingCaption,
       bodyCopy: editingCaption,
+      linkedinPostText: editingLinkedInPostText,
       hookHeadline: editingHeadline,
       theme: activeSlideIdx === 0 ? editingHeadline : selectedFeedPost.theme,
       slides: currentSlides,
@@ -547,8 +614,10 @@ export function InstagramFeedGridView() {
         tag: isCurrentlyEditing ? editingTag : (targetSlide?.tag || `0${(postIdx >= 0 ? postIdx : 0) + 1} // DIRETRIZ`),
         blackLinkVariant: variant,
         imageUrl:
-          targetSlide?.imageUrl && !targetSlide.imageUrl.includes("render-slide")
+          (targetSlide?.imageUrl && !targetSlide.imageUrl.includes("render-slide"))
             ? targetSlide.imageUrl
+            : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+            ? post.imageUrls[0]
             : undefined,
         aspectRatio: "1:1",
       };
@@ -585,8 +654,10 @@ export function InstagramFeedGridView() {
             tag: firstSlide?.tag || `0${postIdx + 1} // DIRETRIZ`,
             blackLinkVariant: variant,
             imageUrl:
-              firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide")
+              (firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide"))
                 ? firstSlide.imageUrl
+                : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                ? post.imageUrls[0]
                 : undefined,
             aspectRatio: "1:1" as const,
           },
@@ -629,8 +700,10 @@ export function InstagramFeedGridView() {
             tag: s.tag || `0${idx + 1} // DIRETRIZ`,
             blackLinkVariant: variant,
             imageUrl:
-              s.imageUrl && !s.imageUrl.includes("render-slide")
+              (s.imageUrl && !s.imageUrl.includes("render-slide"))
                 ? s.imageUrl
+                : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                ? post.imageUrls[0]
                 : undefined,
             aspectRatio: "1:1" as const,
           },
@@ -672,8 +745,10 @@ export function InstagramFeedGridView() {
             tag: s.tag || `0${idx + 1} // DIRETRIZ`,
             blackLinkVariant: variant,
             imageUrl:
-              s.imageUrl && !s.imageUrl.includes("render-slide")
+              (s.imageUrl && !s.imageUrl.includes("render-slide"))
                 ? s.imageUrl
+                : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                ? post.imageUrls[0]
                 : undefined,
             aspectRatio: "1:1" as const,
           },
@@ -702,47 +777,7 @@ export function InstagramFeedGridView() {
     }
   };
 
-  const handleDownloadMotionPoster = async (post: ScheduledPost, slideIdx = 0) => {
-    const slide = post.slides[slideIdx] || post.slides[0];
-    const postIdx = scheduledPosts.findIndex((p) => p.id === post.id);
-    const variant = slide.blackLinkVariant || getPostVariant(post, postIdx, slideIdx);
 
-    setIsDownloading(true);
-    setCopiedFeedback("Iniciando renderização de vídeo Motion Poster 4K...");
-
-    try {
-      const payload: SlideRenderPayload = {
-        headline: slide.headline || post.theme,
-        bodyText: slide.bodyText || post.hookHeadline,
-        tag: slide.tag || `0${slideIdx + 1} // DIRETRIZ`,
-        blackLinkVariant: variant,
-        imageUrl:
-          slide.imageUrl && !slide.imageUrl.includes("render-slide")
-            ? slide.imageUrl
-            : undefined,
-        aspectRatio: "1:1",
-      };
-
-      const fileName = `blacklink_motion_poster_${post.id}_slide_${slideIdx + 1}.webm`;
-
-      await exportSlideToMotionPoster(
-        payload,
-        { name: companyProfile.name, handle: companyProfile.instagram },
-        fileName,
-        (current, total, label) => {
-          setCopiedFeedback(`[${current}/${total}] ${label}`);
-        }
-      );
-
-      setCopiedFeedback("🎬 Motion Poster (Vídeo 5s) baixado com sucesso!");
-    } catch (err) {
-      console.error("[BlackLinkEngine] Erro ao exportar Motion Poster:", err);
-      setCopiedFeedback("Erro ao exportar Motion Poster: " + (err as Error).message);
-    } finally {
-      setIsDownloading(false);
-      setTimeout(() => setCopiedFeedback(null), 4000);
-    }
-  };
 
   const handleLoadCampaignPreset = (preset: BlackLinkCampaignPreset) => {
     preset.posts.forEach((presetPost) => {
@@ -751,9 +786,11 @@ export function InstagramFeedGridView() {
         hookHeadline: presetPost.hookHeadline,
         bodyCopy: presetPost.bodyCopy,
         postCaption: presetPost.postCaption,
+        linkedinPostText: presetPost.linkedinPostText,
         ctaText: presetPost.ctaText,
         hashtags: presetPost.hashtags,
         scheduledDate: presetPost.scheduledDate,
+        imageUrls: presetPost.slides[0]?.imageUrl ? [presetPost.slides[0].imageUrl] : [],
         slides: presetPost.slides.map((s) => ({
           slideNumber: s.slideNumber,
           headline: s.headline,
@@ -761,11 +798,37 @@ export function InstagramFeedGridView() {
           tag: s.tag,
           blackLinkVariant: s.blackLinkVariant,
           seamlessBleed: s.seamlessBleed,
+          imageUrl: s.imageUrl,
         })),
       });
     });
 
-    setCopiedFeedback(`🎯 Campanha "${preset.name}" carregada com sucesso na grade!`);
+    // Se o modal estiver aberto em um post da grade, atualiza o post selecionado com o novo visual
+    if (selectedFeedPost) {
+      const match = preset.posts.find((p) => p.id === selectedFeedPost.id);
+      if (match) {
+        setSelectedFeedPost({
+          ...selectedFeedPost,
+          theme: match.theme,
+          hookHeadline: match.hookHeadline,
+          bodyCopy: match.bodyCopy,
+          postCaption: match.postCaption,
+          linkedinPostText: match.linkedinPostText,
+          imageUrls: match.slides[0]?.imageUrl ? [match.slides[0].imageUrl] : [],
+          slides: match.slides.map((s) => ({
+            slideNumber: s.slideNumber,
+            headline: s.headline,
+            bodyText: s.bodyText,
+            tag: s.tag,
+            blackLinkVariant: s.blackLinkVariant,
+            seamlessBleed: s.seamlessBleed,
+            imageUrl: s.imageUrl,
+          })),
+        });
+      }
+    }
+
+    setCopiedFeedback(`🎯 Campanha "${preset.name}" carregada com artes e copies sincronizadas!`);
     setTimeout(() => setCopiedFeedback(null), 4000);
   };
 
@@ -812,8 +875,150 @@ export function InstagramFeedGridView() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* HEADER DO PERFIL ESTILO INSTAGRAM */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl p-7 lg:p-9 shadow-2xl space-y-6">
+      {/* 1. SWITCHER DE CANAIS BICANAL: INSTAGRAM VS LINKEDIN */}
+      <div className="rounded-3xl border border-white/10 bg-zinc-950/80 p-4 sm:p-5 shadow-2xl backdrop-blur-2xl space-y-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          {/* Seletor Master de Canal */}
+          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-black/90 border border-white/10 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setActiveChannelTab("instagram")}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeChannelTab === "instagram"
+                  ? "bg-gradient-to-r from-rose-500/25 via-pink-500/20 to-amber-500/20 text-white border border-rose-500/40 shadow-lg ring-1 ring-rose-500/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <InstagramIcon className="h-4 w-4 text-rose-400" />
+              <span>📸 Instagram (Grade 3x3 &amp; Visor)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveChannelTab("linkedin")}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeChannelTab === "linkedin"
+                  ? "bg-[#0077B5]/25 text-white border border-[#0077B5]/50 shadow-lg ring-1 ring-[#0077B5]/30"
+                  : "text-zinc-400 hover:text-white hover:bg-white/[0.05]"
+              }`}
+            >
+              <LinkedinIcon className="h-4 w-4 text-[#0077B5]" />
+              <span>💼 LinkedIn (Carrossel PDF &amp; Artigo)</span>
+            </button>
+          </div>
+
+          {/* Status de Sincronização & Botões Rápidos */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowPresenceConfig(!showPresenceConfig)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-mono text-zinc-300 transition-all cursor-pointer"
+              title="Configurar URLs observáveis e links de atuação"
+            >
+              <Sliders className="h-3.5 w-3.5 text-zinc-400" />
+              <span>Links de Atuação</span>
+              {showPresenceConfig ? (
+                <ChevronUp className="h-3.5 w-3.5 text-zinc-400" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={isSyncingPresence}
+              onClick={handleSyncPresence}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-xs font-semibold text-sky-300 transition-all cursor-pointer shadow-md disabled:opacity-50"
+              title="Sincronizar presença digital com blklnk.com e perfis oficiais"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 text-sky-400 ${
+                  isSyncingPresence ? "animate-spin" : ""
+                }`}
+              />
+              <span>{isSyncingPresence ? "Sincronizando..." : "Sincronizar Presença"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Drawer Expansível: Links Observáveis e Notas de Posicionamento */}
+        {showPresenceConfig && (
+          <div className="pt-4 border-t border-white/[0.08] space-y-4 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                  Website Oficial (blklnk.com):
+                </label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={presenceWebsiteUrl}
+                    onChange={(e) => setPresenceWebsiteUrl(e.target.value)}
+                    placeholder="https://blklnk.com"
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-white/10 bg-black/70 text-xs text-white font-mono focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                  Perfil Instagram:
+                </label>
+                <div className="relative">
+                  <InstagramIcon className="absolute left-3 top-2.5 h-3.5 w-3.5 text-rose-500" />
+                  <input
+                    type="text"
+                    value={presenceInstagramUrl}
+                    onChange={(e) => setPresenceInstagramUrl(e.target.value)}
+                    placeholder="https://instagram.com/blacklink.tech"
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-white/10 bg-black/70 text-xs text-white font-mono focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                  Página LinkedIn:
+                </label>
+                <div className="relative">
+                  <LinkedinIcon className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[#0077B5]" />
+                  <input
+                    type="text"
+                    value={presenceLinkedinUrl}
+                    onChange={(e) => setPresenceLinkedinUrl(e.target.value)}
+                    placeholder="https://linkedin.com/company/blacklink-holding"
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-white/10 bg-black/70 text-xs text-white font-mono focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {companyProfile.digitalFootprintNotes && (
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-xs font-sans text-zinc-300 leading-relaxed space-y-1">
+                <div className="flex items-center gap-2 text-[11px] font-mono font-bold text-sky-400 uppercase">
+                  <span>● Diretrizes de Atuação Observadas (blklnk.com)</span>
+                </div>
+                <p className="line-clamp-3 text-zinc-400 font-sans">
+                  {companyProfile.digitalFootprintNotes}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* RENDERIZAÇÃO DO WORKSPACE CONFORME O CANAL ATIVO */}
+      {activeChannelTab === "linkedin" ? (
+        <LinkedInFeedWorkspace
+          onLoadPreset={handleLoadCampaignPreset}
+          onSyncPresence={handleSyncPresence}
+          isSyncingPresence={isSyncingPresence}
+        />
+      ) : (
+        <>
+          {/* HEADER DO PERFIL ESTILO INSTAGRAM */}
+          <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl p-7 lg:p-9 shadow-2xl space-y-6">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 border-b border-white/[0.08] pb-6">
@@ -1093,8 +1298,10 @@ export function InstagramFeedGridView() {
                 tag: firstSlide?.tag || `0${postIdx + 1} // DIRETRIZ`,
                 blackLinkVariant: variant,
                 imageUrl:
-                  firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide")
+                  (firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide"))
                     ? firstSlide.imageUrl
+                    : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                    ? post.imageUrls[0]
                     : undefined,
               };
 
@@ -1164,19 +1371,7 @@ export function InstagramFeedGridView() {
                         <span>IA</span>
                       </button>
 
-                      <button
-                        type="button"
-                        disabled={isDownloading}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadMotionPoster(post, 0);
-                        }}
-                        className="text-[10px] font-mono text-purple-200 bg-purple-950/70 hover:bg-purple-900/90 px-2 py-1 rounded-full border border-purple-500/30 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                        title="Gerar e baixar vídeo Motion Poster (5s) deste post"
-                      >
-                        <Video className="h-2.5 w-2.5 text-purple-400" />
-                        <span>Motion</span>
-                      </button>
+
 
                       <button
                         type="button"
@@ -1295,8 +1490,10 @@ export function InstagramFeedGridView() {
                         visorActivePost.slides[0]?.blackLinkVariant ||
                         "3d-sculpture",
                       imageUrl:
-                        rawVisorSlide?.imageUrl && !rawVisorSlide.imageUrl.includes("render-slide")
+                        (rawVisorSlide?.imageUrl && !rawVisorSlide.imageUrl.includes("render-slide"))
                           ? rawVisorSlide.imageUrl
+                          : (visorActivePost.imageUrls?.[0] && !visorActivePost.imageUrls[0].includes("render-slide"))
+                          ? visorActivePost.imageUrls[0]
                           : undefined,
                     };
                     return (
@@ -1543,16 +1740,7 @@ export function InstagramFeedGridView() {
                   <span>Editar Criativo &amp; Copy</span>
                 </button>
 
-                <button
-                  type="button"
-                  disabled={isDownloading}
-                  onClick={() => handleDownloadMotionPoster(visorActivePost, visorSlideIdx)}
-                  className="w-full sm:flex-1 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
-                  title="Exportar vídeo 5s em loop brutalista para Reels/Stories"
-                >
-                  <Video className="h-3.5 w-3.5 text-purple-300" />
-                  <span>Motion (5s)</span>
-                </button>
+
 
                 <button
                   type="button"
@@ -1658,8 +1846,10 @@ export function InstagramFeedGridView() {
                       tag: currentSlide?.tag || "01 // DIRETRIZ",
                       blackLinkVariant: currentSlide?.blackLinkVariant || "3d-sculpture",
                       imageUrl:
-                        currentSlide?.imageUrl && !currentSlide.imageUrl.includes("render-slide")
+                        (currentSlide?.imageUrl && !currentSlide.imageUrl.includes("render-slide"))
                           ? currentSlide.imageUrl
+                          : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                          ? post.imageUrls[0]
                           : undefined,
                     };
                     return (
@@ -1765,17 +1955,7 @@ export function InstagramFeedGridView() {
                       <span>Editar Criativo &amp; Copy</span>
                     </button>
 
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        disabled={isDownloading}
-                        onClick={() => handleDownloadMotionPoster(post, feedSlideIndexes[post.id] || 0)}
-                        className="text-purple-400 hover:text-purple-200 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                        title="Baixar vídeo Motion Poster (5s) deste post"
-                      >
-                        <Video className="h-3 w-3" />
-                        <span>Motion (5s)</span>
-                      </button>
+
 
                       <button
                         type="button"
@@ -1789,13 +1969,14 @@ export function InstagramFeedGridView() {
                     </div>
                   </div>
                 </div>
-              </div>
             );
           })}
         </div>
       )}
+    </>
+  )}
 
-      {/* MODAL DE EDIÇÃO COMPLETA: CRIATIVO & COPY */}
+  {/* MODAL DE EDIÇÃO COMPLETA: CRIATIVO & COPY */}
       <AnimatePresence>
         {selectedFeedPost && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1975,6 +2156,19 @@ export function InstagramFeedGridView() {
                       }`}
                     >
                       Legenda Instagram
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setModalTab("linkedin")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        modalTab === "linkedin"
+                          ? "bg-[#0077B5] text-white shadow-md font-bold"
+                          : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      <LinkedinIcon className="h-3.5 w-3.5" />
+                      <span>Artigo LinkedIn</span>
                     </button>
 
                     <button
@@ -2239,6 +2433,70 @@ export function InstagramFeedGridView() {
                     </div>
                   )}
 
+                  {/* ABA: ARTIGO EXECUTIVO LINKEDIN */}
+                  {modalTab === "linkedin" && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                            Artigo Thought Leadership (LinkedIn B2B)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(editingLinkedInPostText);
+                              setCopiedFeedback("Artigo executivo copiado para o LinkedIn!");
+                              setTimeout(() => setCopiedFeedback(null), 3000);
+                            }}
+                            className="text-[10px] font-mono text-[#0077B5] hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Copy className="h-3 w-3" />
+                            <span>Copiar Artigo</span>
+                          </button>
+                        </div>
+
+                        <textarea
+                          rows={11}
+                          value={editingLinkedInPostText}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditingLinkedInPostText(val);
+                            if (selectedFeedPost) {
+                              setSelectedFeedPost({
+                                ...selectedFeedPost,
+                                linkedinPostText: val,
+                              });
+                              updateScheduledPost(selectedFeedPost.id, {
+                                linkedinPostText: val,
+                              });
+                            }
+                          }}
+                          placeholder="Escreva ou edite o artigo executivo do LinkedIn com tese C-Level..."
+                          className="w-full rounded-xl border border-white/10 bg-black/50 p-3.5 text-xs text-white leading-relaxed font-sans focus:border-[#0077B5] focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                        <span>{editingLinkedInPostText.length} caracteres • Alinhado à Engenharia da Ausência</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedFeedPost) {
+                              updateScheduledPost(selectedFeedPost.id, {
+                                linkedinPostText: editingLinkedInPostText,
+                              });
+                              setCopiedFeedback("Artigo executivo salvo!");
+                              setTimeout(() => setCopiedFeedback(null), 3000);
+                            }
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-[#0077B5] text-white text-xs font-bold hover:bg-[#006097] transition-colors cursor-pointer shadow-md"
+                        >
+                          Salvar Artigo
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* ABA 3: AUDITORIA & VIRAL IA (DIRETOR DE GROWTH BLACK LINK) */}
                   {modalTab === "audit" && (
                     <div className="space-y-5 animate-in fade-in duration-200">
@@ -2482,16 +2740,7 @@ export function InstagramFeedGridView() {
                       </button>
                     )}
 
-                    <button
-                      type="button"
-                      disabled={isDownloading}
-                      onClick={() => handleDownloadMotionPoster(selectedFeedPost, activeSlideIdx)}
-                      className="w-full sm:flex-1 py-2.5 rounded-xl border border-purple-500/40 bg-purple-500/15 hover:bg-purple-500/25 px-3 text-xs font-bold text-purple-200 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
-                      title="Gerar e baixar vídeo de 5 segundos em loop brutalista para Reels/Stories/LinkedIn"
-                    >
-                      <Video className="h-3.5 w-3.5 text-purple-300" />
-                      <span>Motion (Vídeo 5s)</span>
-                    </button>
+
 
                     <button
                       type="button"
