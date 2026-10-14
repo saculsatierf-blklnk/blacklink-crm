@@ -1302,4 +1302,162 @@ PRODUTOS & SOLUÇÕES DIGITAIS DA BLACK LINK PARA CONVERSÃO:
 5. Captação Cinematográfica em Megaeventos corporativos
 `;
 
+/**
+ * ============================================================================
+ * REA FRAMEWORK // REVERSE ENGINEER ANYTHING — BENCHMARKS GLOBAIS DE DESIGN (GOATS)
+ * Engenharia reversa formal das maiores autoridades mundiais de direção de arte, branding e imagem:
+ * 1. Bureau Borsche (Brutalismo Europeu / Alta Moda)
+ * 2. Collins (Sistemas Vivos & Transformação Escultural)
+ * 3. Base Design (Rigor Suíço & Alto Luxo Silencioso)
+ * 4. Accept & Proceed (Telemetria, Ciência de Dados & Prismas Isométricos)
+ * 5. Pentagram (Síntese Monumental & Pureza Geométrica Clássica)
+ * 6. Vogue / High Fashion Editorial (Retratos Soberanos C-Level com Modelos Negros Retintos)
+ * ============================================================================
+ */
+
+export interface GoatReaDefinition {
+  id: string;
+  studioName: string;
+  benchmarks: string[];
+  coreDoctrine: string;
+  lightingSignature: string;
+  materialPalette: string[];
+  spatialRatio: string;
+  promptGenerator: (concept: string, context?: { headline?: string; bodyText?: string }) => string;
+}
+
+export const BLACKLINK_GOATS_REA_ENGINEERING: Record<string, GoatReaDefinition> = {
+  "bureau-borsche": {
+    id: "bureau-borsche",
+    studioName: "Bureau Borsche (Munique)",
+    benchmarks: ["Balenciaga", "Supreme", "Rimowa", "Highsnobiety", "Inter de Milão"],
+    coreDoctrine: "Brutalismo industrial e anti-decorativo. O poder não pede licença; impõe-se pela densidade física, tensão assimétrica e eliminação total de ornamentos inúteis.",
+    lightingSignature: "Luz direcional fria de passarela (5600K) e estúdio industrial berlinense, sombras duras calculadas e ambient occlusion profundo.",
+    materialPalette: ["Titânio escovado usinado", "Mármore negro Nero Marquina", "Obsidiana crua lapidada", "Cromo espelhado de alto índice de reflexão"],
+    spatialRatio: "35% massa escultural monumental / 65% vácuo puro em grafite profundo (#09090B)",
+    promptGenerator: (concept) =>
+      `Monumental brutalist architectural sculpture inspired by concept "${concept}", sharp beveled obsidian geometry intertwined with precision laser-cut brushed dark titanium plates, cold directional studio spotlighting, deep graphite noir atmospheric negative space, high-luxury European art direction in the style of Bureau Borsche, Octane 3D render, 8k, no text, no objects, no humans`,
+  },
+
+  "collins": {
+    id: "collins",
+    studioName: "COLLINS (Nova York / San Francisco)",
+    benchmarks: ["Spotify", "Robinhood", "Bose", "Sanofi", "Twitch"],
+    coreDoctrine: "Sistemas vivos e cinemática gravitacional. A tecnologia e a escala comercial como um organismo harmônico em perpétua evolução e ausência de atrito.",
+    lightingSignature: "Softbox monumental 360°, caustics ópticas suaves, luz difusa imaculada em ambiente de proporção áurea.",
+    materialPalette: ["Vidro de borossilicato óptico", "Fita contínua de mercúrio líquido", "Platina acetinada", "Porcelana limestone polida"],
+    spatialRatio: "40% escultura cinética em microgravidade / 60% espaço negativo de estúdio luminoso",
+    promptGenerator: (concept) =>
+      `Dynamic kinetic sculpture in suspended microgravity inspired by concept "${concept}", flowing continuous ribbon of liquid mercury chrome weaving through a frosted optical glass polyhedron, soft caustic caressing reflections, pure off-white porcelain studio floor with subtle diffused contact shadow, high-end European tech branding in the style of Collins, Octane 3D render, 8k, no text, no objects, no humans`,
+  },
+
+  "base-design": {
+    id: "base-design",
+    studioName: "Base Design (Genebra / Paris / Nova York)",
+    benchmarks: ["Dior", "Fondation Louis Vuitton", "Delvaux", "MoMA"],
+    coreDoctrine: "Minimalismo e precisão suíça para o alto luxo. O silêncio (espaço negativo) é o elemento mais caro da composição. Rigor aristocrático e sobriedade inquestionável.",
+    lightingSignature: "Iluminação zenital suave de galeria europeia, difusor de seda branca, reflexões tênues de joalheria sem estouro de brancos.",
+    materialPalette: ["Calcário francês liso", "Porcelana mate", "Ouro branco polido", "Vidro float translúcido"],
+    spatialRatio: "25% monólito de joalheria / 75% espaço negativo imaculado de porcelana (#F4F4F5)",
+    promptGenerator: (concept) =>
+      `Immaculate minimalist sculpture of high Swiss luxury inspired by concept "${concept}", pristine geometric slab of white limestone concrete meeting a precision-cut polished white-gold accent, soft diffuse ambient museum illumination from top-left, pure off-white porcelain studio backdrop, Swiss precision aesthetic in the style of Base Design, Octane 3D render, 8k, no text, no objects, no humans`,
+  },
+
+  "accept-and-proceed": {
+    id: "accept-and-proceed",
+    studioName: "Accept & Proceed (Londres)",
+    benchmarks: ["Nike", "NASA", "Rapha", "Endurance Tech"],
+    coreDoctrine: "Telemetria de dados, rigor científico e arquitetura isométrica. A inteligência comercial decodificada como física pura e visibilidade 360° sem pontos cegos.",
+    lightingSignature: "Luz técnica de laboratório óptico, feixes de refração limpos atravessando cristais e arestas acentuadas por luz de contorno fria.",
+    materialPalette: ["Cristal óptico refrativo", "Placas de safira escura", "Silício monocristalino", "Titânio anodizado negro"],
+    spatialRatio: "35% prisma óptico isométrico / 65% vazio técnico em preto absoluto",
+    promptGenerator: (concept) =>
+      `Isometric optical prism sculpture inspired by revenue telemetry and concept "${concept}", layered sheets of dark optical glass and laser-etched black titanium plates revealing pure prismatic caustics and internal geometric refractions, floating above pure deep noir floor, scientific luxury aesthetic in the style of Accept & Proceed, Octane 3D render, 8k, no text, no objects, no humans`,
+  },
+
+  "pentagram": {
+    id: "pentagram",
+    studioName: "Pentagram (Londres / Nova York)",
+    benchmarks: ["Rolls-Royce", "The New York Times", "MIT Media Lab", "Mastercard"],
+    coreDoctrine: "Síntese monumental e pureza geométrica clássica. Monólitos simétricos que comunicam estabilidade institucional perene contra qualquer volatilidade de mercado.",
+    lightingSignature: "Chiaroscuro cinematográfico dramático, feixe angular único de luz recortando o monólito contra a escuridão estelar.",
+    materialPalette: ["Mármore negro Nero Marquina", "Bronze titânio escovado", "Vidro estrutural denso"],
+    spatialRatio: "45% monólito institucional / 55% atmosfera noir teatral",
+    promptGenerator: (concept) =>
+      `Monumental institutional monolith inspired by concept "${concept}", massive perfectly balanced geometric block of Nero Marquina black marble with fine white calcite veining, seamless brushed titanium joint, dramatic single-source chiaroscuro studio lighting carving the edge, atmospheric negative space, timeless authority in the style of Pentagram, Octane 3D render, 8k, no text, no objects, no humans`,
+  },
+
+  "vogue-editorial": {
+    id: "vogue-editorial",
+    studioName: "Vogue Italia / High Fashion Editorial (Milão / Paris)",
+    benchmarks: ["Vogue Italia", "Dazed & Confused", "Yves Saint Laurent", "Arina TVA"],
+    coreDoctrine: "Representação humana de soberania executiva e poder intelectual. A liderança corporativa personificada com rigor estético de alta costura e autenticidade inquestionável.",
+    lightingSignature: "Cinematografia de estúdio 35mm, luz de contorno (rim light) escultural desenhando as maçãs do rosto e maxilar, sombras profundas e atmosfera moody.",
+    materialPalette: ["Alfaiataria contemporânea em lã fria", "Couro patente fosco", "Óculos metálicos de armação geométrica fina"],
+    spatialRatio: "Retrato em plano médio ou primeiro plano editorial / 60% fundo atmosférico de estúdio escuro ou vidro canelado",
+    promptGenerator: (concept) =>
+      `High-fashion editorial portrait of an elegant deep dark-skinned Black executive leader (pele negra retinta, rich dark melanin skin tone) inspired by concept "${concept}", sharp sculpted facial features, tailored contemporary collar coat, minimalist round titanium spectacles, dramatic studio rim light sculpting cheekbones, moody cinematic dark teal and noir studio backdrop, shot on 35mm film, Vogue Italia aesthetic, authentic Black representation, no text`,
+  },
+};
+
+/**
+ * Construtor Generativo REA da Black Link:
+ * Transforma uma copy/tema em um prompt de arte inédito sob o DNA dos GOATs,
+ * eliminando para sempre templates fixos de objetos como mouses e alfinetes.
+ */
+export function buildReaGoatPrompt(params: {
+  variant?: BlackLinkStyleVariant;
+  theme?: string;
+  headline?: string;
+  bodyText?: string;
+  customPrompt?: string;
+}): string {
+  if (params.customPrompt && params.customPrompt.trim().length > 15) {
+    return params.customPrompt.trim();
+  }
+
+  const v = params.variant || "swiss-box";
+  const concept = [
+    params.headline,
+    params.theme,
+    params.bodyText,
+  ]
+    .filter(Boolean)
+    .join(" — ") || "Soberania e Infraestrutura Black Link";
+
+  // Mapeamento semiótico de variantes para os sistemas GOAT via REA
+  switch (v) {
+    case "swiss-box":
+      return BLACKLINK_GOATS_REA_ENGINEERING["bureau-borsche"].promptGenerator(concept);
+
+    case "3d-keycap":
+      return BLACKLINK_GOATS_REA_ENGINEERING["accept-and-proceed"].promptGenerator(concept);
+
+    case "3d-crystal":
+      return BLACKLINK_GOATS_REA_ENGINEERING["base-design"].promptGenerator(concept);
+
+    case "pure-monumental":
+      return BLACKLINK_GOATS_REA_ENGINEERING["vogue-editorial"].promptGenerator(concept);
+
+    case "3d-cursor":
+      return BLACKLINK_GOATS_REA_ENGINEERING["collins"].promptGenerator(concept);
+
+    case "3d-liquid":
+      return `High-fashion editorial photography of an elegant deep dark-skinned Black female executive (pele negra retinta, rich dark melanin skin tone) inspired by concept "${concept}", stylish futuristic sunglasses and glossy black coat, viewed through vertical ribbed fluted frosted optical glass with subtle studio water caustics, dramatic rim lighting, moody black and white, luxury fashion campaign aesthetic, authentic Black representation, no text`;
+
+    case "3d-sculpture":
+      return BLACKLINK_GOATS_REA_ENGINEERING["pentagram"].promptGenerator(concept);
+
+    case "clean-ice":
+      return BLACKLINK_GOATS_REA_ENGINEERING["bureau-borsche"].promptGenerator(concept);
+
+    case "clean-ice-box":
+      return BLACKLINK_GOATS_REA_ENGINEERING["base-design"].promptGenerator(concept);
+
+    default:
+      return BLACKLINK_GOATS_REA_ENGINEERING["bureau-borsche"].promptGenerator(concept);
+  }
+}
+
+
 

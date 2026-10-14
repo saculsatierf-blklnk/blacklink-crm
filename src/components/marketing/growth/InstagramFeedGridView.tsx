@@ -328,6 +328,8 @@ export function InstagramFeedGridView() {
         body: JSON.stringify({
           variant,
           theme: editingHeadline || post.theme,
+          headline: editingHeadline || targetSlide?.headline,
+          bodyText: editingBodyText || targetSlide?.bodyText,
           currentImageUrl: safeCurrentImageUrl,
           postId: post.id,
         }),
@@ -434,6 +436,8 @@ export function InstagramFeedGridView() {
             body: JSON.stringify({
               variant,
               theme: post.theme || post.hookHeadline,
+              headline: slide?.headline || post.hookHeadline,
+              bodyText: slide?.bodyText || post.bodyCopy,
               postId: post.id,
             }),
             signal: controller.signal,

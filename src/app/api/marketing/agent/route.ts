@@ -270,9 +270,9 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
   "imageAction": {
     "shouldGenerate": <true se o usuário pediu para mudar/gerar/regerar a imagem deste post, senão false>,
     "postId": "<ID do post, ex: '${focusedPost?.id || "post-bl-01"}'>",
-    "variant": "<variante gráfica sugerida: '3d-cursor' | 'clean-ice' | 'clean-ice-box' | '3d-crystal' | 'pure-monumental' | '3d-liquid' | '3d-sculpture' | '3d-keycap' | 'swiss-box'>",
-    "prompt": "<prompt descritivo para o gerador de imagem, respeitando a regra de modelos negros retintos se houver pessoas>",
-    "explanation": "<explicação curta para o usuário>"
+    "variant": "<variante gráfica sugerida: 'swiss-box' | '3d-keycap' | '3d-crystal' | 'pure-monumental' | '3d-cursor' | '3d-liquid' | 'clean-ice-box' | '3d-sculpture' | 'clean-ice'>",
+    "prompt": "<prompt descritivo inédito sob a metodologia REA dos GOATs (Bureau Borsche, Collins, Base Design, Accept & Proceed, Pentagram, Vogue). NUNCA gere objetos literais ou repetitivos como mouses, alfinetes ou teclas! Gere metáforas esculturais com vidro óptico, titânio escuro, porcelana, mármore Nero Marquina e iluminação de luxo>",
+    "explanation": "<explicação curta para o usuário conectando o conceito da imagem à tese do post>"
   }
 }
 

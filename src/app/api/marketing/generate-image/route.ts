@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
+import { buildReaGoatPrompt } from "@/lib/marketing/blacklinkBrandBrain";
 
 // Dicionário Oficial de Direção de Arte da Black Link (Metáforas Físicas de Alto Luxo)
 const VARIANT_PROMPTS: Record<BlackLinkStyleVariant, string> = {
@@ -78,10 +79,17 @@ export async function POST(req: Request) {
     const theme: string | undefined = body.theme?.trim();
     const currentImageUrl: string | undefined = body.currentImageUrl;
     const postId: string | undefined = body.postId;
+    const headline: string | undefined = body.headline?.trim();
+    const bodyText: string | undefined = body.bodyText?.trim();
 
-    // 1. Monta o Prompt de Alto Luxo com Controle Inteligente de Figuras Humanas
-    const basePrompt = customPrompt || VARIANT_PROMPTS[variant] || VARIANT_PROMPTS["3d-cursor"];
-    const contextualAddon = theme ? `, inspired by theme "${theme}"` : "";
+    // 1. Constrói o Prompt de Alto Luxo com o Motor REA dos GOATs (Sem Templates Engessados)
+    const reaPrompt = buildReaGoatPrompt({
+      variant,
+      theme,
+      headline,
+      bodyText,
+      customPrompt,
+    });
 
     // Determina se este criativo deve conter figuras humanas:
     // Apenas se a variante for de retrato editorial ("pure-monumental" ou "3d-liquid")
@@ -91,7 +99,8 @@ export async function POST(req: Request) {
       /\b(pessoa|pessoas|modelo|modelos|homem|homens|mulher|mulheres|person|people|model|models|man|men|woman|women|portrait|human|face|rosto)\b/i;
     const mentionsHuman =
       (customPrompt && humanKeywordsRegex.test(customPrompt)) ||
-      (theme && humanKeywordsRegex.test(theme));
+      (theme && humanKeywordsRegex.test(theme)) ||
+      (headline && humanKeywordsRegex.test(headline));
 
     const shouldIncludeHuman = isHumanVariant || Boolean(mentionsHuman);
 
@@ -107,7 +116,7 @@ export async function POST(req: Request) {
         "STRICT NO-HUMANS CONSTRAINT: Absolutely NO human models, no people, no portraits, no faces, no hands, no human figures. Strictly focus purely on inanimate luxury 3D objects, polished metals, optical glass, materials, studio lighting, and negative space.";
     }
 
-    const finalPrompt = `${basePrompt}${contextualAddon}. ${specificDirective}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
+    const finalPrompt = `${reaPrompt}. ${specificDirective}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
 
     const apiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
 
