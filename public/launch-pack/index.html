@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black Link — Kit Oficial de Lançamento Global (9 Lâminas)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #09090B;
+      color: #FFFFFF;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      padding: 40px 24px;
+      line-height: 1.5;
+    }
+    .container { max-width: 1440px; margin: 0 auto; }
+    header {
+      margin-bottom: 48px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 32px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+    }
+    .brand-title {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #FBBF24;
+      font-family: "Space Grotesk", monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-top: 10px;
+    }
+    .instructions {
+      color: #A1A1AA;
+      font-size: 1rem;
+      max-width: 780px;
+      margin-top: 12px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .grid-3x3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 36px;
+    }
+    @media (max-width: 640px) {
+      .grid-3x3 { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #111114;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+      border-color: rgba(255,255,255,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+    }
+    .preview-box {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #000;
+      position: relative;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .preview-badge {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(8px);
+      color: #FFF;
+      font-family: "Space Grotesk", monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+    }
+    .meta-box {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+    .post-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding-bottom: 12px;
+      gap: 8px;
+    }
+    .post-num {
+      font-family: "Space Grotesk", monospace;
+      font-size: 0.95rem;
+      color: #FBBF24;
+      font-weight: 800;
+    }
+    .post-pos {
+      font-size: 0.75rem;
+      color: #71717A;
+      font-family: "Space Grotesk", monospace;
+    }
+    .goat-tag {
+      font-family: "Space Grotesk", monospace;
+      font-size: 0.68rem;
+      color: #A1A1AA;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-align: right;
+    }
+    .post-title {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      color: #FFFFFF;
+    }
+    .post-body {
+      color: #D4D4D8;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .copy-block {
+      background: #09090B;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .copy-label {
+      font-family: "Space Grotesk", monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #A1A1AA;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .copy-content {
+      font-size: 0.82rem;
+      color: #E4E4E7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 120px;
+      overflow-y: auto;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      background: rgba(255,255,255,0.02);
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .actions-row {
+      margin-top: auto;
+      display: flex;
+      gap: 10px;
+      padding-top: 8px;
+    }
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #FFFFFF;
+      color: #09090B;
+      flex: 1;
+    }
+    .btn-primary:hover { background: #E4E4E7; transform: translateY(-1px); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.08);
+      color: #FFFFFF;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    .btn-accent {
+      background: #FBBF24;
+      color: #000;
+    }
+    .btn-accent:hover { background: #F59E0B; }
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      background: rgba(255,255,255,0.12);
+      color: #FFFFFF;
+    }
+    .btn-sm:hover { background: rgba(255,255,255,0.22); }
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #10B981;
+      color: #000000;
+      font-weight: 800;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      z-index: 9999;
+      letter-spacing: -0.01em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1 class="brand-title">Black Link — Lançamento Global</h1>
+        <div class="badge">9 LÂMINAS DE ALTA DEFINIÇÃO (1080x1080) & COPIES MONUMENTAIS</div>
+        <p class="instructions">
+          Acervo oficial de lançamento da Black Link (<strong>blklnk.com</strong>).
+          Zero inteligência generativa imprevisível. Zero tempo de espera. Cada imagem está renderizada em 1080x1080 nativo pronta para postar no Instagram e LinkedIn com 1 clique de cópia de texto.
+        </p>
+      </div>
+      <div class="header-actions">
+        <a href="COPIES-E-LEGENDAS.txt" download="BLACKLINK-COPIES-E-LEGENDAS.txt" class="btn btn-secondary">
+          📄 Baixar Todas as Copys (.txt)
+        </a>
+        <a href="blacklink-launch-pack-9posts.zip" download="blacklink-launch-pack-9posts.zip" class="btn btn-accent">
+          📦 Baixar Pacote Completo (.ZIP)
+        </a>
+      </div>
+    </header>
+
+    <div class="grid-3x3">
+      
+      <div class="card" id="card-01">
+        <div class="preview-box">
+          <img src="post-01.png" alt="ENGENHARIA DA AUSÊNCIA" loading="lazy" />
+          <span class="preview-badge">01 // SOBERANIA</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #01</span>
+              <span class="post-pos">• Grade: Superior Esquerda</span>
+            </div>
+            <span class="goat-tag">Bureau Borsche // Brutalismo Noir</span>
+          </div>
+
+          <h3 class="post-title">ENGENHARIA DA AUSÊNCIA</h3>
+          <p class="post-body">Criamos a infraestrutura que sua autoridade merece. Assuma o comando sem ruídos.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-01')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-01">A maioria das operações morre no atrito invisível da própria equipe.
+
+Na Black Link, construímos sistemas comerciais e inteligência sob medida para que os fundadores liderem sem operar o operacional.
+
+Descubra a Engenharia da Ausência em blklnk.com
+
+#BlackLink #EngenhariaDaAusencia #VendasB2B #HighTicket #Soberania</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-01')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-01">Existe uma diferença brutal entre ter uma empresa e ser prisioneiro da própria operação.
+
+A verdadeira soberania corporativa começa quando a esteira de vendas, os processos e a telemetria funcionam com precisão matemática, sem depender da presença diária do CEO.
+
+Na Black Link (blklnk.com), desenvolvemos a Engenharia da Ausência para holdings e líderes de alto valor.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-01.png" download="blacklink-post-01.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-01.svg" download="blacklink-post-01.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-02">
+        <div class="preview-box">
+          <img src="post-02.png" alt="TELEMETRIA DE RECEITA" loading="lazy" />
+          <span class="preview-badge">02 // VELOCIDADE</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #02</span>
+              <span class="post-pos">• Grade: Superior Centro</span>
+            </div>
+            <span class="goat-tag">COLLINS // Arquitetura Cinética</span>
+          </div>
+
+          <h3 class="post-title">TELEMETRIA DE RECEITA</h3>
+          <p class="post-body">Dados frios do pipeline em tempo real para decisões sem achismos.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-02')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-02">Planilhas manuais não escalam holdings de 8 dígitos.
+
+O Black Link CRM OS centraliza cada interação, pontua o momento exato de fechamento e automatiza o follow-up executivo.
+
+Saiba mais em blklnk.com
+
+#TelemetriaDeReceita #BlackLink #CRMOS #EnterpriseB2B</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-02')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-02">Como você sabe com 100% de certeza quais negócios vão fechar esta semana?
+
+Se sua resposta envolve perguntar para a equipe de vendas ou abrir uma planilha desatualizada, sua operação está no escuro.
+
+Telemetria de receita em tempo real é o padrão da Black Link (blklnk.com).</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-02.png" download="blacklink-post-02.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-02.svg" download="blacklink-post-02.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-03">
+        <div class="preview-box">
+          <img src="post-03.png" alt="AUTOMAÇÃO INTELIGENTE" loading="lazy" />
+          <span class="preview-badge">03 // EFICIÊNCIA</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #03</span>
+              <span class="post-pos">• Grade: Superior Direita</span>
+            </div>
+            <span class="goat-tag">Base Design // Swiss Porcelain Luxury</span>
+          </div>
+
+          <h3 class="post-title">AUTOMAÇÃO INTELIGENTE</h3>
+          <p class="post-body">Agentes autônomos que qualificam e avançam leads 24 horas por dia.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-03')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-03">Trabalho braçal e atraso no primeiro contato custam contratos milionários.
+
+Implementamos pipelines automatizados com IA que conduzem o tomador de decisão da dúvida ao agendamento direto com o sócio.
+
+Explore em blklnk.com
+
+#AutomacaoInteligente #BlackLink #IAOperacional #HighTicket</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-03')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-03">Tempo de resposta é o maior preditor de conversão em vendas consultivas B2B.
+
+Enquanto concorrentes levam horas para responder, a infraestrutura da Black Link engaja, analisa o perfil do lead e agenda reuniões em minutos.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-03.png" download="blacklink-post-03.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-03.svg" download="blacklink-post-03.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-04">
+        <div class="preview-box">
+          <img src="post-04.png" alt="BRANDING SOBERANO" loading="lazy" />
+          <span class="preview-badge">04 // AUTORIDADE</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #04</span>
+              <span class="post-pos">• Grade: Meio Esquerda</span>
+            </div>
+            <span class="goat-tag">Vogue Italia // Editorial C-Level Alta Moda</span>
+          </div>
+
+          <h3 class="post-title">BRANDING SOBERANO</h3>
+          <p class="post-body">Alta moda e rigor suíço para empresas que cobram alto valor.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-04')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-04">Empresas comuns brigam por preço. Marcas soberanas ditam as regras do mercado.
+
+A estética minimalista e monumental da Black Link posiciona sua holding como referência inquestionável no primeiro contato.
+
+Conheça nosso ecossistema em blklnk.com
+
+#BrandingSoberano #AltaModa #BlackLink #LuxoSuico</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-04')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-04">Design não é apenas cosmética. É a primeira linha de defesa da sua precificação.
+
+Quando seu posicionamento visual respira autoridade internacional, você nunca mais precisa justificar seu ticket em reuniões de negócios.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-04.png" download="blacklink-post-04.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-04.svg" download="blacklink-post-04.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-05">
+        <div class="preview-box">
+          <img src="post-05.png" alt="CONTROLE ABSOLUTO" loading="lazy" />
+          <span class="preview-badge">05 // COMANDO</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #05</span>
+              <span class="post-pos">• Grade: Centro Absoluto</span>
+            </div>
+            <span class="goat-tag">COLLINS & Borsche // Centro de Comando</span>
+          </div>
+
+          <h3 class="post-title">CONTROLE ABSOLUTO</h3>
+          <p class="post-body">Visão 360° de cada oportunidade comercial em uma interface pura.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-05')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-05">O centro de comando da sua expansão comercial.
+
+Sem interfaces poluídas de softwares legados dos anos 2000. O Black Link CRM OS foi esculpido para decisões de segundos.
+
+Conheça em blklnk.com
+
+#ControleAbsoluto #BlackLinkOS #Enterprise #VendasB2B</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-05')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-05">Quantas abas abertas seu time comercial precisa para registrar uma ligação?
+
+Complexidade é o inimigo número 1 da produtividade. Criamos um sistema operacional comercial que une minimalismo visual e máxima tração de negócios.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-05.png" download="blacklink-post-05.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-05.svg" download="blacklink-post-05.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-06">
+        <div class="preview-box">
+          <img src="post-06.png" alt="DISRUPÇÃO OPERACIONAL" loading="lazy" />
+          <span class="preview-badge">06 // DISRUPÇÃO</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #06</span>
+              <span class="post-pos">• Grade: Meio Direita</span>
+            </div>
+            <span class="goat-tag">Vogue Italia // Editorial Escultural Futurista</span>
+          </div>
+
+          <h3 class="post-title">DISRUPÇÃO OPERACIONAL</h3>
+          <p class="post-body">Substitua atritos e processos manuais por inteligência aplicada.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-06')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-06">O mercado mudou. Vendas consultivas modernas exigem inteligência preditiva e esteira de automações conectadas.
+
+Conheça a arquitetura proprietária da Black Link em blklnk.com
+
+#DisrupcaoOperacional #BlackLink #InteligenciaArtificial</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-06')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-06">Se sua empresa ainda depende de rotinas repetitivas que poderiam ser automatizadas, sua margem está sendo consumida por ineficiência.
+
+Engenharia de automações é investimento em escala pura.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-06.png" download="blacklink-post-06.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-06.svg" download="blacklink-post-06.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-07">
+        <div class="preview-box">
+          <img src="post-07.png" alt="BLINDAGEM COMERCIAL" loading="lazy" />
+          <span class="preview-badge">07 // BLINDAGEM</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #07</span>
+              <span class="post-pos">• Grade: Inferior Esquerda</span>
+            </div>
+            <span class="goat-tag">Pentagram // Macro Arquitetura Óptica de Vidro</span>
+          </div>
+
+          <h3 class="post-title">BLINDAGEM COMERCIAL</h3>
+          <p class="post-body">Zero vazamento de oportunidades no pipeline de alta demanda.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-07')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-07">Cada lead não respondido é capital deixado na mesa.
+
+A esteira da Black Link monitora o tempo de resposta e reativa conversas adormecidas sem intervenção manual.
+
+Conheça o CRM OS em blklnk.com
+
+#BlindagemComercial #BlackLink #EnterpriseB2B</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-07')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-07">Vazamento de pipeline é o custo silencioso mais caro de qualquer organização comercial.
+
+Blindamos sua esteira de aquisição com gatilhos automáticos de retenção e telemetria de negócios.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-07.png" download="blacklink-post-07.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-07.svg" download="blacklink-post-07.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-08">
+        <div class="preview-box">
+          <img src="post-08.png" alt="PROTOCOLO DE EXPANSÃO" loading="lazy" />
+          <span class="preview-badge">08 // ESCALA</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #08</span>
+              <span class="post-pos">• Grade: Inferior Centro</span>
+            </div>
+            <span class="goat-tag">Accept & Proceed // Monólito de Dados Obsidiana</span>
+          </div>
+
+          <h3 class="post-title">PROTOCOLO DE EXPANSÃO</h3>
+          <p class="post-body">O método validado de tração para empresas e holdings B2B.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-08')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-08">Não acreditamos em fórmulas mágicas de internet. Acreditamos em engenharia de processos, esteira técnica e autoridade executiva.
+
+Explore em blklnk.com/protocolo
+
+#ProtocoloDeExpansao #BlackLink #EngenhariaDeVendas</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-08')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-08">Crescimento sustentável não nasce do improviso. Nasce de um protocolo comercial rigoroso e repetível.
+
+É exatamente essa engenharia que entregamos na Black Link.</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-08.png" download="blacklink-post-08.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-08.svg" download="blacklink-post-08.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="card" id="card-09">
+        <div class="preview-box">
+          <img src="post-09.png" alt="SOBERANIA DIGITAL" loading="lazy" />
+          <span class="preview-badge">09 // LIDERANÇA</span>
+        </div>
+        <div class="meta-box">
+          <div class="post-header">
+            <div>
+              <span class="post-num">POST #09</span>
+              <span class="post-pos">• Grade: Inferior Direita</span>
+            </div>
+            <span class="goat-tag">Pentagram // Metal Líquido Institucional</span>
+          </div>
+
+          <h3 class="post-title">SOBERANIA DIGITAL</h3>
+          <p class="post-body">A infraestrutura definitiva para liderar seu segmento com elegância.</p>
+
+          <!-- Legenda Instagram -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>📸 Legenda Instagram</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'caption-09')">Copiar Legenda</button>
+            </div>
+            <pre class="copy-content" id="caption-09">A Black Link foi concebida para liderar o futuro da inteligência de negócios.
+
+Assuma o comando da sua presença e do seu faturamento com quem entende de tecnologia de ponta.
+
+→ Inicie seu projeto ou simule sua arquitetura em blklnk.com
+
+#SoberaniaDigital #BlackLink #HighTicket #LiderancaB2B</pre>
+          </div>
+
+          <!-- Artigo LinkedIn -->
+          <div class="copy-block">
+            <div class="copy-label">
+              <span>💼 Artigo / Post LinkedIn</span>
+              <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-09')">Copiar LinkedIn</button>
+            </div>
+            <pre class="copy-content" id="linkedin-09">Liderança de mercado não se pede. Conquista-se através de autoridade visual implacável e sistemas de entrega perfeitos.
+
+Bem-vindo à Black Link (blklnk.com).</pre>
+          </div>
+
+          <div class="actions-row">
+            <a href="post-09.png" download="blacklink-post-09.png" class="btn btn-primary">
+              ↓ Baixar Imagem PNG (1080x1080)
+            </a>
+            <a href="post-09.svg" download="blacklink-post-09.svg" class="btn btn-secondary">
+              SVG
+            </a>
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  </div>
+
+  <div id="toast" class="toast">✓ Texto copiado para a área de transferência!</div>
+
+  <script>
+    function copyCardText(btn, elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const text = el.innerText || el.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = "✓ Copiado!";
+        btn.style.background = "#10B981";
+        btn.style.color = "#000";
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.background = "";
+          btn.style.color = "";
+        }, 1800);
+
+        const toast = document.getElementById("toast");
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 2500);
+      });
+    }
+  </script>
+</body>
+</html>

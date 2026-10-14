@@ -631,10 +631,10 @@ const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
         copyPosition: "top-right",
         hasScrimBackdrop: false,
         contrastMode: "dark",
-        imageUrl: "/brand/blacklink-art-cursor-light.jpg",
+        imageUrl: "/brand/blacklink-art-fluid-metal.jpg",
       },
     ],
-    imageUrls: ["/brand/blacklink-art-cursor-light.jpg"],
+    imageUrls: ["/brand/blacklink-art-fluid-metal.jpg"],
     linkedinPostText:
       "Liderança de mercado não se pede. Conquista-se através de autoridade visual implacável e sistemas de entrega perfeitos.\n\nBem-vindo à Black Link.",
     createdAt: new Date().toISOString(),

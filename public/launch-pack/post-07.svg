@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .headline {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: -1px;
+      }
+      .body-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+        font-weight: 500;
+      }
+      .tag-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+        font-weight: 700;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+    </style>
+    <linearGradient id="scrim-7" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="45%" stop-color="#000000" stop-opacity="0.15" />
+      <stop offset="70%" stop-color="#000000" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.94" />
+    </linearGradient>
+  </defs>
+
+  <!-- Imagem de Fundo de Alta Resolução -->
+  <image href="/brand/blacklink-art-macro-glass.jpg" width="1080" height="1080" preserveAspectRatio="xMidYMid slice" />
+
+  <!-- Vinheta Cinematográfica Escura -->
+  <rect width="1080" height="1080" fill="url(#scrim-7)" />
+
+  <!-- Moldura Suíça de Precisão -->
+  <rect x="36" y="36" width="1008" height="1008" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" rx="20" fill="none" />
+
+  <!-- Mira de Precisão Suíça (Crosshairs) -->
+  <line x1="36" y1="56" x2="56" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+  <line x1="56" y1="36" x2="56" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+  <line x1="1024" y1="56" x2="1044" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+  <line x1="1024" y1="36" x2="1024" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+
+  <!-- Tag Superior Esquerda -->
+  <text x="72" y="96" class="tag-text" font-size="15" fill="rgba(255,255,255,0.85)">07 // BLINDAGEM</text>
+
+  <!-- Assinatura Superior Direita -->
+  <text x="1008" y="96" text-anchor="end" class="tag-text" font-size="13" fill="rgba(255,255,255,0.75)">BLACK LINK // blklnk.com</text>
+
+  <!-- Bloco Monumental Inferior -->
+  <text x="72" y="830" class="headline" font-size="58" fill="#FFFFFF">BLINDAGEM COMERCIAL</text>
+  <text x="72" y="885" class="body-text" font-size="22" fill="#E4E4E7">Zero vazamento de oportunidades no pipeline de alta demanda.</text>
+
+  <!-- Linha Divisória de Telemetria -->
+  <line x1="72" y1="970" x2="1008" y2="970" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+
+  <!-- Rodapé Técnico de Curadoria -->
+  <text x="72" y="1010" class="tag-text" font-size="12" fill="rgba(255,255,255,0.55)">POST #07 • REA GOAT: PENTAGRAM // MACRO ARQUITETURA ÓPTICA DE VIDRO • blklnk.com</text>
+  <text x="1008" y="1010" text-anchor="end" class="tag-text" font-size="12" fill="rgba(255,255,255,0.55)">1080 x 1080 HIGH RES</text>
+</svg>
