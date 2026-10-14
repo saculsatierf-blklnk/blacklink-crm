@@ -2,9 +2,6 @@
   command = "npm run build"
   publish = ".next"
 
-[functions]
-  timeout = 26
-
 [build.environment]
   NODE_VERSION = "20"
   DATABASE_URL = "postgresql://postgres.vtblcaqihlknddadycpr:82283703Lu!@aws-0-us-west-2.pooler.supabase.com:6543/postgres"

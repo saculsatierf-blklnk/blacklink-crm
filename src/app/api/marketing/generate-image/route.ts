@@ -116,9 +116,9 @@ export async function POST(req: Request) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
 
-        // Timeout resiliente de 12 segundos para ambientes serverless
+        // Timeout resiliente de 8 segundos para responder com folga dentro do limite de 10s do Netlify
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         const response = await fetch(url, {
           method: "POST",
