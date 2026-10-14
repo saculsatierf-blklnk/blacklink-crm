@@ -131,6 +131,7 @@ export function BlackLinkGlassLayout({
   const bgImageSrc = (() => {
     if (
       slide.imageUrl &&
+      !slide.imageUrl.startsWith("data:image") &&
       !slide.imageUrl.includes("render-slide") &&
       !slide.imageUrl.includes("pollinations.ai")
     ) {
@@ -138,6 +139,7 @@ export function BlackLinkGlassLayout({
     }
     if (
       config.bgImage &&
+      !config.bgImage.startsWith("data:image") &&
       !config.bgImage.includes("render-slide") &&
       !config.bgImage.includes("pollinations.ai")
     ) {

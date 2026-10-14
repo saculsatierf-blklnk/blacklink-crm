@@ -903,20 +903,28 @@ export function InstagramFeedGridView() {
   const postForCanva = useMemo(() => {
     if (!selectedFeedPost) return null;
     const slides = (selectedFeedPost.slides || []).map((s, idx) => {
+      const cleanImg = s.imageUrl && !s.imageUrl.startsWith("data:image") ? s.imageUrl : undefined;
       if (idx === activeSlideIdx) {
         return {
           ...s,
+          imageUrl: cleanImg,
           headline: editingHeadline || s.headline,
           bodyText: editingBodyText !== undefined ? editingBodyText : s.bodyText,
           tag: editingTag || s.tag,
           blackLinkVariant: editingVariant || s.blackLinkVariant,
         };
       }
-      return s;
+      return {
+        ...s,
+        imageUrl: cleanImg,
+      };
     });
     return {
       ...selectedFeedPost,
       slides,
+      imageUrls: (selectedFeedPost.imageUrls || []).filter(
+        (url) => url && !url.startsWith("data:image")
+      ),
     };
   }, [selectedFeedPost, activeSlideIdx, editingHeadline, editingBodyText, editingTag, editingVariant]);
 
@@ -1344,10 +1352,13 @@ export function InstagramFeedGridView() {
                 bodyText: firstSlide?.bodyText || post.hookHeadline,
                 tag: firstSlide?.tag || `0${postIdx + 1} // DIRETRIZ`,
                 blackLinkVariant: variant,
+                copyPosition: firstSlide?.copyPosition,
+                contrastMode: firstSlide?.contrastMode,
+                hasScrimBackdrop: firstSlide?.hasScrimBackdrop,
                 imageUrl:
-                  (firstSlide?.imageUrl && !firstSlide.imageUrl.includes("render-slide"))
+                  (firstSlide?.imageUrl && !firstSlide.imageUrl.startsWith("data:image") && !firstSlide.imageUrl.includes("render-slide"))
                     ? firstSlide.imageUrl
-                    : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                    : (post.imageUrls?.[0] && !post.imageUrls[0].startsWith("data:image") && !post.imageUrls[0].includes("render-slide"))
                     ? post.imageUrls[0]
                     : undefined,
               };
@@ -1551,10 +1562,13 @@ export function InstagramFeedGridView() {
                         rawVisorSlide?.blackLinkVariant ||
                         visorActivePost.slides[0]?.blackLinkVariant ||
                         "3d-sculpture",
+                      copyPosition: rawVisorSlide?.copyPosition,
+                      contrastMode: rawVisorSlide?.contrastMode,
+                      hasScrimBackdrop: rawVisorSlide?.hasScrimBackdrop,
                       imageUrl:
-                        (rawVisorSlide?.imageUrl && !rawVisorSlide.imageUrl.includes("render-slide"))
+                        (rawVisorSlide?.imageUrl && !rawVisorSlide.imageUrl.startsWith("data:image") && !rawVisorSlide.imageUrl.includes("render-slide"))
                           ? rawVisorSlide.imageUrl
-                          : (visorActivePost.imageUrls?.[0] && !visorActivePost.imageUrls[0].includes("render-slide"))
+                          : (visorActivePost.imageUrls?.[0] && !visorActivePost.imageUrls[0].startsWith("data:image") && !visorActivePost.imageUrls[0].includes("render-slide"))
                           ? visorActivePost.imageUrls[0]
                           : undefined,
                     };
@@ -1907,10 +1921,13 @@ export function InstagramFeedGridView() {
                       bodyText: currentSlide?.bodyText || post.hookHeadline,
                       tag: currentSlide?.tag || "01 // DIRETRIZ",
                       blackLinkVariant: currentSlide?.blackLinkVariant || "3d-sculpture",
+                      copyPosition: currentSlide?.copyPosition,
+                      contrastMode: currentSlide?.contrastMode,
+                      hasScrimBackdrop: currentSlide?.hasScrimBackdrop,
                       imageUrl:
-                        (currentSlide?.imageUrl && !currentSlide.imageUrl.includes("render-slide"))
+                        (currentSlide?.imageUrl && !currentSlide.imageUrl.startsWith("data:image") && !currentSlide.imageUrl.includes("render-slide"))
                           ? currentSlide.imageUrl
-                          : (post.imageUrls?.[0] && !post.imageUrls[0].includes("render-slide"))
+                          : (post.imageUrls?.[0] && !post.imageUrls[0].startsWith("data:image") && !post.imageUrls[0].includes("render-slide"))
                           ? post.imageUrls[0]
                           : undefined,
                     };
@@ -2099,8 +2116,12 @@ export function InstagramFeedGridView() {
                         bodyText: editingBodyText,
                         tag: editingTag,
                         blackLinkVariant: editingVariant,
+                        copyPosition: selectedFeedPost.slides[activeSlideIdx]?.copyPosition,
+                        contrastMode: selectedFeedPost.slides[activeSlideIdx]?.contrastMode,
+                        hasScrimBackdrop: selectedFeedPost.slides[activeSlideIdx]?.hasScrimBackdrop,
                         imageUrl:
                           selectedFeedPost.slides[activeSlideIdx]?.imageUrl &&
+                          !selectedFeedPost.slides[activeSlideIdx]?.imageUrl?.startsWith("data:image") &&
                           !selectedFeedPost.slides[activeSlideIdx]?.imageUrl?.includes("render-slide")
                             ? selectedFeedPost.slides[activeSlideIdx]?.imageUrl
                             : undefined,
@@ -3007,13 +3028,24 @@ export function InstagramFeedGridView() {
               headline: "",
               bodyText: "",
             };
+            const cleanImageUrl =
+              currentSlide.imageUrl && !currentSlide.imageUrl.startsWith("data:image")
+                ? currentSlide.imageUrl
+                : undefined;
+
             updatedSlides[activeSlideIdx] = {
               ...currentSlide,
-              imageUrl: renderedUrl,
+              ...(cleanImageUrl ? { imageUrl: cleanImageUrl } : {}),
               ...(updatedSlide || {}),
             };
-            const updatedImageUrls = [...selectedFeedPost.imageUrls];
-            updatedImageUrls[activeSlideIdx] = renderedUrl;
+
+            if (updatedSlides[activeSlideIdx].imageUrl?.startsWith("data:image")) {
+              delete updatedSlides[activeSlideIdx].imageUrl;
+            }
+
+            const updatedImageUrls = selectedFeedPost.imageUrls.filter(
+              (url) => url && !url.startsWith("data:image")
+            );
 
             if (updatedSlide?.headline) setEditingHeadline(updatedSlide.headline);
             if (updatedSlide?.bodyText) setEditingBodyText(updatedSlide.bodyText);

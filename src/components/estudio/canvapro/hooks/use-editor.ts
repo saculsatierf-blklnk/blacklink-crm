@@ -546,8 +546,16 @@ const buildEditor = ({
       canvas.renderAll();
       save();
     },
-    changeFontFamily: (value: string) => {
+    changeFontFamily: async (value: string) => {
       setFontFamily(value);
+      if (typeof document !== "undefined" && document.fonts) {
+        try {
+          await document.fonts.load(`700 32px "${value}"`);
+          await document.fonts.ready;
+        } catch (e) {
+          // ignore
+        }
+      }
       canvas.getActiveObjects().forEach((object) => {
         if (isTextType(object.type)) {
           // @ts-ignore
@@ -705,7 +713,10 @@ const buildEditor = ({
 
       // 3. Carrega Imagem de Fundo cobrindo perfeitamente o workspace
       const imageSrc =
-        data.imageUrl && !data.imageUrl.includes("render-slide") && !data.imageUrl.includes("pollinations.ai")
+        data.imageUrl &&
+        !data.imageUrl.startsWith("data:image") &&
+        !data.imageUrl.includes("render-slide") &&
+        !data.imageUrl.includes("pollinations.ai")
           ? data.imageUrl
           : resolveFallbackImage(variant);
 
@@ -737,13 +748,27 @@ const buildEditor = ({
         });
       }
 
+      // Pré-carrega fontes autênticas com document.fonts.load para evitar fallback para Arial
+      if (typeof document !== "undefined" && document.fonts) {
+        try {
+          await Promise.all([
+            document.fonts.load("700 46px 'Clash Display'"),
+            document.fonts.load("700 12px 'JetBrains Mono'"),
+            document.fonts.load("500 15px 'Inter'"),
+          ]);
+          await document.fonts.ready;
+        } catch (err) {
+          console.warn("Fonts preload in Canva Pro:", err);
+        }
+      }
+
       // 4. Header Editorial Suíço (DESIGN.BLACKLINK // 2026)
       const headerBrand = new fabric.Text("DESIGN.BLACKLINK", {
         left: wsLeft + 60,
         top: wsTop + 48,
         fontSize: 12,
-        fontFamily: "'JetBrains Mono', monospace",
-        fontWeight: "700",
+        fontFamily: "JetBrains Mono",
+        fontWeight: 700,
         charSpacing: 280,
         fill: isLight ? "#09090B" : "#FFFFFF",
         opacity: 0.85,
@@ -757,8 +782,8 @@ const buildEditor = ({
         top: wsTop + 48,
         originX: "right",
         fontSize: 12,
-        fontFamily: "'JetBrains Mono', monospace",
-        fontWeight: "700",
+        fontFamily: "JetBrains Mono",
+        fontWeight: 700,
         charSpacing: 250,
         fill: isLight ? "#09090B" : "#FFFFFF",
         opacity: 0.85,
@@ -829,8 +854,8 @@ const buildEditor = ({
           originX: originX,
           textAlign: textAlign,
           fontSize: 11,
-          fontFamily: "'JetBrains Mono', monospace",
-          fontWeight: "700",
+          fontFamily: "JetBrains Mono",
+          fontWeight: 700,
           charSpacing: 250,
           fill: isLight ? "#09090B" : "#FFFFFF",
           backgroundColor: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
@@ -851,8 +876,8 @@ const buildEditor = ({
         textAlign: textAlign,
         width: 620,
         fontSize: headlineFontSize,
-        fontFamily: "'Clash Display', sans-serif",
-        fontWeight: "800",
+        fontFamily: "Clash Display",
+        fontWeight: 700,
         lineHeight: 1.08,
         charSpacing: -20,
         fill: isLight ? "#09090B" : "#FFFFFF",
@@ -876,8 +901,8 @@ const buildEditor = ({
           textAlign: textAlign,
           width: 500,
           fontSize: 15,
-          fontFamily: "Inter, sans-serif",
-          fontWeight: "500",
+          fontFamily: "Inter",
+          fontWeight: 500,
           lineHeight: 1.45,
           fill: isLight ? "#27272A" : "#E4E4E7",
           shadow: new fabric.Shadow({

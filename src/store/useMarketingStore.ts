@@ -1982,8 +1982,24 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v12",
-      version: 12,
+      name: "blacklink-marketing-storage-v13",
+      version: 13,
+      migrate: (persistedState: any, version: number) => {
+        if (persistedState?.scheduledPosts) {
+          persistedState.scheduledPosts = persistedState.scheduledPosts.map((post: any) => ({
+            ...post,
+            imageUrls: (post.imageUrls || []).filter((u: string) => !u?.startsWith("data:image")),
+            slides: (post.slides || []).map((slide: any) => {
+              if (slide?.imageUrl?.startsWith("data:image")) {
+                const { imageUrl, ...rest } = slide;
+                return rest;
+              }
+              return slide;
+            }),
+          }));
+        }
+        return persistedState;
+      },
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

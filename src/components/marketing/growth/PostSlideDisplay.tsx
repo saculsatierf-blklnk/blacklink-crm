@@ -17,6 +17,9 @@ interface PostSlideDisplayProps {
     imageUrl?: string;
     blackLinkVariant?: BlackLinkStyleVariant;
     seamlessBleed?: boolean;
+    copyPosition?: import("@/components/estudio/layouts/layoutTypes").CopyPosition;
+    contrastMode?: "auto" | "light" | "dark";
+    hasScrimBackdrop?: boolean;
   };
   aspectRatio?: AspectRatio;
   authorName?: string;
@@ -100,6 +103,9 @@ export function PostSlideDisplay({
     blackLinkVariant: variant,
     imageUrl: slide?.imageUrl,
     seamlessBleed: isSeamlessBleed,
+    copyPosition: slide?.copyPosition,
+    contrastMode: slide?.contrastMode,
+    hasScrimBackdrop: slide?.hasScrimBackdrop,
   };
 
   const dummyLayoutProps = {

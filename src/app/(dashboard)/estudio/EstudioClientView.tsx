@@ -181,14 +181,29 @@ export function EstudioClientView() {
               onSaveToFeed={(renderedUrl, updatedSlide) => {
                 if (scheduledPosts[0]) {
                   const updatedSlides = [...scheduledPosts[0].slides];
+                  const currentSlide = updatedSlides[0] || {
+                    slideNumber: 1,
+                    headline: "",
+                    bodyText: "",
+                  };
+                  const cleanImageUrl =
+                    currentSlide.imageUrl && !currentSlide.imageUrl.startsWith("data:image")
+                      ? currentSlide.imageUrl
+                      : undefined;
                   updatedSlides[0] = {
-                    ...updatedSlides[0],
-                    imageUrl: renderedUrl,
+                    ...currentSlide,
+                    ...(cleanImageUrl ? { imageUrl: cleanImageUrl } : {}),
                     ...(updatedSlide || {}),
                   };
+                  if (updatedSlides[0].imageUrl?.startsWith("data:image")) {
+                    delete updatedSlides[0].imageUrl;
+                  }
+                  const cleanImageUrls = scheduledPosts[0].imageUrls.filter(
+                    (url) => url && !url.startsWith("data:image")
+                  );
                   updateScheduledPost(scheduledPosts[0].id, {
                     slides: updatedSlides,
-                    imageUrls: [renderedUrl, ...scheduledPosts[0].imageUrls.slice(1)],
+                    imageUrls: cleanImageUrls,
                   });
                   setGlobalFeedbackMsg("✨ Arte atualizada e sincronizada com a Vitrine 3x3!");
                   setTimeout(() => setGlobalFeedbackMsg(null), 4000);

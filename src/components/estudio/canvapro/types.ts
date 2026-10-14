@@ -33,17 +33,17 @@ export const filters = [
 ];
 
 export const fonts = [
-  { name: "Clash Display", value: "'Clash Display', sans-serif" },
-  { name: "Inter", value: "Inter, sans-serif" },
-  { name: "Montserrat", value: "Montserrat, sans-serif" },
-  { name: "Bebas Neue", value: "'Bebas Neue', cursive, sans-serif" },
-  { name: "Playfair Display", value: "'Playfair Display', serif" },
-  { name: "Cinzel", value: "Cinzel, serif" },
-  { name: "Space Grotesk", value: "'Space Grotesk', sans-serif" },
-  { name: "JetBrains Mono", value: "'JetBrains Mono', monospace" },
-  { name: "Helvetica", value: "Helvetica, Arial, sans-serif" },
-  { name: "Impact", value: "Impact, sans-serif" },
-  { name: "Georgia", value: "Georgia, serif" },
+  { name: "Clash Display", value: "Clash Display" },
+  { name: "Inter", value: "Inter" },
+  { name: "Montserrat", value: "Montserrat" },
+  { name: "Bebas Neue", value: "Bebas Neue" },
+  { name: "Playfair Display", value: "Playfair Display" },
+  { name: "Cinzel", value: "Cinzel" },
+  { name: "Space Grotesk", value: "Space Grotesk" },
+  { name: "JetBrains Mono", value: "JetBrains Mono" },
+  { name: "Helvetica", value: "Helvetica" },
+  { name: "Impact", value: "Impact" },
+  { name: "Georgia", value: "Georgia" },
 ];
 
 export const brandPalette = [
@@ -94,7 +94,7 @@ export const FILL_COLOR = "#FFFFFF";
 export const STROKE_COLOR = "#38BDF8";
 export const STROKE_WIDTH = 2;
 export const STROKE_DASH_ARRAY = [];
-export const FONT_FAMILY = "Inter, sans-serif";
+export const FONT_FAMILY = "Inter";
 export const FONT_SIZE = 48;
 export const FONT_WEIGHT = 700;
 
