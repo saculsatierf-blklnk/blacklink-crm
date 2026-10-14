@@ -65,14 +65,27 @@ export const brandPalette = [
 
 export type ActiveTool =
   | "select"
+  | "templates"
+  | "images"
   | "text"
   | "shapes"
-  | "images"
-  | "filters"
-  | "layers"
   | "draw"
   | "settings"
-  | "templates";
+  | "fill"
+  | "stroke-color"
+  | "stroke-width"
+  | "font"
+  | "opacity"
+  | "filter";
+
+export const selectionDependentTools: ActiveTool[] = [
+  "fill",
+  "font",
+  "filter",
+  "opacity",
+  "stroke-color",
+  "stroke-width",
+];
 
 export const FILL_COLOR = "#FFFFFF";
 export const STROKE_COLOR = "#38BDF8";
@@ -210,6 +223,7 @@ export interface Editor {
   addSoftRectangle: () => void;
   addRectangle: () => void;
   addTriangle: () => void;
+  addInverseTriangle: () => void;
   loadExactSlideLayout: (data: ExactSlideLayoutProps) => Promise<void>;
   canvas: fabric.Canvas;
   getActiveFillColor: () => string;

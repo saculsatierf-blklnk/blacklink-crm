@@ -608,6 +608,19 @@ const buildEditor = ({
       });
       addToCanvas(object);
     },
+    addInverseTriangle: () => {
+      const object = new fabric.Triangle({
+        left: 200,
+        top: 200,
+        width: 300,
+        height: 300,
+        angle: 180,
+        fill: fillColor || "rgba(255,255,255,0.1)",
+        stroke: strokeColor,
+        strokeWidth: strokeWidth,
+      });
+      addToCanvas(object);
+    },
     loadExactSlideLayout: async (data: ExactSlideLayoutProps) => {
       // 1. Limpa todos os objetos que não sejam o workspace clip
       const existing = canvas.getObjects().filter((obj) => obj.name !== "clip");
