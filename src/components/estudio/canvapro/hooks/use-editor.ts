@@ -94,10 +94,51 @@ const buildEditor = ({
   };
 
   const exportDataUrl = (format: "png" | "jpeg" = "png"): string => {
-    const options = generateSaveOptions(format);
-    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    const dataUrl = canvas.toDataURL(options);
+    const workspace = getWorkspace();
+    const width = workspace?.width || 1080;
+    const height = workspace?.height || 1080;
+    const left = workspace?.left || 0;
+    const top = workspace?.top || 0;
+
+    const prevWidth = canvas.getWidth();
+    const prevHeight = canvas.getHeight();
+    const prevTransform = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
+    const prevClip = canvas.clipPath;
+    const activeObjects = canvas.getActiveObjects();
+
+    // Desativa seleção e clipPath para renderização limpa do buffer
+    canvas.discardActiveObject();
+    canvas.clipPath = undefined as any;
+
+    // Redimensiona o canvas para a resolução real do post (1080p) e compensa o offset
+    canvas.setWidth(width);
+    canvas.setHeight(height);
+    canvas.setViewportTransform([1, 0, 0, 1, -left, -top]);
+    canvas.renderAll();
+
+    const dataUrl = canvas.toDataURL({
+      format: format === "jpeg" ? "jpeg" : "png",
+      quality: 1,
+    });
+
+    // Restaura o tamanho do container DOM, clipPath, seleção e viewport
+    canvas.setWidth(prevWidth);
+    canvas.setHeight(prevHeight);
+    canvas.clipPath = prevClip;
+    if (activeObjects.length > 0) {
+      if (activeObjects.length === 1) {
+        canvas.setActiveObject(activeObjects[0]);
+      } else {
+        const sel = new fabric.ActiveSelection(activeObjects, { canvas });
+        canvas.setActiveObject(sel);
+      }
+    }
+    if (prevTransform) {
+      canvas.setViewportTransform(prevTransform);
+    }
     autoZoom();
+    canvas.requestRenderAll();
+
     return dataUrl;
   };
 
@@ -629,6 +670,8 @@ const buildEditor = ({
       const workspace = getWorkspace();
       const w = workspace?.width || 1080;
       const h = workspace?.height || 1080;
+      const wsLeft = workspace?.left ?? 0;
+      const wsTop = workspace?.top ?? 0;
 
       // 2. Determina contraste e posicionamento idênticos ao BlackLinkGlassLayout
       const variant = data.variant || "3d-cursor";
@@ -667,8 +710,8 @@ const buildEditor = ({
               if (img && img.width && img.height) {
                 const scale = Math.max(w / img.width, h / img.height);
                 img.set({
-                  left: (w - img.width * scale) / 2,
-                  top: (h - img.height * scale) / 2,
+                  left: wsLeft + (w - img.width * scale) / 2,
+                  top: wsTop + (h - img.height * scale) / 2,
                   originX: "left",
                   originY: "top",
                   scaleX: scale,
@@ -689,8 +732,8 @@ const buildEditor = ({
 
       // 4. Header Editorial Suíço (DESIGN.BLACKLINK // 2026)
       const headerBrand = new fabric.Text("DESIGN.BLACKLINK", {
-        left: 60,
-        top: 48,
+        left: wsLeft + 60,
+        top: wsTop + 48,
         fontSize: 12,
         fontFamily: "'JetBrains Mono', monospace",
         fontWeight: "700",
@@ -703,8 +746,8 @@ const buildEditor = ({
       canvas.add(headerBrand);
 
       const headerYear = new fabric.Text("2026", {
-        left: w - 60,
-        top: 48,
+        left: wsLeft + w - 60,
+        top: wsTop + 48,
         originX: "right",
         fontSize: 12,
         fontFamily: "'JetBrains Mono', monospace",
@@ -719,8 +762,8 @@ const buildEditor = ({
 
       // 5. Rodapé: Seta Suíça ↗
       const arrowBg = new fabric.Circle({
-        left: w - 60 - 44,
-        top: h - 48 - 44,
+        left: wsLeft + w - 60 - 44,
+        top: wsTop + h - 48 - 44,
         radius: 22,
         fill: isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.6)",
         stroke: isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)",
@@ -729,8 +772,8 @@ const buildEditor = ({
         name: "slide-footer-arrow-bg",
       });
       const arrowText = new fabric.Text("↗", {
-        left: w - 60 - 22,
-        top: h - 48 - 22,
+        left: wsLeft + w - 60 - 22,
+        top: wsTop + h - 48 - 22,
         originX: "center",
         originY: "center",
         fontSize: 18,
@@ -750,7 +793,12 @@ const buildEditor = ({
 
       let startTop = 148;
       if (copyPos === "bottom-left") {
-        startTop = h - 280;
+        const hasTag = Boolean(data.tag);
+        const hasBody = Boolean(data.bodyText);
+        const estHeadlineLines = Math.max(1, Math.ceil(headlineRaw.length / 22));
+        const estHeadlineHeight = estHeadlineLines * (headlineFontSize * 1.15);
+        const estTotalHeight = (hasTag ? 38 : 0) + estHeadlineHeight + (hasBody ? 54 : 0);
+        startTop = Math.max(148, h - 110 - estTotalHeight);
       } else if (copyPos === "center") {
         startTop = 380;
       }
@@ -758,8 +806,8 @@ const buildEditor = ({
       // Tag
       if (data.tag) {
         const tagObj = new fabric.Textbox(data.tag.toUpperCase(), {
-          left: copyPos === "center" ? w / 2 : 60,
-          top: startTop,
+          left: copyPos === "center" ? wsLeft + w / 2 : wsLeft + 60,
+          top: wsTop + startTop,
           originX: copyPos === "center" ? "center" : "left",
           textAlign: copyPos === "center" ? "center" : "left",
           fontSize: 11,
@@ -779,8 +827,8 @@ const buildEditor = ({
 
       // Headline (com sombra volumétrica idêntica à BlackLinkGlassLayout)
       const headlineObj = new fabric.Textbox(headlineRaw, {
-        left: copyPos === "center" ? w / 2 : 60,
-        top: startTop,
+        left: copyPos === "center" ? wsLeft + w / 2 : wsLeft + 60,
+        top: wsTop + startTop,
         originX: copyPos === "center" ? "center" : "left",
         textAlign: copyPos === "center" ? "center" : "left",
         width: 620,
@@ -804,8 +852,8 @@ const buildEditor = ({
       // Body Text
       if (data.bodyText) {
         const bodyObj = new fabric.Textbox(data.bodyText, {
-          left: copyPos === "center" ? w / 2 : 60,
-          top: startTop,
+          left: copyPos === "center" ? wsLeft + w / 2 : wsLeft + 60,
+          top: wsTop + startTop,
           originX: copyPos === "center" ? "center" : "left",
           textAlign: copyPos === "center" ? "center" : "left",
           width: 500,
@@ -991,12 +1039,15 @@ export const useEditor = ({
       });
 
       const initialWorkspace = new fabric.Rect({
+        left: 0,
+        top: 0,
         width: initialWidth.current,
         height: initialHeight.current,
         name: "clip",
         fill: "#09090B",
         selectable: false,
         hasControls: false,
+        hoverCursor: "default",
         shadow: new fabric.Shadow({
           color: "rgba(0,0,0,0.85)",
           blur: 32,
@@ -1009,8 +1060,15 @@ export const useEditor = ({
       initialCanvas.setHeight(initialContainer.offsetHeight);
 
       initialCanvas.add(initialWorkspace);
-      initialCanvas.centerObject(initialWorkspace);
-      initialCanvas.clipPath = initialWorkspace;
+
+      initialWorkspace.clone((cloned: fabric.Rect) => {
+        cloned.set({
+          left: 0,
+          top: 0,
+          absolutePositioned: true,
+        });
+        initialCanvas.clipPath = cloned;
+      });
 
       setCanvas(initialCanvas);
       setContainer(initialContainer);

@@ -56,6 +56,9 @@ export const useAutoResize = ({ canvas, container }: UseAutoResizeProps) => {
     canvas.setViewportTransform(viewportTransform);
 
     localWorkspace.clone((cloned: fabric.Rect) => {
+      cloned.set({
+        absolutePositioned: true,
+      });
       canvas.clipPath = cloned;
       canvas.requestRenderAll();
     });
