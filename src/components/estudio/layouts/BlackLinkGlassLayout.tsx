@@ -93,10 +93,34 @@ export function BlackLinkGlassLayout({
 
   // Fundos claros (Porcelana / Gelo) na grade 3x3:
   // Post 3 (Pins cromados), Post 5 (Cursor cromado central) e Post 9 (Ice box)
-  const isLightBackground =
-    variant === "3d-crystal" ||
-    variant === "3d-cursor" ||
-    variant === "clean-ice-box";
+  // Ou explicitamente controlado via slide.contrastMode: "dark" (texto preto / fundo claro) ou "light" (texto branco / fundo escuro)
+  const isLightBackground = (() => {
+    if (slide.contrastMode === "dark") return true;
+    if (slide.contrastMode === "light") return false;
+    return (
+      variant === "3d-crystal" ||
+      variant === "3d-cursor" ||
+      variant === "clean-ice-box"
+    );
+  })();
+
+  // Posicionamento dinâmico e inteligente da Copy:
+  // "top-left" | "bottom-left" | "center"
+  const copyPos: "top-left" | "bottom-left" | "center" = (() => {
+    if (slide.copyPosition === "center") return "center";
+    if (slide.copyPosition === "bottom-left") return "bottom-left";
+    if (slide.copyPosition === "top-left") return "top-left";
+    if (variant === "swiss-box" || variant === "clean-ice-box") return "center";
+    if (
+      variant === "pure-monumental" ||
+      variant === "3d-liquid" ||
+      variant === "3d-sculpture" ||
+      variant === "clean-ice"
+    ) {
+      return "bottom-left";
+    }
+    return "top-left";
+  })();
 
   // Imagens de fundo oficiais para as variações de Alta Moda (Arina TVA)
   const bgImageSrc = (() => {
@@ -151,7 +175,7 @@ export function BlackLinkGlassLayout({
             className={`font-black underline underline-offset-[10px] inline ${
               !isLightBackground
                 ? "text-white decoration-white/50 drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]"
-                : "text-black decoration-black/40"
+                : "text-black decoration-black/40 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
             }`}
           >
             {clean}
@@ -265,7 +289,9 @@ export function BlackLinkGlassLayout({
       {/* ================================================================== */}
       <header
         className={`relative z-10 w-full px-[60px] flex items-center justify-between text-xs font-mono tracking-[0.25em] ${
-          isLightBackground ? "text-black/60" : "text-white/60"
+          isLightBackground
+            ? "text-black/80 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
+            : "text-white/80 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
         } ${is916 ? "pt-24" : is45 ? "pt-16" : "pt-12"}`}
       >
         <span className="font-bold uppercase tracking-[0.28em] text-[12px]">
@@ -277,8 +303,8 @@ export function BlackLinkGlassLayout({
             <span
               className={`px-2.5 py-0.5 rounded-full border text-[10px] font-mono tracking-widest font-bold ${
                 isLightBackground
-                  ? "border-black/25 text-black/80 bg-black/[0.04]"
-                  : "border-white/25 text-white/80 bg-white/[0.05]"
+                  ? "border-black/25 text-black/90 bg-white/60 backdrop-blur-sm"
+                  : "border-white/25 text-white/90 bg-black/40 backdrop-blur-sm"
               }`}
             >
               SLIDE 0{currentSlide} // 0{totalSlides}
@@ -291,63 +317,63 @@ export function BlackLinkGlassLayout({
       </header>
 
       {/* ================================================================== */}
-      {/* 3. NÚCLEO EDITORIAL CONFORME A VARIAÇÃO VISUAL                     */}
+      {/* 3. NÚCLEO EDITORIAL CONFORME A VARIAÇÃO VISUAL & POSICIONAMENTO    */}
       {/* ================================================================== */}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO A: SWISS BOX & CLEAN ICE BOX (BOUNDING BOX COM 8 HANDLES) */}
+      {/* VARIAÇÃO A: BOUNDING BOX COM 8 HANDLES (SWISS BOX / ICE BOX / CENTER) */}
       {/* ------------------------------------------------------------------ */}
-      {(variant === "swiss-box" || variant === "clean-ice-box") && (
+      {copyPos === "center" && (
         <main className="relative z-10 w-full px-[60px] my-auto flex flex-col justify-center items-center text-center">
-          <div className="relative inline-block px-10 py-6 max-w-[840px]">
-            {/* Contorno fino com fundo de vidro fosco */}
+          <div className="relative inline-block px-10 py-7 max-w-[840px]">
+            {/* Contorno fino com fundo de vidro fosco de alto contraste */}
             <div
               className={`absolute inset-0 border ${
-                variant === "clean-ice-box"
-                  ? "border-black/60 bg-black/[0.02]"
-                  : "border-white/50 backdrop-blur-[4px] bg-white/[0.04]"
+                isLightBackground
+                  ? "border-black/30 backdrop-blur-[12px] bg-white/85 shadow-[0_8px_32px_rgba(0,0,0,0.08)]"
+                  : "border-white/40 backdrop-blur-[12px] bg-black/65 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
               }`}
             />
             {/* 4 Handles nos 4 cantos */}
             <span
               className={`absolute -top-1 -left-1 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             <span
               className={`absolute -top-1 -right-1 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             <span
               className={`absolute -bottom-1 -left-1 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             <span
               className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             {/* 4 Handles no centro de cada aresta */}
             <span
               className={`absolute top-1/2 -left-1 -translate-y-1/2 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             <span
               className={`absolute top-1/2 -right-1 -translate-y-1/2 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             <span
               className={`absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
             <span
               className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 ${
-                variant === "clean-ice-box" ? "bg-black border border-white" : "bg-white border border-black"
+                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
               }`}
             />
 
@@ -355,7 +381,7 @@ export function BlackLinkGlassLayout({
             {slide.tag && (
               <div
                 className={`relative z-10 text-[11px] font-mono uppercase tracking-[0.25em] font-bold pb-2 ${
-                  variant === "clean-ice-box" ? "text-black/60" : "text-white/60"
+                  isLightBackground ? "text-black/75" : "text-white/75"
                 }`}
               >
                 {slide.tag}
@@ -364,8 +390,10 @@ export function BlackLinkGlassLayout({
 
             {/* Termo Principal dentro da Bounding Box */}
             <h1
-              className={`relative z-10 font-clash font-bold uppercase tracking-[0.18em] leading-tight py-1 ${
-                variant === "clean-ice-box" ? "text-black" : "text-white"
+              className={`relative z-10 font-clash font-extrabold uppercase tracking-[0.16em] leading-tight py-1 ${
+                isLightBackground
+                  ? "text-[#09090B] drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
+                  : "text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
               }`}
               style={{
                 fontSize: computeHeadlineFontSize(displayHeadline.length, true),
@@ -377,8 +405,8 @@ export function BlackLinkGlassLayout({
             {/* Tese / Linha de Apoio opcional */}
             {slide.bodyText && (
               <p
-                className={`relative z-10 text-xs md:text-sm font-sans max-w-[560px] mx-auto pt-2.5 leading-relaxed tracking-normal ${
-                  variant === "clean-ice-box" ? "text-zinc-700" : "text-zinc-300"
+                className={`relative z-10 text-xs md:text-sm font-sans max-w-[560px] mx-auto pt-2.5 leading-relaxed tracking-normal font-medium ${
+                  isLightBackground ? "text-zinc-800" : "text-zinc-200"
                 }`}
               >
                 {slide.bodyText}
@@ -389,20 +417,29 @@ export function BlackLinkGlassLayout({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO B: 3D KEYCAP, 3D CRYSTAL (PINS), 3D CURSOR                */}
-      {/* Título editorial compacto no canto superior esquerdo com respiro    */}
+      {/* VARIAÇÃO B & C: POSICIONAMENTO COM ESCUDO DE CONTRASTE (SCRIM)     */}
+      {/* Top-Left ou Bottom-Left com proteção garantida contra ofuscamento  */}
       {/* ------------------------------------------------------------------ */}
-      {(variant === "3d-cursor" ||
-        variant === "3d-keycap" ||
-        variant === "3d-crystal") && (
-        <main className="relative z-10 w-full px-[60px] mt-2 mb-auto flex flex-col justify-start items-start text-left">
-          <div className="max-w-[560px] space-y-2.5">
+      {copyPos !== "center" && (
+        <main
+          className={`relative z-10 w-full px-[60px] flex flex-col justify-start items-start text-left ${
+            copyPos === "top-left" ? "mt-4 mb-auto" : "mt-auto mb-4"
+          }`}
+        >
+          {/* Card com Escudo Protetor de Contraste Físico (Vidro Porcelana ou Vidro Obsidian) */}
+          <div
+            className={`max-w-[620px] p-6 rounded-2xl space-y-2.5 transition-all duration-300 ${
+              isLightBackground
+                ? "backdrop-blur-[14px] bg-white/80 border border-black/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)]"
+                : "backdrop-blur-[14px] bg-[#030305]/75 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            }`}
+          >
             {slide.tag && (
               <div
-                className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-[0.25em] font-semibold ${
+                className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-[0.25em] font-bold ${
                   isLightBackground
-                    ? "border-black/20 text-black/70 bg-black/[0.03]"
-                    : "border-white/20 text-white/70 bg-white/[0.05]"
+                    ? "border-black/25 text-black/85 bg-black/[0.04]"
+                    : "border-white/25 text-white/85 bg-white/[0.05]"
                 }`}
               >
                 {slide.tag}
@@ -411,7 +448,7 @@ export function BlackLinkGlassLayout({
             <h1
               className={`font-clash font-extrabold uppercase leading-[1.08] whitespace-pre-line tracking-tight ${
                 isLightBackground
-                  ? "text-black"
+                  ? "text-[#09090B] drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]"
                   : "text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
               }`}
               style={{
@@ -426,59 +463,8 @@ export function BlackLinkGlassLayout({
               <p
                 className={`text-sm font-sans leading-relaxed tracking-normal max-w-[480px] font-medium pt-0.5 ${
                   isLightBackground
-                    ? "text-zinc-700"
-                    : "text-zinc-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]"
-                }`}
-              >
-                {slide.bodyText}
-              </p>
-            )}
-          </div>
-        </main>
-      )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO C: FOTOGRAFIA EDITORIAL & ESCULTURAS MACRO                */}
-      {/* (PORTRAIT, FLUTED GLASS, MACRO GLASS, OBSIDIAN DARK)               */}
-      {/* Título editorial no canto inferior esquerdo com respiro            */}
-      {/* ------------------------------------------------------------------ */}
-      {(variant === "pure-monumental" ||
-        variant === "3d-liquid" ||
-        variant === "3d-sculpture" ||
-        variant === "clean-ice") && (
-        <main className="relative z-10 w-full px-[60px] mt-auto mb-4 flex flex-col justify-end items-start text-left">
-          <div className="max-w-[580px] space-y-2.5">
-            {slide.tag && (
-              <div
-                className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-[0.25em] font-semibold ${
-                  isLightBackground
-                    ? "border-black/20 text-black/70 bg-black/[0.03]"
-                    : "border-white/20 text-white/70 bg-white/[0.05]"
-                }`}
-              >
-                {slide.tag}
-              </div>
-            )}
-            <h1
-              className={`font-clash font-extrabold uppercase leading-[1.08] whitespace-pre-line tracking-tight ${
-                isLightBackground
-                  ? "text-black"
-                  : "text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
-              }`}
-              style={{
-                fontSize: computeHeadlineFontSize(displayHeadline.length, false),
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {renderHighlight(displayHeadline)}
-              <span className="text-xl align-super ml-1 opacity-70">©</span>
-            </h1>
-            {slide.bodyText && (
-              <p
-                className={`text-sm font-sans leading-relaxed tracking-normal max-w-[480px] font-medium pt-0.5 ${
-                  isLightBackground
-                    ? "text-zinc-700"
-                    : "text-zinc-300 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]"
+                    ? "text-zinc-800"
+                    : "text-zinc-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
                 }`}
               >
                 {slide.bodyText}
@@ -518,18 +504,16 @@ export function BlackLinkGlassLayout({
           <div />
         )}
 
-        {/* A Setinha Minimalista Suíça do Pinterest (não exibe nos boxes puros) */}
-        {variant !== "swiss-box" && variant !== "clean-ice-box" && (
-          <div
-            className={`w-11 h-11 rounded-full border flex items-center justify-center text-lg font-bold transition-all ${
-              isLightBackground
-                ? "border-black/25 text-black bg-black/[0.03]"
-                : "border-white/25 text-white bg-white/[0.03]"
-            }`}
-          >
-            ↗
-          </div>
-        )}
+        {/* A Setinha Minimalista Suíça do Pinterest */}
+        <div
+          className={`w-11 h-11 rounded-full border flex items-center justify-center text-lg font-bold transition-all ${
+            isLightBackground
+              ? "border-black/30 text-black bg-white/80 backdrop-blur-md shadow-sm"
+              : "border-white/30 text-white bg-black/60 backdrop-blur-md shadow-md"
+          }`}
+        >
+          ↗
+        </div>
       </footer>
     </div>
   );

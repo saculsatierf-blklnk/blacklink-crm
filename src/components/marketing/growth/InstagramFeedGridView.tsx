@@ -376,20 +376,27 @@ export function InstagramFeedGridView() {
     try {
       for (let i = 0; i < scheduledPosts.length; i++) {
         const post = scheduledPosts[i];
-        setCollectionProgress(`Renderizando arte ${i + 1} de ${scheduledPosts.length}: ${post.theme}...`);
-
         const slide = post.slides[0];
         const variant = getPostVariant(post, i, 0);
 
+        setCollectionProgress(`Renderizando arte ${i + 1} de ${scheduledPosts.length}: ${variant} (${post.theme})...`);
+
         try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 35000);
+
           const res = await fetch("/api/marketing/generate-image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               variant,
-              theme: post.theme,
+              theme: post.theme || post.hookHeadline,
+              postId: post.id,
             }),
+            signal: controller.signal,
           });
+
+          clearTimeout(timer);
 
           const data = await res.json();
           if (data.success && data.imageUrl) {
@@ -398,15 +405,28 @@ export function InstagramFeedGridView() {
             updatedSlides[0] = {
               ...slideToUpdate,
               imageUrl: data.imageUrl,
+              blackLinkVariant: variant,
             };
-            updateScheduledPost(post.id, { slides: updatedSlides });
+
+            updateScheduledPost(post.id, {
+              slides: updatedSlides,
+              imageUrls: [data.imageUrl],
+            });
+
+            if (selectedFeedPost?.id === post.id) {
+              setSelectedFeedPost({
+                ...selectedFeedPost,
+                slides: updatedSlides,
+                imageUrls: [data.imageUrl],
+              });
+            }
           }
         } catch (e) {
           console.warn(`Erro ao gerar post ${post.id}:`, e);
         }
       }
 
-      setCopiedFeedback("✦ Coleção completa de 9 artes atualizada com Gemini IA!");
+      setCopiedFeedback("✨ Coleção de 9 artes gerada com sucesso via Gemini IA!");
     } catch (err) {
       console.error("Erro na geração da coleção:", err);
       setCopiedFeedback("Erro durante geração em lote.");
@@ -1051,25 +1071,25 @@ export function InstagramFeedGridView() {
                   type="button"
                   onClick={() => setIsAgentDrawerOpen(true)}
                   className="flex items-center gap-1.5 rounded-xl border border-sky-400/40 bg-gradient-to-r from-sky-500/20 to-indigo-600/20 hover:from-sky-500/30 hover:to-indigo-600/30 px-3.5 py-2 text-xs font-bold text-white transition-all cursor-pointer shadow-md ring-1 ring-sky-400/20"
-                  title="Abrir o Diretor Executivo de Growth IA da Black Link"
+                  title="Abrir o Diretor Executivo de Growth IA e Auditoria Visual"
                 >
                   <Bot className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
-                  <span>✦ Diretor IA</span>
+                  <span>✦ Diretor IA & Auditoria</span>
                 </button>
 
                 <button
                   type="button"
                   disabled={isGeneratingCollection}
                   onClick={handleGenerateEntireCollection}
-                  className="flex items-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 px-3.5 py-2 text-xs font-semibold text-sky-300 transition-all cursor-pointer shadow-md disabled:opacity-50"
-                  title="Gera ou regenera as 9 artes oficiais com a API oficial do Gemini"
+                  className="flex items-center gap-1.5 rounded-xl border border-sky-500/50 bg-gradient-to-r from-sky-500/20 to-indigo-500/20 hover:from-sky-500/30 hover:to-indigo-500/30 px-3.5 py-2 text-xs font-bold text-sky-200 transition-all cursor-pointer shadow-md disabled:opacity-50"
+                  title="Gera 9 artes inéditas com Gemini IA (100% novas salvas no disco)"
                 >
                   {isGeneratingCollection ? (
                     <RefreshCw className="h-3.5 w-3.5 animate-spin text-sky-400" />
                   ) : (
                     <Sparkles className="h-3.5 w-3.5 text-sky-400" />
                   )}
-                  <span>{isGeneratingCollection ? "Gerando..." : "✨ Gerar Coleção com Gemini IA"}</span>
+                  <span>{isGeneratingCollection ? "Renderizando 9 Artes..." : "🎨 Gerar 9 Novas Artes com Gemini IA"}</span>
                 </button>
 
                 <button
@@ -2353,6 +2373,87 @@ export function InstagramFeedGridView() {
                               {pill}
                             </button>
                           ))}
+                        </div>
+                      </div>
+
+                      {/* Posição da Copy & Modo de Contraste */}
+                      <div className="grid grid-cols-2 gap-3 pt-2 pb-1 border-t border-white/10">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                            Posição da Copy
+                          </label>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[
+                              { id: "top-left", label: "Topo" },
+                              { id: "center", label: "Centro" },
+                              { id: "bottom-left", label: "Base" },
+                            ].map((pos) => {
+                              const currentPos = selectedFeedPost?.slides?.[activeSlideIdx]?.copyPosition || 
+                                (editingVariant === "swiss-box" || editingVariant === "clean-ice-box" ? "center" : 
+                                 (editingVariant === "pure-monumental" || editingVariant === "3d-liquid" || editingVariant === "3d-sculpture" || editingVariant === "clean-ice") ? "bottom-left" : "top-left");
+                              const isSelected = currentPos === pos.id;
+                              return (
+                                <button
+                                  key={pos.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedFeedPost) {
+                                      const updated = [...selectedFeedPost.slides];
+                                      const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                      updated[activeSlideIdx] = { ...s, copyPosition: pos.id as any };
+                                      setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                                      updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                                    }
+                                  }}
+                                  className={`py-1.5 px-1.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                                    isSelected
+                                      ? "bg-white text-black shadow"
+                                      : "bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/10 border border-white/10"
+                                  }`}
+                                >
+                                  {pos.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold block">
+                            Contraste Visual
+                          </label>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[
+                              { id: "auto", label: "Auto" },
+                              { id: "light", label: "Noir" },
+                              { id: "dark", label: "Gelo" },
+                            ].map((c) => {
+                              const currentContrast = selectedFeedPost?.slides?.[activeSlideIdx]?.contrastMode || "auto";
+                              const isSelected = currentContrast === c.id;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedFeedPost) {
+                                      const updated = [...selectedFeedPost.slides];
+                                      const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                      updated[activeSlideIdx] = { ...s, contrastMode: c.id as any };
+                                      setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                                      updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                                    }
+                                  }}
+                                  className={`py-1.5 px-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center ${
+                                    isSelected
+                                      ? "bg-white text-black shadow"
+                                      : "bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/10 border border-white/10"
+                                  }`}
+                                >
+                                  {c.label}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
 

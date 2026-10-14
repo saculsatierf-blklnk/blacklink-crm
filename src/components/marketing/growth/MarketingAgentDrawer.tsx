@@ -27,6 +27,23 @@ import {
   type ScheduledPost,
 } from "@/store/useMarketingStore";
 
+export interface GridAuditDiagnostic {
+  postId: string;
+  position: number;
+  variant: string;
+  tone: string;
+  contrastStatus: string;
+  copyPosition: string;
+  status: string;
+}
+
+export interface GridAuditReport {
+  visualScore: number;
+  colorRhythmDiagnosis: string;
+  contrastDiagnosis: string;
+  postDiagnostics: GridAuditDiagnostic[];
+}
+
 interface AgentMessage {
   id: string;
   role: "user" | "assistant";
@@ -35,6 +52,7 @@ interface AgentMessage {
   alignmentScore?: number;
   highlightedProduct?: string;
   attachedImagePreview?: string;
+  gridAudit?: GridAuditReport;
   suggestedUpdates?: Array<{
     postId: string;
     headline: string;
@@ -43,6 +61,8 @@ interface AgentMessage {
     caption: string;
     linkedinPostText?: string;
     blackLinkVariant?: any;
+    contrastMode?: "auto" | "light" | "dark";
+    copyPosition?: "top-left" | "bottom-left" | "center";
     rationale?: string;
   }>;
   imageAction?: {
@@ -166,6 +186,7 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             alignmentScore: data.alignmentScore,
             highlightedProduct: data.highlightedProduct,
+            gridAudit: data.gridAudit,
             suggestedUpdates: data.suggestedUpdates || [],
             imageAction: data.imageAction?.shouldGenerate ? data.imageAction : undefined,
           },
@@ -209,6 +230,8 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
       bodyText: update.bodyText,
       tag: update.tag,
       blackLinkVariant: update.blackLinkVariant || s0.blackLinkVariant,
+      contrastMode: update.contrastMode || s0.contrastMode,
+      copyPosition: update.copyPosition || s0.copyPosition,
     };
 
     updateScheduledPost(targetPost.id, {
@@ -220,7 +243,7 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
       theme: update.headline,
     });
 
-    setAppliedFeedback(`Post ${update.postId} atualizado com sucesso!`);
+    setAppliedFeedback(`Post ${update.postId} atualizado e harmonizado!`);
     setTimeout(() => setAppliedFeedback(null), 3000);
   };
 
@@ -425,21 +448,41 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
                   <button
                     type="button"
                     disabled={isLoading}
-                    onClick={() => handleSendMessage("Alinhe este post para vender o Black Link CRM OS", "align_crm_os")}
-                    className="px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                    onClick={() => handleSendMessage("Faça uma auditoria visual avançada da grade 3x3 do Instagram. Analise o ritmo de cores claro/escuro, legibilidade e contraste de texto, posicionamento das copies e proponha auto-harmonização completa.", "audit_visual_grid")}
+                    className="px-3 py-1.5 rounded-xl border border-sky-400/40 bg-sky-500/15 hover:bg-sky-500/25 text-sky-200 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm disabled:opacity-50"
                   >
-                    <Target className="h-3.5 w-3.5" />
-                    <span>🎯 Focar no CRM OS</span>
+                    <Eye className="h-3.5 w-3.5 text-sky-400" />
+                    <span>✦ Auditar Visual & Grade 3x3</span>
                   </button>
 
                   <button
                     type="button"
                     disabled={isLoading}
-                    onClick={() => handleSendMessage("Audite a coerência da grade inteira com o site blklnk.com", "audit_feed")}
-                    className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                    onClick={() => handleSendMessage("Analise a imagem deste post selecionado e diga o que você vê.", "diagnostico_visual")}
+                    className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    <Sliders className="h-3.5 w-3.5" />
-                    <span>🔍 Auditar Grade (9 Posts)</span>
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>👁️ Diagnosticar Imagem</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleSendMessage("Gere uma nova arte sofisticada para este post com foco em tecnologia e alto ticket", "gerar_nova_arte")}
+                    className="px-3 py-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>🎨 Nova Imagem com IA</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleSendMessage("Alinhe este post para vender o Black Link CRM OS", "align_crm_os")}
+                    className="px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <Target className="h-3.5 w-3.5" />
+                    <span>🎯 Focar no CRM OS</span>
                   </button>
                 </div>
               </div>
@@ -492,6 +535,73 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
                         {msg.content}
                       </div>
 
+                      {/* Card de Auditoria Visual & Harmonia da Grade 3x3 */}
+                      {msg.gridAudit && (
+                        <div className="mt-4 pt-3 border-t border-sky-500/30 bg-sky-950/30 -mx-4 p-4 space-y-3 rounded-xl border border-sky-500/40">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold text-sky-300 uppercase flex items-center gap-1.5">
+                              <Eye className="h-3.5 w-3.5 text-sky-400" />
+                              <span>Auditoria Visual da Grade 3x3</span>
+                            </span>
+                            <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-sky-400/20 text-sky-200 border border-sky-400/30">
+                              Nota Visual: {msg.gridAudit.visualScore}/100
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 text-[11px] text-zinc-300 leading-relaxed font-sans">
+                            {msg.gridAudit.colorRhythmDiagnosis && (
+                              <p><strong className="text-white font-mono">Ritmo de Cores:</strong> {msg.gridAudit.colorRhythmDiagnosis}</p>
+                            )}
+                            {msg.gridAudit.contrastDiagnosis && (
+                              <p><strong className="text-white font-mono">Legibilidade & Contraste:</strong> {msg.gridAudit.contrastDiagnosis}</p>
+                            )}
+                          </div>
+
+                          {/* Mini-Matriz Visual da Grade 3x3 */}
+                          {msg.gridAudit.postDiagnostics && msg.gridAudit.postDiagnostics.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">
+                                Diagnóstico Posição por Posição:
+                              </span>
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {msg.gridAudit.postDiagnostics.map((pd) => {
+                                  const isLightTone = pd.tone?.toLowerCase().includes("claro") || pd.tone?.toLowerCase().includes("porcelana");
+                                  return (
+                                    <div
+                                      key={pd.postId}
+                                      className={`p-2 rounded-lg border text-left font-mono text-[9px] ${
+                                        isLightTone
+                                          ? "bg-white/95 text-black border-black/30 shadow-sm"
+                                          : "bg-black/90 text-white border-white/20 shadow-sm"
+                                      }`}
+                                    >
+                                      <div className="font-bold flex items-center justify-between">
+                                        <span>Pos #{pd.position}</span>
+                                        <span className="text-[8px] opacity-80">{isLightTone ? "⚪ Claro" : "⚫ Escuro"}</span>
+                                      </div>
+                                      <div className="text-[8px] opacity-80 truncate">{pd.variant}</div>
+                                      <div className="text-[8px] text-emerald-400 font-sans mt-0.5">{pd.status}</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* CTA de Auto-Harmonização */}
+                          {msg.suggestedUpdates && msg.suggestedUpdates.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleApplyAllUpdates(msg.suggestedUpdates!)}
+                              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-400 to-indigo-500 hover:from-sky-300 hover:to-indigo-400 text-black font-bold text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
+                            >
+                              <Sparkles className="h-3.5 w-3.5 text-black" />
+                              <span>✦ Aplicar Auto-Harmonização na Grade do Feed</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       {/* Card de Ação de Imagem com IA */}
                       {msg.imageAction && msg.imageAction.shouldGenerate && (
                         <div className="mt-4 pt-3 border-t border-sky-500/20 bg-sky-500/[0.06] -mx-4 -mb-4 p-4 rounded-b-2xl space-y-2.5">
@@ -533,7 +643,7 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
                       )}
 
                       {/* Card de Proposta de Alterações na Grade */}
-                      {msg.suggestedUpdates && msg.suggestedUpdates.length > 0 && (
+                      {msg.suggestedUpdates && msg.suggestedUpdates.length > 0 && !msg.gridAudit && (
                         <div className="mt-4 pt-3 border-t border-white/10 space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold flex items-center gap-1.5">

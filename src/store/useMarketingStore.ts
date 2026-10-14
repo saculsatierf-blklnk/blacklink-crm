@@ -19,6 +19,9 @@ export interface CreativeSlide {
   tag?: string;
   blackLinkVariant?: BlackLinkStyleVariant;
   seamlessBleed?: boolean;
+  contrastMode?: "auto" | "light" | "dark";
+  copyPosition?: "top-left" | "bottom-left" | "center";
+  hasScrimBackdrop?: boolean;
 }
 
 export interface CompetitorInsightData {

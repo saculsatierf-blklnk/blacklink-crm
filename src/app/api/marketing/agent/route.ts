@@ -142,7 +142,30 @@ ${leadInsights || "Pipeline em fase inicial de atração de leads."}
     }
 
     let actionDirective = "";
-    if (action === "sync_crm_telemetry") {
+    if (action === "audit_visual_grid" || action === "audit_feed") {
+      actionDirective = `AÇÃO EXPRESSA: AUDITORIA VISUAL AVANÇADA DA GRADE 3X3 & DIREÇÃO DE ARTE EXECUTIVA (PADRÃO ARINA TVA / LUXO SUÍÇO).
+Você é o Diretor de Arte e Estrategista Visual inspecionando o feed do Instagram formado por 9 posições.
+Sua missão é inspecionar friamente:
+1. RITMO E HARMONIA DE CORES NA GRADE 3X3:
+   - Em design brutalista de alto luxo, a grade de 9 posts DEVE intercalar fundos escuros (Obsidian/Noir) e fundos claros (Porcelain/Ice) em um ritmo geométrico harmônico.
+   - Padrão oficial recomendado da Black Link:
+     * Post 3 (Canto inferior direito): Fundo Claro Porcelana ('3d-crystal' com Chrome Pins)
+     * Post 5 (CENTRO ABSOLUTO DA GRADE): Fundo Claro Porcelana ('3d-cursor' com Cursor Cromado)
+     * Post 9 (Canto superior direito): Fundo Claro Gelo ('clean-ice-box' Bounding Box Técnica)
+     * Posts 1, 2, 4, 6, 7, 8: Fundos Escuros Profundos (Noir/Obsidian/Retrato Editorial/Fluted Glass)
+   - Se a grade tiver blocos desequilibrados, proponha a reordenação das variantes em 'suggestedUpdates'.
+2. LEGIBILIDADE E CONTRASTE DE TEXTO:
+   - O texto NUNCA pode ter a mesma cor que o fundo ou sumir em sombras/reflexos!
+   - Em fundos claros (porcelana), o texto deve ser PRETO PURO (#09090B) protegido por escudo de vidro fosco porcelana.
+   - Em fundos escuros (noir), o texto deve ser BRANCO PURO (#FFFFFF) protegido por escudo de vidro fosco obsidian.
+   - Forneça em 'suggestedUpdates' o 'contrastMode' ('dark' para texto preto sobre fundo claro, 'light' para texto branco sobre fundo escuro).
+3. POSICIONAMENTO DA COPY (copyPosition):
+   - Avalie onde o objeto 3D ou modelo principal está para que a copy nunca tampe o elemento visual.
+   - Atribua 'copyPosition' para cada post ('top-left', 'bottom-left' ou 'center').
+4. CONCISÃO DAS HEADLINES:
+   - Títulos de no máximo 2 A 4 PALAVRAS em MAIÚSCULAS rigorosas (ex: 'SOBERANIA B2B', 'TELEMETRIA TOTAL', 'BLACK LINK OS'). Sem frases longas nem pontuação!
+5. Preencha 'gridAudit' com notas e diagnósticos detalhados para cada uma das 9 posições da grade.`;
+    } else if (action === "sync_crm_telemetry") {
       actionDirective = "AÇÃO EXPRESSA: SINCRONIZAÇÃO COM A TELEMETRIA VIVA DO CRM. Conecte as pautas e copys do marketing às dores e negócios reais presentes no pipeline do CRM. Use os dados de leads e deal score para propor um ataque comercial focado em destravar o pipeline com os produtos digitais da Black Link (CRM OS, Automações com IA, Branding Soberano). Mostre que o marketing foi moldado com base no comportamento do funil de vendas.";
     } else if (action === "generate_campaign_from_telemetry") {
       actionDirective = "AÇÃO EXPRESSA: GERAÇÃO DE CAMPANHA COMPLETA BASEADA NA TELEMETRIA DO CRM. Analise minuciosamente os gargalos do pipeline (leads travados, deal scores baixos ou altos, atritos registrados nas notas). Gere no array 'suggestedUpdates' exatamente 9 atualizações coordenadas para TODOS os posts da grade (de 'post-bl-01' a 'post-bl-09'). Cada post deve atacar uma objeção real e direcionar para uma solução digital concreta da Black Link (CRM OS, Automações, Branding, Protocolo). Headlines de 2 a 4 palavras em maiúsculas rigorosas no padrão suíço.";
@@ -150,10 +173,8 @@ ${leadInsights || "Pipeline em fase inicial de atração de leads."}
       actionDirective = "AÇÃO EXPRESSA: Realinhe os posts prioritários da grade para venderem o 'Black Link CRM OS' (Software Sob Medida e Telemetria B2B). Foco prático: eliminar planilhas, organizar pipeline e dar telemetria a holdings e empresas B2B.";
     } else if (action === "align_automacoes") {
       actionDirective = "AÇÃO EXPRESSA: Realinhe os posts prioritários da grade para venderem a 'Engenharia de Automações & I.A. Operacional', mostrando que trabalho braçal e mensagens manuais atrasadas custam receita e margem.";
-    } else if (action === "audit_feed") {
-      actionDirective = "AÇÃO EXPRESSA: Faça uma auditoria prática da grade de 9 posts. Diga a nota geral de coerência comercial com o site blklnk.com, aponte onde a copy está fraca e sugira melhorias imediatas.";
     } else if (action === "sharpen_brutalist") {
-      actionDirective = "AÇÃO EXPRESSA: Eleve o padrão das headlines: títulos curtos, impactantes, em caixa alta, sem enrolação e sem clichês de marketing genérico.";
+      actionDirective = "AÇÃO EXPRESSA: Eleve o padrão das headlines: títulos curtos de 2 a 4 palavras, impactantes, em caixa alta, sem enrolação e sem clichês de marketing genérico.";
     }
 
     const hasVisualInput = imageParts.length > 0;
@@ -209,6 +230,22 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
   "reply": "<sua resposta conversacional direta, amigável, cirúrgica e objetiva em markdown (sem jargões prolixos)>",
   "alignmentScore": <número de 0 a 100 indicando a aderência ao site blklnk.com>,
   "highlightedProduct": "<id do produto foco se houver>",
+  "gridAudit": {
+    "visualScore": <número de 0 a 100 indicando harmonia visual da grade 3x3>,
+    "colorRhythmDiagnosis": "<avaliação da alternância de tons claros e escuros na grade>",
+    "contrastDiagnosis": "<avaliação do contraste e legibilidade de texto sobre imagem>",
+    "postDiagnostics": [
+      {
+        "postId": "<ID do post, ex: 'post-bl-01'>",
+        "position": <número de 1 a 9>,
+        "variant": "<variante gráfica>",
+        "tone": "<'Claro (Porcelana)' ou 'Escuro (Noir)'>",
+        "contrastStatus": "<'Perfeito' ou 'Corrigido com Scrim'>",
+        "copyPosition": "<'top-left' | 'bottom-left' | 'center'>",
+        "status": "<'Harmonizado' ou 'Ajustado'>"
+      }
+    ]
+  },
   "suggestedUpdates": [
     {
       "postId": "<ID exato do post, ex: 'post-bl-01'>",
@@ -217,8 +254,10 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
       "tag": "<tag suíça, ex: '01 // TELEMETRIA'>",
       "caption": "<legenda completa para o Instagram com quebras de linha e CTA>",
       "linkedinPostText": "<artigo executivo thought leadership estruturado para LinkedIn B2B (tese clara, desafio de negócio, sem jargões de afiliado, tom executivo de C-level, menção a blklnk.com)>",
-      "blackLinkVariant": "<MANTENHA RIGOROSAMENTE A VARIANTE ORIGINAL DO POST a menos que o usuário peça explicitamente para trocar>",
-      "rationale": "<1 frase explicando a melhoria>"
+      "blackLinkVariant": "<variante harmonizada: 'swiss-box' | '3d-keycap' | '3d-crystal' | 'pure-monumental' | '3d-cursor' | '3d-liquid' | '3d-sculpture' | 'clean-ice' | 'clean-ice-box'>",
+      "contrastMode": "<'auto' | 'light' | 'dark'>",
+      "copyPosition": "<'top-left' | 'bottom-left' | 'center'>",
+      "rationale": "<1 frase explicando a melhoria visual e estratégica>"
     }
   ],
   "imageAction": {

@@ -86,6 +86,9 @@ export interface SlideData {
   blackLinkVariant?: BlackLinkStyleVariant;
   imageUrl?: string;
   seamlessBleed?: boolean;
+  contrastMode?: "auto" | "light" | "dark";
+  copyPosition?: "top-left" | "bottom-left" | "center";
+  hasScrimBackdrop?: boolean;
 }
 
 export type GlassDimensionMode = "3d-slab" | "3d-monolith" | "floating-glass";

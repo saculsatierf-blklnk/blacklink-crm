@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { type BlackLinkStyleVariant } from "@/components/estudio/layouts/layoutTypes";
 
 // Dicionário Oficial de Direção de Arte da Black Link (Metáforas Físicas de Alto Luxo)
@@ -66,7 +68,7 @@ const VARIANT_ASSET_POOLS: Record<BlackLinkStyleVariant, string[]> = {
 };
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -75,6 +77,7 @@ export async function POST(req: Request) {
     const customPrompt: string | undefined = body.customPrompt?.trim();
     const theme: string | undefined = body.theme?.trim();
     const currentImageUrl: string | undefined = body.currentImageUrl;
+    const postId: string | undefined = body.postId;
 
     // 1. Monta o Prompt de Alto Luxo com Controle Inteligente de Figuras Humanas
     const basePrompt = customPrompt || VARIANT_PROMPTS[variant] || VARIANT_PROMPTS["3d-cursor"];
@@ -113,9 +116,9 @@ export async function POST(req: Request) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
 
-        // Timeout estrito de 8.5 segundos para garantir resposta antes do limite serverless do Netlify
+        // Timeout estrito de 25 segundos para alta resolução com segurança
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8500);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
 
         const response = await fetch(url, {
           method: "POST",
@@ -123,7 +126,7 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             contents: [{ parts: [{ text: finalPrompt }] }],
             generationConfig: {
-              responseModalities: ["image", "text"],
+              responseModalities: ["image"],
             },
           }),
           signal: controller.signal,
@@ -139,15 +142,36 @@ export async function POST(req: Request) {
             if (part?.inlineData?.data) {
               const mimeType = part.inlineData.mimeType || "image/png";
               const base64Data = part.inlineData.data;
-              const imageUrl = `data:${mimeType};base64,${base64Data}`;
 
-              return NextResponse.json({
-                success: true,
-                source: "gemini-ai",
-                modelUsed: "gemini-2.5-flash-image",
-                imageUrl,
-                promptUsed: finalPrompt,
-              });
+              // Salva em disco em public/generated-creatives/ para URL leve sem estourar o localStorage
+              try {
+                const outputDir = path.join(process.cwd(), "public", "generated-creatives");
+                if (!fs.existsSync(outputDir)) {
+                  fs.mkdirSync(outputDir, { recursive: true });
+                }
+                const safeId = (postId || variant || "art").replace(/[^a-zA-Z0-9_-]/g, "");
+                const fileName = `bl_${safeId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.png`;
+                const filePath = path.join(outputDir, fileName);
+                fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+
+                const relativeUrl = `/generated-creatives/${fileName}`;
+                return NextResponse.json({
+                  success: true,
+                  source: "gemini-ai",
+                  modelUsed: "gemini-2.5-flash-image",
+                  imageUrl: relativeUrl,
+                  promptUsed: finalPrompt,
+                });
+              } catch (fsErr) {
+                console.warn("[FS Warning] Não foi possível salvar em disco, retornando base64:", fsErr);
+                return NextResponse.json({
+                  success: true,
+                  source: "gemini-ai",
+                  modelUsed: "gemini-2.5-flash-image",
+                  imageUrl: `data:${mimeType};base64,${base64Data}`,
+                  promptUsed: finalPrompt,
+                });
+              }
             }
           }
         } else {
@@ -160,7 +184,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Seleção inteligente do Pool Curado de Estúdio (alterna para uma nova variação real)
+    // 3. Fallback inteligente do Pool Curado de Estúdio se a API Gemini estiver indisponível
     const pool = VARIANT_ASSET_POOLS[variant] || ["/brand/blacklink-art-cursor-light.jpg"];
     const otherAssets = pool.filter((img) => img !== currentImageUrl);
     const chosenImage =
