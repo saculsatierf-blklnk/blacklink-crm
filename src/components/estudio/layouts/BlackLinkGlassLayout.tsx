@@ -110,7 +110,10 @@ export function BlackLinkGlassLayout({
     if (slide.copyPosition === "center") return "center";
     if (slide.copyPosition === "bottom-left") return "bottom-left";
     if (slide.copyPosition === "top-left") return "top-left";
-    if (variant === "swiss-box" || variant === "clean-ice-box") return "center";
+    // Padrão editorial brutalista suíço da Black Link:
+    // Retratos (pure-monumental, 3d-liquid), Macro Glass e Obsidian: Base (bottom-left)
+    // Objetos 3D (3d-cursor, 3d-keycap, 3d-crystal) e composições: Topo (top-left)
+    // NUNCA força caixa no centro por padrão, deixando a arte 100% desobstruída!
     if (
       variant === "pure-monumental" ||
       variant === "3d-liquid" ||
@@ -321,92 +324,54 @@ export function BlackLinkGlassLayout({
       {/* ================================================================== */}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO A: BOUNDING BOX COM 8 HANDLES (SWISS BOX / ICE BOX / CENTER) */}
+      {/* VARIAÇÃO A: NÚCLEO EDITORIAL SUÍÇO (CENTRALIZADO)                 */}
       {/* ------------------------------------------------------------------ */}
       {copyPos === "center" && (
         <main className="relative z-10 w-full px-[60px] my-auto flex flex-col justify-center items-center text-center">
-          <div className="relative inline-block px-10 py-7 max-w-[840px]">
-            {/* Contorno fino com fundo de vidro fosco de alto contraste */}
-            <div
-              className={`absolute inset-0 border ${
-                isLightBackground
-                  ? "border-black/30 backdrop-blur-[12px] bg-white/85 shadow-[0_8px_32px_rgba(0,0,0,0.08)]"
-                  : "border-white/40 backdrop-blur-[12px] bg-black/65 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
-              }`}
-            />
-            {/* 4 Handles nos 4 cantos */}
-            <span
-              className={`absolute -top-1 -left-1 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            <span
-              className={`absolute -top-1 -right-1 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            <span
-              className={`absolute -bottom-1 -left-1 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            <span
-              className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            {/* 4 Handles no centro de cada aresta */}
-            <span
-              className={`absolute top-1/2 -left-1 -translate-y-1/2 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            <span
-              className={`absolute top-1/2 -right-1 -translate-y-1/2 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            <span
-              className={`absolute -top-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-            <span
-              className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 ${
-                isLightBackground ? "bg-black border border-white" : "bg-white border border-black"
-              }`}
-            />
-
+          <div
+            className={`max-w-[840px] space-y-3 transition-all duration-300 ${
+              slide.hasScrimBackdrop
+                ? isLightBackground
+                  ? "p-6 rounded-2xl backdrop-blur-[12px] bg-white/70 border border-black/10 shadow-sm"
+                  : "p-6 rounded-2xl backdrop-blur-[12px] bg-[#030305]/70 border border-white/10 shadow-md"
+                : "p-0 bg-transparent border-0 shadow-none"
+            }`}
+          >
             {/* Tag Editorial Suíça opcional */}
             {slide.tag && (
               <div
-                className={`relative z-10 text-[11px] font-mono uppercase tracking-[0.25em] font-bold pb-2 ${
-                  isLightBackground ? "text-black/75" : "text-white/75"
+                className={`inline-block px-3 py-1 rounded-full border text-[11px] font-mono uppercase tracking-[0.25em] font-bold ${
+                  isLightBackground
+                    ? "border-black/25 text-black/85 bg-black/[0.04]"
+                    : "border-white/25 text-white/85 bg-white/[0.05]"
                 }`}
               >
                 {slide.tag}
               </div>
             )}
 
-            {/* Termo Principal dentro da Bounding Box */}
+            {/* Termo Principal Monumental */}
             <h1
-              className={`relative z-10 font-clash font-extrabold uppercase tracking-[0.16em] leading-tight py-1 ${
+              className={`font-clash font-extrabold uppercase leading-[1.08] tracking-tight py-1 ${
                 isLightBackground
-                  ? "text-[#09090B] drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]"
-                  : "text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
+                  ? "text-[#09090B] drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]"
+                  : "text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
               }`}
               style={{
                 fontSize: computeHeadlineFontSize(displayHeadline.length, true),
+                letterSpacing: "-0.02em",
               }}
             >
-              {displayHeadline}
+              {renderHighlight(displayHeadline)}
             </h1>
 
             {/* Tese / Linha de Apoio opcional */}
             {slide.bodyText && (
               <p
-                className={`relative z-10 text-xs md:text-sm font-sans max-w-[560px] mx-auto pt-2.5 leading-relaxed tracking-normal font-medium ${
-                  isLightBackground ? "text-zinc-800" : "text-zinc-200"
+                className={`text-sm md:text-base font-sans max-w-[560px] mx-auto pt-1 leading-relaxed tracking-normal font-medium ${
+                  isLightBackground
+                    ? "text-zinc-800 drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]"
+                    : "text-zinc-200 drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)]"
                 }`}
               >
                 {slide.bodyText}
@@ -417,8 +382,7 @@ export function BlackLinkGlassLayout({
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* VARIAÇÃO B & C: POSICIONAMENTO COM ESCUDO DE CONTRASTE (SCRIM)     */}
-      {/* Top-Left ou Bottom-Left com proteção garantida contra ofuscamento  */}
+      {/* VARIAÇÃO B & C: NÚCLEO EDITORIAL (TOP-LEFT OU BOTTOM-LEFT)        */}
       {/* ------------------------------------------------------------------ */}
       {copyPos !== "center" && (
         <main
@@ -426,17 +390,18 @@ export function BlackLinkGlassLayout({
             copyPos === "top-left" ? "mt-4 mb-auto" : "mt-auto mb-4"
           }`}
         >
-          {/* Card com Escudo Protetor de Contraste Físico (Vidro Porcelana ou Vidro Obsidian) */}
           <div
-            className={`max-w-[620px] p-6 rounded-2xl space-y-2.5 transition-all duration-300 ${
-              isLightBackground
-                ? "backdrop-blur-[14px] bg-white/80 border border-black/10 shadow-[0_8px_32px_rgba(0,0,0,0.08)]"
-                : "backdrop-blur-[14px] bg-[#030305]/75 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+            className={`max-w-[620px] space-y-3 transition-all duration-300 ${
+              slide.hasScrimBackdrop
+                ? isLightBackground
+                  ? "p-6 rounded-2xl backdrop-blur-[12px] bg-white/70 border border-black/10 shadow-sm"
+                  : "p-6 rounded-2xl backdrop-blur-[12px] bg-[#030305]/70 border border-white/10 shadow-md"
+                : "p-0 bg-transparent border-0 shadow-none"
             }`}
           >
             {slide.tag && (
               <div
-                className={`inline-block px-2.5 py-0.5 rounded-full border text-[10px] font-mono uppercase tracking-[0.25em] font-bold ${
+                className={`inline-block px-3 py-1 rounded-full border text-[11px] font-mono uppercase tracking-[0.25em] font-bold ${
                   isLightBackground
                     ? "border-black/25 text-black/85 bg-black/[0.04]"
                     : "border-white/25 text-white/85 bg-white/[0.05]"
@@ -448,8 +413,8 @@ export function BlackLinkGlassLayout({
             <h1
               className={`font-clash font-extrabold uppercase leading-[1.08] whitespace-pre-line tracking-tight ${
                 isLightBackground
-                  ? "text-[#09090B] drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)]"
-                  : "text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.95)]"
+                  ? "text-[#09090B] drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]"
+                  : "text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.95)]"
               }`}
               style={{
                 fontSize: computeHeadlineFontSize(displayHeadline.length, false),
@@ -461,10 +426,10 @@ export function BlackLinkGlassLayout({
             </h1>
             {slide.bodyText && (
               <p
-                className={`text-sm font-sans leading-relaxed tracking-normal max-w-[480px] font-medium pt-0.5 ${
+                className={`text-sm md:text-base font-sans leading-relaxed tracking-normal max-w-[500px] font-medium pt-1 ${
                   isLightBackground
-                    ? "text-zinc-800"
-                    : "text-zinc-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+                    ? "text-zinc-800 drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]"
+                    : "text-zinc-200 drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)]"
                 }`}
               >
                 {slide.bodyText}

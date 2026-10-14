@@ -207,6 +207,12 @@ INSTRUÇÕES DE CLAREZA E COMPORTAMENTO (IMPORTANTE):
    - Se houver pessoas em artes ou prompts, apenas pessoas negras retintas.
    - Foco nos produtos reais da Black Link (CRM OS, Automações com IA, Branding, Protocolo e Megaeventos).
    - Canais: se estiver gerando para Instagram, priorize impacto estético e headlines de 2 a 4 palavras; se estiver gerando para LinkedIn, priorize teses de negócios B2B e distribuição de carrosséis PDF.
+5. REGRA DE OURO VISUAL — PROIBIDO BALÕES QUADRADOS OU CAIXAS SOBRE A ARTE:
+   - A identidade visual da Black Link usa TIPOGRAFIA PURA MONUMENTAL flutuando diretamente sobre a arte, com drop-shadow limpo.
+   - NUNCA use caixas retangulares, molduras, bordas com handles (alças) ou balões cobrindo os modelos ou o centro da imagem. O usuário DETESTA esses balões.
+   - Se o usuário falar "balão", "caixa", "quadrado", "feio", "tira o balão", "remover caixa", "limpar":
+     * Confirme imediatamente que o balão foi eliminado e a arte agora tem tipografia pura e desobstruída.
+     * Envie em 'suggestedUpdates' com "hasScrimBackdrop": false, e posicione a copy em 'bottom-left' ou 'top-left' para deixar o centro da imagem respirar livremente.
 
 CATÁLOGO DE PRODUTOS DA BLACK LINK:
 ${productsCatalogText}
@@ -254,9 +260,10 @@ RESPONDA ESTRITAMENTE EM JSON VÁLIDO (sem markdown ou texto fora das chaves) co
       "tag": "<tag suíça, ex: '01 // TELEMETRIA'>",
       "caption": "<legenda completa para o Instagram com quebras de linha e CTA>",
       "linkedinPostText": "<artigo executivo thought leadership estruturado para LinkedIn B2B (tese clara, desafio de negócio, sem jargões de afiliado, tom executivo de C-level, menção a blklnk.com)>",
-      "blackLinkVariant": "<variante harmonizada: 'swiss-box' | '3d-keycap' | '3d-crystal' | 'pure-monumental' | '3d-cursor' | '3d-liquid' | '3d-sculpture' | 'clean-ice' | 'clean-ice-box'>",
+      "blackLinkVariant": "<variante harmonizada: '3d-keycap' | '3d-crystal' | 'pure-monumental' | '3d-cursor' | '3d-liquid' | '3d-sculpture' | 'clean-ice'>",
       "contrastMode": "<'auto' | 'light' | 'dark'>",
       "copyPosition": "<'top-left' | 'bottom-left' | 'center'>",
+      "hasScrimBackdrop": false,
       "rationale": "<1 frase explicando a melhoria visual e estratégica>"
     }
   ],

@@ -2389,8 +2389,7 @@ export function InstagramFeedGridView() {
                               { id: "bottom-left", label: "Base" },
                             ].map((pos) => {
                               const currentPos = selectedFeedPost?.slides?.[activeSlideIdx]?.copyPosition || 
-                                (editingVariant === "swiss-box" || editingVariant === "clean-ice-box" ? "center" : 
-                                 (editingVariant === "pure-monumental" || editingVariant === "3d-liquid" || editingVariant === "3d-sculpture" || editingVariant === "clean-ice") ? "bottom-left" : "top-left");
+                                ((editingVariant === "pure-monumental" || editingVariant === "3d-liquid" || editingVariant === "3d-sculpture" || editingVariant === "clean-ice") ? "bottom-left" : "top-left");
                               const isSelected = currentPos === pos.id;
                               return (
                                 <button
@@ -2454,6 +2453,57 @@ export function InstagramFeedGridView() {
                               );
                             })}
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Fundo da Tipografia: Pura vs Balão Vidro */}
+                      <div className="space-y-1.5 pt-2 pb-1 border-t border-white/10">
+                        <label className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold flex items-center justify-between">
+                          <span>Fundo da Tipografia</span>
+                          <span className="text-[10px] text-zinc-400 font-mono">
+                            {!selectedFeedPost?.slides?.[activeSlideIdx]?.hasScrimBackdrop ? "✦ Tipografia Pura" : "Vidro Translúcido"}
+                          </span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedFeedPost) {
+                                const updated = [...selectedFeedPost.slides];
+                                const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                updated[activeSlideIdx] = { ...s, hasScrimBackdrop: false };
+                                setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                                updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                              }
+                            }}
+                            className={`py-1.5 px-2.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+                              !selectedFeedPost?.slides?.[activeSlideIdx]?.hasScrimBackdrop
+                                ? "bg-white text-black shadow"
+                                : "bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/10 border border-white/10"
+                            }`}
+                          >
+                            <span>✦ Tipografia Pura (Sem Balão)</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (selectedFeedPost) {
+                                const updated = [...selectedFeedPost.slides];
+                                const s = updated[activeSlideIdx] || { slideNumber: activeSlideIdx + 1 };
+                                updated[activeSlideIdx] = { ...s, hasScrimBackdrop: true };
+                                setSelectedFeedPost({ ...selectedFeedPost, slides: updated });
+                                updateScheduledPost(selectedFeedPost.id, { slides: updated });
+                              }
+                            }}
+                            className={`py-1.5 px-2.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+                              selectedFeedPost?.slides?.[activeSlideIdx]?.hasScrimBackdrop
+                                ? "bg-white text-black shadow"
+                                : "bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/10 border border-white/10"
+                            }`}
+                          >
+                            <span>Vidro Translúcido</span>
+                          </button>
                         </div>
                       </div>
 

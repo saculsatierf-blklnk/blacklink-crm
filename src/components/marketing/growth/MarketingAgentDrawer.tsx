@@ -63,6 +63,7 @@ interface AgentMessage {
     blackLinkVariant?: any;
     contrastMode?: "auto" | "light" | "dark";
     copyPosition?: "top-left" | "bottom-left" | "center";
+    hasScrimBackdrop?: boolean;
     rationale?: string;
   }>;
   imageAction?: {
@@ -232,6 +233,7 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
       blackLinkVariant: update.blackLinkVariant || s0.blackLinkVariant,
       contrastMode: update.contrastMode || s0.contrastMode,
       copyPosition: update.copyPosition || s0.copyPosition,
+      hasScrimBackdrop: update.hasScrimBackdrop !== undefined ? update.hasScrimBackdrop : false,
     };
 
     updateScheduledPost(targetPost.id, {
@@ -243,8 +245,27 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
       theme: update.headline,
     });
 
-    setAppliedFeedback(`Post ${update.postId} atualizado e harmonizado!`);
+    setAppliedFeedback(`Post ${update.postId} atualizado (Tipografia Pura)!`);
     setTimeout(() => setAppliedFeedback(null), 3000);
+  };
+
+  const handleRemoveAllBalloons = () => {
+    scheduledPosts.forEach((post) => {
+      const updatedSlides = post.slides.map((s) => ({
+        ...s,
+        hasScrimBackdrop: false,
+        copyPosition:
+          s.blackLinkVariant === "pure-monumental" ||
+          s.blackLinkVariant === "3d-liquid" ||
+          s.blackLinkVariant === "3d-sculpture" ||
+          s.blackLinkVariant === "clean-ice"
+            ? ("bottom-left" as const)
+            : ("top-left" as const),
+      }));
+      updateScheduledPost(post.id, { slides: updatedSlides });
+    });
+    setAppliedFeedback("✨ Balões eliminados! Todos os 9 posts agora usam Tipografia Pura.");
+    setTimeout(() => setAppliedFeedback(null), 3500);
   };
 
   const handleApplyAllUpdates = (updates: NonNullable<AgentMessage["suggestedUpdates"]>) => {
@@ -457,22 +478,12 @@ export function MarketingAgentDrawer({ isOpen, onClose }: MarketingAgentDrawerPr
 
                   <button
                     type="button"
-                    disabled={isLoading}
-                    onClick={() => handleSendMessage("Analise a imagem deste post selecionado e diga o que você vê.", "diagnostico_visual")}
-                    className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                    onClick={handleRemoveAllBalloons}
+                    className="px-3 py-1.5 rounded-xl border border-purple-500/40 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ring-1 ring-purple-500/30"
+                    title="Remove todas as caixas/balões de fundo de todos os posts e aplica Tipografia Pura flutuante"
                   >
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>👁️ Diagnosticar Imagem</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleSendMessage("Gere uma nova arte sofisticada para este post com foco em tecnologia e alto ticket", "gerar_nova_arte")}
-                    className="px-3 py-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>🎨 Nova Imagem com IA</span>
+                    <Sparkles className="h-3.5 w-3.5 text-purple-300" />
+                    <span>✦ Tipografia Pura (Eliminar Balões)</span>
                   </button>
 
                   <button
