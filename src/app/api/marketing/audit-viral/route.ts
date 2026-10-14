@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { headline = "", bodyText = "", tag = "", caption = "", productId } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     if (!apiKey) {
       return NextResponse.json(
         { error: "GEMINI_API_KEY não configurada no servidor." },

@@ -1413,7 +1413,7 @@ export async function POST(request: NextRequest) {
       (!body.website?.trim() && Boolean(body.instagram?.trim())) ||
       (body.niche && /influencer|creator|humor|criador|lifestyle|artista/i.test(body.niche));
 
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     let diagnosticResult: ParsedGeminiDiagnostic | null = null;
     let engineSource: "gemini_ai" | "synthetic_engine" = "synthetic_engine";
 

@@ -53,7 +53,7 @@ interface CadenceRequestBody {
 async function callGeminiCadenceAgent(
   body: CadenceRequestBody
 ): Promise<{ cadenceStrategy: CadenceStrategyData; weeklyAgenda: AgendaDayData[] } | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
   if (!apiKey) return null;
 
   const candidateModels = [

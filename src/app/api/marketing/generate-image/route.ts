@@ -109,7 +109,7 @@ export async function POST(req: Request) {
 
     const finalPrompt = `${basePrompt}${contextualAddon}. ${specificDirective}, ultra-high resolution, 8k, masterpiece, no text, clean negative space.`;
 
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
 
     // 2. Tenta gerar via modelo oficial ultrarrápido da Google (gemini-2.5-flash-image)
     if (apiKey) {

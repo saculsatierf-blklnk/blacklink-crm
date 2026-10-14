@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       scrapedSummary = `Website oficial: ${website} (Sincronizado via infraestrutura de inteligência de marca Black Link)`;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     let digitalFootprintNotes = BLACKLINK_CANONICAL_FOOTPRINT;
 
     if (apiKey) {

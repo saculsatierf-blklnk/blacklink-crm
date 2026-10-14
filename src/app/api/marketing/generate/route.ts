@@ -787,7 +787,7 @@ export async function POST(request: NextRequest) {
       "dynamic_synthesizer";
 
     // 2. Tentativa Primária: IA Direta (Google Gemini com modelos ultra-rápidos e contexto de marca)
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     if (geminiKey) {
       try {
         const directResult = await generateWithGeminiDirect(

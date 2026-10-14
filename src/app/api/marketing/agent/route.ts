@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       activeChannel = "instagram",
     } = body;
 
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     if (!apiKey) {
       return NextResponse.json(
         { error: "GEMINI_API_KEY não configurada no servidor." },
