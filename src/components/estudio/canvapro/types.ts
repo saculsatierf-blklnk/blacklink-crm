@@ -210,10 +210,21 @@ export interface Editor {
   addSoftRectangle: () => void;
   addRectangle: () => void;
   addTriangle: () => void;
+  loadExactSlideLayout: (data: ExactSlideLayoutProps) => Promise<void>;
   canvas: fabric.Canvas;
   getActiveFillColor: () => string;
   getActiveStrokeColor: () => string;
   getActiveStrokeWidth: () => number;
   getActiveStrokeDashArray: () => number[];
   selectedObjects: fabric.Object[];
+}
+
+export interface ExactSlideLayoutProps {
+  headline: string;
+  bodyText?: string;
+  tag?: string;
+  imageUrl?: string;
+  variant?: any;
+  contrastMode?: "auto" | "light" | "dark";
+  copyPosition?: "top-left" | "bottom-left" | "center";
 }

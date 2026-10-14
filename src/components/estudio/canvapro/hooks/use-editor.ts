@@ -15,6 +15,7 @@ import {
   FONT_WEIGHT,
   FONT_SIZE,
   JSON_KEYS,
+  ExactSlideLayoutProps,
 } from "../types";
 import { useHistory } from "./use-history";
 import { useClipboard } from "./use-clipboard";
@@ -22,6 +23,29 @@ import { useAutoResize } from "./use-auto-resize";
 import { useCanvasEvents } from "./use-canvas-events";
 import { useHotkeys } from "./use-hotkeys";
 import { createFilter, downloadFile, isTextType, transformText } from "../utils";
+
+function resolveFallbackImage(variant: string): string {
+  switch (variant) {
+    case "swiss-box":
+      return "/brand/blacklink-art-gradient.jpg";
+    case "3d-keycap":
+      return "/brand/blacklink-3d-keycap.jpg";
+    case "3d-crystal":
+      return "/brand/blacklink-art-pins.jpg";
+    case "pure-monumental":
+      return "/brand/blacklink-art-portrait.jpg";
+    case "3d-cursor":
+      return "/brand/blacklink-art-cursor-light.jpg";
+    case "3d-liquid":
+      return "/brand/blacklink-art-glass-model.jpg";
+    case "3d-sculpture":
+      return "/brand/blacklink-art-macro-glass.jpg";
+    case "clean-ice":
+      return "/brand/blacklink-art-obsidian-dark.jpg";
+    default:
+      return "/brand/blacklink-art-portrait.jpg";
+  }
+}
 
 const buildEditor = ({
   save,
@@ -491,10 +515,24 @@ const buildEditor = ({
     },
     changeFillColor: (value: string) => {
       setFillColor(value);
-      canvas.getActiveObjects().forEach((object) => {
-        object.set({ fill: value });
-      });
-      canvas.renderAll();
+      const activeObjs = canvas.getActiveObjects();
+      if (activeObjs.length > 0) {
+        activeObjs.forEach((object) => {
+          object.set({ fill: value });
+          // @ts-ignore
+          if (object.isEditing) {
+            // @ts-ignore
+            object.setSelectionStyles({ fill: value });
+          }
+        });
+      } else {
+        const headline = canvas.getObjects().find((obj) => obj.name === "slide-headline" || isTextType(obj.type));
+        if (headline) {
+          headline.set({ fill: value });
+          canvas.setActiveObject(headline);
+        }
+      }
+      canvas.requestRenderAll();
       save();
     },
     changeStrokeColor: (value: string) => {
@@ -569,6 +607,216 @@ const buildEditor = ({
         strokeWidth: strokeWidth,
       });
       addToCanvas(object);
+    },
+    loadExactSlideLayout: async (data: ExactSlideLayoutProps) => {
+      // 1. Limpa todos os objetos que não sejam o workspace clip
+      const existing = canvas.getObjects().filter((obj) => obj.name !== "clip");
+      existing.forEach((obj) => canvas.remove(obj));
+
+      const workspace = getWorkspace();
+      const w = workspace?.width || 1080;
+      const h = workspace?.height || 1080;
+
+      // 2. Determina contraste e posicionamento idênticos ao BlackLinkGlassLayout
+      const variant = data.variant || "3d-cursor";
+      const isLight = (() => {
+        if (data.contrastMode === "dark") return true;
+        if (data.contrastMode === "light") return false;
+        return variant === "3d-crystal" || variant === "3d-cursor" || variant === "clean-ice-box";
+      })();
+
+      const copyPos = (() => {
+        if (data.copyPosition === "center") return "center";
+        if (data.copyPosition === "bottom-left") return "bottom-left";
+        if (data.copyPosition === "top-left") return "top-left";
+        if (
+          variant === "pure-monumental" ||
+          variant === "3d-liquid" ||
+          variant === "3d-sculpture" ||
+          variant === "clean-ice"
+        ) {
+          return "bottom-left";
+        }
+        return "top-left";
+      })();
+
+      // 3. Carrega Imagem de Fundo cobrindo perfeitamente o workspace
+      const imageSrc =
+        data.imageUrl && !data.imageUrl.includes("render-slide") && !data.imageUrl.includes("pollinations.ai")
+          ? data.imageUrl
+          : resolveFallbackImage(variant);
+
+      if (imageSrc) {
+        await new Promise<void>((resolve) => {
+          fabric.Image.fromURL(
+            imageSrc,
+            (img) => {
+              if (img && img.width && img.height) {
+                const scale = Math.max(w / img.width, h / img.height);
+                img.set({
+                  left: (w - img.width * scale) / 2,
+                  top: (h - img.height * scale) / 2,
+                  originX: "left",
+                  originY: "top",
+                  scaleX: scale,
+                  scaleY: scale,
+                  selectable: false,
+                  evented: false,
+                  name: "slide-bg",
+                });
+                canvas.add(img);
+                img.moveTo(1);
+              }
+              resolve();
+            },
+            { crossOrigin: "anonymous" }
+          );
+        });
+      }
+
+      // 4. Header Editorial Suíço (DESIGN.BLACKLINK // 2026)
+      const headerBrand = new fabric.Text("DESIGN.BLACKLINK", {
+        left: 60,
+        top: 48,
+        fontSize: 12,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontWeight: "700",
+        charSpacing: 280,
+        fill: isLight ? "#09090B" : "#FFFFFF",
+        opacity: 0.85,
+        selectable: true,
+        name: "slide-header-brand",
+      });
+      canvas.add(headerBrand);
+
+      const headerYear = new fabric.Text("2026", {
+        left: w - 60,
+        top: 48,
+        originX: "right",
+        fontSize: 12,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontWeight: "700",
+        charSpacing: 250,
+        fill: isLight ? "#09090B" : "#FFFFFF",
+        opacity: 0.85,
+        selectable: true,
+        name: "slide-header-year",
+      });
+      canvas.add(headerYear);
+
+      // 5. Rodapé: Seta Suíça ↗
+      const arrowBg = new fabric.Circle({
+        left: w - 60 - 44,
+        top: h - 48 - 44,
+        radius: 22,
+        fill: isLight ? "rgba(255,255,255,0.85)" : "rgba(0,0,0,0.6)",
+        stroke: isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)",
+        strokeWidth: 1,
+        selectable: true,
+        name: "slide-footer-arrow-bg",
+      });
+      const arrowText = new fabric.Text("↗", {
+        left: w - 60 - 22,
+        top: h - 48 - 22,
+        originX: "center",
+        originY: "center",
+        fontSize: 18,
+        fontFamily: "sans-serif",
+        fontWeight: "700",
+        fill: isLight ? "#000000" : "#FFFFFF",
+        selectable: true,
+        name: "slide-footer-arrow",
+      });
+      canvas.add(arrowBg);
+      canvas.add(arrowText);
+
+      // 6. Bloco Editorial Tipográfico (Tag + Headline + BodyText)
+      const headlineRaw = (data.headline || "RIGOR TIPOGRÁFICO INTERNACIONAL").trim().toUpperCase();
+      const len = headlineRaw.length;
+      const headlineFontSize = len <= 15 ? 46 : len <= 30 ? 38 : len <= 50 ? 32 : 26;
+
+      let startTop = 148;
+      if (copyPos === "bottom-left") {
+        startTop = h - 280;
+      } else if (copyPos === "center") {
+        startTop = 380;
+      }
+
+      // Tag
+      if (data.tag) {
+        const tagObj = new fabric.Textbox(data.tag.toUpperCase(), {
+          left: copyPos === "center" ? w / 2 : 60,
+          top: startTop,
+          originX: copyPos === "center" ? "center" : "left",
+          textAlign: copyPos === "center" ? "center" : "left",
+          fontSize: 11,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontWeight: "700",
+          charSpacing: 250,
+          fill: isLight ? "#09090B" : "#FFFFFF",
+          backgroundColor: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
+          padding: 6,
+          width: Math.min(360, data.tag.length * 11 + 32),
+          editable: true,
+          name: "slide-tag",
+        });
+        canvas.add(tagObj);
+        startTop += (tagObj.height || 28) + 14;
+      }
+
+      // Headline (com sombra volumétrica idêntica à BlackLinkGlassLayout)
+      const headlineObj = new fabric.Textbox(headlineRaw, {
+        left: copyPos === "center" ? w / 2 : 60,
+        top: startTop,
+        originX: copyPos === "center" ? "center" : "left",
+        textAlign: copyPos === "center" ? "center" : "left",
+        width: 620,
+        fontSize: headlineFontSize,
+        fontFamily: "'Clash Display', sans-serif",
+        fontWeight: "800",
+        lineHeight: 1.08,
+        charSpacing: -20,
+        fill: isLight ? "#09090B" : "#FFFFFF",
+        shadow: new fabric.Shadow({
+          color: isLight ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.95)",
+          blur: isLight ? 2 : 28,
+          offsetY: isLight ? 1 : 4,
+        }),
+        editable: true,
+        name: "slide-headline",
+      });
+      canvas.add(headlineObj);
+      startTop += (headlineObj.height || 80) + 14;
+
+      // Body Text
+      if (data.bodyText) {
+        const bodyObj = new fabric.Textbox(data.bodyText, {
+          left: copyPos === "center" ? w / 2 : 60,
+          top: startTop,
+          originX: copyPos === "center" ? "center" : "left",
+          textAlign: copyPos === "center" ? "center" : "left",
+          width: 500,
+          fontSize: 15,
+          fontFamily: "Inter, sans-serif",
+          fontWeight: "500",
+          lineHeight: 1.45,
+          fill: isLight ? "#27272A" : "#E4E4E7",
+          shadow: new fabric.Shadow({
+            color: isLight ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.9)",
+            blur: isLight ? 1 : 14,
+            offsetY: isLight ? 1 : 2,
+          }),
+          editable: true,
+          name: "slide-body",
+        });
+        canvas.add(bodyObj);
+      }
+
+      // Ativa o Headline para edição imediata
+      canvas.setActiveObject(headlineObj);
+      canvas.requestRenderAll();
+      autoZoom();
+      save();
     },
     canvas,
     getActiveFontWeight: () => {

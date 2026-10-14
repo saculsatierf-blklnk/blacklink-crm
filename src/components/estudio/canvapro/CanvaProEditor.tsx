@@ -99,52 +99,34 @@ export function CanvaProEditor({
     };
   }, [init]);
 
-  // Carrega os elementos do post atual se fornecido (Background Image + Headline + Body + Tag)
+  // Carrega os elementos do post atual mantendo a posição e visual EXATOS da lâmina
   const loadPostContent = useCallback(async () => {
     if (!editor || !initialPost) return;
 
     const slide = initialPost.slides?.[activeSlideIdx] || initialPost.slides?.[0];
     if (!slide) return;
 
-    // Limpa todos os objetos que não são o workspace clip
-    const existing = editor.canvas.getObjects().filter((obj) => obj.name !== "clip");
-    existing.forEach((obj) => editor.canvas.remove(obj));
-
-    // 1. Carrega Imagem de Fundo se existir
-    if (slide.imageUrl) {
-      try {
-        await editor.setBackgroundImage(slide.imageUrl);
-      } catch (e) {
-        console.warn("Não foi possível carregar imagem remota devido a CORS, adicionando cor base", e);
-      }
-    }
-
-    // 2. Adiciona Tag
-    if (slide.tag) {
-      editor.addBadge(slide.tag.toUpperCase());
-    }
-
-    // 3. Adiciona Headline
-    if (slide.headline) {
-      editor.addHeading(slide.headline);
-    }
-
-    // 4. Adiciona Body Text
-    if (slide.bodyText) {
-      editor.addBodyText(slide.bodyText);
-    }
-
-    editor.autoZoom();
+    await editor.loadExactSlideLayout({
+      headline: slide.headline || initialPost.theme || "RIGOR TIPOGRÁFICO INTERNACIONAL",
+      bodyText: slide.bodyText || initialPost.hookHeadline || "",
+      tag: slide.tag || "03 // ESTÉTICA",
+      imageUrl: slide.imageUrl || initialPost.imageUrls?.[0],
+      variant: slide.blackLinkVariant,
+      contrastMode: slide.contrastMode,
+      copyPosition: slide.copyPosition,
+    });
   }, [activeSlideIdx, editor, initialPost]);
 
-  // Quando o editor estiver pronto e o post for fornecido pela primeira vez
-  const hasLoadedRef = useRef(false);
+  // Quando o editor estiver pronto e o post for fornecido, carrega com fidelidade 100%
+  const lastLoadedKeyRef = useRef<string>("");
+  const currentKey = `${initialPost?.id || "empty"}-${activeSlideIdx}-${initialPost?.slides?.[activeSlideIdx]?.headline || ""}`;
+
   useEffect(() => {
-    if (editor && initialPost && !hasLoadedRef.current) {
-      hasLoadedRef.current = true;
+    if (editor && initialPost && lastLoadedKeyRef.current !== currentKey) {
+      lastLoadedKeyRef.current = currentKey;
       loadPostContent();
     }
-  }, [editor, initialPost, loadPostContent]);
+  }, [editor, initialPost, currentKey, loadPostContent]);
 
   // Formato do Canvas (Quadrado 1:1, Retrato 4:5, Stories 9:16)
   const handleFormatChange = (fmt: "1:1" | "4:5" | "9:16") => {
@@ -181,9 +163,17 @@ export function CanvaProEditor({
 
     const renderedUrl = editor.exportDataUrl("png");
 
+    const canvas = editor.canvas;
+    const headlineObj = canvas?.getObjects().find((o) => o.name === "slide-headline") as fabric.Textbox | undefined;
+    const bodyObj = canvas?.getObjects().find((o) => o.name === "slide-body") as fabric.Textbox | undefined;
+    const tagObj = canvas?.getObjects().find((o) => o.name === "slide-tag") as fabric.Textbox | undefined;
+
     if (onSaveToFeed) {
       onSaveToFeed(renderedUrl, {
         imageUrl: renderedUrl,
+        ...(headlineObj?.text ? { headline: headlineObj.text } : {}),
+        ...(bodyObj?.text ? { bodyText: bodyObj.text } : {}),
+        ...(tagObj?.text ? { tag: tagObj.text } : {}),
       });
     }
 
@@ -424,14 +414,73 @@ export function CanvaProEditor({
               </button>
             </div>
 
-            {/* Cor do Texto */}
-            <div className="flex items-center gap-1.5">
+            {/* Seletor & Swatches Rápidas de Cor do Texto (1 Clique) */}
+            <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/10 rounded-lg px-2 py-1">
+              <span className="text-[10px] font-mono text-zinc-400 hidden xl:inline">Cor:</span>
+              
+              {/* Swatches Rápidas em 1 Clique */}
+              <div className="flex items-center gap-1">
+                {[
+                  { name: "Branco Puro", color: "#FFFFFF" },
+                  { name: "Preto Carbono", color: "#09090B" },
+                  { name: "Amber Gold", color: "#F59E0B" },
+                  { name: "Cyber Sky", color: "#38BDF8" },
+                  { name: "Emerald", color: "#10B981" },
+                  { name: "Purple Neon", color: "#A855F7" },
+                  { name: "Crimson", color: "#EF4444" },
+                  { name: "Cinza Platina", color: "#E4E4E7" },
+                ].map((swatch) => {
+                  const activeColor = (editor?.getActiveFillColor() || "").toUpperCase();
+                  const isCurrent = activeColor === swatch.color.toUpperCase();
+                  return (
+                    <button
+                      key={swatch.color}
+                      type="button"
+                      onClick={() => editor?.changeFillColor(swatch.color)}
+                      title={`${swatch.name} (${swatch.color})`}
+                      className={`h-5 w-5 rounded-full border transition-all cursor-pointer flex items-center justify-center ${
+                        isCurrent
+                          ? "ring-2 ring-sky-400 ring-offset-1 ring-offset-black scale-110 border-white shadow-md"
+                          : "border-white/20 hover:scale-110"
+                      }`}
+                      style={{ backgroundColor: swatch.color }}
+                    >
+                      {isCurrent && (
+                        <span className={`text-[8px] font-bold ${swatch.color === "#FFFFFF" || swatch.color === "#E4E4E7" ? "text-black" : "text-white"}`}>
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Seletor Livre (Color Wheel) */}
+              <label
+                className="relative flex items-center justify-center h-5 w-5 rounded-full border border-white/30 bg-gradient-to-tr from-pink-500 via-amber-400 to-sky-400 cursor-pointer hover:scale-110 transition-transform shadow-sm ml-0.5"
+                title="Paleta Completa / Cor Customizada"
+              >
+                <input
+                  type="color"
+                  value={editor?.getActiveFillColor() || "#FFFFFF"}
+                  onChange={(e) => editor?.changeFillColor(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+              </label>
+
+              {/* Input Hex */}
               <input
-                type="color"
+                type="text"
                 value={editor?.getActiveFillColor() || "#FFFFFF"}
-                onChange={(e) => editor?.changeFillColor(e.target.value)}
-                title="Cor da Fonte"
-                className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.startsWith("#") && (val.length === 4 || val.length === 7)) {
+                    editor?.changeFillColor(val);
+                  }
+                }}
+                className="w-16 bg-black/40 border border-white/10 rounded px-1 text-[10px] font-mono text-zinc-300 text-center uppercase focus:border-sky-400 focus:outline-none"
+                placeholder="#HEX"
+                title="Código Hexadecimal da Cor"
               />
             </div>
 
@@ -815,6 +864,45 @@ export function CanvaProEditor({
                       JetBrains Mono 14px • Pill
                     </span>
                   </button>
+                </div>
+
+                {/* PALETA DE CORES RÁPIDA PARA TEXTO */}
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold uppercase text-zinc-300">
+                      Cores Rápidas de Copy
+                    </span>
+                    <span className="text-[10px] font-mono text-sky-400">
+                      {editor?.getActiveFillColor() || "#FFFFFF"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { name: "Branco Puro", color: "#FFFFFF" },
+                      { name: "Preto Carbono", color: "#09090B" },
+                      { name: "Amber Gold", color: "#F59E0B" },
+                      { name: "Cyber Sky", color: "#38BDF8" },
+                      { name: "Emerald", color: "#10B981" },
+                      { name: "Purple Neon", color: "#A855F7" },
+                      { name: "Crimson", color: "#EF4444" },
+                      { name: "Cinza Platina", color: "#E4E4E7" },
+                    ].map((swatch) => (
+                      <button
+                        key={swatch.color}
+                        type="button"
+                        onClick={() => editor?.changeFillColor(swatch.color)}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:border-sky-400/40 transition-all text-left cursor-pointer group"
+                      >
+                        <span
+                          className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0 group-hover:scale-110 transition-transform shadow-sm"
+                          style={{ backgroundColor: swatch.color }}
+                        />
+                        <span className="text-[10px] font-mono text-zinc-300 group-hover:text-white truncate">
+                          {swatch.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

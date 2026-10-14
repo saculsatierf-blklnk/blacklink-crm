@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Bookmark,
   CheckCircle2,
@@ -899,6 +899,26 @@ export function InstagramFeedGridView() {
       [postId]: newIdx,
     }));
   };
+
+  const postForCanva = useMemo(() => {
+    if (!selectedFeedPost) return null;
+    const slides = (selectedFeedPost.slides || []).map((s, idx) => {
+      if (idx === activeSlideIdx) {
+        return {
+          ...s,
+          headline: editingHeadline || s.headline,
+          bodyText: editingBodyText !== undefined ? editingBodyText : s.bodyText,
+          tag: editingTag || s.tag,
+          blackLinkVariant: editingVariant || s.blackLinkVariant,
+        };
+      }
+      return s;
+    });
+    return {
+      ...selectedFeedPost,
+      slides,
+    };
+  }, [selectedFeedPost, activeSlideIdx, editingHeadline, editingBodyText, editingTag, editingVariant]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -2973,7 +2993,7 @@ export function InstagramFeedGridView() {
       <CanvaProModal
         isOpen={isCanvaProModalOpen}
         onClose={() => setIsCanvaProModalOpen(false)}
-        post={selectedFeedPost}
+        post={postForCanva}
         activeSlideIdx={activeSlideIdx}
         onSaveToFeed={(renderedUrl, updatedSlide) => {
           if (selectedFeedPost) {
@@ -2990,6 +3010,10 @@ export function InstagramFeedGridView() {
             };
             const updatedImageUrls = [...selectedFeedPost.imageUrls];
             updatedImageUrls[activeSlideIdx] = renderedUrl;
+
+            if (updatedSlide?.headline) setEditingHeadline(updatedSlide.headline);
+            if (updatedSlide?.bodyText) setEditingBodyText(updatedSlide.bodyText);
+            if (updatedSlide?.tag) setEditingTag(updatedSlide.tag);
 
             updateScheduledPost(selectedFeedPost.id, {
               slides: updatedSlides,
