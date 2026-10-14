@@ -134,7 +134,8 @@ export type GrowthTab =
   | "planejamento"
   | "estudio"
   | "feed"
-  | "performance";
+  | "performance"
+  | "canvapro";
 
 export type InstagramAccountStage = "lancamento_zero" | "tracao" | "escala";
 

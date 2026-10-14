@@ -56,6 +56,12 @@ import {
   exportCarouselToPdf,
   type SlideRenderPayload,
 } from "@/lib/marketing/blacklinkRenderEngine";
+import dynamic from "next/dynamic";
+
+const CanvaProModal = dynamic(
+  () => import("@/components/estudio/canvapro/CanvaProModal").then((mod) => mod.CanvaProModal),
+  { ssr: false }
+);
 
 const VARIANT_OPTIONS: Array<{
   id: BlackLinkStyleVariant;
@@ -240,6 +246,7 @@ export function InstagramFeedGridView() {
   const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
   const [copiedFeedback, setCopiedFeedback] = useState<string | null>(null);
   const [isAgentDrawerOpen, setIsAgentDrawerOpen] = useState<boolean>(false);
+  const [isCanvaProModalOpen, setIsCanvaProModalOpen] = useState<boolean>(false);
 
   // Estados de edição completa no Modal
   const [modalTab, setModalTab] = useState<"creative" | "caption" | "linkedin" | "audit">("creative");
@@ -1407,6 +1414,21 @@ export function InstagramFeedGridView() {
                         <span>HD</span>
                       </button>
 
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFeedPost(post);
+                          setActiveSlideIdx(0);
+                          setIsCanvaProModalOpen(true);
+                        }}
+                        className="text-[10px] font-mono text-purple-200 bg-purple-500/25 hover:bg-purple-500/40 px-2.5 py-1 rounded-full border border-purple-400/40 transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
+                        title="Abrir no Canva Pro Studio para mover textos, ajustar fontes e cores livremente"
+                      >
+                        <Sparkles className="h-2.5 w-2.5 text-purple-300" />
+                        <span>Canva</span>
+                      </button>
+
                       <span className="text-[10px] font-mono text-zinc-200 uppercase tracking-widest bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full border border-white/20 transition-colors">
                         Editar ➔
                       </span>
@@ -2026,13 +2048,24 @@ export function InstagramFeedGridView() {
                   </h3>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedFeedPost(null)}
-                  className="rounded-lg border border-white/10 bg-white/[0.04] p-1.5 text-zinc-400 hover:text-white cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCanvaProModalOpen(true)}
+                    className="flex items-center gap-1.5 rounded-xl border border-purple-500/40 bg-gradient-to-r from-purple-500/20 to-sky-500/20 hover:from-purple-500/30 hover:to-sky-500/30 px-3.5 py-1.5 text-xs font-mono font-bold text-white transition-all cursor-pointer shadow-md ring-1 ring-purple-400/30"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-purple-300 animate-pulse" />
+                    <span>✦ Editar no Canva Pro Studio</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFeedPost(null)}
+                    className="rounded-lg border border-white/10 bg-white/[0.04] p-1.5 text-zinc-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Grid 2 Colunas: Lâmina ao vivo à esquerda e Controles à direita */}
@@ -2058,6 +2091,16 @@ export function InstagramFeedGridView() {
                       totalSlides={selectedFeedPost.slides.length}
                     />
                   </div>
+
+                  {/* Ação Direta para o Canva Pro */}
+                  <button
+                    type="button"
+                    onClick={() => setIsCanvaProModalOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 text-xs font-mono font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    <Sparkles className="h-4 w-4 text-purple-300" />
+                    <span>Abrir no Canva Pro (Mover Textos, Fontes &amp; Imagens Livremente)</span>
+                  </button>
 
                   {/* Seletor de Lâminas (Sempre visível para permitir transformar em Carrossel) */}
                   <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -2923,6 +2966,43 @@ export function InstagramFeedGridView() {
         onSuccess={() => {
           setCopiedFeedback("Post adicionado à grade com sucesso!");
           setTimeout(() => setCopiedFeedback(null), 3000);
+        }}
+      />
+
+      {/* Modal Oficial Canva Pro Studio (Black Link) */}
+      <CanvaProModal
+        isOpen={isCanvaProModalOpen}
+        onClose={() => setIsCanvaProModalOpen(false)}
+        post={selectedFeedPost}
+        activeSlideIdx={activeSlideIdx}
+        onSaveToFeed={(renderedUrl, updatedSlide) => {
+          if (selectedFeedPost) {
+            const updatedSlides = [...selectedFeedPost.slides];
+            const currentSlide = updatedSlides[activeSlideIdx] || {
+              slideNumber: activeSlideIdx + 1,
+              headline: "",
+              bodyText: "",
+            };
+            updatedSlides[activeSlideIdx] = {
+              ...currentSlide,
+              imageUrl: renderedUrl,
+              ...(updatedSlide || {}),
+            };
+            const updatedImageUrls = [...selectedFeedPost.imageUrls];
+            updatedImageUrls[activeSlideIdx] = renderedUrl;
+
+            updateScheduledPost(selectedFeedPost.id, {
+              slides: updatedSlides,
+              imageUrls: updatedImageUrls,
+            });
+            setSelectedFeedPost({
+              ...selectedFeedPost,
+              slides: updatedSlides,
+              imageUrls: updatedImageUrls,
+            });
+            setCopiedFeedback("✨ Post atualizado via Canva Pro Studio!");
+            setTimeout(() => setCopiedFeedback(null), 3500);
+          }
         }}
       />
 

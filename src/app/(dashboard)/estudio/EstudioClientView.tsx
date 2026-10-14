@@ -9,7 +9,9 @@ import {
   UploadCloud,
   Sparkles,
   Bot,
+  Palette,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { useMarketingStore, type GrowthTab } from "@/store/useMarketingStore";
 import { CompetitorsDiagnosticView } from "@/components/marketing/growth/CompetitorsDiagnosticView";
@@ -18,25 +20,36 @@ import { InstagramFeedGridView } from "@/components/marketing/growth/InstagramFe
 import { ManualAssetUploadModal } from "@/components/marketing/ManualAssetUploadModal";
 import { MarketingAgentDrawer } from "@/components/marketing/growth/MarketingAgentDrawer";
 
+const CanvaProEditor = dynamic(
+  () => import("@/components/estudio/canvapro/CanvaProEditor").then((mod) => mod.CanvaProEditor),
+  { ssr: false }
+);
+
 export function EstudioClientView() {
   const {
     activeGrowthTab,
     setActiveGrowthTab,
     scheduledPosts,
     editorialPlan,
+    updateScheduledPost,
   } = useMarketingStore();
 
   const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
   const [isAgentDrawerOpen, setIsAgentDrawerOpen] = useState(false);
   const [globalFeedbackMsg, setGlobalFeedbackMsg] = useState<string | null>(null);
 
-  // 3 Pilares Naturais do Marketing: Vitrine 3x3 (Home), Cronograma de Datas e Diagnóstico Estratégico
+  // 4 Pilares do Marketing: Vitrine 3x3, Canva Pro Studio, Cronograma de Datas e Diagnóstico Estratégico
   const TABS: { id: GrowthTab; label: string; icon: any; count?: number }[] = [
     {
       id: "feed",
       label: "✦ Vitrine 3x3 (Feed)",
       icon: Smartphone,
       count: scheduledPosts.length,
+    },
+    {
+      id: "canvapro",
+      label: "🎨 Canva Pro Studio",
+      icon: Palette,
     },
     {
       id: "planejamento",
@@ -159,14 +172,38 @@ export function EstudioClientView() {
           </div>
         )}
 
-        {/* Pilar 2: Planejamento & Cronograma de Datas */}
+        {/* Pilar 2: Canva Pro Studio Oficial */}
+        {activeGrowthTab === "canvapro" && (
+          <div className="animate-in fade-in duration-200 h-[86vh]">
+            <CanvaProEditor
+              initialPost={scheduledPosts[0] || null}
+              onSaveToFeed={(renderedUrl) => {
+                if (scheduledPosts[0]) {
+                  const updatedSlides = [...scheduledPosts[0].slides];
+                  updatedSlides[0] = {
+                    ...updatedSlides[0],
+                    imageUrl: renderedUrl,
+                  };
+                  updateScheduledPost(scheduledPosts[0].id, {
+                    slides: updatedSlides,
+                    imageUrls: [renderedUrl, ...scheduledPosts[0].imageUrls.slice(1)],
+                  });
+                  setGlobalFeedbackMsg("✨ Arte atualizada e sincronizada com a Vitrine 3x3!");
+                  setTimeout(() => setGlobalFeedbackMsg(null), 4000);
+                }
+              }}
+            />
+          </div>
+        )}
+
+        {/* Pilar 3: Planejamento & Cronograma de Datas */}
         {activeGrowthTab === "planejamento" && (
           <div className="animate-in fade-in duration-200">
             <EditorialPlanningView />
           </div>
         )}
 
-        {/* Pilar 3: Diagnóstico da Empresa & Concorrentes */}
+        {/* Pilar 4: Diagnóstico da Empresa & Concorrentes */}
         {activeGrowthTab === "diagnostico" && (
           <div className="animate-in fade-in duration-200">
             <CompetitorsDiagnosticView />
