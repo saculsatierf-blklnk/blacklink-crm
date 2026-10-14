@@ -1171,13 +1171,14 @@ export function InstagramFeedGridView() {
                   type="button"
                   onClick={() => {
                     resetToOfficialFoundationPosts();
-                    setCopiedFeedback("Grade Oficial de 9 Posts restaurada com sucesso!");
-                    setTimeout(() => setCopiedFeedback(null), 3000);
+                    setCopiedFeedback("✨ Grade de Lançamento Global com REA GOATs aplicada com sucesso!");
+                    setTimeout(() => setCopiedFeedback(null), 3500);
                   }}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/[0.06] hover:bg-white/[0.12] px-3.5 py-2 text-xs font-semibold text-white transition-all cursor-pointer shadow-md"
+                  className="flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 px-3.5 py-2 text-xs font-bold text-amber-200 transition-all cursor-pointer shadow-md ring-1 ring-amber-400/20"
+                  title="Carrega as 9 copys e direções visuais oficiais do Lançamento Global da Black Link (Metodologia REA GOATs)"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                  <span>✦ 9 Posts Oficiais</span>
+                  <span>✦ Aplicar 9 Copys de Lançamento (REA GOATs)</span>
                 </button>
 
                 <button

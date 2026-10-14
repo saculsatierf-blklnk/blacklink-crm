@@ -353,236 +353,290 @@ const INITIAL_FORM_DATA: MarketingFormData = {
 const INITIAL_SCHEDULED_POSTS: ScheduledPost[] = [
   {
     id: "post-bl-01",
-    theme: "Estratégia B2B",
+    theme: "Engenharia da Ausência",
     format: "post",
     targetAudience: "Diretores Comerciais, VPs de Vendas e CEOs B2B",
     scheduledDate: "Segunda • 09:00",
     status: "scheduled",
-    hookHeadline: "Estratégia B2B",
+    hookHeadline: "ENGENHARIA DA AUSÊNCIA",
     bodyCopy:
-      "A diferença entre operações que escalam e as que travam está na ausência de atrito no pipeline comercial.\n\nConstruímos a Black Link para substituir planilhas lentas por telemetria preditiva e velocidade executiva.\n\nBem-vindo à fundação da inteligência comercial autônoma.",
+      "A maioria das operações morre no atrito invisível da própria equipe.\n\nNa Black Link, construímos sistemas comerciais e inteligência sob medida para que os fundadores liderem sem operar o operacional.\n\nDescubra a Engenharia da Ausência em blklnk.com",
     postCaption:
-      "A diferença entre operações que escalam e as que travam está na ausência de atrito no pipeline comercial.\n\nConstruímos a Black Link para substituir planilhas lentas por telemetria preditiva e velocidade executiva.\n\nSiga @blacklink.com.br e acompanhe a evolução das vendas corporativas.\n\n#BlackLink #VendasB2B #InteligenciaComercial #SaaS #Escala",
-    ctaText: "Acompanhe nossa tese no perfil.",
-    hashtags: ["#BlackLink", "#VendasB2B", "#InteligenciaComercial"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "ESTRATÉGIA B2B",
-        bodyText: "Arquitetura de dados e esteira de fechamento corporativo.",
-        tag: "01 // FRAMEWORK",
-        blackLinkVariant: "swiss-box",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-02",
-    theme: "Arquitetura de Reputação",
-    format: "post",
-    targetAudience: "Líderes Comerciais e Empreendedores B2B",
-    scheduledDate: "Terça • 12:00",
-    status: "scheduled",
-    hookHeadline: "Arquitetura de Reputação",
-    bodyCopy:
-      "A percepção de valor define o limite do seu ticket médio corporativo.\n\nQuando sua presença transmite autoridade inegociável, o fechamento deixa de ser uma negociação e passa a ser uma adesão.",
-    postCaption:
-      "A percepção de valor define o limite do seu ticket médio corporativo.\n\nQuando sua presença transmite autoridade inegociável, o fechamento deixa de ser uma negociação e passa a ser uma adesão.\n\n#BlackLink #DesignSistemico #HighTicket #BrandingB2B",
-    ctaText: "Conheça o sistema Black Link.",
-    hashtags: ["#BlackLink", "#DesignSistemico", "#HighTicket"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "ARQUITETURA DE REPUTAÇÃO",
-        bodyText: "A percepção de autoridade define o limite do seu ticket médio.",
-        tag: "02 // DESIGN SISTÊMICO",
-        blackLinkVariant: "3d-keycap",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-03",
-    theme: "Sistema de Marca",
-    format: "post",
-    targetAudience: "CEOs e Fundadores de SaaS Enterprise",
-    scheduledDate: "Quarta • 15:30",
-    status: "scheduled",
-    hookHeadline: "Sistema de Marca",
-    bodyCopy:
-      "Solidez institucional construída para resistir à volatilidade e dominar categorias de alto valor.\n\nUm sistema visual e estratégico impenetrável.",
-    postCaption:
-      "Solidez institucional construída para resistir à volatilidade e dominar categorias de alto valor.\n\nUm sistema visual e estratégico impenetrável.\n\n#SistemaDeMarca #BlackLink #EnterpriseB2B #Monolito",
-    ctaText: "Explore a fundação Black Link.",
-    hashtags: ["#SistemaDeMarca", "#BlackLink", "#EnterpriseB2B"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "SISTEMA DE MARCA",
-        bodyText: "Solidez institucional construída para resistir à volatilidade.",
-        tag: "03 // MONÓLITO",
-        blackLinkVariant: "3d-crystal",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-04",
-    theme: "Zero Atrito. Máxima Conversão.",
-    format: "post",
-    targetAudience: "Heads de Vendas e Closers de Elite",
-    scheduledDate: "Quinta • 10:00",
-    status: "scheduled",
-    hookHeadline: "Zero Atrito. Máxima Conversão.",
-    bodyCopy:
-      "Menos burocracia interna e mais presença diante de decisores de alto ticket. Essa é a regra de ouro das operações B2B de alta densidade.",
-    postCaption:
-      "Menos burocracia interna e mais presença diante de decisores de alto ticket. Essa é a regra de ouro das operações B2B de alta densidade.\n\n#VendasCorporativas #AltaConversao #BlackLink",
-    ctaText: "Veja como blindar sua esteira comercial.",
-    hashtags: ["#VendasCorporativas", "#AltaConversao", "#BlackLink"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "ZERO ATRITO.\nMÁXIMA CONVERSÃO.",
-        bodyText: "Menos burocracia interna e mais presença diante de decisores.",
-        tag: "04 // MANIFESTO",
-        blackLinkVariant: "pure-monumental",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-05",
-    theme: "Black Link OS",
-    format: "post",
-    targetAudience: "Decisores B2B Globais",
-    scheduledDate: "Sexta • 18:00",
-    status: "scheduled",
-    hookHeadline: "Black Link OS",
-    bodyCopy:
-      "O centro nevrálgico da sua operação de vendas enterprise.\n\nO elo definitivo entre inteligência de dados, cadência autônoma e conversão comercial previsível.",
-    postCaption:
-      "O centro nevrálgico da sua operação de vendas enterprise.\n\nO elo definitivo entre inteligência de dados, cadência autônoma e conversão comercial previsível.\n\n#BlackLinkOS #Enterprise #InteligenciaArtificial #VendasB2B",
-    ctaText: "Conheça o ecossistema Black Link.",
-    hashtags: ["#BlackLinkOS", "#Enterprise", "#VendasB2B"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "BLACK LINK OS",
-        bodyText: "O centro nevrálgico da sua operação de vendas enterprise.",
-        tag: "05 // TELEMETRIA B2B",
-        blackLinkVariant: "3d-cursor",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-06",
-    theme: "Telemetria em Tempo Real",
-    format: "post",
-    targetAudience: "CTOs, Diretores de Operações e RevOps",
-    scheduledDate: "Sábado • 11:00",
-    status: "scheduled",
-    hookHeadline: "Telemetria em Tempo Real",
-    bodyCopy:
-      "Como a Black Link monitora o momentum de negociação de cada conta enterprise e dispara ações antes do lead esfriar.",
-    postCaption:
-      "Como a Black Link monitora o momentum de negociação de cada conta enterprise e dispara ações antes do lead esfriar.\n\n#RevOps #Telemetria #BlackLink #B2BGrowth",
-    ctaText: "Acesse os detalhes no link da bio.",
-    hashtags: ["#RevOps", "#Telemetria", "#BlackLink"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "TELEMETRIA EM TEMPO REAL",
-        bodyText: "Monitoramento contínuo de momentum para agir antes do lead esfriar.",
-        tag: "06 // FLUIDEZ",
-        blackLinkVariant: "3d-liquid",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-07",
-    theme: "Fluidez de Alto Ticket",
-    format: "post",
-    targetAudience: "CEOs e Heads de Growth",
-    scheduledDate: "Segunda • 09:30",
-    status: "scheduled",
-    hookHeadline: "Fluidez de Alto Ticket",
-    bodyCopy:
-      "A fluidez entre o primeiro ponto de contato e a proposta técnica elimina qualquer fricção de negociação em contas de alta complexidade.",
-    postCaption:
-      "A fluidez entre o primeiro ponto de contato e a proposta técnica elimina qualquer fricção de negociação em contas de alta complexidade.\n\n#Fluidez #BlackLink #EnterpriseB2B",
-    ctaText: "Veja os detalhes no perfil.",
-    hashtags: ["#Fluidez", "#BlackLink", "#EnterpriseB2B"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "FLUIDEZ DE ALTO TICKET",
-        bodyText: "Eliminação total de atrito em contas de alta densidade.",
-        tag: "07 // FLUIDEZ",
-        blackLinkVariant: "3d-sculpture",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-08",
-    theme: "Qualificação de Elite",
-    format: "post",
-    targetAudience: "Líderes de SDRs e BDRs",
-    scheduledDate: "Quarta • 14:00",
-    status: "scheduled",
-    hookHeadline: "Qualificação de Elite",
-    bodyCopy:
-      "Tolerância zero a oportunidades mornas drenando a energia dos seus closers seniores. Blindagem de pipeline com telemetria preditiva.",
-    postCaption:
-      "Tolerância zero a oportunidades mornas drenando a energia dos seus closers seniores. Blindagem de pipeline com telemetria preditiva.\n\n#QualificacaoDeElite #BlackLink #Pipeline",
-    ctaText: "Blindagem de pipeline ativa.",
-    hashtags: ["#QualificacaoDeElite", "#BlackLink", "#Pipeline"],
-    slides: [
-      {
-        slideNumber: 1,
-        headline: "QUALIFICAÇÃO DE ELITE",
-        bodyText: "Tolerância zero a oportunidades mornas drenando a equipe.",
-        tag: "08 // QUALIFICAÇÃO",
-        blackLinkVariant: "clean-ice",
-      },
-    ],
-    imageUrls: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "post-bl-09",
-    theme: "Engenharia da Ausência",
-    format: "post",
-    targetAudience: "Fundadores e Líderes B2B",
-    scheduledDate: "Sexta • 17:00",
-    status: "scheduled",
-    hookHeadline: "Engenharia da Ausência",
-    bodyCopy:
-      "Criamos a infraestrutura que sua autoridade merece. Simplificamos sua tecnologia e elevamos sua estética para que você foque apenas no que faz de melhor. Assuma o comando sem ruídos.",
-    postCaption:
-      "Criamos a infraestrutura que sua autoridade merece.\n\nSimplificamos sua tecnologia e elevamos sua estética para que sua liderança foque apenas no que faz de melhor.\n\nSua infraestrutura. Sua soberania. Assuma o comando sem ruídos.\n\n→ Inicie seu projeto ou simule sua arquitetura em blklnk.com\n\n#EngenhariaDaAusencia #BlackLink #SoberaniaDigital #HighTicket",
+      "A maioria das operações morre no atrito invisível da própria equipe.\n\nNa Black Link, construímos sistemas comerciais e inteligência sob medida para que os fundadores liderem sem operar o operacional.\n\nDescubra a Engenharia da Ausência em blklnk.com\n\n#BlackLink #EngenhariaDaAusencia #VendasB2B #HighTicket #Soberania",
     ctaText: "Inicie seu projeto em blklnk.com",
-    hashtags: ["#EngenhariaDaAusencia", "#BlackLink", "#SoberaniaDigital"],
+    hashtags: ["#BlackLink", "#EngenhariaDaAusencia", "#VendasB2B"],
     slides: [
       {
         slideNumber: 1,
         headline: "ENGENHARIA DA AUSÊNCIA",
         bodyText: "Criamos a infraestrutura que sua autoridade merece. Assuma o comando sem ruídos.",
-        tag: "09 // SOBERANIA",
-        blackLinkVariant: "clean-ice-box",
+        tag: "01 // SOBERANIA",
+        blackLinkVariant: "swiss-box",
+        copyPosition: "top-left",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-gradient.jpg",
       },
     ],
-    imageUrls: [],
+    imageUrls: ["/brand/blacklink-art-gradient.jpg"],
+    linkedinPostText:
+      "Existe uma diferença brutal entre ter uma empresa e ser prisioneiro da própria operação.\n\nA verdadeira soberania corporativa começa quando a esteira de vendas, os processos e a telemetria funcionam com precisão matemática, sem depender da presença diária do CEO.\n\nNa Black Link (blklnk.com), desenvolvemos a Engenharia da Ausência.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-02",
+    theme: "Telemetria de Receita",
+    format: "post",
+    targetAudience: "Líderes Comerciais e Empreendedores B2B",
+    scheduledDate: "Terça • 12:00",
+    status: "scheduled",
+    hookHeadline: "TELEMETRIA DE RECEITA",
+    bodyCopy:
+      "Planilhas manuais não escalam holdings de 8 dígitos.\n\nO Black Link CRM OS centraliza cada interação, pontua o momento exato de fechamento e automatiza o follow-up executivo.\n\nSaiba mais em blklnk.com",
+    postCaption:
+      "Planilhas manuais não escalam holdings de 8 dígitos.\n\nO Black Link CRM OS centraliza cada interação, pontua o momento exato de fechamento e automatiza o follow-up executivo.\n\nSaiba mais em blklnk.com\n\n#TelemetriaDeReceita #BlackLink #CRMOS #EnterpriseB2B",
+    ctaText: "Conheça o sistema Black Link.",
+    hashtags: ["#TelemetriaDeReceita", "#BlackLink", "#CRMOS"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "TELEMETRIA DE RECEITA",
+        bodyText: "Dados frios do pipeline em tempo real para decisões sem achismos.",
+        tag: "02 // VELOCIDADE",
+        blackLinkVariant: "3d-keycap",
+        copyPosition: "bottom-left",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-3d-keycap.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-3d-keycap.jpg"],
+    linkedinPostText:
+      "Como você sabe com 100% de certeza quais negócios vão fechar esta semana?\n\nSe sua resposta envolve perguntar para a equipe de vendas ou abrir uma planilha desatualizada, sua operação está no escuro.\n\nTelemetria de receita em tempo real é o padrão da Black Link (blklnk.com).",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-03",
+    theme: "Automação Inteligente",
+    format: "post",
+    targetAudience: "CEOs e Fundadores de SaaS Enterprise",
+    scheduledDate: "Quarta • 15:30",
+    status: "scheduled",
+    hookHeadline: "AUTOMAÇÃO INTELIGENTE",
+    bodyCopy:
+      "Trabalho braçal e atraso no primeiro contato custam contratos milionários.\n\nImplementamos pipelines automatizados com IA que conduzem o tomador de decisão da dúvida ao agendamento direto com o sócio.",
+    postCaption:
+      "Trabalho braçal e atraso no primeiro contato custam contratos milionários.\n\nImplementamos pipelines automatizados com IA que conduzem o tomador de decisão da dúvida ao agendamento direto com o sócio.\n\nExplore em blklnk.com\n\n#AutomacaoInteligente #BlackLink #IAOperacional #HighTicket",
+    ctaText: "Explore a fundação Black Link.",
+    hashtags: ["#AutomacaoInteligente", "#BlackLink", "#IAOperacional"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "AUTOMAÇÃO INTELIGENTE",
+        bodyText: "Agentes autônomos que qualificam e avançam leads 24 horas por dia.",
+        tag: "03 // EFICIÊNCIA",
+        blackLinkVariant: "3d-crystal",
+        copyPosition: "top-right",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-pins.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-pins.jpg"],
+    linkedinPostText:
+      "Tempo de resposta é o maior preditor de conversão em vendas consultivas B2B.\n\nEnquanto concorrentes levam horas para responder, a infraestrutura da Black Link engaja, analisa o perfil do lead e agenda reuniões em minutos.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-04",
+    theme: "Branding Soberano",
+    format: "post",
+    targetAudience: "Heads de Vendas e Closers de Elite",
+    scheduledDate: "Quinta • 10:00",
+    status: "scheduled",
+    hookHeadline: "BRANDING SOBERANO",
+    bodyCopy:
+      "Empresas comuns brigam por preço. Marcas soberanas ditam as regras do mercado.\n\nA estética minimalista e monumental da Black Link posiciona sua holding como referência inquestionável no primeiro contato.",
+    postCaption:
+      "Empresas comuns brigam por preço. Marcas soberanas ditam as regras do mercado.\n\nA estética minimalista e monumental da Black Link posiciona sua holding como referência inquestionável no primeiro contato.\n\nConheça nosso ecossistema em blklnk.com\n\n#BrandingSoberano #AltaModa #BlackLink #LuxoSuico",
+    ctaText: "Veja como blindar sua esteira comercial.",
+    hashtags: ["#BrandingSoberano", "#BlackLink", "#LuxoSuico"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "BRANDING SOBERANO",
+        bodyText: "Alta moda e rigor suíço para empresas que cobram alto valor.",
+        tag: "04 // AUTORIDADE",
+        blackLinkVariant: "pure-monumental",
+        copyPosition: "bottom-left",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-portrait.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-portrait.jpg"],
+    linkedinPostText:
+      "Design não é apenas cosmética. É a primeira linha de defesa da sua precificação.\n\nQuando seu posicionamento visual respira autoridade internacional, você nunca mais precisa justificar seu ticket em reuniões de negócios.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-05",
+    theme: "Controle Absoluto",
+    format: "post",
+    targetAudience: "Decisores B2B Globais",
+    scheduledDate: "Sexta • 18:00",
+    status: "scheduled",
+    hookHeadline: "CONTROLE ABSOLUTO",
+    bodyCopy:
+      "O centro de comando da sua expansão comercial.\n\nSem interfaces poluídas de softwares legados dos anos 2000. O Black Link CRM OS foi esculpido para decisões de segundos.",
+    postCaption:
+      "O centro de comando da sua expansão comercial.\n\nSem interfaces poluídas de softwares legados dos anos 2000. O Black Link CRM OS foi esculpido para decisões de segundos.\n\n#ControleAbsoluto #BlackLinkOS #Enterprise #VendasB2B",
+    ctaText: "Conheça o ecossistema Black Link.",
+    hashtags: ["#ControleAbsoluto", "#BlackLinkOS", "#Enterprise"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "CONTROLE ABSOLUTO",
+        bodyText: "Visão 360° de cada oportunidade comercial em uma interface pura.",
+        tag: "05 // COMANDO",
+        blackLinkVariant: "3d-cursor",
+        copyPosition: "top-left",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-cursor-light.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-cursor-light.jpg"],
+    linkedinPostText:
+      "Quantas abas abertas seu time comercial precisa para registrar uma ligação?\n\nComplexidade é o inimigo número 1 da produtividade. Criamos um sistema operacional comercial que une minimalismo visual e máxima tração de negócios.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-06",
+    theme: "Disrupção Operacional",
+    format: "post",
+    targetAudience: "CTOs, Diretores de Operações e RevOps",
+    scheduledDate: "Sábado • 11:00",
+    status: "scheduled",
+    hookHeadline: "DISRUPÇÃO OPERACIONAL",
+    bodyCopy:
+      "O mercado mudou. Vendas consultivas modernas exigem inteligência preditiva e esteira de automações conectadas.\n\nConheça a arquitetura proprietária da Black Link.",
+    postCaption:
+      "O mercado mudou. Vendas consultivas modernas exigem inteligência preditiva e esteira de automações conectadas.\n\nConheça a arquitetura proprietária da Black Link em blklnk.com\n\n#DisrupcaoOperacional #BlackLink #InteligenciaArtificial",
+    ctaText: "Acesse os detalhes no link da bio.",
+    hashtags: ["#DisrupcaoOperacional", "#BlackLink", "#InteligenciaArtificial"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "DISRUPÇÃO OPERACIONAL",
+        bodyText: "Substitua atritos e processos manuais por inteligência aplicada.",
+        tag: "06 // DISRUPÇÃO",
+        blackLinkVariant: "3d-liquid",
+        copyPosition: "bottom-right",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-glass-model.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-glass-model.jpg"],
+    linkedinPostText:
+      "Se sua empresa ainda depende de rotinas repetitivas que poderiam ser automatizadas, sua margem está sendo consumida por ineficiência.\n\nEngenharia de automações é investimento em escala pura.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-07",
+    theme: "Blindagem Comercial",
+    format: "post",
+    targetAudience: "CEOs e Heads de Growth",
+    scheduledDate: "Segunda • 09:30",
+    status: "scheduled",
+    hookHeadline: "BLINDAGEM COMERCIAL",
+    bodyCopy:
+      "Cada lead não respondido é capital deixado na mesa.\n\nA esteira da Black Link monitora o tempo de resposta e reativa conversas adormecidas sem intervenção manual.",
+    postCaption:
+      "Cada lead não respondido é capital deixado na mesa.\n\nA esteira da Black Link monitora o tempo de resposta e reativa conversas adormecidas sem intervenção manual.\n\nConheça o CRM OS em blklnk.com\n\n#BlindagemComercial #BlackLink #EnterpriseB2B",
+    ctaText: "Veja os detalhes no perfil.",
+    hashtags: ["#BlindagemComercial", "#BlackLink", "#EnterpriseB2B"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "BLINDAGEM COMERCIAL",
+        bodyText: "Zero vazamento de oportunidades no pipeline de alta demanda.",
+        tag: "07 // BLINDAGEM",
+        blackLinkVariant: "3d-sculpture",
+        copyPosition: "bottom-left",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-macro-glass.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-macro-glass.jpg"],
+    linkedinPostText:
+      "Vazamento de pipeline é o custo silencioso mais caro de qualquer organização comercial.\n\nBlindamos sua esteira de aquisição com gatilhos automáticos de retenção e telemetria de negócios.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-08",
+    theme: "Protocolo de Expansão",
+    format: "post",
+    targetAudience: "Líderes de SDRs e BDRs",
+    scheduledDate: "Quarta • 14:00",
+    status: "scheduled",
+    hookHeadline: "PROTOCOLO DE EXPANSÃO",
+    bodyCopy:
+      "Não acreditamos em fórmulas mágicas de internet. Acreditamos em engenharia de processos, esteira técnica e autoridade executiva.\n\nExplore em blklnk.com/protocolo",
+    postCaption:
+      "Não acreditamos em fórmulas mágicas de internet. Acreditamos em engenharia de processos, esteira técnica e autoridade executiva.\n\nExplore em blklnk.com/protocolo\n\n#ProtocoloDeExpansao #BlackLink #EngenhariaDeVendas",
+    ctaText: "Blindagem de pipeline ativa.",
+    hashtags: ["#ProtocoloDeExpansao", "#BlackLink", "#EngenhariaDeVendas"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "PROTOCOLO DE EXPANSÃO",
+        bodyText: "O método validado de tração para empresas e holdings B2B.",
+        tag: "08 // ESCALA",
+        blackLinkVariant: "clean-ice",
+        copyPosition: "top-left",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-obsidian-dark.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-obsidian-dark.jpg"],
+    linkedinPostText:
+      "Crescimento sustentável não nasce do improviso. Nasce de um protocolo comercial rigoroso e repetível.\n\nÉ exatamente essa engenharia que entregamos na Black Link.",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "post-bl-09",
+    theme: "Soberania Digital",
+    format: "post",
+    targetAudience: "Fundadores e Líderes B2B",
+    scheduledDate: "Sexta • 17:00",
+    status: "scheduled",
+    hookHeadline: "SOBERANIA DIGITAL",
+    bodyCopy:
+      "A Black Link foi concebida para liderar o futuro da inteligência de negócios.\n\nAssuma o comando da sua presença e do seu faturamento com quem entende de tecnologia de ponta.",
+    postCaption:
+      "A Black Link foi concebida para liderar o futuro da inteligência de negócios.\n\nAssuma o comando da sua presença e do seu faturamento com quem entende de tecnologia de ponta.\n\n→ Inicie seu projeto ou simule sua arquitetura em blklnk.com\n\n#SoberaniaDigital #BlackLink #HighTicket #LiderancaB2B",
+    ctaText: "Inicie seu projeto em blklnk.com",
+    hashtags: ["#SoberaniaDigital", "#BlackLink", "#HighTicket"],
+    slides: [
+      {
+        slideNumber: 1,
+        headline: "SOBERANIA DIGITAL",
+        bodyText: "A infraestrutura definitiva para liderar seu segmento com elegância.",
+        tag: "09 // LIDERANÇA",
+        blackLinkVariant: "clean-ice-box",
+        copyPosition: "top-right",
+        hasScrimBackdrop: false,
+        contrastMode: "dark",
+        imageUrl: "/brand/blacklink-art-cursor-light.jpg",
+      },
+    ],
+    imageUrls: ["/brand/blacklink-art-cursor-light.jpg"],
+    linkedinPostText:
+      "Liderança de mercado não se pede. Conquista-se através de autoridade visual implacável e sistemas de entrega perfeitos.\n\nBem-vindo à Black Link.",
     createdAt: new Date().toISOString(),
   },
 ];
@@ -1982,9 +2036,18 @@ export const useMarketingStore = create<MarketingState>()(
       },
     }),
     {
-      name: "blacklink-marketing-storage-v13",
-      version: 13,
+      name: "blacklink-marketing-storage-v14",
+      version: 14,
       migrate: (persistedState: any, version: number) => {
+        if (!version || version < 14) {
+          // Migração oficial para a grade de Lançamento Global com REA GOATs
+          return {
+            ...persistedState,
+            scheduledPosts: INITIAL_SCHEDULED_POSTS,
+            selectedFeedPost: INITIAL_SCHEDULED_POSTS[0],
+          };
+        }
+
         if (persistedState?.scheduledPosts) {
           persistedState.scheduledPosts = persistedState.scheduledPosts.map((post: any) => ({
             ...post,
