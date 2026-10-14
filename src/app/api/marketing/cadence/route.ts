@@ -176,7 +176,7 @@ Responda apenas com o JSON puro, sem markdown antes ou depois.`;
   for (const model of candidateModels) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(url, {

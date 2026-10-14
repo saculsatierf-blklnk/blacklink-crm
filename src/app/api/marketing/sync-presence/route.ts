@@ -83,6 +83,9 @@ Gere uma síntese operacional executiva da atuação digital da Black Link em ex
 Responda em texto puro e conciso sem markdown extravagante.
 `;
 
+        const geminiController = new AbortController();
+        const geminiTimeout = setTimeout(() => geminiController.abort(), 7000);
+
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
           {
@@ -93,16 +96,31 @@ Responda em texto puro e conciso sem markdown extravagante.
               generationConfig: {
                 temperature: 0.25,
                 maxOutputTokens: 600,
+                thinkingConfig: {
+                  thinkingBudget: 0,
+                },
               },
             }),
+            signal: geminiController.signal,
           }
         );
 
+        clearTimeout(geminiTimeout);
+
         if (geminiRes.ok) {
           const data = await geminiRes.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text && text.trim().length > 100) {
-            digitalFootprintNotes = text.trim();
+          const candidateParts = data?.candidates?.[0]?.content?.parts || [];
+          let rawText = "";
+          for (const p of candidateParts) {
+            if (p.text && !p.thought) {
+              rawText += p.text;
+            }
+          }
+          if (!rawText && candidateParts[0]?.text) {
+            rawText = candidateParts[0].text;
+          }
+          if (rawText && rawText.trim().length > 60) {
+            digitalFootprintNotes = rawText.trim();
           }
         }
       } catch (e) {
