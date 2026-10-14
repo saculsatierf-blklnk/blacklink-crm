@@ -177,12 +177,14 @@ export function EstudioClientView() {
           <div className="animate-in fade-in duration-200 h-[86vh]">
             <CanvaProEditor
               initialPost={scheduledPosts[0] || null}
-              onSaveToFeed={(renderedUrl) => {
+              onClose={() => setActiveGrowthTab("feed")}
+              onSaveToFeed={(renderedUrl, updatedSlide) => {
                 if (scheduledPosts[0]) {
                   const updatedSlides = [...scheduledPosts[0].slides];
                   updatedSlides[0] = {
                     ...updatedSlides[0],
                     imageUrl: renderedUrl,
+                    ...(updatedSlide || {}),
                   };
                   updateScheduledPost(scheduledPosts[0].id, {
                     slides: updatedSlides,

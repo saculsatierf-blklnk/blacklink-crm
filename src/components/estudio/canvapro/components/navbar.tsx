@@ -11,6 +11,8 @@ import {
   Image as ImageIcon,
   ChevronDown,
   Sparkles,
+  ArrowLeft,
+  Save,
 } from "lucide-react";
 import { Editor } from "../types";
 
@@ -20,6 +22,7 @@ interface NavbarProps {
   activeSlideIdx?: number;
   totalSlides?: number;
   onSaveToFeed?: () => void;
+  onSaveAndClose?: () => void;
   onClose?: () => void;
   saveSuccessMsg?: string | null;
 }
@@ -30,6 +33,7 @@ export const Navbar = ({
   activeSlideIdx = 0,
   totalSlides = 1,
   onSaveToFeed,
+  onSaveAndClose,
   onClose,
   saveSuccessMsg,
 }: NavbarProps) => {
@@ -46,10 +50,11 @@ export const Navbar = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
-            title="Fechar Editor"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.04] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer text-xs font-mono font-medium group"
+            title="Voltar ao Feed do Instagram"
           >
-            <X className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+            <span className="hidden sm:inline">Voltar ao Feed</span>
           </button>
         )}
 
@@ -177,15 +182,29 @@ export const Navbar = ({
           )}
         </div>
 
-        {/* Salvar no Feed 3x3 */}
+        {/* Salvar sem sair (continua editando no Canva) */}
         {onSaveToFeed && (
           <button
             type="button"
             onClick={onSaveToFeed}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-emerald-500/50 bg-gradient-to-r from-emerald-500/25 to-teal-500/25 hover:from-emerald-500/35 hover:to-teal-500/35 text-xs font-mono font-bold text-emerald-300 transition-all shadow-md ring-1 ring-emerald-500/40 cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
+            title="Salvar alterações no post sem fechar o Canva"
           >
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Salvar no Feed 3x3</span>
+            <Save className="h-3.5 w-3.5 text-zinc-400" />
+            <span>Salvar</span>
+          </button>
+        )}
+
+        {/* Salvar, Sair do Canva e Voltar ao Feed (Ação Principal) */}
+        {(onSaveAndClose || onSaveToFeed) && (
+          <button
+            type="button"
+            onClick={onSaveAndClose || onSaveToFeed}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-emerald-500/50 bg-gradient-to-r from-emerald-500/25 to-teal-500/25 hover:from-emerald-500/40 hover:to-teal-500/40 text-xs font-mono font-bold text-emerald-300 hover:text-emerald-200 transition-all shadow-md ring-1 ring-emerald-500/40 cursor-pointer"
+            title="Salva as alterações da arte e retorna imediatamente para o Feed 3x3"
+          >
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <span>Salvar e Voltar ao Feed</span>
           </button>
         )}
       </div>

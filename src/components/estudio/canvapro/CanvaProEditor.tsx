@@ -147,7 +147,7 @@ export function CanvaProEditor({
   );
 
   // Salvar no Feed 3x3 com Sincronização Bidirecional
-  const handleSaveToFeed = () => {
+  const handleSaveToFeed = (closeAfterSave = false) => {
     if (!editor) return;
 
     const renderedUrl = editor.exportDataUrl("png");
@@ -167,8 +167,15 @@ export function CanvaProEditor({
       });
     }
 
-    setSaveSuccessMsg("✨ Post sincronizado com o Feed 3x3!");
-    setTimeout(() => setSaveSuccessMsg(null), 3500);
+    setSaveSuccessMsg("✨ Post salvo e sincronizado com o Feed 3x3!");
+
+    if (closeAfterSave && onClose) {
+      setTimeout(() => {
+        onClose();
+      }, 350);
+    } else {
+      setTimeout(() => setSaveSuccessMsg(null), 3500);
+    }
   };
 
   const currentSlide = initialPost?.slides?.[activeSlideIdx];
@@ -184,7 +191,8 @@ export function CanvaProEditor({
         title={initialPost?.theme || "Design BlackLink"}
         activeSlideIdx={activeSlideIdx}
         totalSlides={initialPost?.slides?.length || 1}
-        onSaveToFeed={onSaveToFeed ? handleSaveToFeed : undefined}
+        onSaveToFeed={onSaveToFeed ? () => handleSaveToFeed(false) : undefined}
+        onSaveAndClose={onSaveToFeed && onClose ? () => handleSaveToFeed(true) : undefined}
         onClose={onClose}
         saveSuccessMsg={saveSuccessMsg}
       />
