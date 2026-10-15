@@ -5,6 +5,7 @@ const sharp = require('sharp');
 const OUTPUT_DIR = path.join(__dirname, '../public/launch-pack');
 const BRAIN_DIR = '/Users/blacklink.com.br/.gemini/antigravity/brain/b9ff108e-3882-4b47-a186-e6d80bb1ce76';
 const BRAND_DIR = path.join(__dirname, '../public/brand');
+const UPLOADED_PRISM = path.join(BRAIN_DIR, '.user_uploaded/media_1792095092284.jpg');
 
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -19,130 +20,25 @@ function escapeXml(unsafe) {
     .replace(/'/g, '&apos;');
 }
 
-// 9 Peças Oficiais — 100% em Português — Padrão Museu Internacional (Collins / Metalab / Pentagram / Rams)
-const FEED_POSTS = [
-  {
-    num: 1,
-    id: "feed-01",
-    pos: "Linha 1, Col 1 // Superior Esquerda",
-    theme: "Manifesto Institucional",
-    headline: "SEU PRODUTO PARECE AMADOR.",
-    sub1: "O mercado não compra o que é bom. Compra o que parece inatingível.",
-    sub2: "Construímos a tecnologia e os ecossistemas que separam quem lidera do resto.",
-    tagPill: "POSICIONAMENTO DE LUXO // blklnk.com",
-    bgPath: path.join(BRAND_DIR, "glass-01-chain.jpg"),
-    layout: "standard"
-  },
-  {
-    num: 2,
-    id: "feed-02",
-    pos: "Linha 1, Col 2 // Superior Centro",
-    theme: "Software & Produto Real",
-    headline: "A PLATAFORMA BLACK LINK",
-    sub1: "Telemetria de receita em tempo real e esteira comercial inteligente.",
-    sub2: "Dados vivos e previsão matemática de fechamento de contratos.",
-    tagPill: "SISTEMA COMERCIAL PROPRIETÁRIO // blklnk.com",
-    bgPath: path.join(BRAIN_DIR, "crm_interface_frontal_1792091145296.jpg"),
-    layout: "software-clean"
-  },
-  {
-    num: 3,
-    id: "feed-03",
-    pos: "Linha 1, Col 3 // Superior Direita",
-    theme: "A Lei do Valor Soberano",
-    headline: "PRECIFICAÇÃO É PERCEPÇÃO.",
-    sub1: "Quem constrói autoridade visual define as regras do mercado.",
-    sub2: "Operações que utilizam ferramentas comuns são forçadas a dar desconto.",
-    tagPill: "ARQUITETURA DE VALOR // blklnk.com",
-    bgPath: path.join(BRAND_DIR, "glass-07-torus.jpg"),
-    layout: "standard"
-  },
-  {
-    num: 4,
-    id: "feed-04",
-    pos: "Linha 2, Col 1 // Meio Esquerda",
-    theme: "Estratégia de Ecossistema",
-    headline: "ECOSSISTEMAS VENCEM CURSOS.",
-    sub1: "A era do infoproduto genérico chegou ao fim.",
-    sub2: "Grandes marcas retêm clientes com software, comunidade e status.",
-    tagPill: "RETENÇÃO E VALOR // blklnk.com",
-    bgPath: path.join(BRAND_DIR, "glass-04-slab.jpg"),
-    layout: "standard"
-  },
-  {
-    num: 5,
-    id: "feed-05",
-    pos: "Linha 2, Col 2 // Centro Absoluto (O Emblema Sagrado da Marca)",
-    theme: "O Emblema Monolítico",
-    headline: "BLACK LINK",
-    sub1: "ECOSSISTEMAS DIGITAIS SOBERANOS",
-    sub2: "Engenharia de software e autoridade visual para o topo da cadeia.",
-    tagPill: "ECOSSISTEMAS SOBERANOS // FUNDAÇÃO 2026",
-    bgPath: path.join(BRAND_DIR, "glass-05-helix.jpg"),
-    layout: "centerpiece-monolith"
-  },
-  {
-    num: 6,
-    id: "feed-06",
-    pos: "Linha 2, Col 3 // Meio Direita",
-    theme: "Autonomia do Fundador",
-    headline: "ENGENHARIA DA AUSÊNCIA.",
-    sub1: "Se sua empresa para quando você viaja, você tem um emprego.",
-    sub2: "Codificamos sua esteira para que ela escale sem a sua presença.",
-    tagPill: "SOBERANIA OPERACIONAL // blklnk.com",
-    bgPath: path.join(BRAIN_DIR, "glass_ribbon_blank_1792091324665.jpg"),
-    layout: "standard"
-  },
-  {
-    num: 7,
-    id: "feed-07",
-    pos: "Linha 3, Col 1 // Inferior Esquerda",
-    theme: "Métricas de Conversão",
-    headline: "VELOCIDADE É CONVERSÃO.",
-    sub1: "Responder em 30 segundos multiplica por 4 o fechamento de contratos.",
-    sub2: "IA proprietária qualificando o decisor antes do concorrente abrir a mensagem.",
-    tagPill: "TELEMETRIA COMERCIAL // blklnk.com",
-    bgPath: path.join(OUTPUT_DIR, "museum-07-vector.jpg"),
-    layout: "vector-direct"
-  },
-  {
-    num: 8,
-    id: "feed-08",
-    pos: "Linha 3, Col 2 // Inferior Centro",
-    theme: "Infraestrutura Corporativa",
-    headline: "INFRAESTRUTURA INTOCÁVEL.",
-    sub1: "Sistemas proprietários construídos para operações de alta escala.",
-    sub2: "Bancos de dados distribuídos e tecnologia de padrão corporativo.",
-    tagPill: "SEGURANÇA CORPORATIVA // blklnk.com",
-    bgPath: path.join(BRAND_DIR, "glass-06-cube.jpg"),
-    layout: "standard"
-  },
-  {
-    num: 9,
-    id: "feed-09",
-    pos: "Linha 3, Col 3 // Inferior Direita (Fechamento)",
-    theme: "Convite Institucional",
-    headline: "CONSTRUA SEU ECOSSISTEMA.",
-    sub1: "As portas estão abertas para novos projetos corporativos.",
-    sub2: "Solicite sua avaliação executiva com nosso time de engenharia.",
-    tagPill: "ACESSO CORPORATIVO // blklnk.com",
-    bgPath: path.join(BRAIN_DIR, "access_card_blank_1792091220745.jpg"),
-    layout: "card-access"
-  }
-];
+async function buildAllPieces() {
+  console.log("=== COMPILANDO GRADE DEFINITIVA (ZERO NÚMEROS FICTÍCIOS // 100% PORTUGUÊS) ===");
 
-async function buildFeed() {
-  console.log("=== COMPILANDO GRADE DEFINITIVA DE MUSEU (9 PEÇAS 100% EM PORTUGUÊS) ===");
+  // 1. PEÇA #01 — O MANIFESTO DO PRISMA ORIGINAL (O Criativo que o usuário enviou e achou lindo)
+  console.log("Renderizando Peça #01 (Manifesto do Prisma 01)...");
+  await sharp(UPLOADED_PRISM)
+    .resize(1080, 1080, { fit: 'cover' })
+    .jpeg({ quality: 98 })
+    .toFile(path.join(OUTPUT_DIR, "museum-01.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-01.jpg"), path.join(BRAIN_DIR, "museum-01.jpg"));
 
-  for (const post of FEED_POSTS) {
-    const numStr = String(post.num).padStart(2, '0');
-    console.log(`Renderizando Peça #${numStr} (${post.headline})...`);
+  // 2. PEÇA #02 — SOFTWARE REAL: BLACK LINK CRM (100% em Português)
+  console.log("Renderizando Peça #02 (CRM em Português Puro)...");
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-02-clean.jpg"), path.join(OUTPUT_DIR, "museum-02.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-02.jpg"), path.join(BRAIN_DIR, "museum-02.jpg"));
 
-    let overlaySvg = '';
-
-    if (post.layout === "centerpiece-monolith") {
-      // Post 05: Monograma Monolítico da Marca em Vidro Fosco
-      overlaySvg = `
+  // 3. PEÇA #03 — ARTE ESCULTURAL: ELOS ENTRELAÇADOS
+  console.log("Renderizando Peça #03 (Elos de Vidro)...");
+  const svg03 = `
 <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
   <g transform="translate(54, 54)">
     <rect width="180" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
@@ -152,16 +48,75 @@ async function buildFeed() {
     <rect width="130" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
     <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
   </g>
+  <g transform="translate(54, 820)">
+    <rect width="972" height="190" rx="20" fill="rgba(7, 7, 10, 0.78)" stroke="rgba(255,255,255,0.14)" stroke-width="1" />
+    <text x="44" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="800" font-size="36" fill="#FFFFFF" letter-spacing="-0.5">PRECIFICAÇÃO É PERCEPÇÃO.</text>
+    <text x="44" y="104" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.85)">Quem constrói autoridade visual define as regras do mercado.</text>
+    <text x="44" y="132" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.55)">Operações que utilizam ferramentas comuns são forçadas a dar desconto.</text>
+    <text x="44" y="166" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="10" fill="rgba(255,255,255,0.4)" letter-spacing="2">ARQUITETURA DE VALOR // blklnk.com</text>
+  </g>
+</svg>`;
+  await sharp(path.join(BRAND_DIR, "glass-07-torus.jpg"))
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg03) }])
+    .jpeg({ quality: 96 })
+    .toFile(path.join(OUTPUT_DIR, "museum-03.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-03.jpg"), path.join(BRAIN_DIR, "museum-03.jpg"));
 
-  <!-- Pílula Central Inferior Sutil -->
+  // 4. PEÇA #04 — TEORIA ESTRATÉGICA: ECOSSISTEMAS VENCEM CURSOS
+  console.log("Renderizando Peça #04 (Placa Monolítica)...");
+  const svg04 = `
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(54, 54)">
+    <rect width="180" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="90" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="#FFFFFF" letter-spacing="2">BLACK LINK</text>
+  </g>
+  <g transform="translate(896, 54)">
+    <rect width="130" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
+  </g>
+  <g transform="translate(54, 820)">
+    <rect width="972" height="190" rx="20" fill="rgba(7, 7, 10, 0.78)" stroke="rgba(255,255,255,0.14)" stroke-width="1" />
+    <text x="44" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="800" font-size="36" fill="#FFFFFF" letter-spacing="-0.5">ECOSSISTEMAS VENCEM CURSOS.</text>
+    <text x="44" y="104" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.85)">A era do infoproduto genérico chegou ao fim.</text>
+    <text x="44" y="132" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.55)">Grandes marcas retêm clientes com software, comunidade e status.</text>
+    <text x="44" y="166" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="10" fill="rgba(255,255,255,0.4)" letter-spacing="2">RETENÇÃO E VALOR // blklnk.com</text>
+  </g>
+</svg>`;
+  await sharp(path.join(BRAND_DIR, "glass-04-slab.jpg"))
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg04) }])
+    .jpeg({ quality: 96 })
+    .toFile(path.join(OUTPUT_DIR, "museum-04.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-04.jpg"), path.join(BRAIN_DIR, "museum-04.jpg"));
+
+  // 5. PEÇA #05 — O EMBLEMA MONOLÍTICO OFICIAL (O Autêntico Elo da Marca no Centro)
+  console.log("Renderizando Peça #05 (O Emblema Monolítico Oficial)...");
+  const svg05 = `
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(54, 54)">
+    <rect width="180" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="90" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="#FFFFFF" letter-spacing="2">BLACK LINK</text>
+  </g>
+  <g transform="translate(896, 54)">
+    <rect width="130" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
+  </g>
   <g transform="translate(290, 960)">
     <rect width="500" height="38" rx="19" fill="rgba(8, 8, 12, 0.88)" stroke="rgba(255,255,255,0.18)" stroke-width="1" />
     <text x="250" y="24" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="#FFFFFF" letter-spacing="2.5">ECOSSISTEMAS DIGITAIS SOBERANOS // 2026</text>
   </g>
 </svg>`;
-    } else if (post.layout === "software-clean") {
-      // Post 02: Software Real
-      overlaySvg = `
+  await sharp(path.join(BRAND_DIR, "glass-05-helix.jpg"))
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg05) }])
+    .jpeg({ quality: 96 })
+    .toFile(path.join(OUTPUT_DIR, "museum-05.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-05.jpg"), path.join(BRAIN_DIR, "museum-05.jpg"));
+
+  // 6. PEÇA #06 — AUTONOMIA: ENGENHARIA DA AUSÊNCIA (Fita de Möbius)
+  console.log("Renderizando Peça #06 (Fita de Möbius)...");
+  const svg06 = `
 <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
   <g transform="translate(54, 54)">
     <rect width="180" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
@@ -171,13 +126,56 @@ async function buildFeed() {
     <rect width="130" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
     <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
   </g>
-  <g transform="translate(54, 980)">
-    <text x="486" y="20" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.6)" letter-spacing="3">TELEMETRIA DE RECEITA EM TEMPO REAL // CRM PROPRIETÁRIO</text>
+  <g transform="translate(54, 820)">
+    <rect width="972" height="190" rx="20" fill="rgba(7, 7, 10, 0.78)" stroke="rgba(255,255,255,0.14)" stroke-width="1" />
+    <text x="44" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="800" font-size="36" fill="#FFFFFF" letter-spacing="-0.5">ENGENHARIA DA AUSÊNCIA.</text>
+    <text x="44" y="104" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.85)">Se sua empresa para quando você viaja, você tem um emprego.</text>
+    <text x="44" y="132" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.55)">Codificamos sua esteira para que ela escale sem a sua presença.</text>
+    <text x="44" y="166" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="10" fill="rgba(255,255,255,0.4)" letter-spacing="2">SOBERANIA OPERACIONAL // blklnk.com</text>
   </g>
 </svg>`;
-    } else if (post.layout === "card-access") {
-      // Post 09: Cartão de Acesso VIP
-      overlaySvg = `
+  await sharp(path.join(BRAIN_DIR, "glass_ribbon_blank_1792091324665.jpg"))
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg06) }])
+    .jpeg({ quality: 96 })
+    .toFile(path.join(OUTPUT_DIR, "museum-06.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-06.jpg"), path.join(BRAIN_DIR, "museum-06.jpg"));
+
+  // 7. PEÇA #07 — O SEGUNDO MANIFESTO DO PRISMA (Substitui os números fictícios pelo modelo solicitado!)
+  console.log("Renderizando Peça #07 (Segundo Manifesto do Prisma: 'O Preço é Definido pela Percepção')...");
+  fs.copyFileSync(path.join(OUTPUT_DIR, "manifesto-02-final.jpg"), path.join(OUTPUT_DIR, "museum-07.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-07.jpg"), path.join(BRAIN_DIR, "museum-07.jpg"));
+
+  // 8. PEÇA #08 — SEGURANÇA MÁXIMA: INFRAESTRUTURA INTOCÁVEL (Cubo Isométrico em Ardósia)
+  console.log("Renderizando Peça #08 (Cubo Monolítico)...");
+  const svg08 = `
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(54, 54)">
+    <rect width="180" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="90" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="#FFFFFF" letter-spacing="2">BLACK LINK</text>
+  </g>
+  <g transform="translate(896, 54)">
+    <rect width="130" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+    <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
+  </g>
+  <g transform="translate(54, 820)">
+    <rect width="972" height="190" rx="20" fill="rgba(7, 7, 10, 0.78)" stroke="rgba(255,255,255,0.14)" stroke-width="1" />
+    <text x="44" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="800" font-size="36" fill="#FFFFFF" letter-spacing="-0.5">INFRAESTRUTURA INTOCÁVEL.</text>
+    <text x="44" y="104" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.85)">Sistemas proprietários construídos para operações de alta escala.</text>
+    <text x="44" y="132" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.55)">Bancos de dados distribuídos e tecnologia de padrão corporativo.</text>
+    <text x="44" y="166" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="10" fill="rgba(255,255,255,0.4)" letter-spacing="2">SEGURANÇA CORPORATIVA // blklnk.com</text>
+  </g>
+</svg>`;
+  await sharp(path.join(BRAND_DIR, "glass-06-cube.jpg"))
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg08) }])
+    .jpeg({ quality: 96 })
+    .toFile(path.join(OUTPUT_DIR, "museum-08.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-08.jpg"), path.join(BRAIN_DIR, "museum-08.jpg"));
+
+  // 9. PEÇA #09 — CONVITE EXCLUSIVO: ACESSO CORPORATIVO 2026
+  console.log("Renderizando Peça #09 (Cartão de Cristal VIP)...");
+  const svg09 = `
 <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
   <g transform="translate(540, 520)">
     <text x="0" y="0" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="800" font-size="28" fill="#FFFFFF" letter-spacing="6">BLACK LINK</text>
@@ -193,45 +191,14 @@ async function buildFeed() {
     <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
   </g>
 </svg>`;
-    } else if (post.layout === "vector-direct") {
-      // Post 07 já é um gráfico vetorial completo
-      overlaySvg = null;
-    } else {
-      // Padrão Editorial Suíço (Posts 1, 3, 4, 6, 8)
-      overlaySvg = `
-<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(54, 54)">
-    <rect width="180" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
-    <text x="90" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="#FFFFFF" letter-spacing="2">BLACK LINK</text>
-  </g>
-  <g transform="translate(896, 54)">
-    <rect width="130" height="36" rx="18" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
-    <text x="65" y="23" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="11" fill="rgba(255,255,255,0.8)" letter-spacing="1.5">blklnk.com</text>
-  </g>
-  <g transform="translate(54, 820)">
-    <rect width="972" height="190" rx="20" fill="rgba(7, 7, 10, 0.78)" stroke="rgba(255,255,255,0.14)" stroke-width="1" />
-    <text x="44" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="800" font-size="36" fill="#FFFFFF" letter-spacing="-0.5">${escapeXml(post.headline)}</text>
-    <text x="44" y="104" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.85)">${escapeXml(post.sub1)}</text>
-    <text x="44" y="132" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="500" font-size="18" fill="rgba(255,255,255,0.55)">${escapeXml(post.sub2)}</text>
-    <text x="44" y="166" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-weight="700" font-size="10" fill="rgba(255,255,255,0.4)" letter-spacing="2">${escapeXml(post.tagPill)}</text>
-  </g>
-</svg>`;
-    }
+  await sharp(path.join(BRAIN_DIR, "access_card_blank_1792091220745.jpg"))
+    .resize(1080, 1080, { fit: 'cover' })
+    .composite([{ input: Buffer.from(svg09) }])
+    .jpeg({ quality: 96 })
+    .toFile(path.join(OUTPUT_DIR, "museum-09.jpg"));
+  fs.copyFileSync(path.join(OUTPUT_DIR, "museum-09.jpg"), path.join(BRAIN_DIR, "museum-09.jpg"));
 
-    let pipeline = sharp(post.bgPath).resize(1080, 1080, { fit: 'cover' });
-
-    if (overlaySvg) {
-      pipeline = pipeline.composite([{ input: Buffer.from(overlaySvg) }]);
-    }
-
-    const targetOutput = path.join(OUTPUT_DIR, `museum-${numStr}.jpg`);
-    const targetBrain = path.join(BRAIN_DIR, `museum-${numStr}.jpg`);
-
-    await pipeline.jpeg({ quality: 96 }).toFile(targetOutput);
-    fs.copyFileSync(targetOutput, targetBrain);
-  }
-
-  console.log("=== TODAS AS 9 PEÇAS DEFINITIVAS FORAM ATUALIZADAS E SINCRONIZADAS! ===");
+  console.log("=== TODAS AS 9 PEÇAS COMPILADAS E SINCRONIZADAS COM SUCESSO! ===");
 }
 
-buildFeed().catch(console.error);
+buildAllPieces().catch(console.error);
