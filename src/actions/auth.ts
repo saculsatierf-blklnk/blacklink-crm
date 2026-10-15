@@ -165,7 +165,7 @@ export async function loginAction(
     maxAge: 60 * 60 * 24 * 7, // 7 dias
   });
 
-  const destination = sessionPayload.role === "commercial" ? "/leads" : "/";
+  const destination = sessionPayload.role === "commercial" ? "/vendas" : "/";
   return {
     success: true,
     user: {
@@ -192,10 +192,19 @@ export async function registerCompanyAdminAction(
     };
   }
 
-  const { companyName, fullName, email, password } = parsed.data;
+  const { companyName, fullName, email, password, role, inviteCompanyId } = parsed.data;
   const cleanEmail = email.toLowerCase().trim();
+  const assignedRole: "admin" | "commercial" = role === "admin" ? "admin" : "commercial";
+  const destination = assignedRole === "commercial" ? "/vendas" : "/";
 
-  let destination = "/";
+  let sessionPayload: {
+    id: string;
+    company_id: string;
+    role: "admin" | "commercial";
+    name: string;
+    email: string;
+    createdAt: string;
+  } | null = null;
 
   try {
     // 1. Verifica se e-mail corporativo já existe
@@ -211,28 +220,54 @@ export async function registerCompanyAdminAction(
       };
     }
 
-    // 2. Criação da Empresa (Tenant)
-    const [newCompany] = await db
-      .insert(companies)
-      .values({
-        corporateName: companyName.trim(),
-      })
-      .returning({ id: companies.id });
+    // 2. Resolução da Empresa: usa o ID de convite, ou busca por nome existente (ex: Gofer Metais), ou cria nova empresa
+    let targetCompanyId = inviteCompanyId || "";
+    let targetCompanyName = companyName.trim();
 
-    if (!newCompany?.id) {
-      return { error: "Não foi possível criar o registro corporativo da empresa." };
+    if (targetCompanyId) {
+      const [existingComp] = await db
+        .select({ id: companies.id, corporateName: companies.corporateName })
+        .from(companies)
+        .where(eq(companies.id, targetCompanyId))
+        .limit(1);
+      if (existingComp) {
+        targetCompanyName = existingComp.corporateName;
+      }
+    } else {
+      const [matchedCompany] = await db
+        .select({ id: companies.id, corporateName: companies.corporateName })
+        .from(companies)
+        .where(sql`LOWER(${companies.corporateName}) = LOWER(${companyName.trim()})`)
+        .limit(1);
+
+      if (matchedCompany) {
+        targetCompanyId = matchedCompany.id;
+        targetCompanyName = matchedCompany.corporateName;
+      } else {
+        const [newCompany] = await db
+          .insert(companies)
+          .values({
+            corporateName: companyName.trim(),
+          })
+          .returning({ id: companies.id, corporateName: companies.corporateName });
+
+        if (!newCompany?.id) {
+          return { error: "Não foi possível criar o registro corporativo da empresa." };
+        }
+        targetCompanyId = newCompany.id;
+      }
     }
 
-    // 3. Criação do Administrador mestre da conta
+    // 3. Criação do Usuário (Administrador ou Operador Comercial)
     const insertRes = await db.execute(
       sql`
         INSERT INTO users (company_id, full_name, email, password_hash, role)
         VALUES (
-          ${newCompany.id}::uuid,
+          ${targetCompanyId}::uuid,
           ${fullName.trim()},
           ${cleanEmail},
           crypt(${password}, gen_salt('bf')),
-          'admin'
+          ${assignedRole}
         )
         RETURNING id, full_name, email, role, company_id;
       `
@@ -240,14 +275,14 @@ export async function registerCompanyAdminAction(
 
     const newUser = insertRes[0];
     if (!newUser?.id) {
-      return { error: "Falha ao registrar a credencial do administrador." };
+      return { error: "Falha ao registrar a credencial do usuário." };
     }
 
     // 4. Emissão imediata do token de sessão executiva
-    const sessionPayload = {
+    sessionPayload = {
       id: String(newUser.id),
-      company_id: String(newCompany.id),
-      role: "admin" as const,
+      company_id: String(targetCompanyId),
+      role: assignedRole,
       name: String(newUser.full_name || fullName),
       email: cleanEmail,
       createdAt: new Date().toISOString(),
@@ -266,13 +301,17 @@ export async function registerCompanyAdminAction(
     if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
       throw err;
     }
-    console.error("Falha no cadastro da empresa/administrador:", err);
+    console.error("Falha no cadastro da empresa/operador:", err);
     return {
       error: "Falha ao registrar a conta corporativa. Verifique os dados e tente novamente.",
     };
   }
 
-  redirect(destination);
+  return {
+    success: true,
+    user: sessionPayload || undefined,
+    destination,
+  };
 }
 
 export interface RequestCodeResult {
@@ -478,10 +517,10 @@ export async function createTeamMemberAction(
 ): Promise<{ success: boolean; error?: string; member?: TeamMember }> {
   try {
     const session = await getSessionContext();
-    if (!session || session.role !== "admin" || !session.company_id) {
+    if (!session || !session.company_id) {
       return {
         success: false,
-        error: "Apenas administradores podem cadastrar novos membros na equipe.",
+        error: "Sessão corporativa não identificada. Realize o login.",
       };
     }
 

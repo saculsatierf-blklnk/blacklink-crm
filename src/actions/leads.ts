@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, ilike } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { db } from "@/db";
@@ -469,7 +469,8 @@ const GENERIC_FREEMAIL_DOMAINS = new Set([
  * Radar Anti-Colisão: Varre o banco em tempo real por e-mail ou domínio corporativo
  */
 export async function checkLeadCollisionAction(
-  email: string
+  email: string,
+  companyIdOverride?: string
 ): Promise<CollisionCheckResult> {
   try {
     const cleanEmail = email?.trim().toLowerCase();
@@ -477,11 +478,14 @@ export async function checkLeadCollisionAction(
       return { collision: false };
     }
 
+    const session = await getSessionContext();
+    const companyId = companyIdOverride || session?.company_id;
+
     const domain = cleanEmail.split("@")[1]?.trim().toLowerCase();
     const isCorporateDomain = domain && !GENERIC_FREEMAIL_DOMAINS.has(domain);
 
     // 1. Busca por e-mail exato
-    const [exactMatch] = await db
+    let exactQuery = db
       .select({
         id: leads.id,
         leadName: leads.leadName,
@@ -491,25 +495,42 @@ export async function checkLeadCollisionAction(
         notes: leads.notes,
       })
       .from(leads)
-      .where(ilike(leads.leadEmail, cleanEmail))
+      .where(
+        companyId
+          ? and(ilike(leads.leadEmail, cleanEmail), eq(leads.companyId, companyId))
+          : ilike(leads.leadEmail, cleanEmail)
+      )
       .limit(1);
 
+    const [exactMatch] = await exactQuery;
+
     if (exactMatch) {
-      const op = getOperator(exactMatch.ownerId);
+      let ownerDisplayName = getOperator(exactMatch.ownerId).name;
+      try {
+        const [matchedUser] = await db
+          .select({ fullName: users.fullName })
+          .from(users)
+          .where(eq(users.id, exactMatch.ownerId))
+          .limit(1);
+        if (matchedUser?.fullName) {
+          ownerDisplayName = matchedUser.fullName;
+        }
+      } catch {}
+
       return {
         collision: true,
         collidedWith: "email",
         domain,
         collidedLead: {
           ...exactMatch,
-          ownerName: op.name,
+          ownerName: ownerDisplayName,
         },
       };
     }
 
     // 2. Busca por domínio corporativo idêntico
     if (isCorporateDomain) {
-      const [domainMatch] = await db
+      let domainQuery = db
         .select({
           id: leads.id,
           leadName: leads.leadName,
@@ -519,18 +540,35 @@ export async function checkLeadCollisionAction(
           notes: leads.notes,
         })
         .from(leads)
-        .where(ilike(leads.leadEmail, `%@${domain}`))
+        .where(
+          companyId
+            ? and(ilike(leads.leadEmail, `%@${domain}`), eq(leads.companyId, companyId))
+            : ilike(leads.leadEmail, `%@${domain}`)
+        )
         .limit(1);
 
+      const [domainMatch] = await domainQuery;
+
       if (domainMatch) {
-        const op = getOperator(domainMatch.ownerId);
+        let ownerDisplayName = getOperator(domainMatch.ownerId).name;
+        try {
+          const [matchedUser] = await db
+            .select({ fullName: users.fullName })
+            .from(users)
+            .where(eq(users.id, domainMatch.ownerId))
+            .limit(1);
+          if (matchedUser?.fullName) {
+            ownerDisplayName = matchedUser.fullName;
+          }
+        } catch {}
+
         return {
           collision: true,
           collidedWith: "domain",
           domain,
           collidedLead: {
             ...domainMatch,
-            ownerName: op.name,
+            ownerName: ownerDisplayName,
           },
         };
       }

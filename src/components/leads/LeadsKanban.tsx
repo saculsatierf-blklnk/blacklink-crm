@@ -20,6 +20,7 @@ import {
   Plus,
   Sparkles,
   User,
+  UserCheck,
   Users,
   Zap,
 } from "lucide-react";
@@ -33,12 +34,21 @@ import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
 import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
+import { TeamInviteModal } from "./TeamInviteModal";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
   initialOperators?: Operator[];
+  currentUser?: {
+    id: string;
+    company_id: string;
+    role: "admin" | "commercial";
+    name: string;
+    email: string;
+  } | null;
+  companyName?: string;
 }
 
 interface ColumnConfig {
@@ -126,16 +136,27 @@ function getActivityInfo(date?: Date | string | null, type?: string | null) {
   };
 }
 
-export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps) {
+export function LeadsKanban({
+  initialLeads,
+  initialOperators,
+  currentUser,
+  companyName,
+}: LeadsKanbanProps) {
   const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
   const [operators, setOperators] = useState<Operator[]>(initialOperators || OPERATORS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Silo de Propriedade: Filtro de Operador Ativo
-  const [activeOperator, setActiveOperator] = useState<string>("todos");
+  const isCommercial = currentUser?.role === "commercial";
+  const myUserId = currentUser?.id || "";
+
+  // Silo de Propriedade: se for comercial, trava por padrão no ID do usuário logado
+  const [activeOperator, setActiveOperator] = useState<string>(
+    isCommercial && myUserId ? myUserId : "todos"
+  );
 
   // Sincroniza operadores dinâmicos
   useEffect(() => {
@@ -319,10 +340,17 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
   };
 
   // Filtragem estrita pelo Silo de Propriedade (Ownership)
+  // Operadores comerciais têm visão 100% isolada da sua carteira (sem cruzar dados com colegas)
   const displayedLeads =
-    activeOperator === "todos"
+    isCommercial && myUserId
+      ? leadsList.filter(
+          (l) =>
+            l.ownerId === myUserId ||
+            (currentUser?.email && l.ownerId === currentUser.email)
+        )
+      : activeOperator === "todos"
       ? leadsList
-      : leadsList.filter((l) => (l.ownerId || "lucas.leite") === activeOperator);
+      : leadsList.filter((l) => (l.ownerId || operators[0]?.id) === activeOperator);
 
   const getLeadsByStatus = (status: LeadStatus) => {
     return displayedLeads.filter((lead) => lead.status === status);
@@ -345,40 +373,65 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
       <div className="relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-5 lg:p-6 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.03]">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
-          {/* Seletor de Operador Ativo */}
-          <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-white" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-                Operador Ativo:
+          {/* Seletor de Operador Ativo ou Silo Pessoal */}
+          {isCommercial ? (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-mono text-emerald-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-semibold text-white">Minha Carteira:</span>
+                <span>{currentUser?.name || "Operador Comercial"}</span>
+                <span className="text-[10px] text-emerald-400/70 uppercase tracking-wider font-sans border-l border-emerald-500/30 pl-2">
+                  Silo Pessoal Ativo
+                </span>
+              </div>
+              <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400">
+                {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
               </span>
             </div>
+          ) : (
+            <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-white" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                  Operador Ativo:
+                </span>
+              </div>
 
-            <select
-              value={activeOperator}
-              onChange={(e) => setActiveOperator(e.target.value)}
-              className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-2 text-xs font-mono text-zinc-200 focus:border-white/30 focus:outline-none cursor-pointer"
-            >
-              <option value="todos">Todos os Operadores ({leadsList.length})</option>
-              {operators.map((op) => {
-                const count = leadsList.filter(
-                  (l) => (l.ownerId || operators[0]?.id) === op.id
-                ).length;
-                return (
-                  <option key={op.id} value={op.id}>
-                    {op.name} ({op.role}) — {count} contas
-                  </option>
-                );
-              })}
-            </select>
+              <select
+                value={activeOperator}
+                onChange={(e) => setActiveOperator(e.target.value)}
+                className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-2 text-xs font-mono text-zinc-200 focus:border-white/30 focus:outline-none cursor-pointer"
+              >
+                <option value="todos">Todos os Operadores ({leadsList.length})</option>
+                {operators.map((op) => {
+                  const count = leadsList.filter(
+                    (l) => (l.ownerId || operators[0]?.id) === op.id
+                  ).length;
+                  return (
+                    <option key={op.id} value={op.id}>
+                      {op.name} ({op.role}) — {count} contas
+                    </option>
+                  );
+                })}
+              </select>
 
-            <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 border-l border-white/10 pl-3">
-              {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
-            </span>
-          </div>
+              <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 border-l border-white/10 pl-3">
+                {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
+              </span>
+            </div>
+          )}
 
-          {/* Botão de Criação de Lead com Radar Anti-Colisão & Guia */}
+          {/* Botões Operacionais: Convidar Equipe, Guia & Novo Lead com Radar Anti-Colisão */}
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsInviteModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer shadow-lg active:scale-[0.99]"
+            >
+              <Users className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Convidar Equipe</span>
+            </button>
+
             <StartTourButton
               steps={KANBAN_TOUR_STEPS}
               variant="secondary"
@@ -693,8 +746,23 @@ export function LeadsKanban({ initialLeads, initialOperators }: LeadsKanbanProps
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onLeadCreated={handleLeadCreated}
-        defaultOwnerId={activeOperator !== "todos" ? activeOperator : operators[0]?.id}
+        defaultOwnerId={isCommercial && myUserId ? myUserId : (activeOperator !== "todos" ? activeOperator : operators[0]?.id)}
         operators={operators}
+        companyId={currentUser?.company_id}
+      />
+
+      {/* Modal de Convite da Equipe (Jorge / Novos Vendedores da Gofer Metais) */}
+      <TeamInviteModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        companyName={companyName || "Gofer Metais"}
+        companyId={currentUser?.company_id}
+        currentUserId={currentUser?.id}
+        onMemberAdded={() => {
+          getCompanyOperatorsAction().then((ops) => {
+            if (ops && ops.length > 0) setOperators(ops);
+          });
+        }}
       />
     </div>
   );

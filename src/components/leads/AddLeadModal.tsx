@@ -28,6 +28,7 @@ interface AddLeadModalProps {
   onLeadCreated: (newLead: Lead) => void;
   defaultOwnerId?: string;
   operators?: Operator[];
+  companyId?: string;
 }
 
 const COUNTRY_CODES = [
@@ -60,6 +61,7 @@ export function AddLeadModal({
   onLeadCreated,
   defaultOwnerId,
   operators: propOperators,
+  companyId,
 }: AddLeadModalProps) {
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
@@ -122,7 +124,7 @@ export function AddLeadModal({
     setIsCheckingCollision(true);
     const timer = setTimeout(async () => {
       try {
-        const result = await checkLeadCollisionAction(email.trim());
+        const result = await checkLeadCollisionAction(email.trim(), companyId);
         setCollisionResult(result);
       } catch (err) {
         console.error("Falha no radar de colisão:", err);
@@ -132,7 +134,7 @@ export function AddLeadModal({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [email]);
+  }, [email, companyId]);
 
   if (!isOpen) return null;
 

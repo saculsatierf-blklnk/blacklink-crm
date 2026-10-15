@@ -13,208 +13,259 @@ const POSTS = [
     num: 1,
     id: "post-bl-01",
     pos: "Grade: Superior Esquerda",
-    goat: "Bureau Borsche // Brutalismo Noir",
-    theme: "Engenharia da Ausência",
-    tag: "01 // SOBERANIA",
-    headline: "ENGENHARIA DA AUSÊNCIA",
-    bodyText: "Criamos a infraestrutura que sua autoridade merece. Assuma o comando sem ruídos.",
-    bgImage: "blacklink-art-gradient.jpg",
-    caption: `A maioria das operações morre no atrito invisível da própria equipe.
+    theme: "O Choque de Realidade do Mercado Digital",
+    headline: "SEU PRODUTO PARECE AMADOR.",
+    sub1: "O mercado não compra o que é bom. Compra o que parece inatingível.",
+    sub2: "Nós construímos a tecnologia e o ecossistema que separam você do resto.",
+    tagPill: "ARQUITETURA DE PRODUTOS DIGITAIS // blklnk.com",
+    bgImage: "glass-01-chain.jpg",
+    caption: `Você pode ter o melhor método do mercado. Pode ter a melhor entrega.
 
-Na Black Link, construímos sistemas comerciais e inteligência sob medida para que os fundadores liderem sem operar o operacional.
+Mas se a sua embalagem visual, sua plataforma e sua esteira de vendas parecem uma página genérica feita em 2021, o cliente de alto poder aquisitivo nem clica.
 
-Descubra a Engenharia da Ausência em blklnk.com
+Marcas soberanas não brigam por atenção com dancinhas ou promessas baratas. Elas constroem uma presença que transmite autoridade inquestionável no primeiro segundo de contato.
 
-#BlackLink #EngenhariaDaAusencia #VendasB2B #HighTicket #Soberania`,
-    linkedin: `Existe uma diferença brutal entre ter uma empresa e ser prisioneiro da própria operação.
+Na Black Link, desenhamos e desenvolvemos produtos digitais, plataformas e ecossistemas sob medida para quem cansou de parecer amador e quer dominar o mercado high-ticket.
 
-A verdadeira soberania corporativa começa quando a esteira de vendas, os processos e a telemetria funcionam com precisão matemática, sem depender da presença diária do CEO.
+Se você está pronto para transformar sua operação em uma instituição: o link está na bio (blklnk.com).
 
-Na Black Link (blklnk.com), desenvolvemos a Engenharia da Ausência para holdings e líderes de alto valor.`
+#BlackLink #ProdutosDigitais #HighTicket #DesignDeAutoridade #BrandingSoberano`,
+    linkedin: `Existe uma verdade desconfortável no mercado digital: o cliente não compra o produto mais completo; ele compra a percepção mais sofisticada.
+
+Enquanto a maioria das empresas foca apenas em empurrar conteúdo em plataformas genéricas, os líderes do mercado investem em ecossistemas proprietários, design de alto impacto e infraestrutura sob medida.
+
+Na Black Link (blklnk.com), criamos a tecnologia e a arquitetura visual para fundadores e empresas que lideram seus segmentos com autoridade inquestionável.`
   },
   {
     num: 2,
     id: "post-bl-02",
     pos: "Grade: Superior Centro",
-    goat: "COLLINS // Arquitetura Cinética",
-    theme: "Telemetria de Receita",
-    tag: "02 // VELOCIDADE",
-    headline: "TELEMETRIA DE RECEITA",
-    bodyText: "Dados frios do pipeline em tempo real para decisões sem achismos.",
-    bgImage: "blacklink-3d-keycap.jpg",
-    caption: `Planilhas manuais não escalam holdings de 8 dígitos.
+    theme: "A Lei da Precificação High-Ticket",
+    headline: "PRECIFICAÇÃO É PERCEPÇÃO.",
+    sub1: "Quem tem autoridade visual e ecossistema próprio dita as regras.",
+    sub2: "Quem usa ferramentas genéricas é forçado a dar desconto para vender.",
+    tagPill: "ENGENHARIA HIGH-TICKET // blklnk.com",
+    bgImage: "glass-02-pillar.jpg",
+    caption: `Por que uma garrafa de água custa R$ 2 no semáforo e R$ 45 no lounge do hotel 5 estrelas?
 
-O Black Link CRM OS centraliza cada interação, pontua o momento exato de fechamento e automatiza o follow-up executivo.
+A água é a mesma. O recipiente, a atmosfera e o status da entrega mudaram tudo.
 
-Saiba mais em blklnk.com
+No mercado digital, 90% dos infoprodutores e consultores sofrem pedindo desconto e lidando com curiosos porque sua presença não passa poder.
 
-#TelemetriaDeReceita #BlackLink #CRMOS #EnterpriseB2B`,
-    linkedin: `Como você sabe com 100% de certeza quais negócios vão fechar esta semana?
+Quando seu produto digital é sustentado por uma infraestrutura cinematográfica, com UX impecável e tecnologia proprietária, a objeção de preço desaparece antes da reunião começar.
 
-Se sua resposta envolve perguntar para a equipe de vendas ou abrir uma planilha desatualizada, sua operação está no escuro.
+Pare de vender commodities. Construa seu ativo de autoridade com a Black Link.
 
-Telemetria de receita em tempo real é o padrão da Black Link (blklnk.com).`
+→ Conheça nossos ecossistemas em blklnk.com
+
+#Precificacao #HighTicket #BlackLink #PosicionamentoDeLuxo #VendasB2B`,
+    linkedin: `Design não é cosmética. É a primeira linha de defesa da sua margem de lucro.
+
+Quando seu posicionamento visual respira autoridade internacional, você nunca mais precisa justificar seu ticket em reuniões de negócios.
+
+Na Black Link, desenvolvemos ecossistemas comerciais e plataformas digitais onde o preço alto é a consequência natural da entrega extraordinária.`
   },
   {
     num: 3,
     id: "post-bl-03",
     pos: "Grade: Superior Direita",
-    goat: "Base Design // Swiss Porcelain Luxury",
-    theme: "Automação Inteligente",
-    tag: "03 // EFICIÊNCIA",
-    headline: "AUTOMAÇÃO INTELIGENTE",
-    bodyText: "Agentes autônomos que qualificam e avançam leads 24 horas por dia.",
-    bgImage: "blacklink-art-pins.jpg",
-    caption: `Trabalho braçal e atraso no primeiro contato custam contratos milionários.
+    theme: "A Máquina de Vendas Automatizada",
+    headline: "A MÁQUINA DE 7 DÍGITOS.",
+    sub1: "Sua operação de vendas precisa de telemetria, não de sorte.",
+    sub2: "Agentes de IA e pipelines proprietários que fecham contratos 24h por dia.",
+    tagPill: "TELEMETRIA COMERCIAL & IA // blklnk.com",
+    bgImage: "glass-03-sphere.jpg",
+    caption: `Depender do humor de vendedores ou de mensagens manuais no WhatsApp para bater meta não é negócio. É loteria.
 
-Implementamos pipelines automatizados com IA que conduzem o tomador de decisão da dúvida ao agendamento direto com o sócio.
+Criamos sistemas de conversão e esteiras de dados que identificam o comportamento do lead em tempo real, ativam gatilhos de fechamento e nutrem tomadores de decisão 24 horas por dia.
 
-Explore em blklnk.com
+Menos reuniões inúteis. Mais contratos assinados.
 
-#AutomacaoInteligente #BlackLink #IAOperacional #HighTicket`,
-    linkedin: `Tempo de resposta é o maior preditor de conversão em vendas consultivas B2B.
+Construímos o CRM OS e a esteira de automações que a sua escala exige.
 
-Enquanto concorrentes levam horas para responder, a infraestrutura da Black Link engaja, analisa o perfil do lead e agenda reuniões em minutos.`
+Acesse blklnk.com e simule sua nova estrutura.
+
+#TelemetriaDeReceita #AutomacaoDeVendas #CRMproprietario #BlackLink #EscalaB2B`,
+    linkedin: `Como você sabe com 100% de precisão quais negócios vão fechar esta semana?
+
+Se sua resposta envolve abrir uma planilha desatualizada ou perguntar no grupo de mensagens, sua operação está no escuro.
+
+Telemetria de receita em tempo real é o padrão que implementamos na Black Link (blklnk.com).`
   },
   {
     num: 4,
     id: "post-bl-04",
     pos: "Grade: Meio Esquerda",
-    goat: "Vogue Italia // Editorial C-Level Alta Moda",
-    theme: "Branding Soberano",
-    tag: "04 // AUTORIDADE",
-    headline: "BRANDING SOBERANO",
-    bodyText: "Alta moda e rigor suíço para empresas que cobram alto valor.",
-    bgImage: "blacklink-art-portrait.jpg",
-    caption: `Empresas comuns brigam por preço. Marcas soberanas ditam as regras do mercado.
+    theme: "A Morte das Áreas de Membros Genéricas",
+    headline: "ECOSSISTEMAS VENCEM CURSOS.",
+    sub1: "A era do infoproduto gravado em plataforma barata morreu.",
+    sub2: "Grandes marcas retêm clientes com software, comunidade e status.",
+    tagPill: "ECOSSISTEMAS PROPRIETÁRIOS // blklnk.com",
+    bgImage: "glass-04-slab.jpg",
+    caption: `Ninguém mais quer pagar R$ 2.000 para assistir a 40 horas de vídeo gravado em plataforma genérica.
 
-A estética minimalista e monumental da Black Link posiciona sua holding como referência inquestionável no primeiro contato.
+Os maiores players do mundo já entenderam: a retenção e o LTV moram no ecossistema proprietário. Plataformas customizadas, design imersivo, ranking em tempo real e experiência de software.
 
-Conheça nosso ecossistema em blklnk.com
+É isso que desenvolvemos para nossos parceiros e clientes: produtos digitais que geram orgulho de pertencer e recompra automática.
 
-#BrandingSoberano #AltaModa #BlackLink #LuxoSuico`,
-    linkedin: `Design não é apenas cosmética. É a primeira linha de defesa da sua precificação.
+Se você fatura mais de R$ 50k/mês e quer criar seu ecossistema proprietário, acesse o link na bio (blklnk.com).
 
-Quando seu posicionamento visual respira autoridade internacional, você nunca mais precisa justificar seu ticket em reuniões de negócios.`
+#ProdutosDigitais #SoftwareProprietario #LTV #Retencao #BlackLink`,
+    linkedin: `A comoditização dos infoprodutos tradicionais é um fato consumado.
+
+Para manter clientes engajados e construir um negócio que vale múltiplos dígitos, você precisa de um ecossistema: plataforma própria, experiência de usuário impecável e inteligência aplicada.
+
+Na Black Link, desenhamos e programamos o software que transforma seu conhecimento em um ativo corporativo real.`
   },
   {
     num: 5,
     id: "post-bl-05",
     pos: "Grade: Centro Absoluto",
-    goat: "COLLINS & Borsche // Centro de Comando",
-    theme: "Controle Absoluto",
-    tag: "05 // COMANDO",
-    headline: "CONTROLE ABSOLUTO",
-    bodyText: "Visão 360° de cada oportunidade comercial em uma interface pura.",
-    bgImage: "blacklink-art-cursor-light.jpg",
-    caption: `O centro de comando da sua expansão comercial.
+    theme: "Engenharia da Ausência: O Fundador Livre",
+    headline: "ENGENHARIA DA AUSÊNCIA.",
+    sub1: "Se sua empresa para quando você viaja, você tem um emprego.",
+    sub2: "Codificamos seus processos para que o negócio escale sem a sua presença.",
+    tagPill: "SOBERANIA OPERACIONAL // blklnk.com",
+    bgImage: "glass-05-helix.jpg",
+    caption: `Se sua operação para quando você viaja, você não tem uma empresa. Você tem um emprego de alta pressão que você mesmo criou.
 
-Sem interfaces poluídas de softwares legados dos anos 2000. O Black Link CRM OS foi esculpido para decisões de segundos.
+A Engenharia da Ausência é o princípio fundamental da Black Link:
 
-Conheça em blklnk.com
+1. Processos comerciais transformados em código.
+2. Automações com IA que qualificam e filtram curiosos.
+3. Dashboard executivo em tempo real na palma da mão.
 
-#ControleAbsoluto #BlackLinkOS #Enterprise #VendasB2B`,
-    linkedin: `Quantas abas abertas seu time comercial precisa para registrar uma ligação?
+Sua autoridade merece uma estrutura que trabalhe por você.
 
-Complexidade é o inimigo número 1 da produtividade. Criamos um sistema operacional comercial que une minimalismo visual e máxima tração de negócios.`
+Conheça o ecossistema Black Link em blklnk.com.
+
+#EngenhariaDaAusencia #Soberania #GestaoDeElite #BlackLink #AutomacaoComercial`,
+    linkedin: `Existe uma diferença brutal entre ser dono de uma empresa e ser prisioneiro da própria operação.
+
+A verdadeira soberania corporativa começa quando a esteira de vendas, os processos e a telemetria funcionam com precisão matemática, sem depender da presença diária do CEO.
+
+Na Black Link (blklnk.com), desenvolvemos a Engenharia da Ausência.`
   },
   {
     num: 6,
     id: "post-bl-06",
     pos: "Grade: Meio Direita",
-    goat: "Vogue Italia // Editorial Escultural Futurista",
-    theme: "Disrupção Operacional",
-    tag: "06 // DISRUPÇÃO",
-    headline: "DISRUPÇÃO OPERACIONAL",
-    bodyText: "Substitua atritos e processos manuais por inteligência aplicada.",
-    bgImage: "blacklink-art-glass-model.jpg",
-    caption: `O mercado mudou. Vendas consultivas modernas exigem inteligência preditiva e esteira de automações conectadas.
+    theme: "Design como Filtro de Riqueza",
+    headline: "ESTÉTICA É FILTRO DE CLIENTE.",
+    sub1: "Comunicação fraca atrai pedinte de desconto e suporte infinito.",
+    sub2: "Design monumental e vidro atraem quem paga à vista sem questionar.",
+    tagPill: "POSICIONAMENTO MONUMENTAL // blklnk.com",
+    bgImage: "glass-06-cube.jpg",
+    caption: `Quem reclama do seu preço não é o cliente ideal. É o cliente atraído pela sua comunicação fraca.
 
-Conheça a arquitetura proprietária da Black Link em blklnk.com
+O público que compra soluções de R$ 10k, R$ 30k ou R$ 100k tem o olhar treinado. Eles compram rigor, sofisticação e segurança estética.
 
-#DisrupcaoOperacional #BlackLink #InteligenciaArtificial`,
-    linkedin: `Se sua empresa ainda depende de rotinas repetitivas que poderiam ser automatizadas, sua margem está sendo consumida por ineficiência.
+Quando você investe em um branding e numa experiência digital de alta densidade visual (Glassmorphism, Minimalismo e Tipografia Editorial), você filtra os curiosos e atrai quem já tem o orçamento aprovado.
 
-Engenharia de automações é investimento em escala pura.`
+Eleve o padrão do seu negócio.
+
+Fale com nosso time em blklnk.com.
+
+#DesignDeAutoridade #BrandingDeLuxo #BlackLink #ClientesHighTicket #Posicionamento`,
+    linkedin: `A qualidade do seu cliente é o reflexo direto da sofisticação da sua embalagem digital.
+
+Marcas genéricas atraem negociações desgastantes. Marcas com rigor estético institucional estabelecem autoridade instantânea antes mesmo da primeira conversa comercial.
+
+Construa sua presença com a Black Link.`
   },
   {
     num: 7,
     id: "post-bl-07",
     pos: "Grade: Inferior Esquerda",
-    goat: "Pentagram // Macro Arquitetura Óptica de Vidro",
-    theme: "Blindagem Comercial",
-    tag: "07 // BLINDAGEM",
-    headline: "BLINDAGEM COMERCIAL",
-    bodyText: "Zero vazamento de oportunidades no pipeline de alta demanda.",
-    bgImage: "blacklink-art-macro-glass.jpg",
-    caption: `Cada lead não respondido é capital deixado na mesa.
+    theme: "Velocidade de Resposta Brutal",
+    headline: "VELOCIDADE BRUTAL DE FECHAMENTO.",
+    sub1: "Responder em 30 segundos aumenta em 400% a conversão de contratos.",
+    sub2: "Nossa IA qualifica o lead e agenda a call antes do concorrente abrir o WhatsApp.",
+    tagPill: "AUTOMAÇÃO DE CONVERSÃO // blklnk.com",
+    bgImage: "glass-07-torus.jpg",
+    caption: `Estudos de conversão mostram: responder um lead nos primeiros 5 minutos aumenta as chances de fechamento em quase 400%.
 
-A esteira da Black Link monitora o tempo de resposta e reativa conversas adormecidas sem intervenção manual.
+O problema? Equipes humanas dormem, almoçam, se distraem e demoram horas.
 
-Conheça o CRM OS em blklnk.com
+Nossos agentes autônomos integrados ao CRM recebem o lead, cruzam dados de faturamento da empresa dele, qualificam a dor e já liberam o link da agenda do closer em menos de 45 segundos.
 
-#BlindagemComercial #BlackLink #EnterpriseB2B`,
-    linkedin: `Vazamento de pipeline é o custo silencioso mais caro de qualquer organização comercial.
+Velocidade brutal. Conversão implacável.
 
-Blindamos sua esteira de aquisição com gatilhos automáticos de retenção e telemetria de negócios.`
+Descubra como blindar seu funil em blklnk.com.
+
+#VelocidadeComercial #IAdeVendas #BlackLinkCRM #AltaConversao #GrowthB2B`,
+    linkedin: `Tempo de resposta é o maior preditor de conversão em vendas consultivas.
+
+Enquanto seus concorrentes demoram horas para fazer o primeiro contato, a infraestrutura da Black Link engaja, analisa o perfil da oportunidade e agenda reuniões em minutos.`
   },
   {
     num: 8,
     id: "post-bl-08",
     pos: "Grade: Inferior Centro",
-    goat: "Accept & Proceed // Monólito de Dados Obsidiana",
-    theme: "Protocolo de Expansão",
-    tag: "08 // ESCALA",
-    headline: "PROTOCOLO DE EXPANSÃO",
-    bodyText: "O método validado de tração para empresas e holdings B2B.",
-    bgImage: "blacklink-art-obsidian-dark.jpg",
-    caption: `Não acreditamos em fórmulas mágicas de internet. Acreditamos em engenharia de processos, esteira técnica e autoridade executiva.
+    theme: "Infraestrutura Enterprise Inquebrável",
+    headline: "INFRAESTRUTURA INTOCÁVEL.",
+    sub1: "Sua escala comercial não cabe em ferramentas no-code gratuitas.",
+    sub2: "Desenvolvemos tecnologia escalável com segurança de padrão bancário.",
+    tagPill: "TECNOLOGIA ENTERPRISE // blklnk.com",
+    bgImage: "glass-08-vault.jpg",
+    caption: `Lançar um produto digital com ferramentas 'no-code' remendadas com fita crepe digital é a receita perfeita para travar na hora do checkout.
 
-Explore em blklnk.com/protocolo
+Na Black Link, desenvolvemos tecnologia de padrão bancário: bancos de dados escaláveis, arquitetura serverless ultrarrápida e design nativo em alta performance.
 
-#ProtocoloDeExpansao #BlackLink #EngenhariaDeVendas`,
-    linkedin: `Crescimento sustentável não nasce do improviso. Nasce de um protocolo comercial rigoroso e repetível.
+Zero travamentos. Zero perda de vendas no pico de tráfego.
 
-É exatamente essa engenharia que entregamos na Black Link.`
+Sua escala não cabe mais em ferramentas gratuitas.
+
+Consulte nossa equipe de engenharia em blklnk.com.
+
+#InfraestruturaDigital #SegurancaBancaria #BlackLinkOS #EscalaGarantida`,
+    linkedin: `Crescimento sustentável exige bases sólidas. Se a sua esteira digital falha durante picos de tráfego, você não está construindo uma empresa, está arriscando seu faturamento.
+
+Na Black Link, desenhamos tecnologia com segurança, velocidade e confiabilidade de nível corporativo.`
   },
   {
     num: 9,
     id: "post-bl-09",
     pos: "Grade: Inferior Direita",
-    goat: "Pentagram // Metal Líquido Institucional",
-    theme: "Soberania Digital",
-    tag: "09 // LIDERANÇA",
-    headline: "SOBERANIA DIGITAL",
-    bodyText: "A infraestrutura definitiva para liderar seu segmento com elegância.",
-    bgImage: "blacklink-art-fluid-metal.jpg",
-    caption: `A Black Link foi concebida para liderar o futuro da inteligência de negócios.
+    theme: "O Convite para Liderar o Mercado",
+    headline: "DOMINE O SEU MERCADO.",
+    sub1: "Pare de ser apenas mais um no feed disputando atenção por centavos.",
+    sub2: "Construa seu ecossistema digital com quem lidera o futuro.",
+    tagPill: "INICIE SEU PROJETO // blklnk.com",
+    bgImage: "glass-09-monolith.jpg",
+    caption: `O mercado digital não perdoa a mediocridade. Daqui a 12 meses, quem tiver uma presença genérica será engolido pela comoditização.
 
-Assuma o comando da sua presença e do seu faturamento com quem entende de tecnologia de ponta.
+Quem tiver um produto digital sofisticado, um ecossistema com IA e uma autoridade visual esmagadora vai monopolizar o faturamento.
 
-→ Inicie seu projeto ou simule sua arquitetura em blklnk.com
+A Black Link existe para desenhar, programar e escalar o seu ecossistema digital.
 
-#SoberaniaDigital #BlackLink #HighTicket #LiderancaB2B`,
-    linkedin: `Liderança de mercado não se pede. Conquista-se através de autoridade visual implacável e sistemas de entrega perfeitos.
+As portas estão abertas para novos projetos de alta escala.
+
+→ Acesse blklnk.com ou envie uma mensagem direta para iniciar sua auditoria.
+
+#SoberaniaDigital #LiderancaB2B #BlackLink #MonopolioDeMercado #HighTicket`,
+    linkedin: `Liderança de mercado não se pede. Conquista-se através de autoridade visual implacável, produtos digitais superiores e sistemas de entrega impecáveis.
 
 Bem-vindo à Black Link (blklnk.com).`
   }
 ];
 
 async function run() {
-  console.log('Generating official Black Link Launch Pack (9 assets)...');
+  console.log('Building 100% Extreme Glassmorphism Launch Pack for Black Link...');
 
   // 1. Generate text copies summary file
   let allCopiesText = `BLACK LINK // KIT OFICIAL DE LANÇAMENTO GLOBAL (9 POSTS)\n`;
   allCopiesText += `Domínio Oficial: blklnk.com\n`;
-  allCopiesText += `Padrão de Design: REA GOATs (Bureau Borsche, COLLINS, Base Design, Pentagram, Accept & Proceed, Vogue Italia)\n`;
+  allCopiesText += `Estilo Visual: EXTREME FROSTED GLASSMORPHISM & CLASH MONUMENTAL\n`;
+  allCopiesText += `Objetivo: Autoridade Inquestionável, Viralidade e Venda de Produtos Digitais High-Ticket\n`;
   allCopiesText += `=========================================================================\n\n`;
 
   for (const post of POSTS) {
     allCopiesText += `-------------------------------------------------------------------------\n`;
     allCopiesText += `POST #${String(post.num).padStart(2, '0')} — ${post.headline} (${post.pos})\n`;
-    allCopiesText += `DIREÇÃO DE ARTE: ${post.goat}\n`;
-    allCopiesText += `TAG: ${post.tag}\n`;
-    allCopiesText += `SUBTÍTULO: ${post.bodyText}\n\n`;
+    allCopiesText += `TEMA: ${post.theme}\n`;
+    allCopiesText += `HEADLINE DA ARTE: ${post.headline}\n`;
+    allCopiesText += `SUBTÍTULO: ${post.sub1} ${post.sub2}\n\n`;
     allCopiesText += `[📸 LEGENDA INSTAGRAM]:\n${post.caption}\n\n`;
     allCopiesText += `[💼 POST LINKEDIN]:\n${post.linkedin}\n\n`;
   }
@@ -227,132 +278,128 @@ async function run() {
     const bgFilePath = path.join(__dirname, '../public/brand', post.bgImage);
 
     const xmlEscape = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const tagEscaped = xmlEscape(post.tag);
     const headlineEscaped = xmlEscape(post.headline);
-    const bodyTextEscaped = xmlEscape(post.bodyText);
-    const goatEscaped = xmlEscape(post.goat.toUpperCase());
+    const sub1Escaped = xmlEscape(post.sub1);
+    const sub2Escaped = xmlEscape(post.sub2);
+    const tagPillEscaped = xmlEscape(post.tagPill);
 
-    // SVG Overlay without embedded image (clean vector overlay)
+    // SVG Overlay with Extreme Glassmorphic Card
     const svgOverlay = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <filter id="glow-${post.num}" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="28" flood-color="rgba(0,0,0,0.88)" />
+    </filter>
+    <linearGradient id="card-glass-${post.num}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.03" />
+    </linearGradient>
+    <linearGradient id="border-glow-${post.num}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.40" />
+    </linearGradient>
     <style>
-      .headline {
-        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: -1px;
+      .brand-pill-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 800;
+        letter-spacing: 2.5px;
       }
-      .body-text {
-        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+      .headline-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+        text-transform: uppercase;
+      }
+      .body-sub-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
         font-weight: 500;
       }
-      .tag-text {
-        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
-        font-weight: 700;
-        letter-spacing: 3px;
+      .tag-pill-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+        font-weight: 800;
+        letter-spacing: 2px;
         text-transform: uppercase;
       }
     </style>
-    <linearGradient id="scrim-${post.num}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#000000" stop-opacity="0.25" />
-      <stop offset="45%" stop-color="#000000" stop-opacity="0.15" />
-      <stop offset="70%" stop-color="#000000" stop-opacity="0.75" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.94" />
-    </linearGradient>
   </defs>
 
-  <!-- Vinheta Cinematográfica Escura -->
-  <rect width="1080" height="1080" fill="url(#scrim-${post.num})" />
+  <!-- Pílulas Superiores em Vidro Puro -->
+  <g transform="translate(54, 54)">
+    <rect width="170" height="40" rx="20" fill="url(#card-glass-${post.num})" stroke="url(#border-glow-${post.num})" stroke-width="1.2" />
+    <text x="85" y="25" text-anchor="middle" class="brand-pill-text" font-size="13" fill="#FFFFFF">BLACK LINK</text>
+  </g>
+  <g transform="translate(896, 54)">
+    <rect width="130" height="40" rx="20" fill="url(#card-glass-${post.num})" stroke="url(#border-glow-${post.num})" stroke-width="1.2" />
+    <text x="65" y="25" text-anchor="middle" class="brand-pill-text" font-size="12" fill="rgba(255,255,255,0.85)">blklnk.com</text>
+  </g>
 
-  <!-- Moldura Suíça de Precisão -->
-  <rect x="36" y="36" width="1008" height="1008" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" rx="20" fill="none" />
+  <!-- Card Inferior em Extreme Glassmorphism -->
+  <g transform="translate(54, 755)" filter="url(#glow-${post.num})">
+    <!-- Camada de Vidro Escuro Acetinado -->
+    <rect width="972" height="270" rx="28" fill="rgba(8, 8, 12, 0.72)" />
+    <rect width="972" height="270" rx="28" fill="url(#card-glass-${post.num})" />
+    <rect width="972" height="270" rx="28" stroke="url(#border-glow-${post.num})" stroke-width="1.5" fill="none" />
 
-  <!-- Mira de Precisão Suíça (Crosshairs) -->
-  <line x1="36" y1="56" x2="56" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-  <line x1="56" y1="36" x2="56" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-  <line x1="1024" y1="56" x2="1044" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-  <line x1="1024" y1="36" x2="1024" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+    <!-- Título Monumental -->
+    <text x="48" y="85" class="headline-text" font-size="46" fill="#FFFFFF">${headlineEscaped}</text>
 
-  <!-- Tag Superior Esquerda -->
-  <text x="72" y="96" class="tag-text" font-size="15" fill="rgba(255,255,255,0.85)">${tagEscaped}</text>
+    <!-- Subtítulo Provocador de Autoridade -->
+    <text x="48" y="148" class="body-sub-text" font-size="22" fill="rgba(255,255,255,0.88)">${sub1Escaped}</text>
+    <text x="48" y="184" class="body-sub-text" font-size="22" fill="rgba(255,255,255,0.62)">${sub2Escaped}</text>
 
-  <!-- Assinatura Superior Direita -->
-  <text x="1008" y="96" text-anchor="end" class="tag-text" font-size="13" fill="rgba(255,255,255,0.75)">BLACK LINK // blklnk.com</text>
-
-  <!-- Bloco Monumental Inferior -->
-  <text x="72" y="830" class="headline" font-size="58" fill="#FFFFFF">${headlineEscaped}</text>
-  <text x="72" y="885" class="body-text" font-size="22" fill="#E4E4E7">${bodyTextEscaped}</text>
-
-  <!-- Linha Divisória de Telemetria -->
-  <line x1="72" y1="970" x2="1008" y2="970" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
-
-  <!-- Rodapé Técnico de Curadoria -->
-  <text x="72" y="1010" class="tag-text" font-size="12" fill="rgba(255,255,255,0.55)">POST #${numStr} • REA GOAT: ${goatEscaped} • blklnk.com</text>
-  <text x="1008" y="1010" text-anchor="end" class="tag-text" font-size="12" fill="rgba(255,255,255,0.55)">1080 x 1080 HIGH RES</text>
+    <!-- Tag de Contexto Comercial -->
+    <g transform="translate(48, 222)">
+      <text x="0" y="16" class="tag-pill-text" font-size="12" fill="rgba(255,255,255,0.52)">${tagPillEscaped}</text>
+    </g>
+  </g>
 </svg>`;
 
-    // Complete standalone SVG that references the background image
+    // Standalone SVG
     const standaloneSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <style>
-      .headline {
-        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: -1px;
-      }
-      .body-text {
-        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
-        font-weight: 500;
-      }
-      .tag-text {
-        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
-        font-weight: 700;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-      }
-    </style>
-    <linearGradient id="scrim-${post.num}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#000000" stop-opacity="0.25" />
-      <stop offset="45%" stop-color="#000000" stop-opacity="0.15" />
-      <stop offset="70%" stop-color="#000000" stop-opacity="0.75" />
-      <stop offset="100%" stop-color="#000000" stop-opacity="0.94" />
+    <filter id="glow-${post.num}" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="28" flood-color="rgba(0,0,0,0.88)" />
+    </filter>
+    <linearGradient id="card-glass-${post.num}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.14" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.03" />
+    </linearGradient>
+    <linearGradient id="border-glow-${post.num}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.40" />
     </linearGradient>
   </defs>
 
-  <!-- Imagem de Fundo de Alta Resolução -->
+  <!-- Fundo de Vidro 3D Fosco -->
   <image href="/brand/${post.bgImage}" width="1080" height="1080" preserveAspectRatio="xMidYMid slice" />
 
-  <!-- Vinheta Cinematográfica Escura -->
-  <rect width="1080" height="1080" fill="url(#scrim-${post.num})" />
+  <!-- Pílulas Superiores em Vidro Puro -->
+  <g transform="translate(54, 54)">
+    <rect width="170" height="40" rx="20" fill="url(#card-glass-${post.num})" stroke="url(#border-glow-${post.num})" stroke-width="1.2" />
+    <text x="85" y="25" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="800" font-size="13" fill="#FFFFFF" letter-spacing="2.5">BLACK LINK</text>
+  </g>
+  <g transform="translate(896, 54)">
+    <rect width="130" height="40" rx="20" fill="url(#card-glass-${post.num})" stroke="url(#border-glow-${post.num})" stroke-width="1.2" />
+    <text x="65" y="25" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="700" font-size="12" fill="rgba(255,255,255,0.85)" letter-spacing="1.5">blklnk.com</text>
+  </g>
 
-  <!-- Moldura Suíça de Precisão -->
-  <rect x="36" y="36" width="1008" height="1008" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" rx="20" fill="none" />
+  <!-- Card Inferior em Extreme Glassmorphism -->
+  <g transform="translate(54, 755)" filter="url(#glow-${post.num})">
+    <rect width="972" height="270" rx="28" fill="rgba(8, 8, 12, 0.72)" />
+    <rect width="972" height="270" rx="28" fill="url(#card-glass-${post.num})" />
+    <rect width="972" height="270" rx="28" stroke="url(#border-glow-${post.num})" stroke-width="1.5" fill="none" />
 
-  <!-- Mira de Precisão Suíça (Crosshairs) -->
-  <line x1="36" y1="56" x2="56" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-  <line x1="56" y1="36" x2="56" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-  <line x1="1024" y1="56" x2="1044" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-  <line x1="1024" y1="36" x2="1024" y2="56" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+    <text x="48" y="85" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="900" font-size="46" fill="#FFFFFF" letter-spacing="-0.5">${headlineEscaped}</text>
+    <text x="48" y="148" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="500" font-size="22" fill="rgba(255,255,255,0.88)">${sub1Escaped}</text>
+    <text x="48" y="184" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="500" font-size="22" fill="rgba(255,255,255,0.62)">${sub2Escaped}</text>
 
-  <!-- Tag Superior Esquerda -->
-  <text x="72" y="96" class="tag-text" font-size="15" fill="rgba(255,255,255,0.85)">${tagEscaped}</text>
-
-  <!-- Assinatura Superior Direita -->
-  <text x="1008" y="96" text-anchor="end" class="tag-text" font-size="13" fill="rgba(255,255,255,0.75)">BLACK LINK // blklnk.com</text>
-
-  <!-- Bloco Monumental Inferior -->
-  <text x="72" y="830" class="headline" font-size="58" fill="#FFFFFF">${headlineEscaped}</text>
-  <text x="72" y="885" class="body-text" font-size="22" fill="#E4E4E7">${bodyTextEscaped}</text>
-
-  <!-- Linha Divisória de Telemetria -->
-  <line x1="72" y1="970" x2="1008" y2="970" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
-
-  <!-- Rodapé Técnico de Curadoria -->
-  <text x="72" y="1010" class="tag-text" font-size="12" fill="rgba(255,255,255,0.55)">POST #${numStr} • REA GOAT: ${goatEscaped} • blklnk.com</text>
-  <text x="1008" y="1010" text-anchor="end" class="tag-text" font-size="12" fill="rgba(255,255,255,0.55)">1080 x 1080 HIGH RES</text>
+    <g transform="translate(48, 222)">
+      <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="800" font-size="12" fill="rgba(255,255,255,0.52)" letter-spacing="2">${tagPillEscaped}</text>
+    </g>
+  </g>
 </svg>`;
 
     fs.writeFileSync(path.join(OUTPUT_DIR, `post-${numStr}.svg`), standaloneSvg, 'utf8');
@@ -364,13 +411,12 @@ async function run() {
       .png({ quality: 95 })
       .toFile(path.join(OUTPUT_DIR, `post-${numStr}.png`));
 
-    console.log(`Rendered post-${numStr}.png & post-${numStr}.svg`);
+    console.log(`Rendered post-${numStr}.png & post-${numStr}.svg with Extreme Glassmorphism`);
   }
 
   // 3. Generate Static Standalone index.html
   const cardsHtml = POSTS.map(p => {
     const numStr = String(p.num).padStart(2, '0');
-    // Sanitize captions for HTML and JS
     const escapedCaption = p.caption
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -384,7 +430,7 @@ async function run() {
       <div class="card" id="card-${numStr}">
         <div class="preview-box">
           <img src="post-${numStr}.png" alt="${p.headline}" loading="lazy" />
-          <span class="preview-badge">${p.tag}</span>
+          <span class="preview-badge">POST #${numStr} • ${p.pos}</span>
         </div>
         <div class="meta-box">
           <div class="post-header">
@@ -392,16 +438,16 @@ async function run() {
               <span class="post-num">POST #${numStr}</span>
               <span class="post-pos">• ${p.pos}</span>
             </div>
-            <span class="goat-tag">${p.goat}</span>
+            <span class="tag-badge">GLASSMORPHISM EXTREMO</span>
           </div>
 
           <h3 class="post-title">${p.headline}</h3>
-          <p class="post-body">${p.bodyText}</p>
+          <p class="post-body">${p.sub1} ${p.sub2}</p>
 
           <!-- Legenda Instagram -->
           <div class="copy-block">
             <div class="copy-label">
-              <span>📸 Legenda Instagram</span>
+              <span>📸 Legenda Instagram (Viral & Conversão)</span>
               <button class="btn btn-sm" onclick="copyCardText(this, 'caption-${numStr}')">Copiar Legenda</button>
             </div>
             <pre class="copy-content" id="caption-${numStr}">${escapedCaption}</pre>
@@ -410,7 +456,7 @@ async function run() {
           <!-- Artigo LinkedIn -->
           <div class="copy-block">
             <div class="copy-label">
-              <span>💼 Artigo / Post LinkedIn</span>
+              <span>💼 Artigo / Post LinkedIn (C-Level Authority)</span>
               <button class="btn btn-sm" onclick="copyCardText(this, 'linkedin-${numStr}')">Copiar LinkedIn</button>
             </div>
             <pre class="copy-content" id="linkedin-${numStr}">${escapedLinkedin}</pre>
@@ -434,14 +480,14 @@ async function run() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Black Link — Kit Oficial de Lançamento Global (9 Lâminas)</title>
+  <title>Black Link — Kit Oficial de Lançamento Global (Extreme Glassmorphism)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: #09090B;
+      background-color: #050508;
       color: #FFFFFF;
       font-family: "Plus Jakarta Sans", sans-serif;
       padding: 40px 24px;
@@ -450,7 +496,7 @@ async function run() {
     .container { max-width: 1440px; margin: 0 auto; }
     header {
       margin-bottom: 48px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
       padding-bottom: 32px;
       display: flex;
       flex-wrap: wrap;
@@ -467,20 +513,21 @@ async function run() {
     }
     .badge {
       display: inline-block;
-      background: rgba(245, 158, 11, 0.15);
-      border: 1px solid rgba(245, 158, 11, 0.4);
-      color: #FBBF24;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #FFFFFF;
       font-family: "Space Grotesk", monospace;
       font-size: 0.75rem;
       font-weight: 700;
-      padding: 5px 14px;
+      padding: 6px 16px;
       border-radius: 999px;
       margin-top: 10px;
+      backdrop-filter: blur(10px);
     }
     .instructions {
       color: #A1A1AA;
       font-size: 1rem;
-      max-width: 780px;
+      max-width: 820px;
       margin-top: 12px;
     }
     .header-actions {
@@ -497,18 +544,19 @@ async function run() {
       .grid-3x3 { grid-template-columns: 1fr; }
     }
     .card {
-      background: #111114;
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 20px;
+      background: rgba(18, 18, 24, 0.6);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      backdrop-filter: blur(16px);
     }
     .card:hover {
-      border-color: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.35);
       transform: translateY(-4px);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
     }
     .preview-box {
       width: 100%;
@@ -528,14 +576,14 @@ async function run() {
       top: 14px;
       left: 14px;
       background: rgba(0,0,0,0.75);
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(12px);
       color: #FFF;
       font-family: "Space Grotesk", monospace;
       font-size: 0.72rem;
       font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 6px;
+      padding: 5px 12px;
+      border-radius: 8px;
       letter-spacing: 1px;
     }
     .meta-box {
@@ -555,8 +603,8 @@ async function run() {
     }
     .post-num {
       font-family: "Space Grotesk", monospace;
-      font-size: 0.95rem;
-      color: #FBBF24;
+      font-size: 1rem;
+      color: #FFFFFF;
       font-weight: 800;
     }
     .post-pos {
@@ -564,19 +612,19 @@ async function run() {
       color: #71717A;
       font-family: "Space Grotesk", monospace;
     }
-    .goat-tag {
+    .tag-badge {
       font-family: "Space Grotesk", monospace;
       font-size: 0.68rem;
-      color: #A1A1AA;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      padding: 3px 8px;
-      border-radius: 6px;
-      text-align: right;
+      color: #FFFFFF;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
     }
     .post-title {
       font-family: "Space Grotesk", sans-serif;
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       font-weight: 800;
       letter-spacing: -0.02em;
       text-transform: uppercase;
@@ -588,45 +636,46 @@ async function run() {
       line-height: 1.45;
     }
     .copy-block {
-      background: #09090B;
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 12px;
-      padding: 14px;
+      background: rgba(8, 8, 12, 0.8);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px;
     }
     .copy-label {
       font-family: "Space Grotesk", monospace;
-      font-size: 0.72rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: #A1A1AA;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .copy-content {
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       color: #E4E4E7;
       white-space: pre-wrap;
       word-break: break-word;
-      max-height: 120px;
+      max-height: 130px;
       overflow-y: auto;
       font-family: "Plus Jakarta Sans", sans-serif;
       background: rgba(255,255,255,0.02);
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.03);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.04);
+      line-height: 1.5;
     }
     .actions-row {
       margin-top: auto;
       display: flex;
       gap: 10px;
-      padding-top: 8px;
+      padding-top: 10px;
     }
     .btn {
       border: none;
-      border-radius: 10px;
-      padding: 12px 18px;
+      border-radius: 12px;
+      padding: 12px 20px;
       font-size: 0.85rem;
       font-weight: 700;
       cursor: pointer;
@@ -646,33 +695,34 @@ async function run() {
     .btn-secondary {
       background: rgba(255,255,255,0.08);
       color: #FFFFFF;
-      border: 1px solid rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.15);
     }
-    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.18); }
     .btn-accent {
-      background: #FBBF24;
+      background: #FFFFFF;
       color: #000;
     }
-    .btn-accent:hover { background: #F59E0B; }
+    .btn-accent:hover { background: #E4E4E7; }
     .btn-sm {
-      padding: 4px 10px;
+      padding: 5px 12px;
       font-size: 0.72rem;
       background: rgba(255,255,255,0.12);
       color: #FFFFFF;
+      border-radius: 8px;
     }
-    .btn-sm:hover { background: rgba(255,255,255,0.22); }
+    .btn-sm:hover { background: rgba(255,255,255,0.25); }
     .toast {
       position: fixed;
       bottom: 28px;
       right: 28px;
-      background: #10B981;
+      background: #FFFFFF;
       color: #000000;
       font-weight: 800;
-      padding: 14px 24px;
-      border-radius: 12px;
+      padding: 14px 26px;
+      border-radius: 14px;
       font-size: 0.92rem;
       display: none;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.8);
       z-index: 9999;
       letter-spacing: -0.01em;
     }
@@ -683,15 +733,16 @@ async function run() {
     <header>
       <div>
         <h1 class="brand-title">Black Link — Lançamento Global</h1>
-        <div class="badge">9 LÂMINAS DE ALTA DEFINIÇÃO (1080x1080) & COPIES MONUMENTAIS</div>
+        <div class="badge">9 ARTES 1080x1080 EM GLASSMORPHISM EXTREMO & COPYS VIRAS HIGH-TICKET</div>
         <p class="instructions">
           Acervo oficial de lançamento da Black Link (<strong>blklnk.com</strong>).
-          Zero inteligência generativa imprevisível. Zero tempo de espera. Cada imagem está renderizada em 1080x1080 nativo pronta para postar no Instagram e LinkedIn com 1 clique de cópia de texto.
+          100% alinhado à estética do elo de vidro da marca: vidro fosco com microgotículas, cáusticas puras, fundo preto obsidiana e cards flutuantes em glassmorphism.
+          Sem poluição, sem etiquetas absurdas, copys focadas em gerar autoridade e vendas de produtos digitais.
         </p>
       </div>
       <div class="header-actions">
         <a href="COPIES-E-LEGENDAS.txt" download="BLACKLINK-COPIES-E-LEGENDAS.txt" class="btn btn-secondary">
-          📄 Baixar Todas as Copys (.txt)
+          📄 Copys em Texto (.txt)
         </a>
         <a href="blacklink-launch-pack-9posts.zip" download="blacklink-launch-pack-9posts.zip" class="btn btn-accent">
           📦 Baixar Pacote Completo (.ZIP)
@@ -704,7 +755,7 @@ async function run() {
     </div>
   </div>
 
-  <div id="toast" class="toast">✓ Texto copiado para a área de transferência!</div>
+  <div id="toast" class="toast">✓ Copiado para a área de transferência!</div>
 
   <script>
     function copyCardText(btn, elementId) {
@@ -714,7 +765,7 @@ async function run() {
       navigator.clipboard.writeText(text).then(() => {
         const originalText = btn.innerText;
         btn.innerText = "✓ Copiado!";
-        btn.style.background = "#10B981";
+        btn.style.background = "#FFFFFF";
         btn.style.color = "#000";
         setTimeout(() => {
           btn.innerText = originalText;
@@ -734,16 +785,16 @@ async function run() {
   fs.writeFileSync(path.join(OUTPUT_DIR, 'index.html'), htmlContent, 'utf8');
   console.log('Generated index.html successfully!');
 
-  // 4. Create ZIP package containing all 9 PNGs, 9 SVGs, and text file
+  // 4. Create ZIP package
   try {
-    const zipCommand = `cd "${OUTPUT_DIR}" && zip -r -9 blacklink-launch-pack-9posts.zip *.png *.svg COPIES-E-LEGENDAS.txt`;
+    const zipCommand = `cd "${OUTPUT_DIR}" && rm -f blacklink-launch-pack-9posts.zip && zip -r -9 blacklink-launch-pack-9posts.zip *.png *.svg COPIES-E-LEGENDAS.txt`;
     execSync(zipCommand, { stdio: 'inherit' });
     console.log('Created blacklink-launch-pack-9posts.zip successfully!');
   } catch (err) {
     console.error('Error creating zip:', err.message);
   }
 
-  console.log('All 9 launch assets generated successfully!');
+  console.log('All 9 extreme glassmorphism launch assets generated successfully!');
 }
 
 run().catch(err => {

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
@@ -16,9 +17,12 @@ import {
   MailCheck,
   RefreshCw,
   ShieldCheck,
+  Target,
   User,
+  Users,
 } from "lucide-react";
 import {
+  registerCompanyAdminAction,
   requestRegistrationCodeAction,
   verifyCodeAndActivateAccountAction,
 } from "@/actions/auth";
@@ -28,7 +32,12 @@ import {
 } from "@/lib/validations/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 
-export default function RegisterPage() {
+function RegisterForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCompany = searchParams.get("company") || "";
+  const inviteCompanyId = searchParams.get("companyId") || "";
+
   const [step, setStep] = useState<"form" | "verify">("form");
   const [serverError, setServerError] = useState<string | null>(null);
   const [targetEmail, setTargetEmail] = useState("");
@@ -43,16 +52,30 @@ export default function RegisterPage() {
     handleSubmit,
     getValues,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterCompanyFormValues>({
     resolver: zodResolver(registerCompanySchema),
     defaultValues: {
-      companyName: "",
+      companyName: inviteCompany || "Gofer Metais",
       fullName: "",
       email: "",
       password: "",
+      role: "commercial",
+      inviteCompanyId: inviteCompanyId || undefined,
     },
   });
+
+  const selectedRole = watch("role") || "commercial";
+
+  useEffect(() => {
+    if (inviteCompany) {
+      setValue("companyName", inviteCompany);
+    }
+    if (inviteCompanyId) {
+      setValue("inviteCompanyId", inviteCompanyId);
+    }
+  }, [inviteCompany, inviteCompanyId, setValue]);
 
   // Temporizador para reenvio de chave
   useEffect(() => {
@@ -63,10 +86,46 @@ export default function RegisterPage() {
     return () => clearInterval(interval);
   }, [resendCooldown]);
 
-  // Submissão do formulário inicial e despacho da chave para o e-mail
-  const onFormSubmit = async (data: RegisterCompanyFormValues) => {
+  // Criação direta e imediata da conta (Recomendado para Gofer Metais e equipe)
+  const onDirectSubmit = async (data: RegisterCompanyFormValues) => {
     try {
       setServerError(null);
+      const res = await registerCompanyAdminAction(data);
+
+      if (res?.error) {
+        setServerError(res.error);
+        return;
+      }
+
+      if (res?.user) {
+        setUser({
+          id: res.user.id,
+          company_id: res.user.company_id,
+          role: res.user.role,
+          name: res.user.name,
+          email: res.user.email,
+        });
+
+        const target = res.destination || (data.role === "commercial" ? "/vendas" : "/");
+        router.push(target);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+        return;
+      }
+      setServerError("Falha na criação da conta. Verifique os dados inseridos.");
+    }
+  };
+
+  // Submissão via código por e-mail (fluxo alternativo)
+  const onCodeRequest = async () => {
+    try {
+      setServerError(null);
+      const data = getValues();
+      if (!data.email || !data.fullName || !data.companyName || !data.password) {
+        setServerError("Preencha todos os campos antes de solicitar a chave.");
+        return;
+      }
       const res = await requestRegistrationCodeAction(data);
 
       if (res.success && res.email) {
@@ -120,14 +179,15 @@ export default function RegisterPage() {
       if (res?.error) {
         setServerError(res.error);
         setIsVerifying(false);
-      } else {
+      } else if (res?.user) {
         setUser({
-          id: "admin-active",
-          company_id: "company-active",
-          role: "admin",
-          name: getValues("fullName"),
-          email: targetEmail,
+          id: res.user.id,
+          company_id: res.user.company_id,
+          role: res.user.role,
+          name: res.user.name,
+          email: res.user.email,
         });
+        router.push(res.destination || "/vendas");
       }
     } catch (err) {
       if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
@@ -136,18 +196,6 @@ export default function RegisterPage() {
       setServerError("Falha ao validar chave. Tente novamente.");
       setIsVerifying(false);
     }
-  };
-
-  // Ativação rápida com Google
-  const handleGoogleQuickFill = () => {
-    const defaultEmail = "saculsatierf@gmail.com";
-    setValue("email", defaultEmail);
-    if (!getValues("companyName")) setValue("companyName", "Black Link");
-    if (!getValues("fullName")) setValue("fullName", "Lucas de Freitas Leite");
-    if (!getValues("password")) setValue("password", "363900");
-    setServerError(
-      "Conta Google identificada! Clique em 'Enviar Chave para meu E-mail' abaixo para receber o código de segurança."
-    );
   };
 
   return (
@@ -162,7 +210,9 @@ export default function RegisterPage() {
             Black Link <span className="text-sub font-normal">CRM</span>
           </h1>
           <p className="text-xs text-sub tracking-tight">
-            Validação corporativa do primeiro Administrador da organização
+            {inviteCompany
+              ? `Cadastro de novo membro para a equipe ${inviteCompany}`
+              : "Cadastro corporativo de organização e operadores comerciais"}
           </p>
         </div>
 
@@ -171,10 +221,10 @@ export default function RegisterPage() {
           <div className="flex items-center justify-between border-b border-glass-border/70 pb-3">
             <span className="text-xs font-mono uppercase tracking-widest text-sub flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 text-platinum" />
-              {step === "form" ? "Conta Mestre" : "Ativação de Segurança"}
+              {step === "form" ? "Novo Cadastro" : "Ativação de Segurança"}
             </span>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-              {step === "form" ? "Administrador" : "Etapa 2 de 2"}
+            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-semibold">
+              {selectedRole === "commercial" ? "Perfil Comercial" : "Administrador"}
             </span>
           </div>
 
@@ -199,179 +249,200 @@ export default function RegisterPage() {
           )}
 
           {step === "form" ? (
-            <>
-              {/* Botão Google OAuth Integrado */}
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit(onDirectSubmit)} className="space-y-4">
+              {/* Seleção de Perfil / Cargo */}
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[11px] uppercase tracking-wider text-sub">
+                  Função na Conta *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setValue("role", "commercial")}
+                    className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      selectedRole === "commercial"
+                        ? "border-accent bg-accent/10 text-platinum shadow-sm"
+                        : "border-glass-border bg-void/50 text-sub hover:border-glass-highlight"
+                    }`}
+                  >
+                    <span className="text-xs font-semibold text-platinum flex items-center gap-1.5">
+                      <Target className="h-3.5 w-3.5 text-emerald-400" />
+                      Comercial
+                    </span>
+                    <span className="text-[10px] text-sub mt-0.5 leading-tight">
+                      Kanban limpo e pipeline pessoal
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setValue("role", "admin")}
+                    className={`flex flex-col items-start p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      selectedRole === "admin"
+                        ? "border-accent bg-accent/10 text-platinum shadow-sm"
+                        : "border-glass-border bg-void/50 text-sub hover:border-glass-highlight"
+                    }`}
+                  >
+                    <span className="text-xs font-semibold text-platinum flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-purple-400" />
+                      Administrador
+                    </span>
+                    <span className="text-[10px] text-sub mt-0.5 leading-tight">
+                      Gestão completa e equipe
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Nome da Empresa */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="companyName"
+                  className="block font-mono text-[11px] uppercase tracking-wider text-sub"
+                >
+                  Nome da Empresa / Organização *
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-3 h-4 w-4 text-sub" />
+                  <input
+                    id="companyName"
+                    type="text"
+                    placeholder="Ex: Gofer Metais"
+                    disabled={isSubmitting || Boolean(inviteCompany)}
+                    {...register("companyName")}
+                    className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-70"
+                  />
+                </div>
+                {errors.companyName && (
+                  <span className="text-[11px] text-red-400 font-mono">
+                    {errors.companyName.message}
+                  </span>
+                )}
+                {inviteCompany && (
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    ✓ Vinculado à organização {inviteCompany}
+                  </span>
+                )}
+              </div>
+
+              {/* Nome do Operador */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="fullName"
+                  className="block font-mono text-[11px] uppercase tracking-wider text-sub"
+                >
+                  Seu Nome Completo *
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-sub" />
+                  <input
+                    id="fullName"
+                    type="text"
+                    placeholder="Ex: Lucas Freitas (ou Jorge)"
+                    disabled={isSubmitting}
+                    {...register("fullName")}
+                    className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+                  />
+                </div>
+                {errors.fullName && (
+                  <span className="text-[11px] text-red-400 font-mono">
+                    {errors.fullName.message}
+                  </span>
+                )}
+              </div>
+
+              {/* E-mail Corporativo */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="block font-mono text-[11px] uppercase tracking-wider text-sub"
+                >
+                  E-mail de Acesso *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-sub" />
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="seu.email@gofermetais.com"
+                    autoComplete="email"
+                    disabled={isSubmitting}
+                    {...register("email")}
+                    className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+                  />
+                </div>
+                {errors.email && (
+                  <span className="text-[11px] text-red-400 font-mono">
+                    {errors.email.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Senha */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="password"
+                  className="block font-mono text-[11px] uppercase tracking-wider text-sub"
+                >
+                  Chave de Acesso (Senha) *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-sub" />
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    autoComplete="new-password"
+                    disabled={isSubmitting}
+                    {...register("password")}
+                    className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
+                  />
+                </div>
+                {errors.password && (
+                  <span className="text-[11px] text-red-400 font-mono">
+                    {errors.password.message}
+                  </span>
+                )}
+              </div>
+
+              {/* Destaque do Isolamento de Carteira */}
+              <div className="rounded-lg border border-glass-border bg-void/60 p-3 space-y-1 text-[11px] text-sub">
+                <div className="flex items-center gap-1.5 text-platinum font-semibold">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Silo de Carteira & Radar Anti-Colisão</span>
+                </div>
+                <p>
+                  Cada operador da equipe terá seu <strong>próprio Kanban limpo</strong> sem cruzar dados com os demais. O radar notificará apenas se houver leads duplicados.
+                </p>
+              </div>
+
+              {/* Botão Principal: Ativação Imediata */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-xs font-semibold text-void transition-colors hover:bg-accent-hover cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+              >
+                {isSubmitting ? (
+                  <span className="font-mono text-xs">Criando Conta e Acessando...</span>
+                ) : (
+                  <>
+                    <span>Criar Conta & Acessar Pipeline</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </button>
+
+              {/* Opção Secundária: Ativar por Chave de E-mail */}
+              <div className="text-center pt-1">
                 <button
                   type="button"
-                  onClick={handleGoogleQuickFill}
-                  className="flex h-10 w-full items-center justify-center gap-3 rounded-md border border-glass-border bg-void/80 px-4 text-xs font-medium text-platinum hover:bg-carbon-muted/70 hover:border-glass-highlight transition-all cursor-pointer"
+                  onClick={onCodeRequest}
+                  className="text-[11px] font-mono text-sub hover:text-platinum transition-colors underline underline-offset-4 cursor-pointer"
                 >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  <span>Continuar com o Google</span>
+                  Prefere receber chave por e-mail? Clique aqui
                 </button>
               </div>
-
-              <div className="relative flex items-center justify-center">
-                <div className="w-full border-t border-glass-border" />
-                <span className="absolute bg-carbon px-2 text-[10px] font-mono text-sub uppercase">
-                  ou confirme os dados
-                </span>
-              </div>
-
-              <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
-                {/* Nome da Empresa */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="companyName"
-                    className="block font-mono text-[11px] uppercase tracking-wider text-sub"
-                  >
-                    Nome da Empresa / Organização *
-                  </label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-3 h-4 w-4 text-sub" />
-                    <input
-                      id="companyName"
-                      type="text"
-                      placeholder="Ex: Black Link"
-                      disabled={isSubmitting}
-                      {...register("companyName")}
-                      className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-                    />
-                  </div>
-                  {errors.companyName && (
-                    <span className="text-[11px] text-red-400 font-mono">
-                      {errors.companyName.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Nome do Administrador */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="fullName"
-                    className="block font-mono text-[11px] uppercase tracking-wider text-sub"
-                  >
-                    Nome Completo do Administrador *
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-sub" />
-                    <input
-                      id="fullName"
-                      type="text"
-                      placeholder="Ex: Lucas de Freitas Leite"
-                      disabled={isSubmitting}
-                      {...register("fullName")}
-                      className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-                    />
-                  </div>
-                  {errors.fullName && (
-                    <span className="text-[11px] text-red-400 font-mono">
-                      {errors.fullName.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* E-mail Corporativo */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="email"
-                    className="block font-mono text-[11px] uppercase tracking-wider text-sub"
-                  >
-                    E-mail Corporativo (Receberá a Chave) *
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-sub" />
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder="saculsatierf@gmail.com"
-                      autoComplete="email"
-                      disabled={isSubmitting}
-                      {...register("email")}
-                      className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-                    />
-                  </div>
-                  {errors.email && (
-                    <span className="text-[11px] text-red-400 font-mono">
-                      {errors.email.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Senha */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="password"
-                    className="block font-mono text-[11px] uppercase tracking-wider text-sub"
-                  >
-                    Chave de Acesso (Senha) *
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-sub" />
-                    <input
-                      id="password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      autoComplete="new-password"
-                      disabled={isSubmitting}
-                      {...register("password")}
-                      className="h-10 w-full rounded-md border border-glass-border bg-void/80 pl-9 pr-3 text-xs text-platinum placeholder:text-sub focus:border-accent focus:outline-none transition-colors disabled:opacity-50"
-                    />
-                  </div>
-                  {errors.password && (
-                    <span className="text-[11px] text-red-400 font-mono">
-                      {errors.password.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Aviso de Verificação */}
-                <div className="rounded-lg border border-glass-border bg-void/60 p-3 space-y-1 text-[11px] text-sub">
-                  <div className="flex items-center gap-1.5 text-platinum font-semibold">
-                    <KeyRound className="h-3.5 w-3.5 text-accent" />
-                    <span>Autenticação Real com Chave por E-mail</span>
-                  </div>
-                  <p>
-                    Ao clicar no botão abaixo, enviaremos uma chave de segurança de 6 dígitos
-                    para o seu e-mail corporativo para confirmar a posse antes da liberação.
-                  </p>
-                </div>
-
-                {/* Botão de Envio */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-xs font-semibold text-void transition-colors hover:bg-accent-hover cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <span className="font-mono text-xs">Gerando Chave de Acesso...</span>
-                  ) : (
-                    <>
-                      <span>Enviar Chave para meu E-mail</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </>
+            </form>
           ) : (
             /* ETAPA 2: DIGITAÇÃO E VALIDAÇÃO DA CHAVE ENVIADA AO E-MAIL */
             <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -450,12 +521,12 @@ export default function RegisterPage() {
 
           {/* Link para Login */}
           <div className="border-t border-glass-border/70 pt-4 text-center">
-            <span className="text-xs text-sub">Já possui uma conta corporativa? </span>
+            <span className="text-xs text-sub">Já possui uma conta cadastrada? </span>
             <Link
               href="/login"
               className="text-xs font-semibold text-platinum hover:text-accent transition-colors underline-offset-4 hover:underline"
             >
-              Fazer Login
+              Fazer Login &rarr;
             </Link>
           </div>
         </div>
@@ -466,5 +537,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-void text-sub font-mono text-xs">Carregando formulário...</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }
