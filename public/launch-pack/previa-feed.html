@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black Link — Nova Prévia de Direção de Arte (Grade 3x3)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #070709;
+      color: #EDEDED;
+    }
+    .font-mono-tag {
+      font-family: 'Space Grotesk', monospace;
+    }
+    .tile-box {
+      background: #0D0D11;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.2s ease;
+    }
+    .tile-box:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      background: #111116;
+    }
+    .tile-box.selected {
+      border-color: #FFFFFF;
+      background: #14141B;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 antialiased">
+
+  <div class="max-w-6xl mx-auto space-y-10">
+
+    <!-- Header com Posicionamento Crítico -->
+    <header class="pb-8 border-b border-white/10 space-y-3">
+      <div class="flex items-center gap-3">
+        <span class="px-3 py-1 rounded-full text-[11px] font-mono-tag font-bold bg-white/10 text-white tracking-widest uppercase">
+          BLACK LINK // DIREÇÃO DE ARTE EXECUTIVA
+        </span>
+        <span class="px-3 py-1 rounded-full text-[11px] font-mono-tag font-bold bg-zinc-800 text-zinc-300">
+          100% EM PORTUGUÊS • ZERO POLUIÇÃO
+        </span>
+      </div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-white tracking-tight font-mono-tag">
+        NOVA PRÉVIA CONCEITUAL DO FEED (3x3)
+      </h1>
+      <p class="text-sm text-zinc-400 max-w-3xl leading-relaxed">
+        Sistema visual unificado. Fundo preto absoluto (<code class="text-zinc-200">#08080A</code>), vidro fumê fosco neutro, tipografia suíça pura e hierarquia sóbria. Eliminamos o efeito de 'labirintite', os neons de ficção científica e termos em inglês.
+      </p>
+    </header>
+
+    <!-- As 3 Leis da Nova Direção Visual -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+        <span class="text-xs font-mono-tag text-zinc-400 font-bold uppercase">01. Unidade de Luz & Fundo</span>
+        <h3 class="text-base font-bold text-white">Preto Profundo + Vidro Neutro</h3>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          Todas as 9 artes usam o mesmo fundo fosco e a mesma luz de estúdio. Sem reflexos coloridos, neons verdes caóticos ou arco-íris.
+        </p>
+      </div>
+
+      <div class="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+        <span class="text-xs font-mono-tag text-zinc-400 font-bold uppercase">02. 100% Idioma Nacional</span>
+        <h3 class="text-base font-bold text-white">Linguagem Direta em Português</h3>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          Zero termos soltos em inglês. Vocabulário afiado para decisores, fundadores e líderes de negócios no Brasil.
+        </p>
+      </div>
+
+      <div class="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2">
+        <span class="text-xs font-mono-tag text-zinc-400 font-bold uppercase">03. Ritmo & Descanso Visual</span>
+        <h3 class="text-base font-bold text-white">Sem Efeito de Labirintite</h3>
+        <p class="text-xs text-zinc-400 leading-relaxed">
+          Alternância equilibrada entre tipografia limpa, interfaces frontais e esculturas centradas, sem sobrecarga de informação.
+        </p>
+      </div>
+    </div>
+
+    <!-- Simulação da Grade 3x3 Harmonizada -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-mono-tag font-bold uppercase tracking-widest text-zinc-400">
+          MAPA DA GRADE 3x3 HARMONIZADA
+        </h2>
+        <span class="text-xs text-zinc-500 font-mono-tag">Clique na peça para ver a ficha técnica</span>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 md:gap-4 p-4 rounded-3xl bg-black/40 border border-white/10">
+
+        <!-- Peça 01 -->
+        <div onclick="showPost(1)" id="tile-1" class="tile-box selected rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">01 // SUP. ESQ</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Manifesto</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">Posicionamento</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">SEU PRODUTO PARECE AMADOR.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Tipografia suíça pura sobre vidro escuro. Sem firulas.</p>
+        </div>
+
+        <!-- Peça 02 -->
+        <div onclick="showPost(2)" id="tile-2" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">02 // SUP. CEN</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Software</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">O Produto Real</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">A PLATAFORMA BLACK LINK</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Interface frontal clean do CRM. Linhas finas, vidro fosco.</p>
+        </div>
+
+        <!-- Peça 03 -->
+        <div onclick="showPost(3)" id="tile-3" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">03 // SUP. DIR</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Tese</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">High-Ticket</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">PRECIFICAÇÃO É PERCEPÇÃO.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Composição editorial minimalista sobre margem de lucro.</p>
+        </div>
+
+        <!-- Peça 04 -->
+        <div onclick="showPost(4)" id="tile-4" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">04 // MEIO ESQ</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Estratégia</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">LTV & Retenção</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">ECOSSISTEMAS VENCEM CURSOS.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Decomposição entre plataforma genérica e software proprietário.</p>
+        </div>
+
+        <!-- Peça 05 -->
+        <div onclick="showPost(5)" id="tile-5" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer border-white/20 bg-white/[0.04]">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-white">05 // CENTRO (ÂNCORA)</span>
+            <span class="text-[9px] font-mono-tag text-white uppercase border border-white/30 px-1.5 py-0.5 rounded bg-white/10">Monólito</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-300 uppercase tracking-widest">Coração da Marca</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">BLACK LINK // MONÓLITO</h3>
+          </div>
+          <p class="text-[11px] text-zinc-300 leading-tight">Arte escultural de vidro negro e prata pura. O ponto focal do perfil.</p>
+        </div>
+
+        <!-- Peça 06 -->
+        <div onclick="showPost(6)" id="tile-6" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">06 // MEIO DIR</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Filosofia</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">Liberdade do Fundador</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">ENGENHARIA DA AUSÊNCIA.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Conceito de autonomia operacional codificada em tecnologia.</p>
+        </div>
+
+        <!-- Peça 07 -->
+        <div onclick="showPost(7)" id="tile-7" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">07 // INF. ESQ</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Dados</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">Métricas Reais</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">VELOCIDADE É CONVERSÃO.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Comparativo sutil e elegante: resposta humana (4h) vs IA (30s).</p>
+        </div>
+
+        <!-- Peça 08 -->
+        <div onclick="showPost(8)" id="tile-8" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">08 // INF. CEN</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Engenharia</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">Infraestrutura</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">ARQUITETURA INTOCÁVEL.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Segurança de padrão bancário e banco de dados proprietário.</p>
+        </div>
+
+        <!-- Peça 09 -->
+        <div onclick="showPost(9)" id="tile-9" class="tile-box rounded-2xl p-4 md:p-6 aspect-square flex flex-col justify-between cursor-pointer">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono-tag font-bold text-zinc-500">09 // INF. DIR</span>
+            <span class="text-[9px] font-mono-tag text-zinc-400 uppercase border border-white/10 px-1.5 py-0.5 rounded">Acesso</span>
+          </div>
+          <div class="space-y-1">
+            <span class="text-[10px] font-mono-tag text-zinc-400 uppercase tracking-widest">Convite Institucional</span>
+            <h3 class="text-sm md:text-base font-bold text-white leading-snug">CONSTRUA SEU ECOSSISTEMA.</h3>
+          </div>
+          <p class="text-[11px] text-zinc-400 leading-tight">Cartão sóbrio de acesso executivo: blklnk.com.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Painel de Inspeção do Post Selecionado -->
+    <div id="inspectorPanel" class="p-6 md:p-8 rounded-3xl bg-white/[0.02] border border-white/10 space-y-6">
+      <!-- Injetado dinamicamente via JS -->
+    </div>
+
+  </div>
+
+  <script>
+    const POSTS = {
+      1: {
+        num: 1,
+        pos: "Linha 1, Coluna 1 (Superior Esquerda)",
+        tag: "Posicionamento Institucional",
+        title: "SEU PRODUTO PARECE AMADOR.",
+        visual: "Tipografia suíça pura em caixa alta, corpo robusto, alinhamento impecável à esquerda. Fundo preto aveludado profundo com refração fosca sutil em vidro de baixa opacidade. Zero ilustrações poluídas.",
+        legenda: "O mercado não compra o que é bom. Compra o que parece inatingível.\n\nVocê pode ter a melhor entrega do seu segmento. Mas se a sua presença visual parece uma página improvisada em ferramentas gratuitas, o tomador de decisão de alto poder aquisitivo nem considera a sua proposta.\n\nMarcas soberanas não brigam por atenção com promessas vazias. Elas constroem autoridade antes da primeira conversa.\n\nNa Black Link, desenhamos a tecnologia e os ecossistemas digitais que separam quem lidera do resto.\n\nConheça nossa arquitetura: blklnk.com"
+      },
+      2: {
+        num: 2,
+        pos: "Linha 1, Coluna 2 (Superior Centro)",
+        tag: "Software & Produto Real",
+        title: "A PLATAFORMA BLACK LINK (INTERFACE REAL)",
+        visual: "Enquadramento frontal ortográfico (sem ângulos tortos) exibindo um módulo real da nossa plataforma: painel em vidro escuro acetinado, indicador discreto de telemetria e tipografia mono-espacial de alta legibilidade.",
+        legenda: "Não vendemos teorias. Construímos sistemas.\n\nEsta é a interface do Black Link CRM: telemetria de receita em tempo real, esteira comercial inteligente e radar de proteção de contas.\n\nEnquanto a maioria das empresas ainda se perde em planilhas manuais e conversas soltas no WhatsApp, nossos clientes operam com dados vivos e previsibilidade de escala.\n\nFerramentas genéricas limitam negócios sérios. Construa seu software sob medida com a Black Link.\n\nblklnk.com"
+      },
+      3: {
+        num: 3,
+        pos: "Linha 1, Coluna 3 (Superior Direita)",
+        tag: "A Lei do High-Ticket",
+        title: "PRECIFICAÇÃO É PERCEPÇÃO.",
+        visual: "Composição editorial sóbria com escala tipográfica monumental. Equilíbrio entre preto profundo, cinza grafite e branco platina. Uma linha fina de 1px separa o conceito central das notas de rodapé técnicas.",
+        legenda: "Por que uma garrafa de água custa R$ 2 no semáforo e R$ 45 no lounge de um hotel 5 estrelas?\n\nA água é a mesma. O recipiente, a atmosfera e o status da entrega mudaram tudo.\n\nNo mercado corporativo, quem sofre para defender preço é quem tem uma embalagem fraca. Quando seu ecossistema digital transmite solidez e sofisticação imediata, a objeção de valor desaparece antes da reunião de fechamento.\n\nPare de vender commodities.\n\nEleve seu padrão com a Black Link: blklnk.com"
+      },
+      4: {
+        num: 4,
+        pos: "Linha 2, Coluna 1 (Meio Esquerda)",
+        tag: "Estratégia de Ecossistema",
+        title: "ECOSSISTEMAS VENCEM CURSOS.",
+        visual: "Design limpo e comparativo. Diagrama vetorial minimalista em traços finos demonstrando a diferença de retenção entre 'Área de Membros Comum' vs. 'Software & Comunidade Proprietária'.",
+        legenda: "Ninguém mais quer pagar caro para assistir a dezenas de horas de vídeo gravado em plataformas genéricas.\n\nOs maiores nomes do mercado já entenderam: retenção e LTV moram no ecossistema proprietário. Comunidade com status, ferramentas exclusivas e experiência de software.\n\nÉ isso que desenvolvemos para os nossos clientes: produtos digitais que geram pertencimento e recompra contínua.\n\nTransforme sua operação em um ativo de verdade: blklnk.com"
+      },
+      5: {
+        num: 5,
+        pos: "Linha 2, Coluna 2 (Centro Absoluto — Âncora do Feed)",
+        tag: "O Coração da Marca",
+        title: "O MONÓLITO BLACK LINK",
+        visual: "A marca oficial da Black Link forjada em vidro escuro temperado e metal acetinado, perfeitamente centralizada contra o preto profundo. Sem textos longos. Iluminação de estúdio suave. O brasão que ancora os 9 posts no perfil.",
+        legenda: "BLACK LINK // ECOSSISTEMAS DIGITAIS SOBERANOS.\n\nA interseção exata entre tecnologia proprietária, automação comercial e design de padrão internacional.\n\nNão somos uma agência de marketing de massa. Somos um estúdio de engenharia e posicionamento para fundadores que exigem o topo da cadeia.\n\nAs portas estão abertas para novos projetos sob medida.\n\nblklnk.com"
+      },
+      6: {
+        num: 6,
+        pos: "Linha 2, Coluna 3 (Meio Direita)",
+        tag: "Liberdade Operacional",
+        title: "ENGENHARIA DA AUSÊNCIA.",
+        visual: "Peça editorial com respiro visual amplo. Tipografia centralizada e sóbria: 'Se sua empresa para quando você viaja, você tem um emprego. Codificamos sua operação para que ela escale sem você.'",
+        legenda: "Se a sua operação depende da sua presença física diária para fechar contratos e resolver crises, você não é dono de uma empresa — você é prisioneiro dela.\n\nA Engenharia da Ausência é o princípio estrutural da Black Link:\n1. Processos comerciais transformados em código.\n2. Automação inteligente de triagem e agendamento.\n3. Telemetria e dados em tempo real na palma da mão.\n\nSua autoridade merece uma estrutura que trabalhe com precisão matemática.\n\nConheça nossa arquitetura em blklnk.com"
+      },
+      7: {
+        num: 7,
+        pos: "Linha 3, Coluna 1 (Inferior Esquerda)",
+        tag: "Métricas de Eficiência",
+        title: "VELOCIDADE É CONVERSÃO.",
+        visual: "Gráfico de dados limpo e de altíssima precisão suíça. Comparativo visual elegante: Tempo de resposta tradicional (4.2 horas) versus Resposta automatizada Black Link (30 segundos). Zero cores gritantes.",
+        legenda: "Estudos de mercado mostram que responder um lead qualificado nos primeiros minutos aumenta as chances de fechamento em quase 400%.\n\nO gargalo? Equipes humanas se distraem, atrasam e demoram horas para fazer o primeiro contato.\n\nNossos sistemas integrados qualificam o perfil da oportunidade e liberam a agenda em menos de 45 segundos.\n\nVelocidade sem atrito. Conversão consistente.\n\nDescubra como estruturar sua esteira em blklnk.com"
+      },
+      8: {
+        num: 8,
+        pos: "Linha 3, Coluna 2 (Inferior Centro)",
+        tag: "Tecnologia & Robustez",
+        title: "ARQUITETURA INTOCÁVEL.",
+        visual: "Estudo minimalista de hardware e segurança. Um bloco de vidro fumê fosco com linhas vetoriais gravadas: 'Bancos de dados distribuídos // Latência < 30ms // Segurança de padrão corporativo'.",
+        legenda: "Lançar um produto digital com ferramentas frágeis e gratuitas é a receita perfeita para travar na hora da escala.\n\nNa Black Link, desenvolvemos tecnologia sobre arquitetura de alto desempenho: bancos de dados escaláveis, infraestrutura protegida e navegação ultrarrápida.\n\nSua reputação e suas vendas não podem correr risco de instabilidade.\n\nConsulte nossa engenharia em blklnk.com"
+      },
+      9: {
+        num: 9,
+        pos: "Linha 3, Coluna 3 (Inferior Direita)",
+        tag: "Acesso Institucional",
+        title: "CONSTRUA SEU ECOSSISTEMA.",
+        visual: "Cartão sóbrio e sofisticado em vidro fumê e corte milimétrico sobre fundo escuro. Apenas o convite silencioso e o domínio oficial: 'blklnk.com — Acesso Corporativo'.",
+        legenda: "O mercado digital caminha para a maturidade. Daqui para frente, quem insistir em soluções genéricas será engolido pela comoditização.\n\nQuem investir em software sob medida, infraestrutura robusta e posicionamento de luxo vai ditar as regras.\n\nA Black Link existe para construir o seu ecossistema digital.\n\n→ Acesse blklnk.com ou envie uma mensagem direta para agendar sua avaliação executiva."
+      }
+    };
+
+    function showPost(num) {
+      document.querySelectorAll('.tile-box').forEach(el => el.classList.remove('selected'));
+      const card = document.getElementById(`tile-${num}`);
+      if (card) card.classList.add('selected');
+
+      const p = POSTS[num];
+      const panel = document.getElementById('inspectorPanel');
+      panel.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-4 border-b border-white/10">
+          <div>
+            <span class="text-xs font-mono-tag text-zinc-400 font-bold uppercase">POST #${String(p.num).padStart(2, '0')} // ${p.pos}</span>
+            <h3 class="text-xl font-bold text-white mt-0.5">${p.title}</h3>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-mono-tag bg-white/10 text-white border border-white/15 self-start md:self-auto">${p.tag}</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <!-- Direção Visual Sem Slop -->
+          <div class="space-y-3 p-5 rounded-2xl bg-black/60 border border-white/5">
+            <span class="text-[10px] font-mono-tag uppercase tracking-wider text-zinc-400 font-bold">Direção de Arte & Composição</span>
+            <p class="text-xs text-zinc-300 leading-relaxed">${p.visual}</p>
+          </div>
+
+          <!-- Legenda 100% em Português -->
+          <div class="space-y-3 p-5 rounded-2xl bg-black/60 border border-white/5">
+            <span class="text-[10px] font-mono-tag uppercase tracking-wider text-zinc-400 font-bold">Legenda Oficial (Instagram / LinkedIn)</span>
+            <pre class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-sans">${p.legenda}</pre>
+          </div>
+        </div>
+      `;
+    }
+
+    // Inicializa no Post 1
+    showPost(1);
+  </script>
+</body>
+</html>
