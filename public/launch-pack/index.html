@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Black Link — Galeria Oficial de Lançamento (Padrão Museu)</title>
+  <title>Black Link — Grade Oficial Museu (9 Peças de Arte & Software)</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,34 +11,41 @@
   <style>
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background-color: #070709;
-      color: #EDEDED;
+      background-color: #050508;
+      color: #F4F4F5;
     }
-    .font-mono-tag {
+    .font-mono-num {
       font-family: 'Space Grotesk', monospace;
     }
     .glass-panel {
-      background: rgba(14, 14, 18, 0.75);
+      background: rgba(18, 18, 24, 0.7);
       backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .post-card {
-      background: #0B0B0F;
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      transition: all 0.25s ease;
-    }
-    .post-card:hover {
-      border-color: rgba(255, 255, 255, 0.3);
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.35);
       transform: translateY(-2px);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
     }
-    .post-card.active {
-      border-color: #FFFFFF;
-      box-shadow: 0 0 30px rgba(255, 255, 255, 0.12);
+    .glass-card.active {
+      border-color: #10B981;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.3);
+    }
+    .badge-pos {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 antialiased">
+<body class="min-h-screen p-4 md:p-8 antialiased selection:bg-white/20">
 
   <div class="max-w-7xl mx-auto space-y-8">
 
@@ -46,130 +53,142 @@
     <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/10">
       <div class="space-y-2">
         <div class="flex items-center gap-3">
-          <span class="px-3 py-1 rounded-full text-xs font-mono-tag font-bold bg-white/10 text-white tracking-widest uppercase">
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 border border-white/20 text-white tracking-widest uppercase">
             BLACK LINK // blklnk.com
           </span>
-          <span class="px-3 py-1 rounded-full text-xs font-mono-tag font-bold bg-zinc-800 text-zinc-300">
-            100% EM PORTUGUÊS • ZERO LABIRINTITE
+          <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 tracking-wider">
+            PADRÃO MUSEU GOAT
           </span>
         </div>
-        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-white font-mono-tag">
-          GALERIA OFICIAL DE LANÇAMENTO (3x3)
+        <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight text-white font-mono-num">
+          A NOVA GRADE OFICIAL (3x3)
         </h1>
         <p class="text-sm text-zinc-400 max-w-3xl leading-relaxed">
-          Sistema visual unificado no padrão dos maiores estúdios globais (Collins, Metalab, Dieter Rams). Fundo preto fosco, vidro escuro neutro, tipografia suíça pura e hierarquia sóbria.
+          Zero templates repetitivos. Uma curadoria viva inspirada em <strong class="text-white">Collins</strong>, <strong class="text-white">Metalab</strong>, <strong class="text-white">Dieter Rams</strong> e <strong class="text-white">Pentagram</strong>: alternando software, tipografia, arte escultural, blueprints e relatórios financeiros.
         </p>
       </div>
 
       <div class="flex items-center gap-3">
-        <a href="blacklink-launch-pack-9posts.zip" download class="px-5 py-2.5 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all cursor-pointer shadow-lg active:scale-95">
-          ↓ Baixar Pacote Completo (.ZIP)
-        </a>
+        <div class="px-4 py-2.5 rounded-xl glass-panel text-xs font-mono text-zinc-300 flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>9/9 Peças de Museu Prontas</span>
+        </div>
       </div>
     </header>
 
-    <!-- Grid 3x3 & Inspector -->
+    <!-- 3x3 Grid & Detail Section -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-      <!-- Left Column: 3x3 Simulation (7 Cols) -->
+      <!-- Left Column: Instagram Feed 3x3 (7 Cols) -->
       <div class="lg:col-span-7 space-y-4">
         <div class="flex items-center justify-between">
-          <h2 class="text-xs font-mono-tag font-bold uppercase tracking-widest text-zinc-400">
-            SIMULAÇÃO EXATA DO FEED (3x3)
+          <h2 class="text-xs font-mono font-bold uppercase tracking-widest text-zinc-400">
+            SIMULAÇÃO DO FEED DO INSTAGRAM (3x3)
           </h2>
-          <span class="text-xs text-zinc-500 font-mono-tag">Clique na peça para ver a cópia e baixar</span>
+          <span class="text-xs text-zinc-500 font-mono">
+            Clique no post para inspecionar
+          </span>
         </div>
 
         <div class="grid grid-cols-3 gap-3 md:gap-4 p-4 rounded-3xl glass-panel">
           
-          <!-- Post 1 -->
-          <div onclick="selectPost(1)" id="feed-card-1" class="post-card active rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 1: Manifesto Tipográfico -->
+          <div onclick="selectPost(1)" id="feed-card-1" class="glass-card active rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-01.jpg" alt="Post 01" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">01 // SUP. ESQ</span>
-              <p class="text-[11px] font-bold text-white leading-tight">SEU PRODUTO PARECE AMADOR.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#01 SUP. ESQ</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">MANIFESTO TIPOGRÁFICO COM PRISMA</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 2 -->
-          <div onclick="selectPost(2)" id="feed-card-2" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 2: Macro UI CRM -->
+          <div onclick="selectPost(2)" id="feed-card-2" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-02.jpg" alt="Post 02" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">02 // SUP. CEN</span>
-              <p class="text-[11px] font-bold text-white leading-tight">A PLATAFORMA BLACK LINK</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#02 SUP. CEN</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">MACRO UI: BLACK LINK CRM OS</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 3 -->
-          <div onclick="selectPost(3)" id="feed-card-3" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 3: Escultura de Vidro -->
+          <div onclick="selectPost(3)" id="feed-card-3" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-03.jpg" alt="Post 03" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">03 // SUP. DIR</span>
-              <p class="text-[11px] font-bold text-white leading-tight">PRECIFICAÇÃO É PERCEPÇÃO.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#03 SUP. DIR</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">ESCULTURA: ANEL E CORRENTE 3D</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 4 -->
-          <div onclick="selectPost(4)" id="feed-card-4" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 4: Blueprint Técnico -->
+          <div onclick="selectPost(4)" id="feed-card-4" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-04.jpg" alt="Post 04" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">04 // MEIO ESQ</span>
-              <p class="text-[11px] font-bold text-white leading-tight">ECOSSISTEMAS VENCEM CURSOS.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#04 MEIO ESQ</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">BLUEPRINT: ENGENHARIA DA AUSÊNCIA</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 5 (Centerpiece Anchor) -->
-          <div onclick="selectPost(5)" id="feed-card-5" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square border-white/20">
+          <!-- Post 5: O Emblema Central (Âncora do Perfil) -->
+          <div onclick="selectPost(5)" id="feed-card-5" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-05.jpg" alt="Post 05" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-white font-bold uppercase">05 // CENTRO (ÂNCORA)</span>
-              <p class="text-[11px] font-bold text-white leading-tight">BLACK LINK // MONÓLITO</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-emerald-500/50 text-emerald-300 font-bold">#05 CENTRO</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">O MONOGRAMA TITÂNIO & CRISTAL</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 6 -->
-          <div onclick="selectPost(6)" id="feed-card-6" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 6: Componente Tátil UI -->
+          <div onclick="selectPost(6)" id="feed-card-6" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-06.jpg" alt="Post 06" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">06 // MEIO DIR</span>
-              <p class="text-[11px] font-bold text-white leading-tight">ENGENHARIA DA AUSÊNCIA.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#06 MEIO DIR</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">MICROCRAFT: TOGGLE EM ESMERALDA</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 7 -->
-          <div onclick="selectPost(7)" id="feed-card-7" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 7: Prova Numérica / Relatório -->
+          <div onclick="selectPost(7)" id="feed-card-7" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-07.jpg" alt="Post 07" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">07 // INF. ESQ</span>
-              <p class="text-[11px] font-bold text-white leading-tight">VELOCIDADE É CONVERSÃO.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#07 INF. ESQ</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">+412% VELOCIDADE DE FECHAMENTO</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 8 -->
-          <div onclick="selectPost(8)" id="feed-card-8" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 8: Terminal Serverless -->
+          <div onclick="selectPost(8)" id="feed-card-8" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-08.jpg" alt="Post 08" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">08 // INF. CEN</span>
-              <p class="text-[11px] font-bold text-white leading-tight">ARQUITETURA INTOCÁVEL.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#08 INF. CEN</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">ENGENHARIA: CONSOLE TRANSPARENTE</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
-          <!-- Post 9 -->
-          <div onclick="selectPost(9)" id="feed-card-9" class="post-card rounded-2xl overflow-hidden cursor-pointer relative aspect-square">
+          <!-- Post 9: VIP Access Card -->
+          <div onclick="selectPost(9)" id="feed-card-9" class="glass-card rounded-2xl overflow-hidden cursor-pointer relative group aspect-square">
             <img src="./museum-09.jpg" alt="Post 09" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent p-3 flex flex-col justify-end">
-              <span class="text-[9px] font-mono-tag text-zinc-400 font-bold uppercase">09 // INF. DIR</span>
-              <p class="text-[11px] font-bold text-white leading-tight">CONSTRUA SEU ECOSSISTEMA.</p>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-2.5 flex flex-col justify-between">
+              <span class="badge-pos self-start px-2 py-0.5 rounded bg-black/70 border border-white/20 text-white font-bold">#09 INF. DIR</span>
+              <p class="text-[11px] font-bold text-white leading-tight line-clamp-2">CARTÃO VIP: ACESSO SOBERANO</p>
             </div>
+            <div class="absolute top-2 right-2 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-sm"></div>
           </div>
 
         </div>
       </div>
 
-      <!-- Right Column: Inspector (5 Cols) -->
+      <!-- Right Column: Inspector & Copy Sheet (5 Cols) -->
       <div class="lg:col-span-5 space-y-6">
-        <div id="inspectorPanel" class="glass-panel p-6 rounded-3xl space-y-6 sticky top-8">
-          <!-- Dinâmico via JS -->
+        <div id="detailPanel" class="glass-panel p-6 rounded-3xl space-y-6 sticky top-8">
+          <!-- Injected via JS -->
         </div>
       </div>
 
@@ -178,36 +197,40 @@
   </div>
 
   <script>
-    const POSTS_DATA = {
+    const MUSEUM_DATA = {
       1: {
         num: 1,
-        pos: "Linha 1, Coluna 1 // Superior Esquerda",
-        title: "SEU PRODUTO PARECE AMADOR.",
-        tag: "Posicionamento Institucional",
+        title: "MANIFESTO: O MERCADO NÃO COMPRA O QUE É BOM.",
+        archetype: "Manifesto Editorial Suíço (Inspiração: Pentagram / Collins)",
+        pos: "Linha 1, Coluna 1 (Superior Esquerda)",
         img: "./museum-01.jpg",
-        caption: `O mercado não compra o que é bom. Compra o que parece inatingível.
+        concept: "Tipografia monumental pura em grotesca suíça sobre ardósia negra. Um prisma óptico real refrata feixes espectrais de arco-íris sobre as palavras. Zero caixas de template.",
+        caption: `Existe uma verdade desconfortável que o mercado digital insiste em ignorar:
 
-Você pode ter o melhor método e a entrega mais dedicada do seu segmento. Mas se a sua embalagem visual e sua esteira de vendas parecem uma página amadora feita em ferramentas gratuitas, o tomador de decisão de alto poder aquisitivo nem clica.
+O cliente não compra o produto mais completo. Ele compra a percepção mais sofisticada.
 
-Marcas soberanas não brigam por atenção com dancinhas ou promessas vazias. Elas impõem autoridade inquestionável no primeiro segundo de contato.
+Você pode ter o melhor método, a entrega mais dedicada e os maiores resultados. Mas se a sua presença visual parece uma página amadora remendada em ferramentas gratuitas, o tomador de decisão de alto poder aquisitivo nem considera a sua proposta.
 
-Na Black Link, desenhamos a tecnologia e os ecossistemas digitais que separam quem lidera do resto.
+Autoridade não é algo que se pede. É algo que se impõe no primeiro segundo de contato.
 
-Se você está pronto para transformar sua operação em uma instituição: blklnk.com
+Na Black Link, nós não criamos "postzinhos". Nós desenhamos a arquitetura de percepção e os ecossistemas digitais que transformam operações comuns em instituições inatingíveis.
+
+Se você está pronto para abandonar o amadorismo: blklnk.com
 
 #BlackLink #ProdutosDigitais #DesignDeAutoridade #BrandingSoberano #HighTicket`,
-        linkedin: `Existe uma verdade desconfortável no mercado digital: o cliente não compra o produto mais completo; ele compra a percepção mais sofisticada.
+        linkedin: `Design não é cosmética. É a primeira linha de defesa da sua margem de lucro.
 
-Enquanto a maioria das empresas foca em empurrar conteúdo em plataformas genéricas, os líderes do mercado investem em ecossistemas proprietários, design de alto impacto e infraestrutura sob medida.
+Quando sua empresa investe em rigor tipográfico, infraestrutura proprietária e autoridade visual internacional, a objeção de preço desaparece antes mesmo da primeira reunião comercial.
 
-Na Black Link (blklnk.com), criamos a tecnologia e a arquitetura visual para fundadores e empresas que lideram seus segmentos com autoridade inquestionável.`
+Na Black Link (blklnk.com), criamos a tecnologia e a arquitetura visual para fundadores que dominam seus mercados com soberania inquestionável.`
       },
       2: {
         num: 2,
-        pos: "Linha 1, Coluna 2 // Superior Centro",
-        title: "A PLATAFORMA BLACK LINK (SOFTWARE REAL)",
-        tag: "Software Proprietário",
+        title: "A INTERFACE: BLACK LINK CRM OS (MACRO UI 3D)",
+        archetype: "Software Craft & Product UI (Inspiração: Metalab / Linear / Apple Pro)",
+        pos: "Linha 1, Coluna 2 (Superior Centro)",
         img: "./museum-02.jpg",
+        concept: "Macro shot tridimensional exibindo a interface do sistema proprietário: cards em vidro fosco acetinado, radar anti-colisão em esmeralda, métricas reais de R$ 1.45M e Deal Momentum Score.",
         caption: `Não vendemos teorias. Nós construímos o software.
 
 Esta é uma prévia do Black Link CRM OS: nossa esteira proprietária com telemetria de receita em tempo real e radar anti-colisão ativo.
@@ -227,61 +250,67 @@ Na Black Link, desenvolvemos tecnologia proprietária de telemetria preditiva e 
       },
       3: {
         num: 3,
-        pos: "Linha 1, Coluna 3 // Superior Direita",
-        title: "PRECIFICAÇÃO É PERCEPÇÃO.",
-        tag: "A Lei do High-Ticket",
+        title: "ARTE ESCULTURAL: ANEL & CORRENTE MONOLÍTICA",
+        archetype: "Arte Monumental de Marca (Inspiração: MoMA / Apple Pro Hardware)",
+        pos: "Linha 1, Coluna 3 (Superior Direita)",
         img: "./museum-03.jpg",
-        caption: `Por que uma garrafa de água custa R$ 2 no semáforo e R$ 45 no lounge de um hotel 5 estrelas?
+        concept: "Escultura hiper-realista de elos de corrente forjados em vidro fosco fundidos ao anel de cristal sobre pedestal no vácuo. Microtipografia a laser no aro: 'BLACK LINK — SPECIMEN 05'.",
+        caption: `O elo inquebrável entre design de luxo e engenharia de software.
 
-A água é a mesma. O recipiente, a atmosfera e o status da entrega mudaram tudo.
+Quando a tecnologia é tratada como arte monumental, ela deixa de ser uma commodity e se torna um ativo de desejo instantâneo.
 
-No mercado corporativo, quem sofre pedindo desconto é quem tem uma presença fraca. Quando seu produto digital é sustentado por uma infraestrutura cinematográfica, com design sóbrio e tecnologia proprietária, a objeção de preço desaparece antes da reunião começar.
+Cada componente, cada micro-interação e cada linha de código que produzimos na Black Link é lapidada com a mesma obsessão de um artesão de alta relojoaria.
 
-Pare de vender commodities. Construa seu ativo de autoridade com a Black Link.
+Eleve o padrão do seu ecossistema.
 
 blklnk.com
 
-#Precificacao #HighTicket #BlackLink #PosicionamentoDeLuxo #VendasB2B`,
-        linkedin: `Design não é cosmética. É a primeira linha de defesa da sua margem de lucro.
+#ExtremeGlassmorphism #BlackLink #ArteEstrangeira #DesignMonumental #LuxoDigital`,
+        linkedin: `A verdadeira sofisticação reside no silêncio e na precisão dos detalhes.
 
-Quando seu posicionamento visual respira autoridade internacional, você nunca mais precisa justificar seu ticket em reuniões de negócios.
+Construir ecossistemas digitais soberanos exige a união entre engenharia implacável e estética de padrão internacional.
 
-Na Black Link, desenvolvemos ecossistemas comerciais e plataformas digitais onde o preço alto é a consequência natural da entrega extraordinária.`
+Bem-vindo à Black Link (blklnk.com).`
       },
       4: {
         num: 4,
-        pos: "Linha 2, Coluna 1 // Meio Esquerda",
-        title: "ECOSSISTEMAS VENCEM CURSOS.",
-        tag: "Estratégia de Retenção",
+        title: "BLUEPRINT: A ENGENHARIA DA AUSÊNCIA",
+        archetype: "Esquema Técnico Vetorial (Inspiração: Dieter Rams / NASA Technical Manual)",
+        pos: "Linha 2, Coluna 1 (Meio Esquerda)",
         img: "./museum-04.jpg",
-        caption: `Ninguém mais quer pagar caro para assistir a dezenas de horas de vídeo gravado em plataformas genéricas.
+        concept: "Blueprint cirúrgico com linhas de laser de 0.5px, eixos milimétricos, fluxo de qualificação em 30s, latência <300ms e cubos isométricos de dados. O mapa da automação sem humanos.",
+        caption: `A Engenharia da Ausência decodificada em linhas de código e precisão matemática.
 
-Os maiores players do mundo já entenderam: a retenção e o LTV moram no ecossistema proprietário. Plataformas customizadas, design imersivo, ranking em tempo real e experiência de software.
+Se a sua empresa para quando você viaja, você não tem uma empresa. Você é apenas o funcionário mais estressado da sua própria operação.
 
-É isso que desenvolvemos para nossos parceiros e clientes: produtos digitais que geram orgulho de pertencer e recompra automática.
+Este blueprint documenta a nossa esteira de IA autônoma:
+1. Inbound Lead capturado instantaneamente.
+2. IA Telemetry Engine qualificando a oportunidade em menos de 30 segundos.
+3. Matriz de fechamento que agenda o tomador de decisão na call sem intervenção manual.
 
-Se você fatura alto e quer criar seu ecossistema proprietário: blklnk.com
+Menos ruído operacional. Mais contratos assinados.
 
-#ProdutosDigitais #SoftwareProprietario #LTV #Retencao #BlackLink`,
-        linkedin: `A comoditização dos infoprodutos tradicionais é um fato consumado.
+Acesse blklnk.com e construa a sua Engenharia da Ausência.
 
-Para manter clientes engajados e construir um negócio que vale múltiplos dígitos, você precisa de um ecossistema: plataforma própria, experiência de usuário impecável e inteligência aplicada.
+#EngenhariaDaAusencia #DieterRams #SistemasAutonomos #BlackLink #AIdeVendas`,
+        linkedin: `Soberania corporativa não se constrói trabalhando 16 horas por dia. Constrói-se transformando processos comerciais em código proprietário e arquitetura de dados.
 
-Na Black Link, desenhamos e programamos o software que transforma seu conhecimento em um ativo corporativo real.`
+Na Black Link, desenhamos a infraestrutura que permite à sua empresa faturar múltiplos 7 dígitos sem depender da presença física do fundador.`
       },
       5: {
         num: 5,
-        pos: "Linha 2, Coluna 2 // Centro Absoluto (O Coração do Feed)",
-        title: "BLACK LINK // O MONÓLITO CENTRAL",
-        tag: "A Marca Soberana",
+        title: "O EMBLEMA CENTRAL: O CORAÇÃO DO FEED",
+        archetype: "Monograma Monolítico da Marca (Inspiração: Studio Frith / Rimowa)",
+        pos: "Linha 2, Coluna 2 (Centro Absoluto — Âncora do Perfil)",
         img: "./museum-05.jpg",
+        concept: "O brasão oficial da Black Link forjado em titânio escovado e cristal com corte diamante. O ponto focal que ancora as 9 peças e define a soberania do feed.",
         caption: `BLACK LINK // SOVEREIGN ECOSYSTEMS.
 
-A união exata entre engenharia de software de padrão bancário e a estética visual mais refinada do mercado digital.
+O ponto focal onde convergem tecnologia bancária, inteligência artificial e a estética mais sofisticada do mercado digital.
 
-Nós não somos uma agência de marketing tradicional. Somos um estúdio de arquitetura tecnológica e posicionamento para fundadores e empresas que operam no topo da cadeia.
+Nós não somos uma agência de marketing. Somos um estúdio de engenharia e arquitetura de produtos digitais para quem joga no topo da cadeia.
 
-As portas estão abertas para novos projetos sob medida.
+As portas estão abertas para novos projetos institucionais.
 
 blklnk.com
 
@@ -292,85 +321,93 @@ A Black Link (blklnk.com) desenvolve a tecnologia para as empresas e fundadores 
       },
       6: {
         num: 6,
-        pos: "Linha 2, Coluna 3 // Meio Direita",
-        title: "ENGENHARIA DA AUSÊNCIA.",
-        tag: "Liberdade do Fundador",
+        title: "MICROCRAFT: TOGGLE EM ESMERALDA & PROTOCOLO",
+        archetype: "Microscópio de Componente de UI (Inspiração: Fantasy.co / Apple VisionOS)",
+        pos: "Linha 2, Coluna 3 (Meio Direita)",
         img: "./museum-06.jpg",
-        caption: `Se sua empresa para quando você viaja, você não tem uma empresa. Você tem um emprego de alta pressão que você mesmo criou.
+        concept: "Macro extremo em um interruptor físico em vidro fosco com retroiluminação neon verde em estado 'ACTIVE'. Bisel de aço escovado e inscrições: 'SECURITY PROTOCOL: BANK-GRADE'.",
+        caption: `Deus mora no detalhe de 1 pixel.
 
-A Engenharia da Ausência é o princípio fundamental da Black Link:
-1. Processos comerciais transformados em código.
-2. Automações com IA que qualificam e filtram oportunidades.
-3. Dashboard executivo em tempo real na palma da mão.
+Este é o acabamento que dedicamos a cada componente interativo dos nossos produtos digitais:
+- Vidro fosco tátil com difusão de luz natural.
+- Estado reativo com iluminação esmeralda em tempo real.
+- Segurança de padrão bancário e isolamento estrito de dados entre operadores.
 
-Sua autoridade merece uma estrutura que trabalhe por você com precisão matemática.
+O cliente de ticket alto percebe o esmero antes mesmo de ler o contrato.
 
-Conheça nossa arquitetura em blklnk.com
+Construa seu produto com a Black Link.
 
-#EngenhariaDaAusencia #Soberania #GestaoDeElite #BlackLink #AutomacaoComercial`,
-        linkedin: `Existe uma diferença brutal entre ser dono de uma empresa e ser prisioneiro da própria operação.
+blklnk.com
 
-A verdadeira soberania corporativa começa quando a esteira de vendas, os processos e a telemetria funcionam com precisão matemática, sem depender da presença diária do CEO.
+#Microcraft #UIdeLuxo #Glassmorphism #AppleDesign #BlackLinkTech`,
+        linkedin: `A diferença entre um produto digital descartável e um ativo avaliado em milhões está na obsessão milimétrica por acabamento de interface e segurança de dados.
 
-Na Black Link (blklnk.com), desenvolvemos a Engenharia da Ausência.`
+Na Black Link, cada linha de código e cada componente visual são projetados para durar.`
       },
       7: {
         num: 7,
-        pos: "Linha 3, Coluna 1 // Inferior Esquerda",
-        title: "VELOCIDADE É CONVERSÃO.",
-        tag: "Métricas de Conversão",
+        title: "A PROVA NUMÉRICA: +412% VELOCIDADE DE NEGÓCIOS",
+        archetype: "Data-Driven Performance Report (Inspiração: Bloomberg Terminal / Monocle)",
+        pos: "Linha 3, Coluna 1 (Inferior Esquerda)",
         img: "./museum-07.jpg",
-        caption: `Estudos de conversão em vendas consultivas comprovam:
+        concept: "Relatório financeiro com curvas de dados luminescentes comparando 4.2h humanas vs. 28s de IA, taxa de retenção LTV (+88%) e receita anual de múltiplos dígitos.",
+        caption: `Design atrai o olhar. Dados fecham a venda.
+
+Estudos de conversão em vendas consultivas comprovam:
 - Tempo de resposta humano médio: 4.2 HORAS.
-- Tempo de resposta da IA Black Link: 30 SEGUNDOS.
+- Tempo de resposta da IA Black Link: 28 SEGUNDOS.
 
-Responder nos primeiros minutos aumenta em até 400% as chances de fechamento de contratos de alto valor.
+O resultado? Mais de 412% de aumento na velocidade de fechamento de contratos e retenção líquida de LTV de 88%.
 
-Sua operação comercial não pode depender de vendedores distraídos.
+Sua operação comercial não pode depender de vendedores esquecendo de responder mensagens.
 
 Implemente telemetria real em blklnk.com
 
-#DealVelocity #MetricasDeNegocio #IAcomercial #BlackLinkMetrics #DataDriven`,
+#VelocidadeDeFechamento #MetricasDeNegocio #IAcomercial #BlackLinkMetrics #DataDriven`,
         linkedin: `Tempo de resposta é o maior preditor de conversão em vendas corporativas.
 
 Enquanto a concorrência demora horas para fazer o primeiro follow-up, a tecnologia da Black Link qualifica e agenda oportunidades em segundos.`
       },
       8: {
         num: 8,
-        pos: "Linha 3, Coluna 2 // Inferior Centro",
-        title: "ARQUITETURA INTOCÁVEL.",
-        tag: "Infraestrutura Corporativa",
+        title: "ENGENHARIA: CONSOLE TRANSPARENTE & WEBSOCKET",
+        archetype: "Invisible Architecture & Terminal (Inspiração: Vercel / Stripe)",
+        pos: "Linha 3, Coluna 2 (Inferior Centro)",
         img: "./museum-08.jpg",
-        caption: `Lançar um produto digital com ferramentas 'no-code' remendadas com fita crepe digital é a receita perfeita para travar na hora do checkout.
+        concept: "Tela flutuante de vidro fumê sobre mesa escura executando o motor de pipelines e registrando transações reais de R$ 450.000,00 via Stripe API.",
+        caption: `Atrás de uma embalagem cinematográfica, existe uma engenharia implacável.
 
-Na Black Link, desenvolvemos tecnologia de padrão bancário: bancos de dados escaláveis, arquitetura serverless ultrarrápida e design nativo em alta performance.
+- Arquitetura serverless de latência inferior a 30ms.
+- Webhooks de receita auditados e verificados em tempo real.
+- Bancos de dados distribuídos com replicação global instantânea.
 
-Zero travamentos. Zero perda de vendas no pico de tráfego.
+Ferramentas "no-code" gratuitas não aguentam a pressão de um lançamento de 7 dígitos. Nós desenvolvemos código próprio que nunca cai.
 
-Sua escala não cabe mais em ferramentas gratuitas.
+Consulte nossa equipe de tecnologia em blklnk.com
 
-Consulte nossa equipe de engenharia em blklnk.com
-
-#InfraestruturaDigital #SegurancaBancaria #BlackLinkOS #EscalaGarantida`,
+#EngenhariaServerless #StripeAPI #CleanCode #Infraestrutura #BlackLinkDev`,
         linkedin: `Infraestrutura digital não é um custo; é a garantia de que o seu checkout não vai falhar no pico de tráfego.
 
 Na Black Link, construímos sistemas com a mesma segurança e velocidade exigidas pelos maiores unicórnios globais.`
       },
       9: {
         num: 9,
-        pos: "Linha 3, Coluna 3 // Inferior Direita",
-        title: "CONSTRUA SEU ECOSSISTEMA.",
-        tag: "Acesso Institucional",
+        title: "ACESSO SOBERANO: O CARTÃO VIP DE CRISTAL",
+        archetype: "The VIP Invitation & Closing Key (Inspiração: Saint Laurent / A24)",
+        pos: "Linha 3, Coluna 3 (Inferior Direita — Fechamento da Grade)",
         img: "./museum-09.jpg",
-        caption: `O mercado digital caminha para a maturidade. Daqui para frente, quem insistir em soluções genéricas será engolido pela comoditização.
+        concept: "Cartão de acesso físico em cristal lapidado com corte diamante e chip integrado, repousando sobre rocha de obsidiana negra: 'blklnk.com // ACESSO SOBERANO'.",
+        caption: `ACESSO SOBERANO // 2026.
 
-Quem investir em software sob medida, infraestrutura robusta e posicionamento de luxo vai ditar as regras.
+O mercado digital está dividido em dois grupos:
+1. Quem disputa centavos no feed com ferramentas comuns.
+2. Quem constrói um ecossistema proprietário e dita o preço do mercado.
 
-A Black Link existe para construir o seu ecossistema digital.
+O cartão de acesso da Black Link está liberado para fundadores e empresas que decidiram liderar.
 
-→ Acesse blklnk.com ou envie uma mensagem direta para agendar sua avaliação executiva.
+→ Acesse blklnk.com ou envie uma mensagem direta para iniciar sua auditoria executiva.
 
-#SovereignAccess #BlackLink #Exclusividade #HighTicket #EcossistemasDigitais`,
+#AcessoSoberano #BlackLink #Exclusividade #HighTicket #EcossistemasDigitais`,
         linkedin: `Liderança de mercado não se pede com discurso de vendas. Estabelece-se com uma entrega tão superior que torna qualquer concorrência irrelevante.
 
 Acesse blklnk.com e descubra o que a Black Link pode construir pela sua empresa.`
@@ -378,40 +415,46 @@ Acesse blklnk.com e descubra o que a Black Link pode construir pela sua empresa.
     };
 
     function selectPost(num) {
-      document.querySelectorAll('.post-card').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.glass-card').forEach(el => el.classList.remove('active'));
       const activeCard = document.getElementById(`feed-card-${num}`);
       if (activeCard) activeCard.classList.add('active');
 
-      const data = POSTS_DATA[num];
-      const panel = document.getElementById('inspectorPanel');
+      const data = MUSEUM_DATA[num];
+      const panel = document.getElementById('detailPanel');
       panel.innerHTML = `
         <div class="space-y-2 pb-4 border-b border-white/10">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 rounded text-[11px] font-mono-tag font-bold bg-white/10 text-white">PEÇA #${String(data.num).padStart(2, '0')}</span>
-            <span class="text-xs text-zinc-400 font-mono-tag">${data.pos}</span>
+            <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-white/10 text-white">PEÇA #${String(data.num).padStart(2, '0')}</span>
+            <span class="text-xs text-zinc-400 font-mono">${data.pos}</span>
           </div>
-          <h3 class="text-xl font-bold text-white">${data.title}</h3>
-          <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-mono-tag bg-zinc-800 text-zinc-300 border border-white/10">${data.tag}</span>
+          <h3 class="text-lg font-bold text-white">${data.title}</h3>
+          <p class="text-xs text-emerald-400 font-mono">${data.archetype}</p>
         </div>
 
         <div class="space-y-4">
+          <!-- Concept -->
+          <div class="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Conceito de Museu & Craft</span>
+            <p class="text-xs text-zinc-300 leading-relaxed">${data.concept}</p>
+          </div>
+
           <!-- Instagram Caption -->
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-mono-tag uppercase tracking-wider text-zinc-400 font-bold">Legenda Instagram</span>
-              <button onclick="copyToClipboard('caption-${num}')" class="text-[11px] font-mono-tag text-zinc-300 hover:text-white flex items-center gap-1 cursor-pointer">
-                <span>📋 Copiar Legenda</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Legenda Instagram</span>
+              <button onclick="copyToClipboard('caption-${num}')" class="text-[11px] font-mono text-zinc-300 hover:text-white flex items-center gap-1 cursor-pointer">
+                <span>📋 Copiar</span>
               </button>
             </div>
-            <textarea id="caption-${num}" readonly class="w-full h-36 rounded-xl bg-black/50 border border-white/10 p-3 text-xs text-zinc-300 font-sans leading-relaxed focus:outline-none resize-none">${data.caption}</textarea>
+            <textarea id="caption-${num}" readonly class="w-full h-32 rounded-xl bg-black/50 border border-white/10 p-3 text-xs text-zinc-300 font-sans leading-relaxed focus:outline-none resize-none">${data.caption}</textarea>
           </div>
 
           <!-- LinkedIn Post -->
           <div class="space-y-2">
             <div class="flex items-center justify-between">
-              <span class="text-[10px] font-mono-tag uppercase tracking-wider text-zinc-400 font-bold">Post LinkedIn (C-Level)</span>
-              <button onclick="copyToClipboard('linkedin-${num}')" class="text-[11px] font-mono-tag text-zinc-300 hover:text-white flex items-center gap-1 cursor-pointer">
-                <span>📋 Copiar LinkedIn</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 font-bold">Post LinkedIn (C-Level)</span>
+              <button onclick="copyToClipboard('linkedin-${num}')" class="text-[11px] font-mono text-zinc-300 hover:text-white flex items-center gap-1 cursor-pointer">
+                <span>📋 Copiar</span>
               </button>
             </div>
             <textarea id="linkedin-${num}" readonly class="w-full h-24 rounded-xl bg-black/50 border border-white/10 p-3 text-xs text-zinc-300 font-sans leading-relaxed focus:outline-none resize-none">${data.linkedin}</textarea>
@@ -419,8 +462,8 @@ Acesse blklnk.com e descubra o que a Black Link pode construir pela sua empresa.
 
           <!-- Download Action -->
           <div class="pt-3 border-t border-white/10">
-            <a href="${data.img}" download="blacklink-peca-${String(data.num).padStart(2, '0')}.jpg" class="w-full block py-2.5 rounded-xl bg-white text-black font-semibold text-xs text-center hover:bg-zinc-200 transition-all cursor-pointer shadow-lg active:scale-95">
-              ↓ Baixar Imagem (1080x1080)
+            <a href="${data.img}" download="blacklink-museum-${String(data.num).padStart(2, '0')}.jpg" class="w-full block py-2.5 rounded-xl bg-white text-black font-semibold text-xs text-center hover:bg-zinc-200 transition-all cursor-pointer shadow-lg active:scale-95">
+              ↓ Baixar Imagem Oficial (Alta Resolução)
             </a>
           </div>
         </div>
@@ -435,7 +478,7 @@ Acesse blklnk.com e descubra o que a Black Link pode construir pela sua empresa.
       }
     }
 
-    // Inicializa no Post 1
+    // Initialize with Post 1
     selectPost(1);
   </script>
 </body>
