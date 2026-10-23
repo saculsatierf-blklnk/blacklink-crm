@@ -35,8 +35,10 @@ import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
 import { TeamInviteModal } from "./TeamInviteModal";
+import { GoogleSheetsLeadHunter } from "./GoogleSheetsLeadHunter";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
+import { FileSpreadsheet, Kanban as KanbanIcon } from "lucide-react";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
@@ -149,6 +151,7 @@ export function LeadsKanban({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [viewMode, setViewMode] = useState<"sheets" | "kanban" | "all">("all");
 
   const isCommercial = currentUser?.role === "commercial";
   const myUserId = currentUser?.id || "";
@@ -421,8 +424,47 @@ export function LeadsKanban({
             </div>
           )}
 
-          {/* Botões Operacionais: Convidar Equipe, Guia & Novo Lead com Radar Anti-Colisão */}
-          <div className="flex items-center gap-3">
+          {/* Botões Operacionais: Alternador Planilha/Kanban, Convidar Equipe, Guia & Novo Lead */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center rounded-xl border border-white/10 bg-black/40 p-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("all")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "all"
+                    ? "bg-emerald-500 text-black shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span>Planilha + Kanban</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("sheets")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "sheets"
+                    ? "bg-emerald-500 text-black shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>Só Planilha Sheets</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("kanban")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "kanban"
+                    ? "bg-emerald-500 text-black shadow-sm"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <KanbanIcon className="h-3.5 w-3.5" />
+                <span>Só Kanban</span>
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setIsInviteModalOpen(true)}
@@ -451,8 +493,16 @@ export function LeadsKanban({
         </div>
       </div>
 
+      {/* EXTRATOR AUTOMÁTICO DO GOOGLE + PLANILHA GOOGLE SHEETS (PADRÃO IMOBILIÁRIO / GOFER) */}
+      {(viewMode === "all" || viewMode === "sheets") && (
+        <GoogleSheetsLeadHunter
+          companyName={companyName || "Gofer Metais"}
+          onLeadImportedToKanban={handleLeadCreated}
+        />
+      )}
+
       {/* Board Kanban com Drag-and-Drop Bidirecional */}
-      {isMounted ? (
+      {(viewMode === "all" || viewMode === "kanban") && (isMounted ? (
         <DragDropContext onDragEnd={onDragEnd}>
           <div data-tour="kanban-columns" className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
             {COLUMNS.map((column) => {
@@ -724,7 +774,7 @@ export function LeadsKanban({
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {/* Slide-over Sheet Lateral: Dossiê Completo do Vendedor (Hunter) */}
       <LeadDetailsSheet
