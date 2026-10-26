@@ -650,56 +650,56 @@ export function GoogleSheetsLeadHunter({
       {
         dayCode: "D1" as const,
         dayLabel: "Segunda-feira (Hoje)",
-        touchNumber: "Toque 1 • Abertura & Descoberta",
+        touchNumber: "Dia 1 • Mapear Setores & Abastecer Planilhas",
         targetLevel: "Tentativa de contato" as ProspectionLevel,
-        nextLevel: "Catálogo enviado" as ProspectionLevel,
-        channels: ["Ligação Rápida (Triagem)", "WhatsApp Catálogo", "E-mail Técnico"],
+        nextLevel: "Tentativa de contato" as ProspectionLevel,
+        channels: ["Cérebro de Nichos", "Captar & Validar Leads", "Sync Google Sheets"],
         objective:
-          "Descobrir o nome do comprador/engenharia nas empresas em 'Tentativa de contato' e enviar o catálogo técnico da Gofer Metais.",
-        badgeColor: "border-amber-500/40 bg-amber-500/15 text-amber-300",
+          "Mapear os setores da semana, extrair novos leads verificados (CNPJ/Domínio/Tel) e abastecer as abas da planilha para ter munição de Terça a Sexta.",
+        badgeColor: "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
       },
       {
         dayCode: "D2" as const,
         dayLabel: "Terça-feira",
-        touchNumber: "Toque 2 • Follow-up de Catálogo (24h)",
-        targetLevel: "Catálogo enviado" as ProspectionLevel,
-        nextLevel: "Em contato" as ProspectionLevel,
-        channels: ["WhatsApp Direto", "E-mail de Bitolas/Recorrência"],
+        touchNumber: "Dia 2 • Disparo de Abertura (Oferecer Catálogo)",
+        targetLevel: "Tentativa de contato" as ProspectionLevel,
+        nextLevel: "Catálogo enviado" as ProspectionLevel,
+        channels: ["WhatsApp Abertura", "E-mail Apresentação", "Ligação Triagem"],
         objective:
-          "Cobrar retorno de quem já recebeu o catálogo, perguntando qual especificação de chapa/perfil compram com maior recorrência para cotar comparativo.",
-        badgeColor: "border-indigo-500/40 bg-indigo-500/15 text-indigo-300",
+          "Abordar a lista abastecida na segunda-feira ('Tentativa de contato') para descobrir o comprador e fazer eles pedirem o Catálogo em PDF.",
+        badgeColor: "border-amber-500/40 bg-amber-500/15 text-amber-300",
       },
       {
         dayCode: "D3" as const,
         dayLabel: "Quarta-feira",
-        touchNumber: "Toque 3 • Destravamento de Cotação (Quentes)",
-        targetLevel: "Em contato" as ProspectionLevel,
-        nextLevel: "Reunião agendada" as ProspectionLevel,
-        channels: ["Ligação p/ Decisor", "WhatsApp Condição Comercial"],
+        touchNumber: "Dia 3 • Envio do Catálogo em PDF (Pós-Resposta)",
+        targetLevel: "Tentativa de contato" as ProspectionLevel,
+        nextLevel: "Catálogo enviado" as ProspectionLevel,
+        channels: ["Anexo PDF no WhatsApp", "Anexo PDF no E-mail"],
         objective:
-          "Focar nos leads em 'Em contato' e destacados em amarelo para puxar 1 item da lista de compras atual deles e bater preço/prazo.",
-        badgeColor: "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
+          "Responder quem pediu o catálogo enviando o arquivo PDF da Gofer Metais + mensagem destacando os aços/perfis do setor deles.",
+        badgeColor: "border-indigo-500/40 bg-indigo-500/15 text-indigo-300",
       },
       {
         dayCode: "D4" as const,
         dayLabel: "Quinta-feira",
-        touchNumber: "Toque 4 • Reativação & Janela Logística",
+        touchNumber: "Dia 4 • Follow-up Pós-PDF (Puxar Cotação)",
         targetLevel: "Catálogo enviado" as ProspectionLevel,
         nextLevel: "Em contato" as ProspectionLevel,
-        channels: ["E-mail de Programação de Corte", "WhatsApp Áudio/Curto"],
+        channels: ["WhatsApp Pós-PDF", "E-mail Comparativo de Preço"],
         objective:
-          "Usar o gatilho de fechamento da programação de corte/dobra da próxima semana para destravar compradores silenciosos.",
+          "Cobrar quem já recebeu o PDF ('Catálogo enviado'), perguntando se conseguiram abrir o arquivo e qual bitola/perfil podemos cotar hoje.",
         badgeColor: "border-sky-500/40 bg-sky-500/15 text-sky-300",
       },
       {
         dayCode: "D5" as const,
         dayLabel: "Sexta-feira",
-        touchNumber: "Toque 5 • Fechamento de Agenda & Breakup",
-        targetLevel: "Reunião agendada" as ProspectionLevel,
+        touchNumber: "Dia 5 • Fechamento de Cotação & Reunião",
+        targetLevel: "Em contato" as ProspectionLevel,
         nextLevel: "Reunião agendada" as ProspectionLevel,
-        channels: ["WhatsApp Confirmação", "E-mail Resumo Executivo"],
+        channels: ["Ligação p/ Decisor", "WhatsApp Fechamento"],
         objective:
-          "Confirmar reuniões técnicas agendadas e deixar porta aberta para cotações da segunda-feira seguinte.",
+          "Focar nos leads quentes ('Em contato' e Destaques Amarelos) que interagiram após o PDF para fechar pedido ou agendar reunião técnica.",
         badgeColor: "border-pink-500/40 bg-pink-500/15 text-pink-300",
       },
     ],
@@ -716,56 +716,42 @@ export function GoogleSheetsLeadHunter({
   // Fila inteligente de leads para o dia selecionado da cadência
   const cadenceQueueForDay = useMemo(() => {
     const validRows = activeTabRows.filter((r) => r.empresa.trim());
-    if (selectedCadenceDay === "D1") {
-      // Segunda: Prioriza 'Tentativa de contato' + Destaques Amarelos para abrir a semana forte
+    if (selectedCadenceDay === "D1" || selectedCadenceDay === "D2" || selectedCadenceDay === "D3") {
+      // Segunda (Preparação), Terça (Abertura) e Quarta (Envio do PDF): Prioriza 'Tentativa de contato' + Destaques Amarelos
       return validRows.sort((a, b) => {
         const aScore =
-          (a.nivelProspeccao === "Tentativa de contato" ? 20 : 0) +
+          (a.nivelProspeccao === "Tentativa de contato" ? 25 : 0) +
           (a.highlighted ? 15 : 0) +
           (a.nivelProspeccao === "Catálogo enviado" ? 5 : 0);
         const bScore =
-          (b.nivelProspeccao === "Tentativa de contato" ? 20 : 0) +
+          (b.nivelProspeccao === "Tentativa de contato" ? 25 : 0) +
           (b.highlighted ? 15 : 0) +
           (b.nivelProspeccao === "Catálogo enviado" ? 5 : 0);
         return bScore - aScore;
       });
     }
-    if (selectedCadenceDay === "D2" || selectedCadenceDay === "D4") {
-      // Terça e Quinta: Prioriza 'Catálogo enviado' (os 12 leads parados esperando follow-up!)
+    if (selectedCadenceDay === "D4") {
+      // Quinta (Follow-up Pós-PDF): Prioriza 'Catálogo enviado' (quem já recebeu o PDF e precisa ser cobrado)
       return validRows.sort((a, b) => {
         const aScore =
           (a.nivelProspeccao === "Catálogo enviado" ? 25 : 0) +
-          (a.highlighted ? 10 : 0);
+          (a.highlighted ? 15 : 0);
         const bScore =
           (b.nivelProspeccao === "Catálogo enviado" ? 25 : 0) +
-          (b.highlighted ? 10 : 0);
+          (b.highlighted ? 15 : 0);
         return bScore - aScore;
       });
     }
-    if (selectedCadenceDay === "D3") {
-      // Quarta: Prioriza Destaques Amarelos + 'Em contato'
-      return validRows.sort((a, b) => {
-        const aScore =
-          (a.highlighted ? 25 : 0) +
-          (a.nivelProspeccao === "Em contato" ? 20 : 0) +
-          (a.nivelProspeccao === "Catálogo enviado" ? 10 : 0);
-        const bScore =
-          (b.highlighted ? 25 : 0) +
-          (b.nivelProspeccao === "Em contato" ? 20 : 0) +
-          (b.nivelProspeccao === "Catálogo enviado" ? 10 : 0);
-        return bScore - aScore;
-      });
-    }
-    // Sexta: Prioriza 'Reunião agendada' + 'Em contato'
+    // Sexta (Fechamento): Prioriza Destaques Amarelos + 'Em contato' + 'Reunião agendada'
     return validRows.sort((a, b) => {
       const aScore =
-        (a.nivelProspeccao === "Reunião agendada" ? 30 : 0) +
-        (a.nivelProspeccao === "Em contato" ? 20 : 0) +
-        (a.highlighted ? 10 : 0);
+        (a.highlighted ? 25 : 0) +
+        (a.nivelProspeccao === "Em contato" ? 25 : 0) +
+        (a.nivelProspeccao === "Reunião agendada" ? 20 : 0);
       const bScore =
-        (b.nivelProspeccao === "Reunião agendada" ? 30 : 0) +
-        (b.nivelProspeccao === "Em contato" ? 20 : 0) +
-        (b.highlighted ? 10 : 0);
+        (b.highlighted ? 25 : 0) +
+        (b.nivelProspeccao === "Em contato" ? 25 : 0) +
+        (b.nivelProspeccao === "Reunião agendada" ? 20 : 0);
       return bScore - aScore;
     });
   }, [activeTabRows, selectedCadenceDay]);
@@ -779,7 +765,7 @@ export function GoogleSheetsLeadHunter({
     );
   }, [activeTabRows, selectedCadenceLeadId, cadenceQueueForDay]);
 
-  // Gerador dinâmico de Scripts (WhatsApp + E-mail Assunto/Corpo + Ligação) adaptado ao Nível de Prospecção e Observações do Lead
+  // Gerador dinâmico de Scripts (1º Contato -> Entrega do Catálogo em PDF -> Follow-up Pós-PDF -> Fechamento)
   const leadCadencePlaybook = useMemo(() => {
     if (!selectedCadenceLead) return null;
     const emp = selectedCadenceLead.empresa || "sua empresa";
@@ -788,70 +774,90 @@ export function GoogleSheetsLeadHunter({
     const sector = selectedCadenceLead.tab || activeTab || "Estruturas Metálicas";
     const obs = selectedCadenceLead.observacoes?.trim() || "";
     const hasCustomNote =
-      obs.length > 0 && !obs.startsWith("[Toque") && !obs.startsWith("[Auto-");
+      obs.length > 0 && !obs.startsWith("[D") && !obs.startsWith("[Auto-");
 
     const customHook = hasCustomNote
-      ? `Vi aqui na minha anotação sobre a ${emp} (${obs.toLowerCase()}) e separei exatamente as linhas que atendem essa aplicação.`
-      : `Atendemos fabricantes de ${sector} com fornecimento ágil de chapas, bobinas, perfis estruturais dobrados e aço galvanizado sob medida.`;
+      ? `Vi aqui na minha anotação sobre a ${emp} (${obs.toLowerCase()}) e separei exatamente as nossas linhas de aço que atendem essa aplicação.`
+      : `Atendemos fabricantes do setor de ${sector} com fornecimento ágil de chapas, bobinas, perfis estruturais dobrados e aço galvanizado sob medida.`;
+
+    // Script universal de Entrega do Catálogo em PDF (para quando o lead responde "Pode mandar o catálogo")
+    const pdfDeliveryWhatsapp = `${greeting} Perfeito! Segue em anexo aqui no WhatsApp o **Catálogo Técnico em PDF da ${myCompany}** atualizado.\n\n📌 Para a operação da *${emp}* (${sector}), recomendo dar uma olhada especial na nossa linha de chapas estruturais, aço galvanizado e perfis dobrados sob medida.\n\nDepois que der uma olhada no PDF, me avisa se tiver alguma bitola ou perfil que vocês compram com recorrência para eu montar uma cotação comparativa sem compromisso!`;
+    const pdfDeliveryEmailSubject = `Catálogo Técnico em PDF — ${myCompany} (${emp})`;
+    const pdfDeliveryEmailBody = `${greeting}\n\nConforme conversamos, envio em anexo o Catálogo Técnico em PDF da ${myCompany} (${representedWebsite}).\n\nPara o segmento de ${sector} da ${emp}, destacamos no PDF nossas linhas de:\n- Chapas de aço carbono, galvanizadas e xadrez;\n- Bobinas e slitter sob medida;\n- Perfis estruturais dobrados (U, UDC, Cartola e especiais).\n\nFico à disposição! Caso tenha alguma requisição aberta nesta semana, pode responder a este e-mail com as medidas/quantidades para montarmos um comparativo de preço e prazo.\n\nAtenciosamente,\nComercial ${myCompany}`;
 
     if (selectedCadenceLead.nivelProspeccao === "Tentativa de contato") {
       return {
-        stageTitle: "Toque 1 (Abertura): Descobrir Comprador & Enviar Catálogo",
+        stageTitle:
+          "Passo 1 (Abertura): Despertar Interesse & Fazer Pedirem o Catálogo em PDF",
         nextRecommendedLevel: "Catálogo enviado" as ProspectionLevel,
         timingHint:
-          "Ideal para Segunda-feira de manhã: ligue rápido para pegar o nome do comprador(a) e já mande o catálogo no WhatsApp + E-mail.",
-        phoneScript: `"Bom dia! Aqui é da ${myCompany}. Nós fornecemos aços, chapas e perfis estruturais para o setor de ${sector}. Quem é a pessoa responsável pelas compras de aço ou engenharia da ${emp} hoje para eu direcionar nossa tabela técnica?"`,
-        whatsappScript: `${greeting} Aqui é da *${myCompany}* (${representedWebsite}).\n\n${customHook}\n\nPosso te enviar por aqui o nosso catálogo técnico de aços e perfis para você ter a ${myCompany} homologada nas próximas cotações da *${emp}*?`,
-        emailSubject: `Homologação de Fornecimento de Aço & Perfis (${myCompany} -> ${emp})`,
-        emailBody: `${greeting}\n\nEntro em contato pela área comercial da ${myCompany} (${representedWebsite}).\n\n${customHook}\n\nSabemos que no setor de ${sector} atraso de entrega e variação de dobra travam o cronograma de produção. Trabalhamos com pronta-entrega e corte/dobra sob medida.\n\nSeguem nossos canais diretos. Quem seria o ponto focal de compras/engenharia na ${emp} para validarmos uma primeira cotação comparativa sem compromisso?\n\nAtenciosamente,\nComercial ${myCompany}`,
+          "Mande o 1º contato abaixo para fazer o comprador pedir o catálogo. Assim que ele responder 'Pode mandar', copie o Script de Entrega do PDF (caixa roxa abaixo), anexe o PDF e clique em 'Concluir -> Catálogo enviado'.",
+        phoneScript: `"Bom dia! Aqui é da ${myCompany}. Nós fornecemos aços, chapas e perfis estruturais para o setor de ${sector}. Quem cuida das compras de aço da ${emp} para eu enviar o nosso Catálogo Técnico em PDF no WhatsApp ou e-mail?"`,
+        whatsappScript: `${greeting} Aqui é da *${myCompany}* (${representedWebsite}).\n\n${customHook}\n\nPosso te enviar por aqui o nosso **Catálogo Técnico em PDF** com a linha completa de chapas e perfis para você ter a ${myCompany} como opção nas cotações da *${emp}*?`,
+        emailSubject: `Catálogo Técnico de Aços & Perfis (${myCompany} -> ${emp})`,
+        emailBody: `${greeting}\n\nEntro em contato pela área comercial da ${myCompany} (${representedWebsite}).\n\n${customHook}\n\nTrabalhamos com pronta-entrega e corte/dobra sob medida para não travar seu cronograma de produção.\n\nPosso encaminhar nosso Catálogo Técnico em PDF por aqui (ou no WhatsApp do setor de compras) para homologação na ${emp}?\n\nAtenciosamente,\nComercial ${myCompany}`,
+        pdfDeliveryWhatsapp,
+        pdfDeliveryEmailSubject,
+        pdfDeliveryEmailBody,
       };
     }
 
     if (selectedCadenceLead.nivelProspeccao === "Catálogo enviado") {
       return {
-        stageTitle: "Toque 2/3 (Follow-up de Catálogo): Puxar 1 Item p/ Cotação Comparativa",
+        stageTitle:
+          "Passo 2 (Follow-up Pós-PDF): Cobrar Leitura do PDF & Puxar 1 Item p/ Cotar",
         nextRecommendedLevel: "Em contato" as ProspectionLevel,
         timingHint:
-          "Você já enviou o catálogo! Não pergunte apenas 'se viu o catálogo' — peça 1 bitola ou perfil que eles compram todo mês para você cotar e provar preço.",
+          "Você já enviou o PDF do catálogo! Agora o segredo é perguntar se conseguiram abrir o PDF e pedir 1 única bitola/perfil de compra recorrente para você cotar e provar preço.",
         phoneScript: `"${
           resp ? `Oi ${resp}` : "Bom dia"
-        }, tudo bem? Aqui é da ${myCompany}. Te mandei nosso catálogo técnico de aços para a ${emp}. Queria fazer um teste rápido e sem compromisso: qual é a chapa ou perfil que vocês mais consomem no mês aí para eu montar um comparativo de preço e prazo hoje?"`,
-        whatsappScript: `${greeting} Passando para dar um retorno rápido sobre o catálogo da *${myCompany}* que te enviei!\n\n${
+        }, tudo bem? Aqui é da ${myCompany}. Conseguiu abrir aquele PDF do nosso catálogo técnico que te mandei? Queria fazer um teste rápido: qual daquelas chapas ou perfis do PDF vocês mais consomem no mês na ${emp} para eu te passar nosso preço atualizado hoje?"`,
+        whatsappScript: `${greeting} Tudo certo por aí?\n\nConseguiu dar uma olhada no **PDF do catálogo da ${myCompany}** que te enviei por aqui?\n\n${
           hasCustomNote ? `${customHook}\n\n` : ""
-        }Para você testar a nossa competitividade na prática sem precisar mudar nada na operação da *${emp}* hoje: qual é a bitola de chapa ou perfil que vocês compram com maior recorrência? Me manda a especificação que eu te devolvo uma cotação comparativa ainda hoje!`,
-        emailSubject: `Re: Catálogo ${myCompany} — Cotação comparativa p/ ${emp}`,
-        emailBody: `${greeting}\n\nEnviei recentemente nosso catálogo técnico da ${myCompany} para a ${emp}.\n\n${
+        }Para você testar nosso preço e prazo na prática: qual daquelas chapas ou perfis do PDF vocês compram com maior recorrência na *${emp}*? Me manda a medida/bitola que eu te devolvo uma cotação comparativa ainda hoje!`,
+        emailSubject: `Re: Catálogo em PDF ${myCompany} — Cotação comparativa p/ ${emp}`,
+        emailBody: `${greeting}\n\nPassando para confirmar se você conseguiu receber e abrir o Catálogo Técnico em PDF da ${myCompany} que encaminhei para a ${emp}.\n\n${
           hasCustomNote ? `${customHook}\n\n` : ""
-        }Estamos fechando a programação de corte e distribuição desta semana para o setor de ${sector}. Para que você possa avaliar nosso custo por quilo/peça e nosso prazo de entrega:\n\nVocê teria alguma requisição de chapas, telhas ou perfis estruturais em aberto nesta semana para cotarmos como comparativo?\n\nFico no aguardo de uma especificação rápida por aqui ou no WhatsApp.\n\nAbraço,\nComercial ${myCompany}`,
+        }Estamos fechando a programação de corte e distribuição desta semana para o setor de ${sector}. Você teria alguma requisição dos itens do catálogo em aberto nesta semana para fazermos uma cotação comparativa sem compromisso?\n\nAbraço,\nComercial ${myCompany}`,
+        pdfDeliveryWhatsapp,
+        pdfDeliveryEmailSubject,
+        pdfDeliveryEmailBody,
       };
     }
 
     if (selectedCadenceLead.nivelProspeccao === "Em contato") {
       return {
-        stageTitle: "Toque 4 (Fechamento / Destravamento): Converter Conversa em Cotação/Reunião",
+        stageTitle:
+          "Passo 3 (Destravamento Pós-PDF): Converter Conversa em Cotação / Reunião",
         nextRecommendedLevel: "Reunião agendada" as ProspectionLevel,
         timingHint:
-          "Lead quente! O objetivo agora é alinhar condição comercial, prazo de pagamento/entrega ou cravar 10 min de call com compras.",
+          "O lead já recebeu o PDF e respondeu! Agora puxe a lista de materiais da próxima obra ou agende 10 min de conversa.",
         phoneScript: `"${
           resp ? `Fala ${resp}` : "Olá"
-        }, aqui é da ${myCompany}! Como já estamos em contato sobre o fornecimento para a ${emp}, queria alinhar nossa programação desta semana. Consegue me passar a lista da próxima obra/lote ou fazemos um bate-papo rápido de 10 min na quinta-feira?"`,
-        whatsappScript: `${greeting} Tudo certo por aí na *${emp}*?\n\nAproveitando que começamos a semana: estamos reservando lote e programação de entrega na *${myCompany}* para clientes de ${sector}.\n\nConseguimos avançar naquela demanda de aços/perfis nesta semana ou prefere agendar uma conversa rápida de 10 minutos para alinharmos condição comercial e faturamento?`,
+        }, aqui é da ${myCompany}! Como já estamos conversando sobre o fornecimento para a ${emp}, queria alinhar nossa programação desta semana. Consegue me passar a lista da próxima obra/lote ou fazemos um bate-papo rápido de 10 min?"`,
+        whatsappScript: `${greeting} Tudo certo na *${emp}*?\n\nAproveitando a programação da semana na *${myCompany}*: conseguimos orçar aqueles itens do nosso catálogo para a próxima produção de vocês ou prefere agendar uma conversa rápida de 10 minutos para alinharmos condição comercial e prazo de faturamento?`,
         emailSubject: `Condição Comercial & Programação de Entrega — ${myCompany} + ${emp}`,
-        emailBody: `${greeting}\n\nDando sequência ao nosso contato comercial entre ${myCompany} e ${emp}, gostaria de alinhar os próximos passos para atendermos a programação de vocês neste mês.\n\nPodemos agendar uma breve chamada de 10 minutos nesta semana para definirmos tabela, prazos de entrega e cadastro, ou você já prefere me enviar a lista de materiais da próxima produção?\n\nAtenciosamente,\nComercial ${myCompany}`,
+        emailBody: `${greeting}\n\nDando sequência ao nosso contato comercial após o envio do catálogo da ${myCompany}, gostaria de alinhar os próximos passos para atendermos a programação da ${emp} neste mês.\n\nPodemos agendar uma breve chamada de 10 minutos nesta semana para definirmos tabela, prazos de entrega e cadastro, ou você já prefere me enviar a lista de materiais da próxima produção?\n\nAtenciosamente,\nComercial ${myCompany}`,
+        pdfDeliveryWhatsapp,
+        pdfDeliveryEmailSubject,
+        pdfDeliveryEmailBody,
       };
     }
 
     return {
-      stageTitle: "Toque 5 (Confirmação Executiva): Garantir Reunião & Pedido Inicial",
+      stageTitle: "Passo 4 (Confirmação Executiva): Garantir Reunião & Pedido Inicial",
       nextRecommendedLevel: "Reunião agendada" as ProspectionLevel,
       timingHint:
-        "Reunião já agendada! Confirme o horário no WhatsApp e leve a tabela de chapas/perfis de maior giro do setor.",
+        "Reunião já agendada! Confirme o horário no WhatsApp e leve a tabela de chapas/perfis de maior giro do catálogo PDF.",
       phoneScript: `"${
         resp ? `Oi ${resp}` : "Olá"
-      }, passando apenas para confirmar nossa reunião agendada entre a ${myCompany} e a ${emp}. Já separei as condições especiais para o setor de ${sector}."`,
-      whatsappScript: `${greeting} Passando para confirmar nossa reunião agendada entre a *${myCompany}* e a *${emp}*!\n\nJá deixei separado o portfólio de chapas, bobinas e perfis focados em ${sector}. Se quiser me adiantar alguma medida específica para eu já levar o preço calculado, pode mandar por aqui!`,
+      }, passando apenas para confirmar nossa reunião agendada entre a ${myCompany} e a ${emp}. Já separei as condições especiais dos itens do catálogo para o setor de ${sector}."`,
+      whatsappScript: `${greeting} Passando para confirmar nossa reunião agendada entre a *${myCompany}* e a *${emp}*!\n\nJá deixei separado o nosso catálogo em PDF e a tabela comercial focada em ${sector}. Se quiser me adiantar alguma medida específica para eu já levar o preço calculado, pode mandar por aqui!`,
       emailSubject: `Confirmação de Reunião Técnica/Comercial — ${myCompany} & ${emp}`,
-      emailBody: `${greeting}\n\nConfirmando nossa agenda comercial entre ${myCompany} e ${emp}.\n\nLevaremos nossas condições de fornecimento recorrente para a linha de ${sector}. Caso queira adiantar algum desenho ou listagem de materiais para já apresentarmos a proposta calculada na reunião, basta responder a este e-mail.\n\nAté breve,\nComercial ${myCompany}`,
+      emailBody: `${greeting}\n\nConfirmando nossa agenda comercial entre ${myCompany} e ${emp}.\n\nLevaremos nossas condições de fornecimento recorrente baseadas no catálogo técnico para a linha de ${sector}. Caso queira adiantar algum desenho ou listagem de materiais para já apresentarmos a proposta calculada na reunião, basta responder a este e-mail.\n\nAté breve,\nComercial ${myCompany}`,
+      pdfDeliveryWhatsapp,
+      pdfDeliveryEmailSubject,
+      pdfDeliveryEmailBody,
     };
   }, [selectedCadenceLead, activeTab, myCompany, representedWebsite]);
 
@@ -1680,6 +1686,84 @@ export function GoogleSheetsLeadHunter({
               })}
             </div>
 
+            {/* PAINEL ESPECIAL DE SEGUNDA-FEIRA (D1): MAPEAMENTO DE SETORES & ABASTECIMENTO DE PLANILHAS */}
+            {selectedCadenceDay === "D1" && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/15 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
+                      ⚡ Missão de Segunda-Feira (D1): Mapear Setores &amp; Abastecer Planilhas da Semana
+                    </span>
+                    <p className="text-[11px] text-zinc-300 mt-0.5">
+                      Antes de iniciar os disparos na Terça-feira, garanta que cada aba da sua planilha tenha pelo menos <strong>15 a 20 empresas únicas verificadas</strong>. Clique em qualquer aba vazia/baixa abaixo para abastecer agora:
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isExtracting}
+                    onClick={handleExtractLeads}
+                    className="rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 px-3.5 py-2 text-xs font-bold text-black shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    <span>
+                      {isExtracting
+                        ? "Abastecendo Aba..."
+                        : `Abastecer "${activeTab}" (+${batchLimit} Leads)`}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                  {nicheIntelligence.stats.map((st) => {
+                    const needsSupply = st.total < 15;
+                    return (
+                      <div
+                        key={st.tab}
+                        className={`rounded-lg border p-2.5 flex flex-col justify-between gap-2 ${
+                          needsSupply
+                            ? "border-amber-500/35 bg-amber-500/10"
+                            : "border-emerald-500/30 bg-black/40"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-white truncate">
+                              {st.tab}
+                            </span>
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[9px] font-mono font-bold ${
+                                needsSupply
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : "bg-emerald-500/20 text-emerald-300"
+                              }`}
+                            >
+                              {needsSupply ? "Abastecer Hoje" : "Pronta p/ Semana"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-400 font-mono mt-1">
+                            Base atual: <strong className="text-white">{st.total}</strong> empresas
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(st.tab);
+                            setTargetSegment(st.tab);
+                          }}
+                          className="w-full rounded bg-white/10 hover:bg-white/20 px-2 py-1 text-[10px] font-semibold text-white transition-colors cursor-pointer"
+                        >
+                          {activeTab === st.tab
+                            ? "✓ Aba Selecionada"
+                            : "Selecionar p/ Abastecer"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 2. FILA DE PRIORIDADE DO DIA + COPILOTO DE SCRIPTS MULTICANAL DA EMPRESA SELECIONADA */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
               {/* Coluna Esquerda (4 cols): Fila Prioritária de Empresas para Acionar Neste Dia */}
@@ -1695,12 +1779,12 @@ export function GoogleSheetsLeadHunter({
                     </span>
                   </div>
                   <p className="text-[11px] text-zinc-400">
-                    Ordem recomendada de ataque para hoje na aba{" "}
+                    Ordem recomendada de ataque na aba{" "}
                     <strong className="text-white">{activeTab}</strong>:
                   </p>
                 </div>
 
-                <div className="max-h-[340px] overflow-y-auto space-y-1.5 pr-1">
+                <div className="max-h-[420px] overflow-y-auto space-y-1.5 pr-1">
                   {cadenceQueueForDay.map((item, idx) => {
                     const isCurrentLead = selectedCadenceLead?.id === item.id;
                     const alreadyTouchedToday = (item.observacoes || "").includes("OK]");
@@ -1761,7 +1845,7 @@ export function GoogleSheetsLeadHunter({
                 </div>
               </div>
 
-              {/* Coluna Direita (8 cols): Copiloto de Execução (Ligação + WhatsApp + E-mail + Botão Avançar Etapa) */}
+              {/* Coluna Direita (8 cols): Copiloto de Execução (Ligação + WhatsApp + E-mail + Entrega do PDF) */}
               <div className="lg:col-span-8 rounded-xl border border-white/10 bg-black/50 p-4 space-y-4">
                 {selectedCadenceLead && leadCadencePlaybook ? (
                   <>
@@ -1837,12 +1921,14 @@ export function GoogleSheetsLeadHunter({
                           </p>
                         </div>
 
-                        {/* Script de WhatsApp Direto */}
+                        {/* Script de WhatsApp da Etapa Atual */}
                         <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/15 p-3 space-y-2">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold flex items-center gap-1.5">
                               <MessageCircle className="h-3.5 w-3.5" />
-                              <span>2. Script de Follow-up WhatsApp</span>
+                              <span>
+                                2. WhatsApp ({selectedCadenceLead.nivelProspeccao})
+                              </span>
                             </span>
                             <div className="flex items-center gap-1.5">
                               <button
@@ -1946,6 +2032,87 @@ export function GoogleSheetsLeadHunter({
                           </pre>
                         </div>
                       </div>
+                    </div>
+
+                    {/* BLOCO ESPECIAL: QUANDO PEDEM O CATÁLOGO -> MENSAGEM PARA ENVIAR JUNTO COM O ARQUIVO PDF */}
+                    <div className="rounded-xl border border-purple-500/35 bg-purple-950/20 p-3.5 space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[11px] font-mono uppercase tracking-wider text-purple-300 font-bold">
+                            📄 Respondeu &ldquo;Pode mandar o catálogo&rdquo;? Use este texto junto com o Arquivo PDF:
+                          </span>
+                          <p className="text-[10px] text-zinc-400">
+                            Copie ou abra o WhatsApp/E-mail abaixo, anexe o PDF do Catálogo da {myCompany} e clique em <strong>&ldquo;Marcar PDF Enviado&rdquo;</strong>.
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                leadCadencePlaybook.pdfDeliveryWhatsapp
+                              );
+                              setCopiedCadenceField("pdf_wpp");
+                              setTimeout(() => setCopiedCadenceField(null), 2500);
+                            }}
+                            className="rounded-lg bg-white/10 hover:bg-white/20 px-2.5 py-1 text-[10px] font-semibold text-white cursor-pointer"
+                          >
+                            {copiedCadenceField === "pdf_wpp"
+                              ? "Texto PDF Copiado!"
+                              : "Copiar Texto p/ WhatsApp"}
+                          </button>
+
+                          {sanitizePhoneE164(selectedCadenceLead.contato).length >=
+                            12 && (
+                            <a
+                              href={`https://wa.me/${sanitizePhoneE164(
+                                selectedCadenceLead.contato
+                              )}?text=${encodeURIComponent(
+                                leadCadencePlaybook.pdfDeliveryWhatsapp
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-lg bg-purple-500 hover:bg-purple-400 px-2.5 py-1 text-[10px] font-bold text-black"
+                            >
+                              Abrir WhatsApp p/ Anexar PDF &rarr;
+                            </a>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCell(
+                                selectedCadenceLead.id,
+                                "nivelProspeccao",
+                                "Catálogo enviado"
+                              );
+                              const todayStr = new Date().toLocaleDateString(
+                                "pt-BR",
+                                { day: "2-digit", month: "2-digit" }
+                              );
+                              updateCell(
+                                selectedCadenceLead.id,
+                                "observacoes",
+                                `[PDF Enviado ${todayStr}] ${
+                                  selectedCadenceLead.observacoes || ""
+                                }`.trim()
+                              );
+                              setFeedbackBanner({
+                                type: "success",
+                                text: `✦ Catálogo em PDF registrado como enviado para "${selectedCadenceLead.empresa}"!`,
+                              });
+                            }}
+                            className="rounded-lg border border-purple-400/50 bg-purple-500/20 hover:bg-purple-500/30 px-2.5 py-1 text-[10px] font-bold text-purple-200 cursor-pointer"
+                          >
+                            ✓ Marcar PDF Enviado
+                          </button>
+                        </div>
+                      </div>
+
+                      <pre className="whitespace-pre-wrap font-sans text-[11px] text-zinc-200 leading-relaxed bg-black/40 rounded-lg p-2.5 border border-white/5">
+                        {leadCadencePlaybook.pdfDeliveryWhatsapp}
+                      </pre>
                     </div>
                   </>
                 ) : (
