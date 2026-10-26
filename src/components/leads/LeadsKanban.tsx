@@ -35,10 +35,18 @@ import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
 import { TeamInviteModal } from "./TeamInviteModal";
-import { GoogleSheetsLeadHunter } from "./GoogleSheetsLeadHunter";
+import {
+  GoogleSheetsLeadHunter,
+  type VendasWorkspaceTab,
+} from "./GoogleSheetsLeadHunter";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
-import { FileSpreadsheet, Kanban as KanbanIcon } from "lucide-react";
+import {
+  Compass,
+  FileSpreadsheet,
+  Kanban as KanbanIcon,
+  Terminal,
+} from "lucide-react";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
@@ -66,27 +74,27 @@ const COLUMNS: ColumnConfig[] = [
     id: "new",
     title: "Novo Lead",
     icon: Sparkles,
-    accentColor: "text-platinum",
-    badgeBg: "bg-white/10 text-platinum",
+    accentColor: "text-[#7fa9f7]",
+    badgeBg: "bg-[#0f1b33] text-[#7fa9f7]",
   },
   {
     id: "negotiation",
     title: "Em Prospecção",
     icon: Clock,
-    accentColor: "text-emerald-400",
-    badgeBg: "bg-emerald-400/10 text-emerald-400 border border-emerald-500/20",
+    accentColor: "text-[#e8c267]",
+    badgeBg: "bg-[#2b2410] text-[#e8c267]",
   },
   {
     id: "closed",
     title: "Fechado",
     icon: CheckCircle2,
-    accentColor: "text-accent",
-    badgeBg: "bg-accent text-void font-semibold",
+    accentColor: "text-[#14d06e]",
+    badgeBg: "bg-[#0c2b1c] text-[#14d06e]",
   },
 ];
 
 /**
- * Calcula dados visuais para a próxima atividade agendada com destaque de urgência
+ * Calcula dados visuais para a próxima atividade agendada no padrão irvo.com.br
  */
 function getActivityInfo(date?: Date | string | null, type?: string | null) {
   if (!date) return null;
@@ -117,16 +125,14 @@ function getActivityInfo(date?: Date | string | null, type?: string | null) {
     minute: "2-digit",
   }).format(activityDate);
 
-  const formattedStr = `${label}: ${dayMonth} - ${time}`;
+  const formattedStr = `${label}: ${dayMonth} · ${time}`;
 
-  let badgeClass = "border-glass-border bg-void/60 text-platinum";
+  let badgeClass = "bg-[#0d0d0d] ring-1 ring-[#2e2e2e] text-[#afafaf]";
 
   if (isToday) {
-    badgeClass =
-      "border-amber-400/80 bg-amber-400/20 text-amber-300 font-bold shadow-[0_0_12px_rgba(251,191,36,0.3)] animate-pulse";
+    badgeClass = "bg-[#2b2410] text-[#e8c267] font-semibold";
   } else if (isOverdue) {
-    badgeClass =
-      "border-rose-500/80 bg-rose-500/20 text-rose-300 font-bold shadow-[0_0_12px_rgba(244,63,94,0.3)]";
+    badgeClass = "bg-[#2b1310] text-[#ff5d48] font-semibold";
   }
 
   return {
@@ -151,7 +157,8 @@ export function LeadsKanban({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [viewMode, setViewMode] = useState<"sheets" | "kanban" | "all">("all");
+  const [activeWorkspaceTab, setActiveWorkspaceTab] =
+    useState<VendasWorkspaceTab>("planilha");
 
   const isCommercial = currentUser?.role === "commercial";
   const myUserId = currentUser?.id || "";
@@ -370,114 +377,137 @@ export function LeadsKanban({
     }).format(d);
   };
 
+  const WORKSPACE_TABS: {
+    id: VendasWorkspaceTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string | number;
+  }[] = [
+    {
+      id: "planilha",
+      label: "Planilha & Captação",
+      icon: FileSpreadsheet,
+    },
+    {
+      id: "cadencia",
+      label: "Cadência & Catálogo PDF",
+      icon: Calendar,
+    },
+    {
+      id: "nichos",
+      label: "Mapa de Nichos",
+      icon: Compass,
+    },
+    {
+      id: "kanban",
+      label: "Pipeline Kanban",
+      icon: KanbanIcon,
+      badge: displayedLeads.length,
+    },
+    {
+      id: "integracao",
+      label: "Conexão & Auditoria",
+      icon: Terminal,
+    },
+  ];
+
   return (
-    <div className="space-y-8">
-      {/* Barra Operacional na estética irvo.com.br */}
-      <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-4 lg:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* Seletor de Operador Ativo ou Silo Pessoal */}
-          {isCommercial ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white">
-                <span className="size-2 rounded-full bg-[#14d06e]" />
-                <span className="font-semibold">Carteira:</span>
-                <span>{currentUser?.name || "Operador Comercial"}</span>
-              </div>
-              <span className="hidden sm:inline-block text-xs text-[#afafaf] tabular-nums">
-                {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
-              </span>
-            </div>
-          ) : (
-            <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Users className="size-4 text-[#afafaf]" />
-                <span className="text-xs font-medium text-[#afafaf]">
-                  Operador:
-                </span>
-              </div>
+    <div className="space-y-4">
+      {/* Barra de Navegação por Abas Dedicadas (Estética irvo.com.br) */}
+      <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* 5 Abas de Trabalho — Cada ferramenta em seu devido lugar */}
+          <nav className="flex flex-wrap items-center gap-1">
+            {WORKSPACE_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeWorkspaceTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveWorkspaceTab(tab.id)}
+                  className={`inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
+                    isActive
+                      ? "bg-white text-[#0d0d0d]"
+                      : "text-[#afafaf] hover:text-white hover:bg-[#1a1a1a]"
+                  }`}
+                >
+                  <Icon className="size-3.5 shrink-0" />
+                  <span>{tab.label}</span>
+                  {tab.badge !== undefined && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
+                        isActive
+                          ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
+                          : "bg-[#262626] text-[#afafaf]"
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
 
-              <select
-                value={activeOperator}
-                onChange={(e) => setActiveOperator(e.target.value)}
-                className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs font-medium text-white focus:ring-white focus:outline-none cursor-pointer"
-              >
-                <option value="todos">Todos os Operadores ({leadsList.length})</option>
-                {operators.map((op) => {
-                  const count = leadsList.filter(
-                    (l) => (l.ownerId || operators[0]?.id) === op.id
-                  ).length;
-                  return (
-                    <option key={op.id} value={op.id}>
-                      {op.name} ({op.role}) — {count} contas
-                    </option>
-                  );
-                })}
-              </select>
-
-              <span className="hidden sm:inline-block text-xs text-[#afafaf] border-l border-[#2e2e2e] pl-3 tabular-nums">
-                {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
-              </span>
-            </div>
-          )}
-
-          {/* Alternador Planilha/Kanban, Convidar Equipe, Guia & Novo Lead */}
+          {/* Ações Rápidas Globais + Filtro de Operador quando no Kanban */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("all")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                  viewMode === "all"
-                    ? "bg-white text-[#0d0d0d]"
-                    : "text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <span>Planilha + Kanban</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("sheets")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                  viewMode === "sheets"
-                    ? "bg-white text-[#0d0d0d]"
-                    : "text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <span>Só Planilha</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("kanban")}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                  viewMode === "kanban"
-                    ? "bg-white text-[#0d0d0d]"
-                    : "text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <span>Só Kanban</span>
-              </button>
-            </div>
+            {activeWorkspaceTab === "kanban" &&
+              (isCommercial ? (
+                <div className="flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white">
+                  <span className="size-2 rounded-full bg-[#14d06e]" />
+                  <span className="font-semibold">Carteira:</span>
+                  <span>{currentUser?.name || "Operador Comercial"}</span>
+                </div>
+              ) : (
+                <div
+                  data-tour="kanban-operator-filter"
+                  className="flex items-center gap-2"
+                >
+                  <select
+                    value={activeOperator}
+                    onChange={(e) => setActiveOperator(e.target.value)}
+                    className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1.5 text-xs font-medium text-white focus:ring-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="todos">
+                      Todos os Operadores ({leadsList.length})
+                    </option>
+                    {operators.map((op) => {
+                      const count = leadsList.filter(
+                        (l) => (l.ownerId || operators[0]?.id) === op.id
+                      ).length;
+                      return (
+                        <option key={op.id} value={op.id}>
+                          {op.name} ({op.role}) — {count} contas
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              ))}
 
             <button
               type="button"
               onClick={() => setIsInviteModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#262626] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#262626] transition-colors cursor-pointer"
             >
               <Users className="size-3.5 text-[#afafaf]" />
               <span>Equipe</span>
             </button>
 
-            <StartTourButton
-              steps={KANBAN_TOUR_STEPS}
-              variant="secondary"
-              label="Guia"
-            />
+            {activeWorkspaceTab === "kanban" && (
+              <StartTourButton
+                steps={KANBAN_TOUR_STEPS}
+                variant="secondary"
+                label="Guia"
+              />
+            )}
 
             <button
               data-tour="kanban-new-lead"
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 rounded-md bg-white px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
             >
               <Plus className="size-3.5" />
               <span>Novo Lead</span>
@@ -486,288 +516,248 @@ export function LeadsKanban({
         </div>
       </div>
 
-      {/* EXTRATOR AUTOMÁTICO DO GOOGLE + PLANILHA GOOGLE SHEETS (PADRÃO IMOBILIÁRIO / GOFER) */}
-      {(viewMode === "all" || viewMode === "sheets") && (
+      {/* Módulos Google Sheets (Planilha, Cadência, Nichos e Integração) — Mantidos em memória p/ troca instantânea */}
+      <div className={activeWorkspaceTab === "kanban" ? "hidden" : "block"}>
         <GoogleSheetsLeadHunter
           companyName={companyName || "Gofer Metais"}
           onLeadImportedToKanban={handleLeadCreated}
+          activeWorkspaceTab={activeWorkspaceTab}
+          onWorkspaceTabChange={setActiveWorkspaceTab}
         />
-      )}
+      </div>
 
-      {/* Board Kanban com Drag-and-Drop Bidirecional */}
-      {(viewMode === "all" || viewMode === "kanban") && (isMounted ? (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div data-tour="kanban-columns" className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-            {COLUMNS.map((column) => {
-              const columnLeads = getLeadsByStatus(column.id);
-              const ColumnIcon = column.icon;
+      {/* ABA 4: PIPELINE KANBAN (ESTÉTICA ARQUITETÔNICA IRVO.COM.BR) */}
+      {activeWorkspaceTab === "kanban" &&
+        (isMounted ? (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div
+              data-tour="kanban-columns"
+              className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-[#2e2e2e]"
+            >
+              {COLUMNS.map((column) => {
+                const columnLeads = getLeadsByStatus(column.id);
+                const ColumnIcon = column.icon;
 
-              return (
-                <div
-                  key={column.id}
-                  className="relative overflow-hidden flex flex-col rounded-3xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-2xl shadow-2xl min-h-[560px]"
-                >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+                return (
+                  <div
+                    key={column.id}
+                    className="flex flex-col border-r border-b border-[#2e2e2e] bg-[#0d0d0d] min-h-[540px]"
+                  >
+                    {/* Cabeçalho da Coluna */}
+                    <div className="flex items-center justify-between border-b border-[#2e2e2e] px-4 py-3.5 bg-[#1a1a1a]">
+                      <div className="flex items-center gap-2">
+                        <ColumnIcon className={`size-4 ${column.accentColor}`} />
+                        <h2 className="text-xs font-semibold text-white">
+                          {column.title}
+                        </h2>
+                      </div>
 
-                  {/* Cabeçalho da Coluna */}
-                  <div className="flex items-center justify-between border-b border-white/[0.08] p-5 bg-white/[0.02]">
-                    <div className="flex items-center gap-2.5">
-                      <ColumnIcon className={`h-4 w-4 ${column.accentColor}`} />
-                      <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                        {column.title}
-                      </h2>
+                      <span
+                        className={`inline-flex h-5 items-center rounded-full px-2.5 text-xs font-semibold tabular-nums ${column.badgeBg}`}
+                      >
+                        {columnLeads.length}
+                      </span>
                     </div>
 
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-mono ${column.badgeBg}`}
-                    >
-                      {columnLeads.length}
-                    </span>
-                  </div>
+                    {/* Área Droppable da Coluna */}
+                    <Droppable droppableId={column.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`flex flex-col flex-1 p-3.5 space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto transition-colors ${
+                            snapshot.isDraggingOver ? "bg-[#1a1a1a]/70" : ""
+                          }`}
+                        >
+                          {columnLeads.map((lead, index) => {
+                            const parsed = parseLeadInfo(lead.leadName);
+                            const completed =
+                              cadenceMap[lead.id] ||
+                              lead.cadenceState?.completedSteps ||
+                              [];
+                            const actionInfo = getNextCadenceAction(
+                              lead.createdAt,
+                              completed,
+                              lead.status
+                            );
+                            const op = getOperator(lead.ownerId);
+                            const activityInfo = getActivityInfo(
+                              lead.nextActivityDate,
+                              lead.nextActivityType
+                            );
 
-                  {/* Área Droppable da Coluna */}
-                  <Droppable droppableId={column.id}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={`flex flex-col flex-1 p-3 space-y-3 min-h-[460px] transition-colors ${
-                          snapshot.isDraggingOver
-                            ? "bg-carbon-muted/70 ring-1 ring-accent/30"
-                            : ""
-                        }`}
-                      >
-                        {columnLeads.map((lead, index) => {
-                          const parsed = parseLeadInfo(lead.leadName);
-
-                          // Inteligência Visual Temporal derivada dos dados do PostgreSQL
-                          const completed =
-                            cadenceMap[lead.id] ||
-                            lead.cadenceState?.completedSteps ||
-                            [];
-                          const actionInfo = getNextCadenceAction(
-                            lead.createdAt,
-                            completed,
-                            lead.status
-                          );
-
-                          // Resolução do Dono da Conta (Ownership)
-                          const op = getOperator(lead.ownerId);
-
-                          // Inteligência de Agenda & Atividade Agendada
-                          const activityInfo = getActivityInfo(
-                            lead.nextActivityDate,
-                            lead.nextActivityType
-                          );
-
-                          return (
-                            <Draggable
-                              key={lead.id}
-                              draggableId={lead.id}
-                              index={index}
-                            >
-                              {(dragProvided, dragSnapshot) => (
-                                <div
-                                  ref={dragProvided.innerRef}
-                                  {...dragProvided.draggableProps}
-                                  {...dragProvided.dragHandleProps}
-                                  onClick={(e) => {
-                                    if (dragSnapshot.isDragging) return;
-                                    handleOpenSheet(lead);
-                                  }}
-                                  className={`rounded-2xl border p-5 space-y-3.5 transition-all select-none group cursor-grab active:cursor-grabbing ${
-                                    dragSnapshot.isDragging
-                                      ? "border-white/40 shadow-2xl scale-[1.02] ring-2 ring-white/20 z-50 bg-[#0d0d0d]"
-                                      : "border-white/10 bg-black/40 hover:border-white/25 hover:bg-black/60 shadow-lg"
-                                  }`}
-                                >
-                                  {/* Topo do Card: Nome, Empresa e Alça */}
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="space-y-0.5 min-w-0">
-                                      <div className="font-semibold text-xs text-platinum group-hover:text-accent transition-colors leading-snug truncate">
-                                        {parsed.name}
+                            return (
+                              <Draggable
+                                key={lead.id}
+                                draggableId={lead.id}
+                                index={index}
+                              >
+                                {(dragProvided, dragSnapshot) => (
+                                  <div
+                                    ref={dragProvided.innerRef}
+                                    {...dragProvided.draggableProps}
+                                    {...dragProvided.dragHandleProps}
+                                    onClick={() => {
+                                      if (dragSnapshot.isDragging) return;
+                                      handleOpenSheet(lead);
+                                    }}
+                                    className={`rounded-lg p-4 space-y-3 transition-colors select-none group cursor-grab active:cursor-grabbing ${
+                                      dragSnapshot.isDragging
+                                        ? "bg-[#262626] ring-1 ring-[#7fa9f7]/60 z-50"
+                                        : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626]"
+                                    }`}
+                                  >
+                                    {/* Topo do Card: Nome, Empresa e Alça */}
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="space-y-0.5 min-w-0">
+                                        <div className="font-semibold text-sm text-white truncate">
+                                          {parsed.name}
+                                        </div>
+                                        {parsed.company && (
+                                          <div className="flex items-center gap-1.5 text-xs text-[#afafaf]">
+                                            <Building2 className="size-3.5 shrink-0" />
+                                            <span className="truncate">
+                                              {parsed.company}
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
-                                      {parsed.company && (
-                                        <div className="flex items-center gap-1 text-[11px] text-sub">
-                                          <Building2 className="h-3 w-3 shrink-0" />
-                                          <span className="truncate">{parsed.company}</span>
+
+                                      <div
+                                        title="Arrastar Card"
+                                        className="text-[#757575] group-hover:text-white transition-colors p-0.5 rounded shrink-0"
+                                      >
+                                        <GripVertical className="size-3.5" />
+                                      </div>
+                                    </div>
+
+                                    {/* Linha Operacional: Setor/Cargo & Valor */}
+                                    <div className="flex items-center justify-between gap-2 text-xs text-[#afafaf] bg-[#0d0d0d] rounded-md px-2.5 py-1.5 ring-1 ring-[#2e2e2e]">
+                                      <span className="truncate">
+                                        {lead.cadenceState?.roleTitle ||
+                                          "Decisor Comercial"}
+                                      </span>
+                                      {lead.cadenceState?.estimatedValue ? (
+                                        <span className="font-semibold text-white tabular-nums shrink-0">
+                                          {lead.cadenceState.estimatedValue}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[11px] text-[#757575] shrink-0">
+                                          Cotação aberta
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Próxima Atividade Agendada */}
+                                    {activityInfo && (
+                                      <div
+                                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs ${activityInfo.badgeClass}`}
+                                      >
+                                        <Calendar className="size-3.5 shrink-0" />
+                                        <span className="truncate tabular-nums">
+                                          {activityInfo.formattedStr}
+                                        </span>
+                                        {activityInfo.isToday && (
+                                          <span className="ml-auto text-[10px] font-semibold">
+                                            Hoje
+                                          </span>
+                                        )}
+                                        {activityInfo.isOverdue && (
+                                          <span className="ml-auto text-[10px] font-semibold">
+                                            Atrasado
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Próxima Ação da Cadência & Responsável */}
+                                    <div className="flex items-center justify-between gap-2 border-y border-[#2e2e2e] py-2">
+                                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0f1b33] px-2.5 py-0.5 text-[11px] font-semibold text-[#7fa9f7] truncate">
+                                        <span className="truncate">
+                                          {actionInfo.fullLabel}
+                                        </span>
+                                      </span>
+
+                                      <span
+                                        title={`Responsável: ${op.name} (${op.role})`}
+                                        className="inline-flex items-center gap-1 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-2 py-0.5 text-[11px] text-[#afafaf] shrink-0"
+                                      >
+                                        <User className="size-3" />
+                                        <span>{op.shortName}</span>
+                                      </span>
+                                    </div>
+
+                                    {/* Contatos Rápidos */}
+                                    <div className="space-y-1 text-xs text-[#afafaf]">
+                                      {lead.leadEmail && (
+                                        <div
+                                          className="flex items-center gap-1.5 truncate"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <Mail className="size-3.5 text-[#757575] shrink-0" />
+                                          <a
+                                            href={`mailto:${lead.leadEmail}`}
+                                            className="truncate text-[#7fa9f7] hover:underline"
+                                          >
+                                            {lead.leadEmail}
+                                          </a>
+                                        </div>
+                                      )}
+                                      {lead.leadPhone && (
+                                        <div
+                                          className="flex items-center gap-1.5 tabular-nums"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <Phone className="size-3.5 text-[#757575] shrink-0" />
+                                          <a
+                                            href={`tel:${lead.leadPhone}`}
+                                            className="hover:text-white transition-colors"
+                                          >
+                                            {lead.leadPhone}
+                                          </a>
                                         </div>
                                       )}
                                     </div>
 
-                                    <div
-                                      title="Arrastar Card"
-                                      className="text-sub/40 group-hover:text-platinum transition-colors p-0.5 rounded shrink-0"
-                                    >
-                                      <GripVertical className="h-3.5 w-3.5" />
-                                    </div>
-                                  </div>
-
-                                  {/* Linha Operacional do Hunter: Cargo & Valor Estimado */}
-                                  <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-sub bg-void/50 rounded px-2.5 py-1.5 border border-glass-border/40">
-                                    <span className="truncate max-w-[150px] text-sub">
-                                      {lead.cadenceState?.roleTitle || "Decisor Comercial"}
-                                    </span>
-                                    {lead.cadenceState?.estimatedValue ? (
-                                      <span className="font-bold text-accent shrink-0">
-                                        {lead.cadenceState.estimatedValue}
+                                    {/* Rodapé do Card: Origem e Data */}
+                                    <div className="flex items-center justify-between pt-1 text-[11px] text-[#757575] tabular-nums">
+                                      <span className="truncate max-w-[140px]">
+                                        {lead.origin || "Prospecção B2B"}
                                       </span>
-                                    ) : (
-                                      <span className="text-[10px] text-sub/50 italic shrink-0">
-                                        Valor a definir
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* Badge de Próxima Atividade Agendada (com urgência para hoje) */}
-                                  {activityInfo && (
-                                    <div
-                                      className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 text-[10px] font-mono border transition-all ${activityInfo.badgeClass}`}
-                                    >
-                                      <Calendar className="h-3 w-3 shrink-0" />
-                                      <span className="truncate">
-                                        📅 {activityInfo.formattedStr}
-                                      </span>
-                                      {activityInfo.isToday && (
-                                        <span className="ml-auto text-[8px] uppercase tracking-wider rounded bg-amber-400/30 px-1 py-0.2 shrink-0">
-                                          Hoje
-                                        </span>
-                                      )}
-                                      {activityInfo.isOverdue && (
-                                        <span className="ml-auto text-[8px] uppercase tracking-wider rounded bg-rose-500/30 px-1 py-0.2 shrink-0">
-                                          Atrasado
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Inteligência Operacional: Próxima Ação da Cadência & Dono */}
-                                  <div className="flex items-center justify-between gap-2 border-y border-glass-border/60 py-2">
-                                    <div className="flex items-center gap-1.5 min-w-0">
-                                      <span className="text-[9px] font-mono uppercase tracking-wider text-sub shrink-0">
-                                        Cadência:
-                                      </span>
-                                      <span
-                                        className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-mono border truncate ${actionInfo.badgeClass}`}
-                                      >
-                                        {actionInfo.type === "overdue" && (
-                                          <AlertCircle className="h-3 w-3 shrink-0 text-rose-400" />
-                                        )}
-                                        {actionInfo.type === "today" && (
-                                          <Zap className="h-3 w-3 shrink-0 text-amber-300" />
-                                        )}
-                                        {actionInfo.type === "future" && (
-                                          <Clock className="h-3 w-3 shrink-0 text-sub" />
-                                        )}
-                                        {actionInfo.type === "completed" && (
-                                          <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
-                                        )}
-                                        <span className="truncate">{actionInfo.fullLabel}</span>
-                                      </span>
-                                    </div>
-
-                                    {/* Dono do Lead (Silo de Propriedade) */}
-                                    <span
-                                      title={`Responsável: ${op.name} (${op.role})`}
-                                      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-mono shrink-0 ${op.badgeClass}`}
-                                    >
-                                      <User className="h-2.5 w-2.5" />
-                                      <span>{op.shortName}</span>
-                                    </span>
-                                  </div>
-
-                                  {/* Contatos Rápidos */}
-                                  <div className="space-y-1 text-[11px] text-sub font-mono">
-                                    {lead.leadEmail && (
-                                      <div
-                                        className="flex items-center gap-1.5 truncate"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <Mail className="h-3 w-3 text-sub shrink-0" />
-                                        <a
-                                          href={`mailto:${lead.leadEmail}`}
-                                          className="truncate hover:text-platinum transition-colors"
-                                        >
-                                          {lead.leadEmail}
-                                        </a>
-                                      </div>
-                                    )}
-                                    {lead.leadPhone && (
-                                      <div
-                                        className="flex items-center gap-1.5"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <Phone className="h-3 w-3 text-sub shrink-0" />
-                                        <a
-                                          href={`tel:${lead.leadPhone}`}
-                                          className="hover:text-platinum transition-colors"
-                                        >
-                                          {lead.leadPhone}
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Rodapé do Card: Origem e Data */}
-                                  <div className="flex items-center justify-between border-t border-glass-border/60 pt-2.5 text-[10px] font-mono text-sub">
-                                    <div className="flex items-center gap-1">
-                                      <Globe className="h-3 w-3 text-sub" />
-                                      {lead.origin?.includes("Estúdio") ? (
-                                        <span className="truncate max-w-[170px] font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px] shadow-sm">
-                                          {lead.origin}
-                                        </span>
-                                      ) : (
-                                        <span className="truncate max-w-[120px]">
-                                          {lead.origin || "Direto"}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div className="flex items-center gap-1 text-[10px]">
-                                      <Calendar className="h-3 w-3 text-sub" />
                                       <span>{formatDate(lead.createdAt)}</span>
                                     </div>
                                   </div>
-                                </div>
-                              )}
-                            </Draggable>
-                          );
-                        })}
-                        {provided.placeholder}
+                                )}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
 
-                        {/* Estado Vazio da Coluna */}
-                        {columnLeads.length === 0 && (
-                          <div className="flex flex-1 items-center justify-center p-8 text-center text-sub border border-dashed border-glass-border/60 rounded-lg pointer-events-none">
-                            <span className="text-[11px] font-mono">
-                              Nenhum lead nesta etapa
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Droppable>
-                </div>
-              );
-            })}
-          </div>
-        </DragDropContext>
-      ) : (
-        /* Fallback durante hidratação SSR */
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {COLUMNS.map((col) => (
-            <div
-              key={col.id}
-              className="rounded-xl border border-glass-border bg-carbon p-4 min-h-[520px] animate-pulse"
-            >
-              <div className="h-5 w-28 bg-carbon-muted rounded mb-4" />
-              <div className="space-y-3">
-                <div className="h-24 bg-carbon-muted/50 rounded-lg" />
-                <div className="h-24 bg-carbon-muted/50 rounded-lg" />
-              </div>
+                          {columnLeads.length === 0 && (
+                            <div className="flex flex-1 items-center justify-center p-8 text-center text-[#757575] rounded-lg bg-[#000000] ring-1 ring-[#2e2e2e] pointer-events-none">
+                              <span className="text-xs">
+                                Nenhum lead nesta etapa
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
-      ))}
+          </DragDropContext>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-[#2e2e2e]">
+            {COLUMNS.map((col) => (
+              <div
+                key={col.id}
+                className="border-r border-b border-[#2e2e2e] bg-[#0d0d0d] p-4 min-h-[520px] animate-pulse"
+              />
+            ))}
+          </div>
+        ))}
 
       {/* Slide-over Sheet Lateral: Dossiê Completo do Vendedor (Hunter) */}
       <LeadDetailsSheet
@@ -789,7 +779,13 @@ export function LeadsKanban({
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onLeadCreated={handleLeadCreated}
-        defaultOwnerId={isCommercial && myUserId ? myUserId : (activeOperator !== "todos" ? activeOperator : operators[0]?.id)}
+        defaultOwnerId={
+          isCommercial && myUserId
+            ? myUserId
+            : activeOperator !== "todos"
+            ? activeOperator
+            : operators[0]?.id
+        }
         operators={operators}
         companyId={currentUser?.company_id}
       />
