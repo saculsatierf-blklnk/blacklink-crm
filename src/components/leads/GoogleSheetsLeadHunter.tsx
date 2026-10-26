@@ -47,7 +47,9 @@ import {
 import { createLeadAction } from "@/actions/leads";
 import type { Lead } from "@/db/schema";
 
-const PLACEHOLDER_SHEET_ID = "1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFfYXSGDJpUXA";
+const PLACEHOLDER_SHEET_ID = "PLACEHOLDER_NONE";
+const DEFAULT_USER_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFFyXSGDJpUXA/edit?usp=sharing";
 
 export interface ManagedSpreadsheet {
   id: string;
@@ -60,14 +62,8 @@ const DEFAULT_SPREADSHEETS: ManagedSpreadsheet[] = [
   {
     id: "sheet-imobiliario",
     title: "Imobiliário.",
-    sheetUrl: "",
-    tabs: [
-      "Casas Modulares",
-      "Fachadas",
-      "Lajes",
-      "Corte e Solda",
-      "Esquadrias",
-    ],
+    sheetUrl: DEFAULT_USER_SHEET_URL,
+    tabs: ["Casas Modulares", "Fachadas", "Lajes"],
   },
 ];
 
@@ -87,12 +83,14 @@ function extractSheetIdFromUrl(url: string | undefined | null): string | null {
 const PROSPECTION_LEVELS: ProspectionLevel[] = [
   "Tentativa de contato",
   "Catálogo enviado",
+  "Atendeu",
   "Em contato",
   "Reunião agendada",
 ];
 
-// Os 19 leads reais do print da planilha "Imobiliário." (com telefones higienizados E.164 e domínios)
+// Os 49 leads reais das 3 abas ("Casas Modulares", "Fachadas" e "Lajes") da planilha do Google Sheets
 const INITIAL_PRINT_LEADS: ExtractedSheetLead[] = [
+  // === ABA 1: CASAS MODULARES (19 leads) ===
   {
     id: "row-1",
     empresa: "Cmc Modular",
@@ -156,7 +154,7 @@ const INITIAL_PRINT_LEADS: ExtractedSheetLead[] = [
     responsavel: "",
     email: "minhacasabox@gmail.com",
     contato: "5581983650178",
-    nivelProspeccao: "Tentativa de contato",
+    nivelProspeccao: "Catálogo enviado",
     observacoes: "",
     website: "freemail:minhacasabox@gmail.com",
     campanha: "CAMP-CASAS-MODULARES",
@@ -359,6 +357,430 @@ const INITIAL_PRINT_LEADS: ExtractedSheetLead[] = [
     highlighted: false,
     tab: "Casas Modulares",
   },
+
+  // === ABA 2: FACHADAS (23 leads reais da planilha) ===
+  {
+    id: "fach-1",
+    empresa: "Pissk",
+    cnpj: "",
+    responsavel: "Cassia",
+    email: "compras@pissk.com.br",
+    contato: "5511991351028",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "pissk.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-2",
+    empresa: "Grupo Mais",
+    cnpj: "",
+    responsavel: "",
+    email: "vendas@grupomaissp.com.br",
+    contato: "5511932912005",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "grupomaissp.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-3",
+    empresa: "kortinox",
+    cnpj: "",
+    responsavel: "Joice",
+    email: "financeiro@kortinox.com.br",
+    contato: "551127695917",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "kortinox.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-4",
+    empresa: "Alfatech",
+    cnpj: "",
+    responsavel: "",
+    email: "orcamento@alfatechbr.com.br",
+    contato: "551149023918",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "alfatechbr.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-5",
+    empresa: "Wall Design",
+    cnpj: "",
+    responsavel: "",
+    email: "sac@walldesign.com.br",
+    contato: "5511992443939",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "walldesign.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-6",
+    empresa: "Alu Composto",
+    cnpj: "",
+    responsavel: "",
+    email: "projeto@alucomposto.com.br",
+    contato: "5515991980115",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "alucomposto.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-7",
+    empresa: "Milenio Fachadas",
+    cnpj: "",
+    responsavel: "juliana",
+    email: "juliana@mileniofachadas.com.br",
+    contato: "5511973855751",
+    nivelProspeccao: "Atendeu",
+    observacoes: "Retornar via wpp/email.",
+    website: "mileniofachadas.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: true,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-8",
+    empresa: "Sto Brasil",
+    cnpj: "",
+    responsavel: "durvan",
+    email: "dgomes@stobrasil.com.br",
+    contato: "551121450011",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "apenas via email",
+    website: "stobrasil.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-9",
+    empresa: "JRM",
+    cnpj: "",
+    responsavel: "",
+    email: "contato@jrmsolucoes.com.br",
+    contato: "5511978534700",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "jrmsolucoes.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-10",
+    empresa: "itefal",
+    cnpj: "",
+    responsavel: "Thais ou Amanda",
+    email: "compras1@itefal.com.br",
+    contato: "551133822500",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "apenas via email",
+    website: "itefal.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-11",
+    empresa: "Alubond",
+    cnpj: "",
+    responsavel: "Brenda ou Pedro",
+    email: "compras@alubond.com.br",
+    contato: "551133924466",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "Enviar proposta via email.",
+    website: "alubond.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-12",
+    empresa: "Fachada Premium",
+    cnpj: "",
+    responsavel: "",
+    email: "contato@fachadapremium.com.br",
+    contato: "5511940876688",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "fachadapremium.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-13",
+    empresa: "rb revestimentos",
+    cnpj: "",
+    responsavel: "",
+    email: "contato@rbrevestimentos.com.br",
+    contato: "551128974635",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "rbrevestimentos.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-14",
+    empresa: "guarusign",
+    cnpj: "",
+    responsavel: "elcio",
+    email: "elcioadesivos@gmail.com",
+    contato: "551149696006",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "apenas via email",
+    website: "freemail:elcioadesivos@gmail.com",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-15",
+    empresa: "novacm revestimentos",
+    cnpj: "",
+    responsavel: "",
+    email: "douglas@novacmrevestimentos.com.br",
+    contato: "5511976898772",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "essse é o nmr dele!!!",
+    website: "novacmrevestimentos.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: true,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-16",
+    empresa: "bepex",
+    cnpj: "",
+    responsavel: "",
+    email: "",
+    contato: "551130424225",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-17",
+    empresa: "aludim",
+    cnpj: "",
+    responsavel: "",
+    email: "",
+    contato: "554836264900",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-18",
+    empresa: "acrinel",
+    cnpj: "",
+    responsavel: "valeria",
+    email: "valeria@acrinel.com.br",
+    contato: "551126519230",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "apenas via email",
+    website: "acrinel.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-19",
+    empresa: "pizzinatto",
+    cnpj: "",
+    responsavel: "",
+    email: "contato@grupopizzinatto.com.br",
+    contato: "551934378300",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "grupopizzinatto.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-20",
+    empresa: "gfmvisual",
+    cnpj: "",
+    responsavel: "",
+    email: "contato@gfmvisual.com.br",
+    contato: "5511914848152",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "gfmvisual.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-21",
+    empresa: "evolve",
+    cnpj: "",
+    responsavel: "",
+    email: "comercial@evolvecomunicacao.com.br",
+    contato: "551125266550",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "chamar no wpp",
+    website: "evolvecomunicacao.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-22",
+    empresa: "nomen",
+    cnpj: "",
+    responsavel: "",
+    email: "vendas@nomen.com.br",
+    contato: "551936241413",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "Tel alternativo: 11 97140-8101",
+    website: "nomen.com.br",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+  {
+    id: "fach-23",
+    empresa: "hunterdouglas",
+    cnpj: "",
+    responsavel: "",
+    email: "",
+    contato: "551937084000",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "",
+    campanha: "CAMP-FACHADAS",
+    highlighted: false,
+    tab: "Fachadas",
+  },
+
+  // === ABA 3: LAJES (7 leads reais da planilha) ===
+  {
+    id: "laj-1",
+    empresa: "Fortec Lajes",
+    cnpj: "",
+    responsavel: "Mikael",
+    email: "",
+    contato: "5511940290662",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "contato via wpp — (11) 3988-5012 / (11) 94029-0662",
+    website: "",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
+  {
+    id: "laj-2",
+    empresa: "Cassol",
+    cnpj: "",
+    responsavel: "",
+    email: "contato@cassol.ind.br",
+    contato: "554136415900",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "cassol.ind.br",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
+  {
+    id: "laj-3",
+    empresa: "Tijolage",
+    cnpj: "",
+    responsavel: "Samara",
+    email: "falecom@tijolaje.com.br",
+    contato: "551144792424",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "tijolaje.com.br",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
+  {
+    id: "laj-4",
+    empresa: "Isobloco",
+    cnpj: "",
+    responsavel: "",
+    email: "tecnico@isobloco.com.br",
+    contato: "5582981799779",
+    nivelProspeccao: "Tentativa de contato",
+    observacoes: "",
+    website: "isobloco.com.br",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
+  {
+    id: "laj-5",
+    empresa: "Mta Engenharia",
+    cnpj: "",
+    responsavel: "",
+    email: "eng.bruno@mtagrupo.com.br",
+    contato: "551120127001",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "mtagrupo.com.br",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
+  {
+    id: "laj-6",
+    empresa: "Amplo Ferros",
+    cnpj: "",
+    responsavel: "",
+    email: "gustavo@mtagrupo.com.br",
+    contato: "551120129620",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
+  {
+    id: "laj-7",
+    empresa: "Lajes Masteo | Lajes Tolstoi",
+    cnpj: "",
+    responsavel: "Angelo",
+    email: "angelo@mtagrupo.com.br",
+    contato: "551120127001",
+    nivelProspeccao: "Catálogo enviado",
+    observacoes: "",
+    website: "",
+    campanha: "CAMP-LAJES",
+    highlighted: false,
+    tab: "Lajes",
+  },
 ];
 
 // Script Google Apps Script Bidirecional (doGet + doPost + Criação de Novas Planilhas) com Trava Tripla
@@ -538,6 +960,7 @@ function doPost(e) {
 function getPillStyle(level: ProspectionLevel): string {
   switch (level) {
     case "Em contato":
+    case "Atendeu":
       return "bg-[#d9ead3] text-[#137333] border-[#b6d7a8]";
     case "Tentativa de contato":
       return "bg-[#fce5cd] text-[#b45f06] border-[#f9cb9c]";
@@ -628,7 +1051,7 @@ export function GoogleSheetsLeadHunter({
     text: string;
   } | null>(null);
 
-  const [sheetUrl, setSheetUrl] = useState("");
+  const [sheetUrl, setSheetUrl] = useState(DEFAULT_USER_SHEET_URL);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [campaignWebhookUrl, setCampaignWebhookUrl] = useState("");
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
@@ -639,13 +1062,13 @@ export function GoogleSheetsLeadHunter({
 
   useEffect(() => {
     try {
-      const savedRows = localStorage.getItem("gofer_sheets_leads_v2");
-      const savedTabs = localStorage.getItem("gofer_sheets_tabs_v2");
-      const savedSpreadsheets = localStorage.getItem("gofer_spreadsheets_v1");
-      const savedActiveSheetId = localStorage.getItem("gofer_active_spreadsheet_id_v1");
+      const savedRows = localStorage.getItem("gofer_sheets_leads_v3");
+      const savedTabs = localStorage.getItem("gofer_sheets_tabs_v3");
+      const savedSpreadsheets = localStorage.getItem("gofer_spreadsheets_v3");
+      const savedActiveSheetId = localStorage.getItem("gofer_active_spreadsheet_id_v3");
       const savedWebhook = localStorage.getItem("gofer_sheets_webhook_v1");
       const savedCampWebhook = localStorage.getItem("gofer_campaign_webhook_v1");
-      const savedSheetUrl = localStorage.getItem("gofer_sheets_url_v1");
+      const savedSheetUrl = localStorage.getItem("gofer_sheets_url_v3");
       const savedMyCompany = localStorage.getItem("gofer_my_company_v1");
       const savedRepSite = localStorage.getItem("gofer_represented_site_v1");
       const savedKanbanSent = localStorage.getItem("gofer_kanban_sent_rows_v1");
@@ -658,15 +1081,19 @@ export function GoogleSheetsLeadHunter({
         const parsedSent = JSON.parse(savedKanbanSent);
         if (Array.isArray(parsedSent)) setKanbanSentRowIds(parsedSent);
       }
-      const cleanSavedUrl = isRealGoogleSheetUrl(savedSheetUrl) ? savedSheetUrl! : "";
-      if (cleanSavedUrl) setSheetUrl(cleanSavedUrl);
+      const cleanSavedUrl = isRealGoogleSheetUrl(savedSheetUrl)
+        ? savedSheetUrl!
+        : DEFAULT_USER_SHEET_URL;
+      setSheetUrl(cleanSavedUrl);
 
       if (savedSpreadsheets) {
         const parsedSheets: ManagedSpreadsheet[] = JSON.parse(savedSpreadsheets);
         if (Array.isArray(parsedSheets) && parsedSheets.length > 0) {
           const sanitized = parsedSheets.map((s) => ({
             ...s,
-            sheetUrl: isRealGoogleSheetUrl(s.sheetUrl) ? s.sheetUrl : "",
+            sheetUrl: isRealGoogleSheetUrl(s.sheetUrl)
+              ? s.sheetUrl
+              : DEFAULT_USER_SHEET_URL,
           }));
           setSpreadsheets(sanitized);
           const targetId =
@@ -705,10 +1132,10 @@ export function GoogleSheetsLeadHunter({
 
   useEffect(() => {
     try {
-      localStorage.setItem("gofer_sheets_leads_v2", JSON.stringify(rows));
-      localStorage.setItem("gofer_sheets_tabs_v2", JSON.stringify(tabs));
-      localStorage.setItem("gofer_spreadsheets_v1", JSON.stringify(spreadsheets));
-      localStorage.setItem("gofer_active_spreadsheet_id_v1", activeSpreadsheetId);
+      localStorage.setItem("gofer_sheets_leads_v3", JSON.stringify(rows));
+      localStorage.setItem("gofer_sheets_tabs_v3", JSON.stringify(tabs));
+      localStorage.setItem("gofer_spreadsheets_v3", JSON.stringify(spreadsheets));
+      localStorage.setItem("gofer_active_spreadsheet_id_v3", activeSpreadsheetId);
       localStorage.setItem("gofer_kanban_sent_rows_v1", JSON.stringify(kanbanSentRowIds));
       localStorage.setItem("gofer_my_company_v1", myCompany);
       localStorage.setItem("gofer_represented_site_v1", representedWebsite);
@@ -716,8 +1143,8 @@ export function GoogleSheetsLeadHunter({
       if (campaignWebhookUrl)
         localStorage.setItem("gofer_campaign_webhook_v1", campaignWebhookUrl);
       localStorage.setItem(
-        "gofer_sheets_url_v1",
-        isRealGoogleSheetUrl(sheetUrl) ? sheetUrl : ""
+        "gofer_sheets_url_v3",
+        isRealGoogleSheetUrl(sheetUrl) ? sheetUrl : DEFAULT_USER_SHEET_URL
       );
     } catch {}
   }, [
@@ -1193,6 +1620,7 @@ export function GoogleSheetsLeadHunter({
     const nextLevelMap: Record<ProspectionLevel, ProspectionLevel> = {
       "Tentativa de contato": "Catálogo enviado",
       "Catálogo enviado": "Em contato",
+      "Atendeu": "Em contato",
       "Em contato": "Reunião agendada",
       "Reunião agendada": "Reunião agendada",
     };
@@ -1316,7 +1744,7 @@ export function GoogleSheetsLeadHunter({
       // Atualiza automaticamente todas as abas descobertas na planilha Google Sheets (ex: Casas Modulares, Fachadas, Lajes...)
       const discoveredTabs: string[] =
         Array.isArray(data.tabs) && data.tabs.length > 0 ? data.tabs : [];
-      const mergedTabs = Array.from(new Set([...discoveredTabs, ...tabs]));
+      const mergedTabs = discoveredTabs.length > 0 ? discoveredTabs : tabs;
       const discoveredTitle =
         typeof data.title === "string" && data.title.trim()
           ? data.title.trim()
@@ -1324,6 +1752,10 @@ export function GoogleSheetsLeadHunter({
 
       if (mergedTabs.length > 0) {
         setTabs(mergedTabs);
+        if (!mergedTabs.includes(activeTab)) {
+          setActiveTab(mergedTabs[0]);
+          setTargetSegment(mergedTabs[0]);
+        }
         setSheetTitle(discoveredTitle);
         setSpreadsheets((prev) =>
           prev.map((s) =>

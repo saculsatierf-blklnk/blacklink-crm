@@ -8,7 +8,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_SPREADSHEET_ID = "1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFfYXSGDJpUXA";
+const DEFAULT_SPREADSHEET_ID = "1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFFyXSGDJpUXA";
 
 export function extractSpreadsheetId(urlOrId?: string): string {
   if (!urlOrId) return DEFAULT_SPREADSHEET_ID;
@@ -75,7 +75,7 @@ async function fetchSingleTabViaGviz(
   tabName: string
 ): Promise<{ ok: boolean; cols: string[]; rows: ExtractedSheetLead[] }> {
   try {
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(
       tabName
     )}`;
     const ctrl = new AbortController();
@@ -114,8 +114,9 @@ async function fetchSingleTabViaGviz(
       if (!empresa || empresa.toLowerCase() === "empresa") continue;
 
       const responsavel = getVal(1);
-      const email = getVal(2).toLowerCase();
-      const rawPhone = getVal(3);
+      const rawEmail = getVal(2).toLowerCase();
+      const email = rawEmail.includes("@") ? rawEmail : "";
+      const rawPhone = getVal(3) || (!rawEmail.includes("@") ? rawEmail : "");
       const nivel = (getVal(4) || "Tentativa de contato") as ProspectionLevel;
       const observacoes = getVal(5);
       const cnpj = sanitizeCnpj(getVal(6));
@@ -160,10 +161,7 @@ export async function GET(req: NextRequest) {
     ).trim();
 
     const spreadsheetId = extractSpreadsheetId(sheetUrl);
-    const validSpreadsheetId =
-      spreadsheetId && spreadsheetId !== DEFAULT_SPREADSHEET_ID
-        ? spreadsheetId
-        : "";
+    const validSpreadsheetId = spreadsheetId || DEFAULT_SPREADSHEET_ID;
 
     // 1. Se houver Apps Script Webhook com doGet configurado, lê todas as abas e planilhas via Webhook
     if (webhookUrl) {
@@ -229,13 +227,9 @@ export async function GET(req: NextRequest) {
       .filter(Boolean);
 
     const tabsToRead = readAllTabs
-      ? Array.from(
-          new Set([
-            ...(metadata.tabs.length > 0 ? metadata.tabs : []),
-            ...knownTabs,
-            tabName,
-          ])
-        )
+      ? metadata.tabs.length > 0
+        ? metadata.tabs
+        : Array.from(new Set([...knownTabs, tabName]))
       : [tabName];
 
     const tabResults = await Promise.all(

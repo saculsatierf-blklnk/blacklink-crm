@@ -14,6 +14,7 @@ export const maxDuration = 60;
 export type ProspectionLevel =
   | "Tentativa de contato"
   | "Catálogo enviado"
+  | "Atendeu"
   | "Em contato"
   | "Reunião agendada";
 
