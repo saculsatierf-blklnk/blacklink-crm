@@ -35,18 +35,10 @@ import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
 import { TeamInviteModal } from "./TeamInviteModal";
-import {
-  GoogleSheetsLeadHunter,
-  type VendasWorkspaceTab,
-} from "./GoogleSheetsLeadHunter";
+import { GoogleSheetsLeadHunter } from "./GoogleSheetsLeadHunter";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
-import {
-  Compass,
-  FileSpreadsheet,
-  Kanban as KanbanIcon,
-  Terminal,
-} from "lucide-react";
+import { useUiStore } from "@/store/useUiStore";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
@@ -157,8 +149,8 @@ export function LeadsKanban({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] =
-    useState<VendasWorkspaceTab>("planilha");
+  const activeWorkspaceTab = useUiStore((state) => state.activeVendasTab);
+  const setActiveWorkspaceTab = useUiStore((state) => state.setActiveVendasTab);
 
   const isCommercial = currentUser?.role === "commercial";
   const myUserId = currentUser?.id || "";
@@ -377,146 +369,9 @@ export function LeadsKanban({
     }).format(d);
   };
 
-  const WORKSPACE_TABS: {
-    id: VendasWorkspaceTab;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    badge?: string | number;
-  }[] = [
-    {
-      id: "planilha",
-      label: "Planilha & Captação",
-      icon: FileSpreadsheet,
-    },
-    {
-      id: "cadencia",
-      label: "Cadência & Catálogo PDF",
-      icon: Calendar,
-    },
-    {
-      id: "nichos",
-      label: "Mapa de Nichos",
-      icon: Compass,
-    },
-    {
-      id: "kanban",
-      label: "Pipeline Kanban",
-      icon: KanbanIcon,
-      badge: displayedLeads.length,
-    },
-    {
-      id: "integracao",
-      label: "Conexão & Auditoria",
-      icon: Terminal,
-    },
-  ];
-
   return (
     <div className="space-y-4">
-      {/* Barra de Navegação por Abas Dedicadas (Estética irvo.com.br) */}
-      <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* 5 Abas de Trabalho — Cada ferramenta em seu devido lugar */}
-          <nav className="flex flex-wrap items-center gap-1">
-            {WORKSPACE_TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeWorkspaceTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveWorkspaceTab(tab.id)}
-                  className={`inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-white text-[#0d0d0d]"
-                      : "text-[#afafaf] hover:text-white hover:bg-[#1a1a1a]"
-                  }`}
-                >
-                  <Icon className="size-3.5 shrink-0" />
-                  <span>{tab.label}</span>
-                  {tab.badge !== undefined && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
-                        isActive
-                          ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
-                          : "bg-[#262626] text-[#afafaf]"
-                      }`}
-                    >
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Ações Rápidas Globais + Filtro de Operador quando no Kanban */}
-          <div className="flex flex-wrap items-center gap-2">
-            {activeWorkspaceTab === "kanban" &&
-              (isCommercial ? (
-                <div className="flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white">
-                  <span className="size-2 rounded-full bg-[#14d06e]" />
-                  <span className="font-semibold">Carteira:</span>
-                  <span>{currentUser?.name || "Operador Comercial"}</span>
-                </div>
-              ) : (
-                <div
-                  data-tour="kanban-operator-filter"
-                  className="flex items-center gap-2"
-                >
-                  <select
-                    value={activeOperator}
-                    onChange={(e) => setActiveOperator(e.target.value)}
-                    className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1.5 text-xs font-medium text-white focus:ring-white focus:outline-none cursor-pointer"
-                  >
-                    <option value="todos">
-                      Todos os Operadores ({leadsList.length})
-                    </option>
-                    {operators.map((op) => {
-                      const count = leadsList.filter(
-                        (l) => (l.ownerId || operators[0]?.id) === op.id
-                      ).length;
-                      return (
-                        <option key={op.id} value={op.id}>
-                          {op.name} ({op.role}) — {count} contas
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              ))}
-
-            <button
-              type="button"
-              onClick={() => setIsInviteModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#262626] transition-colors cursor-pointer"
-            >
-              <Users className="size-3.5 text-[#afafaf]" />
-              <span>Equipe</span>
-            </button>
-
-            {activeWorkspaceTab === "kanban" && (
-              <StartTourButton
-                steps={KANBAN_TOUR_STEPS}
-                variant="secondary"
-                label="Guia"
-              />
-            )}
-
-            <button
-              data-tour="kanban-new-lead"
-              type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-md bg-white px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
-            >
-              <Plus className="size-3.5" />
-              <span>Novo Lead</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Módulos Google Sheets (Planilha, Cadência, Nichos e Integração) — Mantidos em memória p/ troca instantânea */}
+      {/* Módulos Google Sheets (Planilha, Cadência, Nichos e Integração) — Controlados pelas abas na barra lateral esquerda */}
       <div className={activeWorkspaceTab === "kanban" ? "hidden" : "block"}>
         <GoogleSheetsLeadHunter
           companyName={companyName || "Gofer Metais"}
@@ -527,13 +382,88 @@ export function LeadsKanban({
       </div>
 
       {/* ABA 4: PIPELINE KANBAN (ESTÉTICA ARQUITETÔNICA IRVO.COM.BR) */}
-      {activeWorkspaceTab === "kanban" &&
-        (isMounted ? (
-          <DragDropContext onDragEnd={onDragEnd}>
-            <div
-              data-tour="kanban-columns"
-              className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-[#2e2e2e]"
-            >
+      {activeWorkspaceTab === "kanban" && (
+        <div className="space-y-4">
+          {/* Barra de Operador e Ações do Kanban */}
+          <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            {isCommercial ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white">
+                  <span className="size-2 rounded-full bg-[#14d06e]" />
+                  <span className="font-semibold">Carteira:</span>
+                  <span>{currentUser?.name || "Operador Comercial"}</span>
+                </div>
+                <span className="text-xs text-[#afafaf] tabular-nums">
+                  {displayedLeads.length}{" "}
+                  {displayedLeads.length === 1
+                    ? "conta visível"
+                    : "contas visíveis"}
+                </span>
+              </div>
+            ) : (
+              <div
+                data-tour="kanban-operator-filter"
+                className="flex items-center gap-3"
+              >
+                <span className="text-xs font-medium text-[#afafaf]">
+                  Operador:
+                </span>
+                <select
+                  value={activeOperator}
+                  onChange={(e) => setActiveOperator(e.target.value)}
+                  className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs font-medium text-white focus:ring-white focus:outline-none cursor-pointer"
+                >
+                  <option value="todos">
+                    Todos os Operadores ({leadsList.length})
+                  </option>
+                  {operators.map((op) => {
+                    const count = leadsList.filter(
+                      (l) => (l.ownerId || operators[0]?.id) === op.id
+                    ).length;
+                    return (
+                      <option key={op.id} value={op.id}>
+                        {op.name} ({op.role}) — {count} contas
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsInviteModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#262626] transition-colors cursor-pointer"
+              >
+                <Users className="size-3.5 text-[#afafaf]" />
+                <span>Equipe</span>
+              </button>
+
+              <StartTourButton
+                steps={KANBAN_TOUR_STEPS}
+                variant="secondary"
+                label="Guia"
+              />
+
+              <button
+                data-tour="kanban-new-lead"
+                type="button"
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-md bg-white px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                <span>Novo Lead</span>
+              </button>
+            </div>
+          </div>
+
+          {isMounted ? (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <div
+                data-tour="kanban-columns"
+                className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-[#2e2e2e]"
+              >
               {COLUMNS.map((column) => {
                 const columnLeads = getLeadsByStatus(column.id);
                 const ColumnIcon = column.icon;
@@ -748,16 +678,18 @@ export function LeadsKanban({
               })}
             </div>
           </DragDropContext>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-[#2e2e2e]">
-            {COLUMNS.map((col) => (
-              <div
-                key={col.id}
-                className="border-r border-b border-[#2e2e2e] bg-[#0d0d0d] p-4 min-h-[520px] animate-pulse"
-              />
-            ))}
-          </div>
-        ))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 border-t border-l border-[#2e2e2e]">
+              {COLUMNS.map((col) => (
+                <div
+                  key={col.id}
+                  className="border-r border-b border-[#2e2e2e] bg-[#0d0d0d] p-4 min-h-[520px] animate-pulse"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Slide-over Sheet Lateral: Dossiê Completo do Vendedor (Hunter) */}
       <LeadDetailsSheet
