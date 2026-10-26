@@ -25,8 +25,16 @@ import {
   EB_Garamond,
   Cinzel,
   Crimson_Pro,
+  Figtree,
 } from "next/font/google";
 import "./globals.css";
+
+const figtree = Figtree({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-figtree",
+  display: "swap",
+});
 
 // 1-4: Originais
 const spaceGrotesk = Space_Grotesk({
@@ -188,6 +196,7 @@ const fontVariables = [
   ebGaramond.variable,
   cinzel.variable,
   crimsonPro.variable,
+  figtree.variable,
 ].join(" ");
 
 export default function RootLayout({
@@ -198,14 +207,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="dark scroll-smooth">
       <body
-        className={`min-h-screen bg-[#050505] text-zinc-200 antialiased font-sans selection:bg-white/30 flex flex-col ${fontVariables}`}
+        style={{ fontFamily: "var(--font-figtree), ui-sans-serif, system-ui, sans-serif" }}
+        className={`min-h-screen bg-black text-white antialiased selection:bg-white selection:text-black flex flex-col ${fontVariables}`}
       >
-        {/* Luzes radiais para refração no vidro Apple Glassmorphism */}
-        <div className="fixed inset-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-zinc-800/30 blur-[150px]" />
-          <div className="absolute top-[70%] -right-[10%] w-[40%] h-[50%] rounded-full bg-zinc-700/20 blur-[150px]" />
-        </div>
-
         <div className="relative z-10 flex-1 flex flex-col">
           {children}
         </div>

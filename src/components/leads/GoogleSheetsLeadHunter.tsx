@@ -1245,27 +1245,39 @@ export function GoogleSheetsLeadHunter({
     setNewTabModalOpen(false);
   };
 
+  const getIrvoLevelBadge = (level: ProspectionLevel) => {
+    switch (level) {
+      case "Em contato":
+        return "bg-[#0c2b1c] text-[#14d06e]";
+      case "Catálogo enviado":
+        return "bg-[#0f1b33] text-[#7fa9f7]";
+      case "Reunião agendada":
+        return "bg-white text-[#0d0d0d]";
+      case "Tentativa de contato":
+      default:
+        return "bg-[#2b2410] text-[#e8c267]";
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* 1. COMPORTAMENTO DE SESSÃO ATIVA (SÉRIE REA-DESCONSTRUÇÃO) */}
-      <div className="relative overflow-hidden rounded-3xl border border-emerald-500/25 bg-gradient-to-br from-[#0c121e] via-[#090d16] to-[#070709] p-6 shadow-2xl">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-white/10">
-          <div className="space-y-1">
+    <div className="space-y-10 text-white">
+      {/* 1. CABEÇALHO & CONFIGURAÇÃO DA SESSÃO ATIVA (ESTÉTICA IRVO.COM.BR) */}
+      <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-5 md:p-7 border-b border-[#2e2e2e]">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
-                <Sparkles className="h-4 w-4" />
+              <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-3 text-xs font-semibold text-[#7fa9f7]">
+                Data Warehouse · Google Sheets
               </span>
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                Sessão Ativa de Prospecção &rarr; Data Warehouse Google Sheets
-              </h2>
-              <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1">
-                <ShieldCheck className="h-3 w-3" />
-                <span>Trava Tripla: CNPJ • Domínio • Tel E.164</span>
+              <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-3 text-xs font-semibold text-[#14d06e]">
+                CNPJ · Domínio · E.164
               </span>
             </div>
-            <p className="text-xs text-zinc-400">
-              Defina <strong className="text-zinc-200">Minha Empresa</strong> e o{" "}
-              <strong className="text-zinc-200">Setor Alvo de Prospecção</strong> do dia. O Gemini adapta argumentos, scripts e higieniza cada lead contra duplicidade antes de abastecer o Google Sheets.
+            <h2 className="text-xl md:text-2xl font-semibold tracking-[-0.03em] text-white">
+              Prospecção B2B &amp; Inteligência de Cadência
+            </h2>
+            <p className="text-sm text-[#afafaf] max-w-2xl">
+              Configure a empresa representada e o setor alvo. O sistema valida cada contato contra duplicidade antes de abastecer a planilha.
             </p>
           </div>
 
@@ -1274,103 +1286,96 @@ export function GoogleSheetsLeadHunter({
               type="button"
               disabled={isReadingSheets}
               onClick={handleReadFromGoogleSheets}
-              className="flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3.5 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
             >
-              <CloudDownload className="h-3.5 w-3.5" />
+              <CloudDownload className="size-3.5 text-[#afafaf]" />
               <span>
-                {isReadingSheets ? "Lendo Planilha..." : "Ler Base do Google Sheets"}
+                {isReadingSheets ? "Lendo planilha..." : "Ler Google Sheets"}
               </span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowAuditDrawer((v) => !v)}
-              className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-2 text-xs font-medium text-zinc-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3.5 py-2 text-xs font-semibold text-white transition-colors cursor-pointer tabular-nums"
             >
-              <Terminal className="h-3.5 w-3.5 text-amber-400" />
-              <span>Logs Anti-Duplicidade ({auditLogs.length})</span>
+              <Terminal className="size-3.5 text-[#afafaf]" />
+              <span>Auditoria ({auditLogs.length})</span>
             </button>
 
             <a
               href={sheetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-2 text-xs font-medium text-zinc-200 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3.5 py-2 text-xs font-semibold text-white transition-colors"
             >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
+              <FileSpreadsheet className="size-3.5 text-[#afafaf]" />
               <span>Abrir Planilha</span>
-              <ExternalLink className="h-3 w-3 text-zinc-400" />
+              <ExternalLink className="size-3 text-[#757575]" />
             </a>
 
             <button
               type="button"
               onClick={() => setIsSetupModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-lg bg-white text-[#0d0d0d] hover:bg-white/90 px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer"
             >
-              <Link2 className="h-3.5 w-3.5" />
+              <Link2 className="size-3.5" />
               <span>
-                {webhookUrl ? "API Sheets Conectada" : "Conectar API Google Sheets"}
+                {webhookUrl ? "Ponte Conectada" : "Conectar Google Sheets"}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Variáveis Globais de Entrada da Sessão */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 pt-5 items-end">
-          {/* Variável Global 1: Minha Empresa */}
-          <div className="md:col-span-3 space-y-1.5">
-            <label className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-              <Building2 className="h-3.5 w-3.5" />
-              <span>1. Minha Empresa</span>
+        {/* Grade de Inputs Globais no padrão de linhas divisórias irvo.com.br */}
+        <div className="grid grid-cols-1 md:grid-cols-12 border-b border-[#2e2e2e]">
+          <div className="md:col-span-3 p-4 md:p-5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1.5">
+            <label className="block text-xs font-medium text-[#afafaf]">
+              Minha empresa
             </label>
             <input
               type="text"
               value={myCompany}
               onChange={(e) => setMyCompany(e.target.value)}
-              placeholder="Ex: Gofer Metais"
-              className="w-full rounded-xl border border-white/15 bg-black/50 px-3.5 py-2.5 text-xs text-white font-semibold focus:border-emerald-400 focus:outline-none"
+              placeholder="Gofer Metais"
+              className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-sm text-white font-semibold placeholder:text-[#757575] focus:ring-white focus:outline-none"
             />
           </div>
 
-          {/* Site de Referência da Minha Empresa */}
-          <div className="md:col-span-3 space-y-1.5">
-            <label className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
-              <Globe className="h-3.5 w-3.5 text-zinc-400" />
-              <span>Site da Minha Empresa</span>
+          <div className="md:col-span-3 p-4 md:p-5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1.5">
+            <label className="block text-xs font-medium text-[#afafaf]">
+              Site institucional
             </label>
             <input
               type="text"
               value={representedWebsite}
               onChange={(e) => setRepresentedWebsite(e.target.value)}
               placeholder="https://gofermetais.com.br"
-              className="w-full rounded-xl border border-white/15 bg-black/50 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-emerald-400 focus:outline-none"
+              className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
             />
           </div>
 
-          {/* Variável Global 2: Setor Alvo de Prospecção */}
-          <div className="md:col-span-3 space-y-1.5">
-            <label className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-sky-400 font-bold">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>2. Setor Alvo de Prospecção</span>
+          <div className="md:col-span-3 p-4 md:p-5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1.5">
+            <label className="block text-xs font-medium text-[#afafaf]">
+              Setor alvo de prospecção
             </label>
             <input
               type="text"
               value={targetSegment}
               onChange={(e) => setTargetSegment(e.target.value)}
-              placeholder="Ex: Fabricantes de Fachadas, Corte e Solda, Esquadrias..."
-              className="w-full rounded-xl border border-sky-500/30 bg-black/50 px-3.5 py-2.5 text-xs text-white font-semibold focus:border-sky-400 focus:outline-none"
+              placeholder="Casas Modulares, Fachadas, Esquadrias..."
+              className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-sm text-white font-semibold placeholder:text-[#757575] focus:ring-white focus:outline-none"
             />
           </div>
 
-          {/* Região & Lote */}
-          <div className="md:col-span-1 space-y-1.5">
-            <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-semibold">
-              UF / Lote
+          <div className="md:col-span-1 p-4 md:p-5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1.5">
+            <label className="block text-xs font-medium text-[#afafaf]">
+              Região
             </label>
             <select
               value={targetRegion}
               onChange={(e) => setTargetRegion(e.target.value)}
-              className="w-full rounded-xl border border-white/15 bg-black/50 px-2 py-2.5 text-xs text-white focus:border-emerald-400 focus:outline-none"
+              className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-2 text-sm text-white focus:ring-white focus:outline-none"
             >
               <option value="Brasil">BR</option>
               <option value="São Paulo SP">SP</option>
@@ -1382,186 +1387,270 @@ export function GoogleSheetsLeadHunter({
             </select>
           </div>
 
-          {/* Botão de Execução da Sessão */}
-          <div className="md:col-span-2">
+          <div className="md:col-span-2 p-4 md:p-5 flex items-end">
             <button
               type="button"
               disabled={isExtracting}
               onClick={handleExtractLeads}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-4 py-2.5 text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-white hover:bg-white/90 disabled:opacity-50 text-[#0d0d0d] font-semibold px-4 py-2.5 text-sm transition-colors cursor-pointer"
             >
               {isExtracting ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <RefreshCw className="size-4 animate-spin" />
                   <span>Captando...</span>
                 </>
               ) : (
                 <>
-                  <Search className="h-4 w-4" />
-                  <span>Captar &amp; Validar</span>
+                  <Search className="size-4" />
+                  <span>Captar Leads</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
-        {/* Setores Alvo Rápidos (Metalurgia & Construção Gofer Metais) */}
-        <div className="flex flex-wrap items-center gap-2 pt-4">
-          <span className="text-[11px] font-mono text-zinc-400">
-            Setores Alvo do Dia:
-          </span>
-          {[
-            "Casas Modulares",
-            "Fachadas",
-            "Lajes",
-            "Corte e Solda",
-            "Esquadrias",
-            "Construtoras Steel Frame",
-            "Estruturas Metálicas",
-          ].map((seg) => (
-            <button
-              key={seg}
-              type="button"
-              onClick={() => {
-                setTargetSegment(seg);
-                if (!tabs.includes(seg)) {
-                  setTabs((prev) => [...prev, seg]);
-                }
-                setActiveTab(seg);
-              }}
-              className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-                targetSegment.toLowerCase() === seg.toLowerCase()
-                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                  : "bg-white/[0.04] text-zinc-400 hover:text-white border border-white/10"
-              }`}
-            >
-              {seg}
-            </button>
-          ))}
+        {/* Barra de Setores Rápidos e Alternadores de Painéis */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-[#000000]">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-[#afafaf] mr-1">Setores:</span>
+            {[
+              "Casas Modulares",
+              "Fachadas",
+              "Lajes",
+              "Corte e Solda",
+              "Esquadrias",
+              "Construtoras Steel Frame",
+              "Estruturas Metálicas",
+            ].map((seg) => {
+              const active = targetSegment.toLowerCase() === seg.toLowerCase();
+              return (
+                <button
+                  key={seg}
+                  type="button"
+                  onClick={() => {
+                    setTargetSegment(seg);
+                    if (!tabs.includes(seg)) {
+                      setTabs((prev) => [...prev, seg]);
+                    }
+                    setActiveTab(seg);
+                  }}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                    active
+                      ? "bg-white text-[#0d0d0d] font-semibold"
+                      : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
+                  }`}
+                >
+                  {seg}
+                </button>
+              );
+            })}
+          </div>
 
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setShowNicheRadar((v) => !v)}
-              className="rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1 text-[11px] font-mono font-bold text-amber-300 cursor-pointer"
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ring-1 ${
+                showNicheRadar
+                  ? "bg-[#262626] text-white ring-[#7fa9f7]/60"
+                  : "bg-[#1a1a1a] text-[#afafaf] ring-[#2e2e2e] hover:text-white"
+              }`}
             >
-              {showNicheRadar ? "Ocultar Radar de Nichos" : "Abrir Radar de Nichos"}
+              Mapa de Nichos
             </button>
             <button
               type="button"
               onClick={() => setShowCadenceEngine((v) => !v)}
-              className="rounded-lg border border-indigo-500/40 bg-indigo-500/15 hover:bg-indigo-500/25 px-3 py-1 text-[11px] font-mono font-bold text-indigo-300 cursor-pointer flex items-center gap-1.5"
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ring-1 flex items-center gap-1.5 ${
+                showCadenceEngine
+                  ? "bg-[#262626] text-white ring-[#7fa9f7]/60"
+                  : "bg-[#1a1a1a] text-[#afafaf] ring-[#2e2e2e] hover:text-white"
+              }`}
             >
-              <Calendar className="h-3.5 w-3.5" />
-              <span>
-                {showCadenceEngine
-                  ? "Ocultar Inteligência de Cadência"
-                  : "Abrir Inteligência de Cadência (Seg-Sex)"}
-              </span>
+              <Calendar className="size-3.5" />
+              <span>Cadência Semanal</span>
             </button>
           </div>
         </div>
 
-        {/* CAMADA DE INTELIGÊNCIA DE NICHOS: QUAIS PROSPECTEI, QUAIS DÃO RESULTADO E QUAIS LIGAR A SEGUIR */}
-        {showNicheRadar && (
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/45 p-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-              <div>
-                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400">
-                  ✦ Cérebro Comercial ({myCompany}) — Mapa de Tração por Nicho &amp; Próximos Alvos
-                </h3>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Cruzamento automático das abas da sua planilha mostrando onde estão atendendo/pedindo catálogo e quais novos setores explorar.
-                </p>
+        {/* Feedback Banner Sóbrio (Padrão irvo.com.br) */}
+        {feedbackBanner && (
+          <div
+            className={`flex items-center justify-between gap-3 px-5 py-3 text-xs font-medium border-t border-[#2e2e2e] ${
+              feedbackBanner.type === "success"
+                ? "bg-[#0c2b1c] text-[#14d06e]"
+                : feedbackBanner.type === "error"
+                ? "bg-[#2b1310] text-[#ff5d48]"
+                : "bg-[#0f1b33] text-[#7fa9f7]"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Check className="size-4 shrink-0" />
+              <span>{feedbackBanner.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFeedbackBanner(null)}
+              className="opacity-70 hover:opacity-100 cursor-pointer"
+            >
+              <X className="size-3.5" />
+            </button>
+          </div>
+        )}
+
+        {/* Gaveta de Auditoria Anti-Duplicidade */}
+        {showAuditDrawer && (
+          <div className="border-t border-[#2e2e2e] bg-[#0d0d0d] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-white">
+                Registro de Auditoria Anti-Duplicidade (CNPJ · Domínio · E.164)
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAuditDrawer(false)}
+                className="text-xs text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+            {auditLogs.length === 0 ? (
+              <p className="text-xs text-[#afafaf]">
+                Nenhuma verificação executada nesta sessão. Clique em &ldquo;Captar Leads&rdquo;.
+              </p>
+            ) : (
+              <div className="max-h-40 overflow-y-auto divide-y divide-[#2e2e2e] rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-xs">
+                {auditLogs.map((log, i) => (
+                  <div
+                    key={i}
+                    className="px-3.5 py-2 flex items-center justify-between gap-2"
+                  >
+                    <span className="text-white">
+                      <strong className="text-[#7fa9f7] mr-1.5">
+                        [{log.action.toUpperCase()}]
+                      </strong>
+                      {log.empresa} —{" "}
+                      <span className="text-[#afafaf]">{log.details}</span>
+                    </span>
+                    <span className="text-[11px] text-[#757575] tabular-nums shrink-0">
+                      {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
+                    </span>
+                  </div>
+                ))}
               </div>
-              {nicheIntelligence.topPerformingNiche && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-mono text-emerald-300">
-                  🏆 Maior Tração Atual:{" "}
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* 2. MAPA DE TRAÇÃO POR NICHO & NOVOS SETORES (GRADE ARQUITETÔNICA IRVO.COM.BR) */}
+      {showNicheRadar && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-[#afafaf] uppercase tracking-wider">
+                Inteligência de Portfólio · {myCompany}
+              </p>
+              <h3 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
+                Tração por nicho prospectado
+              </h3>
+            </div>
+            {nicheIntelligence.topPerformingNiche && (
+              <div className="inline-flex items-center gap-2.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs">
+                <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 font-semibold text-[#14d06e] tabular-nums">
+                  {nicheIntelligence.topPerformingNiche.tractionRate}% tração
+                </span>
+                <span className="text-[#afafaf]">
+                  Melhor resposta em{" "}
                   <strong className="text-white">
                     {nicheIntelligence.topPerformingNiche.tab}
-                  </strong>{" "}
-                  ({nicheIntelligence.topPerformingNiche.tractionRate}% avançaram)
-                </div>
-              )}
-            </div>
+                  </strong>
+                </span>
+              </div>
+            )}
+          </div>
 
-            {/* 1. Termômetro dos Nichos Já Prospectados */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-              {nicheIntelligence.stats.map((st) => {
-                const isSelected = st.tab === activeTab;
-                return (
-                  <div
-                    key={st.tab}
-                    onClick={() => handleSelectTab(st.tab)}
-                    className={`rounded-xl border p-3 transition-all cursor-pointer ${
-                      isSelected
-                        ? "border-emerald-500/50 bg-emerald-500/10"
-                        : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-bold text-white truncate">
-                        {st.tab}
+          {/* Grade com bordas compartilhadas idêntica ao catálogo de categorias da irvo.com.br */}
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t border-l border-[#2e2e2e]">
+            {nicheIntelligence.stats.map((st) => {
+              const isSelected = st.tab === activeTab;
+              return (
+                <li
+                  key={st.tab}
+                  onClick={() => handleSelectTab(st.tab)}
+                  className={`flex min-h-44 flex-col justify-between border-r border-b border-[#2e2e2e] p-5 md:p-6 transition-colors cursor-pointer ${
+                    isSelected
+                      ? "bg-[#1a1a1a]"
+                      : "bg-[#000000] hover:bg-[#0d0d0d]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold tabular-nums ${
+                        st.tractionRate >= 50
+                          ? "bg-[#0c2b1c] text-[#14d06e]"
+                          : st.total > 0
+                          ? "bg-[#0f1b33] text-[#7fa9f7]"
+                          : "bg-[#1a1a1a] text-[#afafaf]"
+                      }`}
+                    >
+                      {st.total > 0 ? `${st.tractionRate}% engajamento` : "Vazia"}
+                    </span>
+                    {isSelected && (
+                      <span className="text-xs font-medium text-[#7fa9f7]">
+                        Ativa
                       </span>
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold ${
-                          st.tractionRate >= 50
-                            ? "bg-emerald-500/20 text-emerald-300"
-                            : st.total > 0
-                            ? "bg-amber-500/20 text-amber-300"
-                            : "bg-zinc-800 text-zinc-400"
-                        }`}
-                      >
-                        {st.total > 0 ? `${st.tractionRate}% tração` : "0 leads"}
-                      </span>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="mt-2 space-y-1 text-[11px] text-zinc-400 font-mono">
-                      <div className="flex justify-between">
-                        <span>Total na aba:</span>
-                        <strong className="text-zinc-200">{st.total}</strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Catálogo / Contato:</span>
-                        <strong className="text-emerald-400">
-                          {st.engagedCount} ({st.inContact + st.meetingBooked} quentes)
-                        </strong>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Destaques amarelos:</span>
-                        <strong className="text-amber-300">{st.hotHighlighted}</strong>
-                      </div>
+                  <div className="mt-auto pt-6">
+                    <p className="text-base font-semibold text-white">
+                      {st.tab}
+                    </p>
+                    <div className="mt-2 flex items-baseline justify-between text-xs text-[#afafaf] tabular-nums">
+                      <span>{st.total} empresas</span>
+                      <span>
+                        {st.engagedCount} c/ catálogo · {st.hotHighlighted} destaque
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </li>
+              );
+            })}
+          </ul>
 
-            {/* 2. Recomendação Inteligente: Próximos Nichos para Ligar (Baseado no Portfólio da Gofer Metais) */}
-            {nicheIntelligence.candidateExpansions.length > 0 && (
-              <div className="pt-2 border-t border-white/10 space-y-2">
-                <span className="block text-[11px] font-mono uppercase tracking-wider text-sky-300 font-bold">
-                  🎯 Próximos Nichos Recomendados p/ Ligar (Alta Demanda de Aço/Metal &amp; Ainda Inexplorados na Planilha):
-                </span>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                  {nicheIntelligence.candidateExpansions.slice(0, 3).map((rec) => (
-                    <div
-                      key={rec.niche}
-                      className="flex flex-col justify-between rounded-xl border border-sky-500/25 bg-sky-950/15 p-3 gap-2"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-white">
-                            {rec.niche}
-                          </span>
-                          <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[9px] font-mono font-bold text-sky-300">
-                            {rec.avgTicket}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400 leading-snug">
-                          {rec.reason}
-                        </p>
+          {/* Expansão de Novos Setores Recomendados */}
+          {nicheIntelligence.candidateExpansions.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-[#afafaf]">
+                Próximos setores recomendados para prospecção ({myCompany}):
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {nicheIntelligence.candidateExpansions.slice(0, 3).map((rec) => (
+                  <div
+                    key={rec.niche}
+                    className="rounded-lg bg-[#1a1a1a] p-4 text-left ring-1 ring-[#2e2e2e] flex flex-col justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
+                          {rec.avgTicket}
+                        </span>
+                        <span className="text-xs text-[#afafaf]">
+                          Novo nicho
+                        </span>
                       </div>
+                      <p className="mt-3 text-base font-semibold text-white">
+                        {rec.niche}
+                      </p>
+                      <p className="mt-1.5 text-xs text-[#afafaf] leading-relaxed">
+                        {rec.reason}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-[#2e2e2e] pt-3">
+                      <span className="text-xs text-[#afafaf]">
+                        Criar aba na planilha
+                      </span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1571,309 +1660,286 @@ export function GoogleSheetsLeadHunter({
                           setActiveTab(rec.niche);
                           setTargetSegment(rec.niche);
                         }}
-                        className="self-start rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 px-2.5 py-1 text-[11px] font-semibold text-sky-200 transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
                       >
-                        + Criar Aba &amp; Prospectar Este Nicho
+                        <Plus className="size-3.5" />
+                        <span>Explorar setor</span>
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 3. INTELIGÊNCIA DE CADÊNCIA SEMANAL (SEGUNDA A SEXTA) & COPILOTO DE SCRIPTS */}
+      {showCadenceEngine && (
+        <section className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-[#afafaf] uppercase tracking-wider">
+                Roteiro Semanal · Segunda a Sexta
+              </p>
+              <h3 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
+                Cadência comercial &amp; entrega do catálogo em PDF
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums">
+              <span className="inline-flex h-7 items-center rounded-full bg-[#2b2410] px-3 font-semibold text-[#e8c267]">
+                {
+                  activeTabRows.filter(
+                    (r) => r.nivelProspeccao === "Tentativa de contato"
+                  ).length
+                }{" "}
+                aguardando 1º contato
+              </span>
+              <span className="inline-flex h-7 items-center rounded-full bg-[#0f1b33] px-3 font-semibold text-[#7fa9f7]">
+                {
+                  activeTabRows.filter(
+                    (r) => r.nivelProspeccao === "Catálogo enviado"
+                  ).length
+                }{" "}
+                com PDF enviado
+              </span>
+              <span className="inline-flex h-7 items-center rounded-full bg-[#0c2b1c] px-3 font-semibold text-[#14d06e]">
+                {
+                  activeTabRows.filter(
+                    (r) =>
+                      r.nivelProspeccao === "Em contato" ||
+                      r.nivelProspeccao === "Reunião agendada"
+                  ).length
+                }{" "}
+                em negociação
+              </span>
+            </div>
           </div>
-        )}
 
-        {/* CAMADA DE INTELIGÊNCIA DE CADÊNCIA SEMANAL (SEGUNDA A SEXTA) & COPILOTO DE FOLLOW-UP */}
-        {showCadenceEngine && (
-          <div className="mt-5 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-[#0d1021] via-[#090c18] to-[#07080f] p-5 space-y-5 shadow-xl">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-white/10 pb-3.5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-indigo-500/20 border border-indigo-500/40 px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-300">
-                    Bússola da Semana • Segunda a Sexta
-                  </span>
-                  <h3 className="text-sm font-bold text-white">
-                    Inteligência de Cadência &amp; Copiloto de Follow-up ({activeTab})
-                  </h3>
-                </div>
-                <p className="text-[11px] text-zinc-400 mt-1">
-                  Nunca mais se perca nos follow-ups: escolha o dia da semana para ver a fila prioritária e copie/dispare o script exato de Ligação, WhatsApp e E-mail para a etapa de cada empresa.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] font-mono">
-                <span className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-amber-300">
-                  1º Toque pendente:{" "}
-                  <strong>
-                    {
-                      activeTabRows.filter(
-                        (r) => r.nivelProspeccao === "Tentativa de contato"
-                      ).length
-                    }
-                  </strong>
-                </span>
-                <span className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-indigo-300">
-                  Cobrar Catálogo:{" "}
-                  <strong>
-                    {
-                      activeTabRows.filter(
-                        (r) => r.nivelProspeccao === "Catálogo enviado"
-                      ).length
-                    }
-                  </strong>
-                </span>
-                <span className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
-                  Fechar Cotação:{" "}
-                  <strong>
-                    {
-                      activeTabRows.filter(
-                        (r) =>
-                          r.nivelProspeccao === "Em contato" ||
-                          r.nivelProspeccao === "Reunião agendada"
-                      ).length
-                    }
-                  </strong>
-                </span>
-              </div>
-            </div>
-
-            {/* 1. TRILHA DA SEMANA (D1 SEGUNDA -> D5 SEXTA) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-              {WEEKLY_CADENCE_STEPS.map((step) => {
-                const isSelected = step.dayCode === selectedCadenceDay;
-                return (
-                  <button
-                    key={step.dayCode}
-                    type="button"
-                    onClick={() => setSelectedCadenceDay(step.dayCode)}
-                    className={`text-left rounded-xl border p-3 transition-all cursor-pointer flex flex-col justify-between gap-2 ${
-                      isSelected
-                        ? "border-indigo-400 bg-indigo-500/15 shadow-lg shadow-indigo-500/10"
-                        : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[11px] font-mono font-bold text-indigo-300">
-                          {step.dayCode} • {step.dayLabel}
-                        </span>
-                        {step.dayCode === "D1" && (
-                          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-300">
-                            HOJE
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs font-bold text-white leading-snug">
-                        {step.touchNumber}
-                      </p>
-                      <p className="text-[11px] text-zinc-400 leading-snug line-clamp-3">
-                        {step.objective}
-                      </p>
-                    </div>
-
-                    <div className="pt-1.5 border-t border-white/10 flex flex-wrap gap-1">
-                      {step.channels.map((ch) => (
-                        <span
-                          key={ch}
-                          className="rounded bg-black/50 border border-white/10 px-1.5 py-0.5 text-[9px] font-mono text-zinc-300"
-                        >
-                          {ch}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* PAINEL ESPECIAL DE SEGUNDA-FEIRA (D1): MAPEAMENTO DE SETORES & ABASTECIMENTO DE PLANILHAS */}
-            {selectedCadenceDay === "D1" && (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/15 p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
-                      ⚡ Missão de Segunda-Feira (D1): Mapear Setores &amp; Abastecer Planilhas da Semana
+          {/* Grade de 5 Dias (Segunda a Sexta) na estética arquitetônica irvo.com.br */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t border-l border-[#2e2e2e]">
+            {WEEKLY_CADENCE_STEPS.map((step) => {
+              const isSelected = step.dayCode === selectedCadenceDay;
+              return (
+                <button
+                  key={step.dayCode}
+                  type="button"
+                  onClick={() => setSelectedCadenceDay(step.dayCode)}
+                  className={`flex min-h-44 flex-col justify-between border-r border-b border-[#2e2e2e] p-5 text-left transition-colors cursor-pointer ${
+                    isSelected
+                      ? "bg-[#1a1a1a]"
+                      : "bg-[#000000] hover:bg-[#0d0d0d]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <span
+                      className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold ${
+                        isSelected
+                          ? "bg-white text-[#0d0d0d]"
+                          : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e]"
+                      }`}
+                    >
+                      {step.dayLabel}
                     </span>
-                    <p className="text-[11px] text-zinc-300 mt-0.5">
-                      Antes de iniciar os disparos na Terça-feira, garanta que cada aba da sua planilha tenha pelo menos <strong>15 a 20 empresas únicas verificadas</strong>. Clique em qualquer aba vazia/baixa abaixo para abastecer agora:
+                    {step.dayCode === "D1" && (
+                      <span className="text-xs font-semibold text-[#14d06e]">
+                        Hoje
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-6">
+                    <p className="text-sm font-semibold text-white">
+                      {step.touchNumber}
+                    </p>
+                    <p className="mt-2 text-xs text-[#afafaf] leading-relaxed">
+                      {step.objective}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={isExtracting}
-                    onClick={handleExtractLeads}
-                    className="rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 px-3.5 py-2 text-xs font-bold text-black shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Search className="h-3.5 w-3.5" />
-                    <span>
-                      {isExtracting
-                        ? "Abastecendo Aba..."
-                        : `Abastecer "${activeTab}" (+${batchLimit} Leads)`}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bloco Operacional de Segunda-Feira (D1): Abastecimento das Abas da Planilha */}
+          {selectedCadenceDay === "D1" && (
+            <div className="rounded-lg bg-[#1a1a1a] p-5 ring-1 ring-[#2e2e2e] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2e2e2e] pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 text-xs font-semibold text-[#14d06e]">
+                      Planejamento de Segunda-feira
                     </span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                  {nicheIntelligence.stats.map((st) => {
-                    const needsSupply = st.total < 15;
-                    return (
-                      <div
-                        key={st.tab}
-                        className={`rounded-lg border p-2.5 flex flex-col justify-between gap-2 ${
-                          needsSupply
-                            ? "border-amber-500/35 bg-amber-500/10"
-                            : "border-emerald-500/30 bg-black/40"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs font-bold text-white truncate">
-                              {st.tab}
-                            </span>
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[9px] font-mono font-bold ${
-                                needsSupply
-                                  ? "bg-amber-500/20 text-amber-300"
-                                  : "bg-emerald-500/20 text-emerald-300"
-                              }`}
-                            >
-                              {needsSupply ? "Abastecer Hoje" : "Pronta p/ Semana"}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-400 font-mono mt-1">
-                            Base atual: <strong className="text-white">{st.total}</strong> empresas
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveTab(st.tab);
-                            setTargetSegment(st.tab);
-                          }}
-                          className="w-full rounded bg-white/10 hover:bg-white/20 px-2 py-1 text-[10px] font-semibold text-white transition-colors cursor-pointer"
-                        >
-                          {activeTab === st.tab
-                            ? "✓ Aba Selecionada"
-                            : "Selecionar p/ Abastecer"}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 2. FILA DE PRIORIDADE DO DIA + COPILOTO DE SCRIPTS MULTICANAL DA EMPRESA SELECIONADA */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
-              {/* Coluna Esquerda (4 cols): Fila Prioritária de Empresas para Acionar Neste Dia */}
-              <div className="lg:col-span-4 rounded-xl border border-white/10 bg-black/50 p-3.5 flex flex-col justify-between space-y-3">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-indigo-300 font-bold flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>Fila Prioritária ({currentCadenceStep.dayLabel})</span>
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-400">
-                      Clique p/ gerar script
+                    <span className="text-sm font-semibold text-white">
+                      Mapeamento de Setores &amp; Abastecimento da Semana
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-400">
-                    Ordem recomendada de ataque na aba{" "}
-                    <strong className="text-white">{activeTab}</strong>:
+                  <p className="mt-1 text-xs text-[#afafaf]">
+                    Garanta pelo menos 15 a 20 empresas em cada aba hoje para trabalhar os disparos e envios de PDF de terça a sexta-feira.
                   </p>
                 </div>
 
-                <div className="max-h-[420px] overflow-y-auto space-y-1.5 pr-1">
+                <button
+                  type="button"
+                  disabled={isExtracting}
+                  onClick={handleExtractLeads}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+                >
+                  <Search className="size-3.5" />
+                  <span>
+                    {isExtracting
+                      ? "Abastecendo..."
+                      : `Abastecer "${activeTab}" (+${batchLimit} leads)`}
+                  </span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {nicheIntelligence.stats.map((st) => {
+                  const needsSupply = st.total < 15;
+                  const active = activeTab === st.tab;
+                  return (
+                    <div
+                      key={st.tab}
+                      onClick={() => handleSelectTab(st.tab)}
+                      className={`rounded-md p-3.5 transition-colors cursor-pointer flex flex-col justify-between gap-3 ${
+                        active
+                          ? "bg-[#262626] ring-1 ring-[#7fa9f7]/60"
+                          : "bg-[#0d0d0d] ring-1 ring-[#2e2e2e] hover:bg-[#262626]/50"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-white truncate">
+                            {st.tab}
+                          </span>
+                          <span
+                            className={`inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold ${
+                              needsSupply
+                                ? "bg-[#2b2410] text-[#e8c267]"
+                                : "bg-[#0c2b1c] text-[#14d06e]"
+                            }`}
+                          >
+                            {needsSupply ? "Abastecer" : "Pronta"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm font-semibold tabular-nums text-white">
+                          {st.total}{" "}
+                          <span className="font-normal text-xs text-[#afafaf]">
+                            empresas
+                          </span>
+                        </p>
+                      </div>
+
+                      <span className="text-[11px] text-[#afafaf]">
+                        {active ? "Aba selecionada" : "Selecionar aba"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Fila Prioritária + Copiloto de Scripts da Empresa (Design data-ui da irvo.com.br) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Coluna Esquerda: Fila Prioritária do Dia */}
+            <div className="lg:col-span-4 rounded-lg bg-[#1a1a1a] p-4 ring-1 ring-[#2e2e2e] flex flex-col justify-between">
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-xs font-medium text-[#afafaf]">
+                    Fila de prioridade · {currentCadenceStep.dayLabel}
+                  </p>
+                  <span className="text-xs font-semibold text-white tabular-nums">
+                    {cadenceQueueForDay.length} empresas
+                  </span>
+                </div>
+
+                <div className="max-h-[460px] overflow-y-auto space-y-2 pr-1">
                   {cadenceQueueForDay.map((item, idx) => {
                     const isCurrentLead = selectedCadenceLead?.id === item.id;
-                    const alreadyTouchedToday = (item.observacoes || "").includes("OK]");
+                    const alreadyTouchedToday =
+                      (item.observacoes || "").includes("OK]") ||
+                      (item.observacoes || "").includes("[PDF Enviado");
                     return (
                       <div
                         key={item.id}
                         onClick={() => setSelectedCadenceLeadId(item.id)}
-                        className={`rounded-xl border px-3 py-2 transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        className={`rounded-md p-3 transition-colors cursor-pointer ${
                           isCurrentLead
-                            ? "border-indigo-400 bg-indigo-500/20"
-                            : "border-white/10 bg-white/[0.02] hover:bg-white/[0.06]"
+                            ? "bg-[#262626] ring-1 ring-[#7fa9f7]/60"
+                            : "bg-[#0d0d0d] ring-1 ring-[#2e2e2e] hover:bg-[#262626]/60"
                         }`}
                       >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-mono text-zinc-500">
-                              #{idx + 1}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs text-[#757575] tabular-nums">
+                              {idx + 1}.
                             </span>
-                            <span className="text-xs font-bold text-white truncate">
+                            <p className="text-sm font-semibold text-white truncate">
                               {item.empresa}
-                            </span>
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold whitespace-nowrap ${getIrvoLevelBadge(
+                              item.nivelProspeccao
+                            )}`}
+                          >
+                            {item.nivelProspeccao}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between text-xs text-[#afafaf]">
+                          <span className="truncate">
+                            {item.responsavel
+                              ? item.responsavel
+                              : "Comprador não identificado"}
+                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0">
                             {item.highlighted && (
-                              <span
-                                title="Destaque Amarelo (Prioridade Quente)"
-                                className="inline-flex items-center rounded bg-amber-400/20 px-1 py-0.2 text-[9px] font-mono font-bold text-amber-300"
-                              >
-                                <Flame className="h-2.5 w-2.5 mr-0.5" />
-                                QUENTE
+                              <span className="text-[#e8c267] font-semibold">
+                                Prioridade
                               </span>
                             )}
                             {alreadyTouchedToday && (
-                              <span className="rounded bg-emerald-500/20 px-1.5 py-0.2 text-[9px] font-mono text-emerald-300">
-                                ✓ Feito
+                              <span className="text-[#14d06e] font-semibold">
+                                Concluído
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] text-zinc-400 mt-0.5 truncate">
-                            <span>
-                              {item.responsavel
-                                ? `👤 ${item.responsavel}`
-                                : "👤 Descobrir comprador"}
-                            </span>
-                            <span>•</span>
-                            <span className="text-zinc-300 font-medium">
-                              {item.nivelProspeccao}
-                            </span>
-                          </div>
                         </div>
-
-                        <ArrowRight
-                          className={`h-3.5 w-3.5 shrink-0 ${
-                            isCurrentLead ? "text-indigo-300" : "text-zinc-600"
-                          }`}
-                        />
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Coluna Direita (8 cols): Copiloto de Execução (Ligação + WhatsApp + E-mail + Entrega do PDF) */}
-              <div className="lg:col-span-8 rounded-xl border border-white/10 bg-black/50 p-4 space-y-4">
-                {selectedCadenceLead && leadCadencePlaybook ? (
-                  <>
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-bold text-white">
-                            {selectedCadenceLead.empresa}
-                          </span>
-                          <span
-                            className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getPillStyle(
-                              selectedCadenceLead.nivelProspeccao
-                            )}`}
-                          >
-                            Etapa Atual: {selectedCadenceLead.nivelProspeccao}
-                          </span>
-                          {selectedCadenceLead.responsavel && (
-                            <span className="rounded-lg bg-white/10 px-2 py-0.5 text-[11px] text-zinc-200">
-                              Decisor: <strong>{selectedCadenceLead.responsavel}</strong>
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs font-semibold text-indigo-300 mt-1">
-                          {leadCadencePlaybook.stageTitle}
-                        </p>
-                        <p className="text-[11px] text-zinc-400 mt-0.5">
-                          💡 {leadCadencePlaybook.timingHint}
-                        </p>
+              <div className="mt-4 flex items-baseline justify-between border-t border-[#2e2e2e] pt-3 text-xs text-[#afafaf]">
+                <span>Aba em foco</span>
+                <span className="font-semibold text-white">{activeTab}</span>
+              </div>
+            </div>
+
+            {/* Coluna Direita: Copiloto de Scripts e Entrega do PDF */}
+            <div className="lg:col-span-8 rounded-lg bg-[#1a1a1a] p-5 ring-1 ring-[#2e2e2e] space-y-5">
+              {selectedCadenceLead && leadCadencePlaybook ? (
+                <>
+                  <div className="rounded-md bg-[#262626] p-4 ring-1 ring-[#7fa9f7]/60">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span
+                          className={`inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold whitespace-nowrap ${getIrvoLevelBadge(
+                            selectedCadenceLead.nivelProspeccao
+                          )}`}
+                        >
+                          {selectedCadenceLead.nivelProspeccao}
+                        </span>
+                        <span className="text-xs text-[#afafaf]">
+                          {selectedCadenceLead.responsavel
+                            ? `Responsável: ${selectedCadenceLead.responsavel}`
+                            : "Responsável pendente de confirmação"}
+                        </span>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -1882,387 +1948,280 @@ export function GoogleSheetsLeadHunter({
                           onClick={() =>
                             handleAdvanceLeadCadence(selectedCadenceLead, false)
                           }
-                          className="rounded-xl border border-white/15 bg-white/[0.05] hover:bg-white/[0.1] px-3 py-1.5 text-[11px] font-semibold text-zinc-200 cursor-pointer"
+                          className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#0d0d0d] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
                         >
-                          ✓ Registrar Toque (Manter Etapa)
+                          Registrar toque
                         </button>
                         <button
                           type="button"
                           onClick={() =>
                             handleAdvanceLeadCadence(selectedCadenceLead, true)
                           }
-                          className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-1.5 text-[11px] font-bold text-black shadow-md shadow-emerald-500/15 cursor-pointer flex items-center gap-1"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="size-3.5" />
                           <span>
-                            Concluir Toque &rarr; {leadCadencePlaybook.nextRecommendedLevel}
+                            Avançar para {leadCadencePlaybook.nextRecommendedLevel}
                           </span>
                         </button>
                       </div>
                     </div>
 
-                    {/* 3 CANAIS DE ABORDAGEM SINCRONIZADOS (LIGAÇÃO, WHATSAPP E E-MAIL) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {/* Canal 1: Roteiro de Ligação Rápida + Canal 2: WhatsApp */}
-                      <div className="space-y-3">
-                        {/* Roteiro de Ligação (30s) */}
-                        <div className="rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 font-bold flex items-center gap-1.5">
-                              <PhoneCall className="h-3 w-3" />
-                              <span>1. Script de Ligação Rápida (30 seg)</span>
-                            </span>
-                            <span className="text-[10px] font-mono text-zinc-400">
-                              Tel: {selectedCadenceLead.contato || "Sem telefone"}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-zinc-200 italic leading-relaxed">
-                            {leadCadencePlaybook.phoneScript}
-                          </p>
-                        </div>
+                    <p className="mt-3 text-base font-semibold text-white">
+                      {selectedCadenceLead.empresa}{" "}
+                      <span className="font-normal text-sm text-[#afafaf]">
+                        · {leadCadencePlaybook.stageTitle}
+                      </span>
+                    </p>
+                    <p className="mt-1 text-xs text-[#afafaf]">
+                      {leadCadencePlaybook.timingHint}
+                    </p>
+                  </div>
 
-                        {/* Script de WhatsApp da Etapa Atual */}
-                        <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/15 p-3 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold flex items-center gap-1.5">
-                              <MessageCircle className="h-3.5 w-3.5" />
-                              <span>
-                                2. WhatsApp ({selectedCadenceLead.nivelProspeccao})
-                              </span>
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(
-                                    leadCadencePlaybook.whatsappScript
-                                  );
-                                  setCopiedCadenceField("wpp");
-                                  setTimeout(() => setCopiedCadenceField(null), 2500);
-                                }}
-                                className="rounded bg-white/10 hover:bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-zinc-200 cursor-pointer"
+                  {/* Canais: Ligação, WhatsApp e E-mail */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      {/* 1. Roteiro de Ligação */}
+                      <div className="rounded-md bg-[#0d0d0d] p-4 ring-1 ring-[#2e2e2e] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-white flex items-center gap-2">
+                            <PhoneCall className="size-3.5 text-[#afafaf]" />
+                            <span>Ligação rápida (30s)</span>
+                          </span>
+                          <span className="text-xs text-[#afafaf] tabular-nums">
+                            {selectedCadenceLead.contato || "Sem telefone"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#afafaf] leading-relaxed">
+                          {leadCadencePlaybook.phoneScript}
+                        </p>
+                      </div>
+
+                      {/* 2. Script WhatsApp */}
+                      <div className="rounded-md bg-[#0d0d0d] p-4 ring-1 ring-[#2e2e2e] space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-white flex items-center gap-2">
+                            <MessageCircle className="size-3.5 text-[#afafaf]" />
+                            <span>Mensagem WhatsApp</span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  leadCadencePlaybook.whatsappScript
+                                );
+                                setCopiedCadenceField("wpp");
+                                setTimeout(() => setCopiedCadenceField(null), 2500);
+                              }}
+                              className="rounded bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-medium text-white cursor-pointer"
+                            >
+                              {copiedCadenceField === "wpp" ? "Copiado" : "Copiar"}
+                            </button>
+                            {sanitizePhoneE164(selectedCadenceLead.contato).length >=
+                              12 && (
+                              <a
+                                href={`https://wa.me/${sanitizePhoneE164(
+                                  selectedCadenceLead.contato
+                                )}?text=${encodeURIComponent(
+                                  leadCadencePlaybook.whatsappScript
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded bg-white hover:bg-white/90 px-2.5 py-1 text-xs font-semibold text-[#0d0d0d]"
                               >
-                                {copiedCadenceField === "wpp" ? "Copiado!" : "Copiar"}
-                              </button>
-                              {sanitizePhoneE164(selectedCadenceLead.contato).length >=
-                                12 && (
+                                Abrir WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <pre className="whitespace-pre-wrap font-sans text-xs text-[#afafaf] leading-relaxed bg-[#1a1a1a] rounded p-3 ring-1 ring-[#2e2e2e]">
+                          {leadCadencePlaybook.whatsappScript}
+                        </pre>
+                      </div>
+                    </div>
+
+                    {/* 3. E-mail B2B Completo */}
+                    <div className="rounded-md bg-[#0d0d0d] p-4 ring-1 ring-[#2e2e2e] flex flex-col justify-between space-y-3">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-white flex items-center gap-2">
+                            <Mail className="size-3.5 text-[#afafaf]" />
+                            <span>E-mail comercial</span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  `Assunto: ${leadCadencePlaybook.emailSubject}\n\n${leadCadencePlaybook.emailBody}`
+                                );
+                                setCopiedCadenceField("email");
+                                setTimeout(() => setCopiedCadenceField(null), 2500);
+                              }}
+                              className="rounded bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-medium text-white cursor-pointer"
+                            >
+                              {copiedCadenceField === "email"
+                                ? "Copiado"
+                                : "Copiar"}
+                            </button>
+                            {selectedCadenceLead.email &&
+                              selectedCadenceLead.email.includes("@") && (
                                 <a
-                                  href={`https://wa.me/${sanitizePhoneE164(
-                                    selectedCadenceLead.contato
-                                  )}?text=${encodeURIComponent(
-                                    leadCadencePlaybook.whatsappScript
+                                  href={`mailto:${
+                                    selectedCadenceLead.email
+                                  }?subject=${encodeURIComponent(
+                                    leadCadencePlaybook.emailSubject
+                                  )}&body=${encodeURIComponent(
+                                    leadCadencePlaybook.emailBody
                                   )}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="rounded bg-emerald-500 hover:bg-emerald-400 px-2.5 py-0.5 text-[10px] font-bold text-black"
+                                  className="rounded bg-white hover:bg-white/90 px-2.5 py-1 text-xs font-semibold text-[#0d0d0d]"
                                 >
-                                  Abrir WhatsApp &rarr;
+                                  Abrir E-mail
                                 </a>
                               )}
-                            </div>
                           </div>
-                          <pre className="whitespace-pre-wrap font-sans text-[11px] text-zinc-200 leading-relaxed bg-black/40 rounded-lg p-2.5 border border-white/5">
-                            {leadCadencePlaybook.whatsappScript}
-                          </pre>
                         </div>
-                      </div>
 
-                      {/* Canal 3: E-mail Comercial B2B Completo (Assunto + Corpo + Botão Mailto) */}
-                      <div className="rounded-xl border border-sky-500/25 bg-sky-950/15 p-3 flex flex-col justify-between space-y-2">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-sky-300 font-bold flex items-center gap-1.5">
-                              <Mail className="h-3.5 w-3.5" />
-                              <span>3. E-mail de Cadência B2B (Assunto + Corpo)</span>
+                        <div className="rounded bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs space-y-1">
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[#757575]">Para:</span>
+                            <span className="text-white font-medium truncate">
+                              {selectedCadenceLead.email || "Não informado"}
                             </span>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(
-                                    `Assunto: ${leadCadencePlaybook.emailSubject}\n\n${leadCadencePlaybook.emailBody}`
-                                  );
-                                  setCopiedCadenceField("email");
-                                  setTimeout(() => setCopiedCadenceField(null), 2500);
-                                }}
-                                className="rounded bg-white/10 hover:bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-zinc-200 cursor-pointer"
-                              >
-                                {copiedCadenceField === "email"
-                                  ? "E-mail Copiado!"
-                                  : "Copiar E-mail"}
-                              </button>
-                              {selectedCadenceLead.email &&
-                                selectedCadenceLead.email.includes("@") && (
-                                  <a
-                                    href={`mailto:${
-                                      selectedCadenceLead.email
-                                    }?subject=${encodeURIComponent(
-                                      leadCadencePlaybook.emailSubject
-                                    )}&body=${encodeURIComponent(
-                                      leadCadencePlaybook.emailBody
-                                    )}`}
-                                    className="rounded bg-sky-500 hover:bg-sky-400 px-2.5 py-0.5 text-[10px] font-bold text-black"
-                                  >
-                                    Disparar E-mail &rarr;
-                                  </a>
-                                )}
-                            </div>
                           </div>
-
-                          <div className="rounded-lg bg-black/40 border border-white/10 px-2.5 py-1.5 text-[11px]">
-                            <span className="text-zinc-400 font-mono text-[10px]">
-                              Para:{" "}
+                          <div className="flex justify-between gap-2">
+                            <span className="text-[#757575]">Assunto:</span>
+                            <span className="text-white font-medium truncate">
+                              {leadCadencePlaybook.emailSubject}
                             </span>
-                            <strong className="text-sky-300">
-                              {selectedCadenceLead.email ||
-                                "E-mail ainda não preenchido na planilha"}
-                            </strong>
-                            <div className="mt-0.5">
-                              <span className="text-zinc-400 font-mono text-[10px]">
-                                Assunto:{" "}
-                              </span>
-                              <strong className="text-white">
-                                {leadCadencePlaybook.emailSubject}
-                              </strong>
-                            </div>
                           </div>
-
-                          <pre className="whitespace-pre-wrap font-sans text-[11px] text-zinc-200 leading-relaxed bg-black/40 rounded-lg p-2.5 border border-white/5 max-h-[210px] overflow-y-auto">
-                            {leadCadencePlaybook.emailBody}
-                          </pre>
                         </div>
+
+                        <pre className="whitespace-pre-wrap font-sans text-xs text-[#afafaf] leading-relaxed bg-[#1a1a1a] rounded p-3 ring-1 ring-[#2e2e2e] max-h-[210px] overflow-y-auto">
+                          {leadCadencePlaybook.emailBody}
+                        </pre>
                       </div>
                     </div>
+                  </div>
 
-                    {/* BLOCO ESPECIAL: QUANDO PEDEM O CATÁLOGO -> MENSAGEM PARA ENVIAR JUNTO COM O ARQUIVO PDF */}
-                    <div className="rounded-xl border border-purple-500/35 bg-purple-950/20 p-3.5 space-y-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
+                  {/* 4. Entrega do Catálogo em PDF (Quando o lead responde pedindo o catálogo) */}
+                  <div className="rounded-md bg-[#0d0d0d] p-4 ring-1 ring-[#2e2e2e] space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-[5px] bg-white text-[#0d0d0d]">
+                          <Check className="size-3.5 stroke-[3]" />
+                        </span>
                         <div>
-                          <span className="text-[11px] font-mono uppercase tracking-wider text-purple-300 font-bold">
-                            📄 Respondeu &ldquo;Pode mandar o catálogo&rdquo;? Use este texto junto com o Arquivo PDF:
-                          </span>
-                          <p className="text-[10px] text-zinc-400">
-                            Copie ou abra o WhatsApp/E-mail abaixo, anexe o PDF do Catálogo da {myCompany} e clique em <strong>&ldquo;Marcar PDF Enviado&rdquo;</strong>.
+                          <p className="text-xs font-semibold text-white">
+                            Resposta ao pedido de catálogo (Envio do arquivo PDF)
+                          </p>
+                          <p className="text-xs text-[#afafaf]">
+                            Quando o cliente pedir o catálogo, envie o PDF junto com esta mensagem e marque como enviado.
                           </p>
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                leadCadencePlaybook.pdfDeliveryWhatsapp
-                              );
-                              setCopiedCadenceField("pdf_wpp");
-                              setTimeout(() => setCopiedCadenceField(null), 2500);
-                            }}
-                            className="rounded-lg bg-white/10 hover:bg-white/20 px-2.5 py-1 text-[10px] font-semibold text-white cursor-pointer"
-                          >
-                            {copiedCadenceField === "pdf_wpp"
-                              ? "Texto PDF Copiado!"
-                              : "Copiar Texto p/ WhatsApp"}
-                          </button>
-
-                          {sanitizePhoneE164(selectedCadenceLead.contato).length >=
-                            12 && (
-                            <a
-                              href={`https://wa.me/${sanitizePhoneE164(
-                                selectedCadenceLead.contato
-                              )}?text=${encodeURIComponent(
-                                leadCadencePlaybook.pdfDeliveryWhatsapp
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="rounded-lg bg-purple-500 hover:bg-purple-400 px-2.5 py-1 text-[10px] font-bold text-black"
-                            >
-                              Abrir WhatsApp p/ Anexar PDF &rarr;
-                            </a>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateCell(
-                                selectedCadenceLead.id,
-                                "nivelProspeccao",
-                                "Catálogo enviado"
-                              );
-                              const todayStr = new Date().toLocaleDateString(
-                                "pt-BR",
-                                { day: "2-digit", month: "2-digit" }
-                              );
-                              updateCell(
-                                selectedCadenceLead.id,
-                                "observacoes",
-                                `[PDF Enviado ${todayStr}] ${
-                                  selectedCadenceLead.observacoes || ""
-                                }`.trim()
-                              );
-                              setFeedbackBanner({
-                                type: "success",
-                                text: `✦ Catálogo em PDF registrado como enviado para "${selectedCadenceLead.empresa}"!`,
-                              });
-                            }}
-                            className="rounded-lg border border-purple-400/50 bg-purple-500/20 hover:bg-purple-500/30 px-2.5 py-1 text-[10px] font-bold text-purple-200 cursor-pointer"
-                          >
-                            ✓ Marcar PDF Enviado
-                          </button>
-                        </div>
                       </div>
 
-                      <pre className="whitespace-pre-wrap font-sans text-[11px] text-zinc-200 leading-relaxed bg-black/40 rounded-lg p-2.5 border border-white/5">
-                        {leadCadencePlaybook.pdfDeliveryWhatsapp}
-                      </pre>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              leadCadencePlaybook.pdfDeliveryWhatsapp
+                            );
+                            setCopiedCadenceField("pdf_wpp");
+                            setTimeout(() => setCopiedCadenceField(null), 2500);
+                          }}
+                          className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-medium text-white cursor-pointer"
+                        >
+                          {copiedCadenceField === "pdf_wpp"
+                            ? "Texto copiado"
+                            : "Copiar mensagem PDF"}
+                        </button>
+
+                        {sanitizePhoneE164(selectedCadenceLead.contato).length >=
+                          12 && (
+                          <a
+                            href={`https://wa.me/${sanitizePhoneE164(
+                              selectedCadenceLead.contato
+                            )}?text=${encodeURIComponent(
+                              leadCadencePlaybook.pdfDeliveryWhatsapp
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white"
+                          >
+                            Abrir WhatsApp p/ anexar PDF
+                          </a>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateCell(
+                              selectedCadenceLead.id,
+                              "nivelProspeccao",
+                              "Catálogo enviado"
+                            );
+                            const todayStr = new Date().toLocaleDateString(
+                              "pt-BR",
+                              { day: "2-digit", month: "2-digit" }
+                            );
+                            updateCell(
+                              selectedCadenceLead.id,
+                              "observacoes",
+                              `[PDF Enviado ${todayStr}] ${
+                                selectedCadenceLead.observacoes || ""
+                              }`.trim()
+                            );
+                            setFeedbackBanner({
+                              type: "success",
+                              text: `Catálogo em PDF registrado como enviado para "${selectedCadenceLead.empresa}".`,
+                            });
+                          }}
+                          className="rounded-md bg-white hover:bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                        >
+                          Marcar PDF enviado
+                        </button>
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-zinc-400">
-                    Selecione uma empresa na fila ao lado ou na planilha abaixo para gerar o roteiro completo de cadência.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Playbook Dinâmico Gerado pelo Gemini para o Setor Alvo do Dia */}
-        {activePlaybook && (
-          <div className="mt-5 rounded-2xl border border-sky-500/25 bg-sky-950/20 p-4 space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-sky-500/20 border border-sky-500/40 px-2 py-0.5 text-[10px] font-mono font-bold text-sky-300">
-                  {activePlaybook.campaignTag}
-                </span>
-                <span className="text-xs font-bold text-white">
-                  Inteligência de Abordagem Gemini • {activePlaybook.myCompany} &rarr;{" "}
-                  {activePlaybook.targetSector}
-                </span>
-              </div>
-              <span className="text-[11px] text-emerald-300 font-mono">
-                {activePlaybook.valueArgument}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <div className="rounded-xl bg-black/40 border border-white/10 p-3 space-y-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 font-bold">
-                  Dores Metalúrgicas do Setor ({activePlaybook.targetSector}):
-                </span>
-                <ul className="list-disc list-inside text-zinc-300 space-y-0.5 text-[11px]">
-                  {activePlaybook.sectorPains.map((pain, i) => (
-                    <li key={i}>{pain}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-xl bg-black/40 border border-white/10 p-3 space-y-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
-                  Script Automático WhatsApp (Injetado nos Leads):
-                </span>
-                <p className="text-zinc-200 text-[11px] leading-relaxed italic">
-                  &ldquo;{activePlaybook.whatsappScriptTemplate}&rdquo;
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Painel de Logs do Motor Anti-Duplicidade Rigoroso */}
-        {showAuditDrawer && (
-          <div className="mt-4 rounded-2xl border border-amber-500/30 bg-black/70 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
-                Log de Auditoria Anti-Duplicidade (CNPJ • Domínio • Telefone E.164)
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAuditDrawer(false)}
-                className="text-zinc-400 hover:text-white text-xs"
-              >
-                Fechar
-              </button>
-            </div>
-            {auditLogs.length === 0 ? (
-              <p className="text-xs text-zinc-400">
-                Nenhuma verificação executada nesta sessão ainda. Clique em &ldquo;Captar &amp; Validar&rdquo;.
-              </p>
-            ) : (
-              <div className="max-h-40 overflow-y-auto space-y-1 text-[11px] font-mono">
-                {auditLogs.map((log, i) => (
-                  <div
-                    key={i}
-                    className={`px-2.5 py-1 rounded flex items-center justify-between gap-2 ${
-                      log.action === "inserted"
-                        ? "bg-emerald-500/10 text-emerald-300"
-                        : log.action === "merged_complementary"
-                        ? "bg-sky-500/10 text-sky-300"
-                        : "bg-rose-500/10 text-rose-300"
-                    }`}
-                  >
-                    <span>
-                      <strong>[{log.action.toUpperCase()}]</strong> {log.empresa} —{" "}
-                      {log.details}
-                    </span>
-                    <span className="text-[10px] opacity-60 shrink-0">
-                      {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
-                    </span>
+                    <pre className="whitespace-pre-wrap font-sans text-xs text-[#afafaf] leading-relaxed bg-[#1a1a1a] rounded p-3 ring-1 ring-[#2e2e2e]">
+                      {leadCadencePlaybook.pdfDeliveryWhatsapp}
+                    </pre>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Banner de Feedback */}
-        {feedbackBanner && (
-          <div
-            className={`mt-4 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-xs font-medium border ${
-              feedbackBanner.type === "success"
-                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-200"
-                : feedbackBanner.type === "error"
-                ? "bg-red-500/15 border-red-500/40 text-red-200"
-                : "bg-sky-500/15 border-sky-500/40 text-sky-200"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {feedbackBanner.type === "success" ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                </>
               ) : (
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="text-xs text-[#afafaf]">
+                  Selecione uma empresa na fila ao lado para abrir os scripts.
+                </p>
               )}
-              <span>{feedbackBanner.text}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setFeedbackBanner(null)}
-              className="text-zinc-400 hover:text-white"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
-      {/* PLANILHA DATA WAREHOUSE IDÊNTICA AO PRINT DO GOOGLE SHEETS ("Imobiliário.") */}
-      <div className="rounded-2xl border border-zinc-300 bg-white text-zinc-900 shadow-2xl overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#f8f9fa] border-b border-zinc-300 px-4 py-3">
+      {/* 4. PLANILHA DATA WAREHOUSE (GRADE ARQUITETÔNICA IRVO.COM.BR + SINCRONIZAÇÃO GOOGLE SHEETS) */}
+      <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 p-5 border-b border-[#2e2e2e]">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0f9d58] text-white shadow-sm">
-              <FileSpreadsheet className="h-5 w-5" />
-            </div>
+            <span className="inline-flex size-9 items-center justify-center rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-white">
+              <FileSpreadsheet className="size-4" />
+            </span>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <input
                   type="text"
                   value={sheetTitle}
                   onChange={(e) => setSheetTitle(e.target.value)}
-                  className="font-semibold text-base text-zinc-800 bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-600 focus:bg-white rounded px-1.5 py-0.5 focus:outline-none"
+                  className="font-semibold text-base text-white bg-transparent border border-transparent hover:border-[#2e2e2e] focus:border-white focus:bg-[#1a1a1a] rounded px-1.5 py-0.5 focus:outline-none"
                 />
-                <span className="rounded bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[11px] font-semibold">
-                  {activeTabRows.length} empresas na aba &ldquo;{activeTab}&rdquo;
+                <span className="inline-flex h-6 items-center rounded-full bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 text-xs font-semibold text-[#afafaf] tabular-nums">
+                  {activeTabRows.length} empresas em {activeTab}
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-500 px-1.5">
-                Data Warehouse Oficial • Telefones higienizados (55DD9XXXXXXXX), Domínio isolado e CNPJ verificado
+              <p className="text-xs text-[#afafaf] px-1.5">
+                Espelho sincronizado com o Google Sheets · Telefones no padrão E.164 e verificação de domínio/CNPJ
               </p>
             </div>
           </div>
@@ -2271,26 +2230,26 @@ export function GoogleSheetsLeadHunter({
             <button
               type="button"
               onClick={addEmptyRow}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5 text-zinc-600" />
-              <span>Nova Linha</span>
+              <Plus className="size-3.5" />
+              <span>Nova linha</span>
             </button>
 
             <button
               type="button"
               onClick={handleCopyForGoogleSheets}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
             >
               {copiedTable ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="text-emerald-700">Copiado p/ Sheets!</span>
+                  <Check className="size-3.5 text-[#14d06e]" />
+                  <span className="text-[#14d06e]">Copiado</span>
                 </>
               ) : (
                 <>
-                  <Copy className="h-3.5 w-3.5 text-zinc-600" />
-                  <span>Copiar p/ Colar no Sheets</span>
+                  <Copy className="size-3.5 text-[#afafaf]" />
+                  <span>Copiar tabela</span>
                 </>
               )}
             </button>
@@ -2298,88 +2257,61 @@ export function GoogleSheetsLeadHunter({
             <button
               type="button"
               onClick={handleDownloadFormattedSheet}
-              className="flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
             >
-              <Download className="h-3.5 w-3.5 text-zinc-600" />
-              <span>Baixar Planilha Formatada (.xls)</span>
+              <Download className="size-3.5 text-[#afafaf]" />
+              <span>Exportar .xls</span>
             </button>
 
             <button
               type="button"
               disabled={isSyncingSheets}
               onClick={handleSyncToGoogleSheets}
-              className="flex items-center gap-1.5 rounded-lg bg-[#1a73e8] hover:bg-[#1557b0] text-white px-3.5 py-1.5 text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 text-[#0d0d0d] px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className="size-3.5" />
               <span>
                 {isSyncingSheets
                   ? "Sincronizando..."
-                  : "Abastecer Google Sheets Agora"}
+                  : "Sincronizar Google Sheets"}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Grade da Planilha com Cabeçalho Azul Marinho (#202b5b) Idêntico ao Print */}
+        {/* Grade de Dados com Linhas Divisórias #2e2e2e */}
         <div className="overflow-x-auto max-h-[620px] overflow-y-auto">
           <table className="w-full border-collapse text-left">
-            <thead className="sticky top-0 z-20">
-              <tr className="bg-[#f8f9fa] border-b border-zinc-300 text-[11px] text-zinc-500 font-sans select-none">
-                <th className="w-10 border-r border-zinc-300 py-1 text-center font-normal">
+            <thead className="sticky top-0 z-20 bg-[#1a1a1a] border-b border-[#2e2e2e]">
+              <tr className="text-xs font-semibold text-[#afafaf]">
+                <th className="w-12 border-r border-[#2e2e2e] py-3 text-center tabular-nums">
                   #
                 </th>
-                <th className="border-r border-zinc-300 py-1 text-center font-normal w-[195px]">
-                  A
-                </th>
-                <th className="border-r border-zinc-300 py-1 text-center font-normal w-[135px]">
-                  B
-                </th>
-                <th className="border-r border-zinc-300 py-1 text-center font-normal w-[245px]">
-                  C
-                </th>
-                <th className="border-r border-zinc-300 py-1 text-center font-normal w-[160px]">
-                  D
-                </th>
-                <th className="border-r border-zinc-300 py-1 text-center font-normal w-[185px]">
-                  E
-                </th>
-                <th className="border-r border-zinc-300 py-1 text-center font-normal min-w-[260px]">
-                  F
-                </th>
-                <th className="w-24 py-1 text-center font-normal">Ações</th>
-              </tr>
-
-              <tr className="bg-[#202b5b] text-white text-xs font-bold">
-                <th className="bg-[#f8f9fa] text-zinc-500 font-normal text-[11px] border-r border-b border-zinc-300 text-center py-2">
-                  1
-                </th>
-                <th className="border-r border-[#34427d] px-3 py-2 text-center">
+                <th className="border-r border-[#2e2e2e] px-3.5 py-3 w-[210px]">
                   Empresa
                 </th>
-                <th className="border-r border-[#34427d] px-3 py-2 text-center">
+                <th className="border-r border-[#2e2e2e] px-3.5 py-3 w-[150px]">
                   Responsável
                 </th>
-                <th className="border-r border-[#34427d] px-3 py-2 text-center">
+                <th className="border-r border-[#2e2e2e] px-3.5 py-3 w-[240px]">
                   E-mail
                 </th>
-                <th className="border-r border-[#34427d] px-3 py-2 text-center">
+                <th className="border-r border-[#2e2e2e] px-3.5 py-3 w-[165px]">
                   Contato
                 </th>
-                <th className="border-r border-[#34427d] px-3 py-2 text-center">
+                <th className="border-r border-[#2e2e2e] px-3.5 py-3 w-[185px]">
                   Nível de Prospecção
                 </th>
-                <th className="border-r border-[#34427d] px-3 py-2 text-center">
+                <th className="border-r border-[#2e2e2e] px-3.5 py-3 min-w-[260px]">
                   Observações
                 </th>
-                <th className="bg-[#182046] px-2 py-2 text-center text-[10px] uppercase tracking-wider">
-                  Atalhos
-                </th>
+                <th className="w-28 px-3 py-3 text-center">Ações</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-zinc-200 text-[13px] font-sans">
+            <tbody className="divide-y divide-[#2e2e2e] text-xs">
               {activeTabRows.map((row, idx) => {
-                const rowNumber = idx + 2;
+                const rowNumber = idx + 1;
                 const cleanE164 = sanitizePhoneE164(row.contato);
                 const domainKey = extractCanonicalDomain(row.email, row.website);
                 const defaultMsg =
@@ -2395,16 +2327,16 @@ export function GoogleSheetsLeadHunter({
                     key={row.id}
                     className={`transition-colors ${
                       row.highlighted
-                        ? "bg-[#ffff00] hover:bg-[#f7f700]"
-                        : "bg-white hover:bg-blue-50/40"
+                        ? "bg-[#2b2410]/60 hover:bg-[#2b2410]"
+                        : "bg-[#000000] hover:bg-[#1a1a1a]/60"
                     }`}
                   >
-                    <td className="bg-[#f8f9fa] border-r border-zinc-300 text-center text-[11px] text-zinc-500 select-none py-1.5">
+                    <td className="border-r border-[#2e2e2e] text-center text-[#757575] tabular-nums py-2.5 select-none">
                       {rowNumber}
                     </td>
 
-                    {/* Coluna A: Empresa + Badge de Domínio/CNPJ */}
-                    <td className="border-r border-zinc-200 px-2 py-1">
+                    {/* Empresa */}
+                    <td className="border-r border-[#2e2e2e] px-3 py-2">
                       <input
                         type="text"
                         value={row.empresa}
@@ -2412,48 +2344,51 @@ export function GoogleSheetsLeadHunter({
                           updateCell(row.id, "empresa", e.target.value)
                         }
                         placeholder="Nome da empresa..."
-                        className="w-full bg-transparent text-zinc-900 font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 rounded px-1 py-0.5"
+                        className="w-full bg-transparent text-white font-semibold focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                       />
-                      {(row.cnpj || (domainKey && !domainKey.startsWith("freemail:"))) && (
-                        <div className="flex items-center gap-1.5 px-1 text-[10px] text-zinc-500 font-mono">
-                          {row.cnpj && <span>CNPJ: {sanitizeCnpj(row.cnpj)}</span>}
+                      {(row.cnpj ||
+                        (domainKey && !domainKey.startsWith("freemail:"))) && (
+                        <div className="flex items-center gap-1.5 px-1.5 text-[11px] text-[#757575] tabular-nums">
+                          {row.cnpj && <span>{sanitizeCnpj(row.cnpj)}</span>}
                           {domainKey && !domainKey.startsWith("freemail:") && (
-                            <span>• {domainKey}</span>
+                            <span>· {domainKey}</span>
                           )}
                         </div>
                       )}
                     </td>
 
-                    {/* Coluna B: Responsável */}
-                    <td className="border-r border-zinc-200 px-2 py-1">
+                    {/* Responsável */}
+                    <td className="border-r border-[#2e2e2e] px-3 py-2">
                       <input
                         type="text"
                         value={row.responsavel}
                         onChange={(e) =>
                           updateCell(row.id, "responsavel", e.target.value)
                         }
-                        className="w-full bg-transparent text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded px-1 py-0.5"
+                        placeholder="—"
+                        className="w-full bg-transparent text-white placeholder:text-[#757575] focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                       />
                     </td>
 
-                    {/* Coluna C: E-mail */}
-                    <td className="border-r border-zinc-200 px-2 py-1">
+                    {/* E-mail */}
+                    <td className="border-r border-[#2e2e2e] px-3 py-2">
                       <input
                         type="text"
                         value={row.email}
                         onChange={(e) =>
                           updateCell(row.id, "email", e.target.value)
                         }
-                        className={`w-full bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-600 rounded px-1 py-0.5 ${
+                        placeholder="—"
+                        className={`w-full bg-transparent placeholder:text-[#757575] focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5 ${
                           row.email.includes("@")
-                            ? "text-[#1155cc] underline"
-                            : "text-zinc-900"
+                            ? "text-[#7fa9f7]"
+                            : "text-white"
                         }`}
                       />
                     </td>
 
-                    {/* Coluna D: Contato (Higienizado E.164 + Disparo WhatsApp com Script do Setor) */}
-                    <td className="border-r border-zinc-200 px-2 py-1">
+                    {/* Contato */}
+                    <td className="border-r border-[#2e2e2e] px-3 py-2">
                       <div className="flex items-center justify-between gap-1">
                         <input
                           type="text"
@@ -2465,24 +2400,24 @@ export function GoogleSheetsLeadHunter({
                             const cleaned = sanitizePhoneE164(e.target.value);
                             if (cleaned) updateCell(row.id, "contato", cleaned);
                           }}
-                          className="w-full bg-transparent text-zinc-900 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-600 rounded px-1 py-0.5"
+                          className="w-full bg-transparent text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                         />
                         {whatsappHref && (
                           <a
                             href={whatsappHref}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Abordar no WhatsApp com Script Setorial IA"
-                            className="text-emerald-600 hover:text-emerald-700 p-0.5 shrink-0"
+                            title="Abrir conversa no WhatsApp"
+                            className="text-[#14d06e] hover:opacity-80 p-1 shrink-0"
                           >
-                            <MessageCircle className="h-3.5 w-3.5" />
+                            <MessageCircle className="size-3.5" />
                           </a>
                         )}
                       </div>
                     </td>
 
-                    {/* Coluna E: Nível de Prospecção */}
-                    <td className="border-r border-zinc-200 px-2.5 py-1">
+                    {/* Nível de Prospecção */}
+                    <td className="border-r border-[#2e2e2e] px-3 py-2">
                       <select
                         value={row.nivelProspeccao}
                         onChange={(e) =>
@@ -2492,7 +2427,7 @@ export function GoogleSheetsLeadHunter({
                             e.target.value as ProspectionLevel
                           )
                         }
-                        className={`w-full rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer focus:outline-none ${getPillStyle(
+                        className={`w-full rounded-full px-3 py-1 text-xs font-semibold cursor-pointer focus:outline-none ${getIrvoLevelBadge(
                           row.nivelProspeccao
                         )}`}
                       >
@@ -2500,7 +2435,7 @@ export function GoogleSheetsLeadHunter({
                           <option
                             key={lvl}
                             value={lvl}
-                            className="bg-white text-zinc-900"
+                            className="bg-[#1a1a1a] text-white"
                           >
                             {lvl}
                           </option>
@@ -2508,20 +2443,21 @@ export function GoogleSheetsLeadHunter({
                       </select>
                     </td>
 
-                    {/* Coluna F: Observações */}
-                    <td className="border-r border-zinc-200 px-2 py-1">
+                    {/* Observações */}
+                    <td className="border-r border-[#2e2e2e] px-3 py-2">
                       <input
                         type="text"
                         value={row.observacoes}
                         onChange={(e) =>
                           updateCell(row.id, "observacoes", e.target.value)
                         }
-                        className="w-full bg-transparent text-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-600 rounded px-1 py-0.5"
+                        placeholder="Adicionar observação..."
+                        className="w-full bg-transparent text-[#afafaf] placeholder:text-[#757575] focus:text-white focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                       />
                     </td>
 
-                    {/* Ações da Linha */}
-                    <td className="px-2 py-1 text-center">
+                    {/* Ações */}
+                    <td className="px-2 py-2 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           type="button"
@@ -2529,14 +2465,14 @@ export function GoogleSheetsLeadHunter({
                             setSelectedCadenceLeadId(row.id);
                             setShowCadenceEngine(true);
                           }}
-                          title="Abrir Scripts de Cadência (Ligação, WhatsApp e E-mail) desta empresa"
-                          className={`p-1 rounded transition-colors cursor-pointer ${
+                          title="Abrir scripts de cadência desta empresa"
+                          className={`p-1.5 rounded transition-colors cursor-pointer ${
                             selectedCadenceLead?.id === row.id && showCadenceEngine
-                              ? "bg-indigo-600 text-white"
-                              : "text-zinc-500 hover:text-indigo-600 hover:bg-zinc-100"
+                              ? "bg-white text-[#0d0d0d]"
+                              : "text-[#afafaf] hover:text-white hover:bg-[#1a1a1a]"
                           }`}
                         >
-                          <Calendar className="h-3.5 w-3.5" />
+                          <Calendar className="size-3.5" />
                         </button>
 
                         <button
@@ -2544,33 +2480,33 @@ export function GoogleSheetsLeadHunter({
                           onClick={() =>
                             updateCell(row.id, "highlighted", !row.highlighted)
                           }
-                          title="Destacar linha em Amarelo (#ffff00)"
-                          className={`p-1 rounded transition-colors cursor-pointer ${
+                          title="Destacar como prioridade"
+                          className={`p-1.5 rounded transition-colors cursor-pointer ${
                             row.highlighted
-                              ? "bg-amber-500 text-white"
-                              : "text-zinc-400 hover:text-amber-600 hover:bg-zinc-100"
+                              ? "bg-[#2b2410] text-[#e8c267]"
+                              : "text-[#afafaf] hover:text-white hover:bg-[#1a1a1a]"
                           }`}
                         >
-                          <Highlighter className="h-3.5 w-3.5" />
+                          <Highlighter className="size-3.5" />
                         </button>
 
                         <button
                           type="button"
                           disabled={isImportingKanban}
                           onClick={() => handleSendRowToKanban(row)}
-                          title="Enviar este lead para meu Kanban"
-                          className="p-1 rounded text-zinc-500 hover:text-blue-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+                          title="Enviar para o Kanban"
+                          className="p-1.5 rounded text-[#afafaf] hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
                         >
-                          <Kanban className="h-3.5 w-3.5" />
+                          <Kanban className="size-3.5" />
                         </button>
 
                         <button
                           type="button"
                           onClick={() => deleteRow(row.id)}
                           title="Remover linha"
-                          className="p-1 rounded text-zinc-400 hover:text-red-600 hover:bg-zinc-100 transition-colors cursor-pointer"
+                          className="p-1.5 rounded text-[#afafaf] hover:text-[#ff5d48] hover:bg-[#2b1310] transition-colors cursor-pointer"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="size-3.5" />
                         </button>
                       </div>
                     </td>
@@ -2581,15 +2517,15 @@ export function GoogleSheetsLeadHunter({
           </table>
         </div>
 
-        {/* Barra Inferior de Abas Idêntica ao Google Sheets */}
-        <div className="flex items-center gap-1 bg-[#f1f3f4] border-t border-zinc-300 px-3 py-1.5 overflow-x-auto">
+        {/* Barra Inferior de Abas na estética irvo.com.br */}
+        <div className="flex items-center gap-1.5 bg-[#0d0d0d] border-t border-[#2e2e2e] px-4 py-2.5 overflow-x-auto">
           <button
             type="button"
             onClick={() => setNewTabModalOpen(true)}
-            title="Adicionar nova aba de campanha/setor"
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-zinc-200 text-zinc-700 cursor-pointer shrink-0"
+            title="Nova aba de setor"
+            className="inline-flex size-7 items-center justify-center rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] text-white cursor-pointer shrink-0"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="size-3.5" />
           </button>
 
           {tabs.map((tab) => {
@@ -2600,18 +2536,18 @@ export function GoogleSheetsLeadHunter({
                 key={tab}
                 type="button"
                 onClick={() => handleSelectTab(tab)}
-                className={`flex items-center gap-2 rounded-t-lg px-4 py-1.5 text-xs font-semibold transition-all cursor-pointer border-b-2 ${
+                className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                   isCurrent
-                    ? "bg-white text-[#1a73e8] border-[#1a73e8] shadow-sm"
-                    : "text-zinc-600 border-transparent hover:bg-zinc-200/70"
+                    ? "bg-white text-[#0d0d0d]"
+                    : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
                 }`}
               >
                 <span>{tab}</span>
                 <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
                     isCurrent
-                      ? "bg-blue-50 text-[#1a73e8]"
-                      : "bg-zinc-200 text-zinc-600"
+                      ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
+                      : "bg-[#262626] text-[#afafaf]"
                   }`}
                 >
                   {count}
@@ -2620,22 +2556,22 @@ export function GoogleSheetsLeadHunter({
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* MODAL PARA CRIAR NOVA ABA (CAMPANHA / SETOR) */}
+      {/* MODAL PARA CRIAR NOVA ABA (ESTÉTICA IRVO.COM.BR) */}
       {newTabModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0e1117] p-6 text-white shadow-2xl space-y-4">
+          <div className="w-full max-w-md rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-white space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                Nova Aba de Campanha / Setor
+              <h3 className="text-base font-semibold text-white">
+                Nova aba de setor
               </h3>
               <button
                 type="button"
                 onClick={() => setNewTabModalOpen(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-[#afafaf] hover:text-white cursor-pointer"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </button>
             </div>
             <input
@@ -2643,66 +2579,58 @@ export function GoogleSheetsLeadHunter({
               value={newTabName}
               onChange={(e) => setNewTabName(e.target.value)}
               placeholder="Ex: Fabricantes de Esquadrias, Corte e Solda..."
-              className="w-full rounded-xl border border-white/15 bg-black/60 px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 focus:outline-none"
+              className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2.5 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
             />
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setNewTabModalOpen(false)}
-                className="rounded-xl border border-white/10 px-4 py-2 text-xs text-zinc-300"
+                className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-4 py-2 text-xs font-semibold text-[#afafaf] hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleCreateTab}
-                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2 text-xs font-bold text-black cursor-pointer"
+                className="rounded-lg bg-white hover:bg-white/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
               >
-                Criar Aba
+                Criar aba
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE CONEXÃO BIDIRECIONAL COM O GOOGLE SHEETS & WEBHOOK DE CAMPANHA */}
+      {/* MODAL DE CONEXÃO COM GOOGLE SHEETS (ESTÉTICA IRVO.COM.BR) */}
       {isSetupModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-[#0b0e14] p-6 text-white shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="w-full max-w-2xl rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-white space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-4">
               <div className="flex items-center gap-2.5">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">
-                  Conector Data Warehouse Google Sheets (Leitura + Escrita + Anti-Duplicidade)
+                <FileSpreadsheet className="size-5 text-white" />
+                <h3 className="text-base font-semibold text-white">
+                  Conector Google Sheets (Leitura + Escrita sem Login OAuth)
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsSetupModalOpen(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-[#afafaf] hover:text-white cursor-pointer"
               >
-                <X className="h-5 w-5" />
+                <X className="size-5" />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs text-zinc-300 leading-relaxed">
+            <div className="space-y-2 text-xs text-[#afafaf] leading-relaxed">
               <p>
-                Este script habilita leitura bidirecional (<code className="text-emerald-300">doGet</code>) e escrita blindada (<code className="text-emerald-300">doPost</code>) com trava anti-duplicidade e merge complementar na sua planilha:
+                Cole o script abaixo dentro de <strong className="text-white">Extensões &rarr; Apps Script</strong> na sua planilha e implante como <strong className="text-white">App da Web</strong> (acesso: <em>Qualquer pessoa</em>). Ele executa em nome da sua conta Google com trava anti-duplicidade.
               </p>
-              <ol className="list-decimal list-inside space-y-1 text-zinc-300">
-                <li>
-                  Na sua planilha, abra <strong className="text-white">Extensões &rarr; Apps Script</strong>.
-                </li>
-                <li>
-                  Cole o código abaixo e clique em <strong className="text-white">Implantar &rarr; Nova implantação &rarr; App da Web</strong> (acesso: <strong className="text-emerald-300">Qualquer pessoa</strong>).
-                </li>
-              </ol>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
-                  Apps Script Bidirecional (doGet + doPost + Trava Tripla)
+                <span className="text-xs font-medium text-[#afafaf]">
+                  Código Google Apps Script
                 </span>
                 <button
                   type="button"
@@ -2711,73 +2639,73 @@ export function GoogleSheetsLeadHunter({
                     setCopiedScript(true);
                     setTimeout(() => setCopiedScript(false), 3000);
                   }}
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 text-xs font-semibold text-emerald-300 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
                 >
                   {copiedScript ? (
                     <>
-                      <Check className="h-3.5 w-3.5" />
-                      <span>Copiado!</span>
+                      <Check className="size-3.5" />
+                      <span>Copiado</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3.5 w-3.5" />
-                      <span>Copiar Código</span>
+                      <Copy className="size-3.5" />
+                      <span>Copiar código</span>
                     </>
                   )}
                 </button>
               </div>
-              <pre className="max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-black/70 p-3 text-[11px] font-mono text-zinc-300">
+              <pre className="max-h-40 overflow-y-auto rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 text-[11px] font-mono text-[#afafaf]">
                 {GOOGLE_APPS_SCRIPT_CODE}
               </pre>
             </div>
 
             <div className="space-y-3 pt-2">
               <div>
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1">
-                  URL da Planilha Google Sheets
+                <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                  URL da planilha Google Sheets
                 </label>
                 <input
                   type="text"
                   value={sheetUrl}
                   onChange={(e) => setSheetUrl(e.target.value)}
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-3.5 py-2 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs text-white focus:ring-white focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-emerald-400 mb-1">
-                  URL do Web App Google Sheets (doGet / doPost)
+                <label className="block text-xs font-medium text-white mb-1">
+                  URL do App da Web (Apps Script)
                 </label>
                 <input
                   type="text"
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
                   placeholder="https://script.google.com/macros/s/.../exec"
-                  className="w-full rounded-xl border border-emerald-500/40 bg-black/60 px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 focus:outline-none"
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2.5 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono uppercase tracking-wider text-sky-400 mb-1">
-                  Webhook de Campanha Outbound (Opcional — n8n / Disparo WhatsApp)
+                <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                  Webhook externo de campanha (opcional)
                 </label>
                 <input
                   type="text"
                   value={campaignWebhookUrl}
                   onChange={(e) => setCampaignWebhookUrl(e.target.value)}
                   placeholder="https://seu-n8n.com/webhook/campanha-gofer"
-                  className="w-full rounded-xl border border-white/15 bg-black/60 px-3.5 py-2 text-xs text-white focus:border-sky-400 focus:outline-none"
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#2e2e2e]">
               <button
                 type="button"
                 onClick={() => setIsSetupModalOpen(false)}
-                className="rounded-xl bg-emerald-500 hover:bg-emerald-400 px-5 py-2 text-xs font-bold text-black cursor-pointer"
+                className="rounded-lg bg-white hover:bg-white/90 px-5 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
               >
-                Salvar &amp; Ativar
+                Salvar configuração
               </button>
             </div>
           </div>

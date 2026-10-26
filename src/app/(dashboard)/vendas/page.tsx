@@ -68,35 +68,35 @@ export default async function VendasPage() {
   ]);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-300">
-      {/* Cabeçalho do Pipeline de Vendas Apple Glass */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/[0.08] pb-6">
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Cabeçalho Editorial na estética irvo.com.br */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-[#2e2e2e] pb-6">
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-white font-heading">
-              Pipeline de Vendas B2B
-            </h1>
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-[11px] font-mono tracking-widest text-emerald-400 font-semibold uppercase">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex h-6 items-center rounded-full bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 text-xs font-semibold text-white">
               {companyName}
             </span>
-            <span className="rounded-full border border-white/20 bg-white/[0.08] px-3 py-1 text-[11px] font-mono tracking-widest text-zinc-300 font-semibold uppercase">
-              {leadsData.length} {leadsData.length === 1 ? "conta" : "contas"}
+            <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-3 text-xs font-semibold text-[#7fa9f7] tabular-nums">
+              {leadsData.length} {leadsData.length === 1 ? "conta ativa" : "contas ativas"}
             </span>
           </div>
-          <p className="text-xs lg:text-sm text-zinc-400 mt-1.5 leading-relaxed font-sans">
-            Gestão executiva de contas corporativas da {companyName} com telemetria, cadência de abordagem e carteira individual.
+          <h1 className="mt-3 text-3xl lg:text-4xl font-semibold tracking-[-0.035em] text-white leading-[1.08]">
+            Operação Comercial &amp; Inteligência de Prospecção
+          </h1>
+          <p className="text-sm text-[#afafaf] mt-2 max-w-2xl leading-relaxed">
+            Mapeamento de nichos, cadência semanal de segunda a sexta e abastecimento direto da planilha oficial sem duplicidade.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-3.5 py-2 text-xs font-mono text-zinc-300 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Radar Anti-Colisão Ativo</span>
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs font-medium text-[#afafaf] flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[#14d06e]" />
+            <span>Trava anti-duplicidade ativa</span>
           </div>
         </div>
       </div>
 
-      {/* Board Kanban de Leads B2B com Slide-over Lateral sem Reload */}
+      {/* Board Kanban & Data Warehouse */}
       <LeadsKanban
         initialLeads={leadsData}
         initialOperators={operators}

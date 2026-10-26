@@ -372,38 +372,34 @@ export function LeadsKanban({
 
   return (
     <div className="space-y-8">
-      {/* Barra Operacional do Hunter: Silo de Propriedade & Novo Lead com Fórmula de Vidro */}
-      <div className="relative overflow-hidden rounded-3xl bg-white/[0.02] border border-white/[0.08] p-5 lg:p-6 shadow-2xl backdrop-blur-2xl transition-all duration-300 hover:bg-white/[0.03]">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+      {/* Barra Operacional na estética irvo.com.br */}
+      <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-4 lg:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Seletor de Operador Ativo ou Silo Pessoal */}
           {isCommercial ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-mono text-emerald-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-semibold text-white">Minha Carteira:</span>
+              <div className="flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white">
+                <span className="size-2 rounded-full bg-[#14d06e]" />
+                <span className="font-semibold">Carteira:</span>
                 <span>{currentUser?.name || "Operador Comercial"}</span>
-                <span className="text-[10px] text-emerald-400/70 uppercase tracking-wider font-sans border-l border-emerald-500/30 pl-2">
-                  Silo Pessoal Ativo
-                </span>
               </div>
-              <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400">
+              <span className="hidden sm:inline-block text-xs text-[#afafaf] tabular-nums">
                 {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
               </span>
             </div>
           ) : (
             <div data-tour="kanban-operator-filter" className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-white" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-                  Operador Ativo:
+                <Users className="size-4 text-[#afafaf]" />
+                <span className="text-xs font-medium text-[#afafaf]">
+                  Operador:
                 </span>
               </div>
 
               <select
                 value={activeOperator}
                 onChange={(e) => setActiveOperator(e.target.value)}
-                className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-2 text-xs font-mono text-zinc-200 focus:border-white/30 focus:outline-none cursor-pointer"
+                className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs font-medium text-white focus:ring-white focus:outline-none cursor-pointer"
               >
                 <option value="todos">Todos os Operadores ({leadsList.length})</option>
                 {operators.map((op) => {
@@ -418,49 +414,46 @@ export function LeadsKanban({
                 })}
               </select>
 
-              <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 border-l border-white/10 pl-3">
+              <span className="hidden sm:inline-block text-xs text-[#afafaf] border-l border-[#2e2e2e] pl-3 tabular-nums">
                 {displayedLeads.length} {displayedLeads.length === 1 ? "conta visível" : "contas visíveis"}
               </span>
             </div>
           )}
 
-          {/* Botões Operacionais: Alternador Planilha/Kanban, Convidar Equipe, Guia & Novo Lead */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex items-center rounded-xl border border-white/10 bg-black/40 p-1">
+          {/* Alternador Planilha/Kanban, Convidar Equipe, Guia & Novo Lead */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-1">
               <button
                 type="button"
                 onClick={() => setViewMode("all")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                   viewMode === "all"
-                    ? "bg-emerald-500 text-black shadow-sm"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-white text-[#0d0d0d]"
+                    : "text-[#afafaf] hover:text-white"
                 }`}
               >
-                <Zap className="h-3.5 w-3.5" />
                 <span>Planilha + Kanban</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("sheets")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                   viewMode === "sheets"
-                    ? "bg-emerald-500 text-black shadow-sm"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-white text-[#0d0d0d]"
+                    : "text-[#afafaf] hover:text-white"
                 }`}
               >
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span>Só Planilha Sheets</span>
+                <span>Só Planilha</span>
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("kanban")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                   viewMode === "kanban"
-                    ? "bg-emerald-500 text-black shadow-sm"
-                    : "text-zinc-400 hover:text-white"
+                    ? "bg-white text-[#0d0d0d]"
+                    : "text-[#afafaf] hover:text-white"
                 }`}
               >
-                <KanbanIcon className="h-3.5 w-3.5" />
                 <span>Só Kanban</span>
               </button>
             </div>
@@ -468,25 +461,25 @@ export function LeadsKanban({
             <button
               type="button"
               onClick={() => setIsInviteModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-zinc-200 hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer shadow-lg active:scale-[0.99]"
+              className="flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#262626] transition-colors cursor-pointer"
             >
-              <Users className="h-3.5 w-3.5 text-cyan-400" />
-              <span>Convidar Equipe</span>
+              <Users className="size-3.5 text-[#afafaf]" />
+              <span>Equipe</span>
             </button>
 
             <StartTourButton
               steps={KANBAN_TOUR_STEPS}
               variant="secondary"
-              label="Guia da Esteira"
+              label="Guia"
             />
 
             <button
               data-tour="kanban-new-lead"
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-all cursor-pointer shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="size-3.5" />
               <span>Novo Lead</span>
             </button>
           </div>
