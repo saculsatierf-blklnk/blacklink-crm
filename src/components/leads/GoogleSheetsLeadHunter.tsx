@@ -544,6 +544,8 @@ export function GoogleSheetsLeadHunter({
     } catch {}
   }, [rows, tabs, myCompany, representedWebsite, webhookUrl, campaignWebhookUrl, sheetUrl]);
 
+  const [showNicheRadar, setShowNicheRadar] = useState<boolean>(true);
+
   const handleSelectTab = (tab: string) => {
     setActiveTab(tab);
     setTargetSegment(tab);
@@ -553,6 +555,81 @@ export function GoogleSheetsLeadHunter({
     () => rows.filter((r) => r.tab === activeTab),
     [rows, activeTab]
   );
+
+  // CAMADA DE INTELIGÊNCIA DE NICHOS: Analisa quais abas/setores estão atendendo e convertendo mais
+  const nicheIntelligence = useMemo(() => {
+    const stats = tabs.map((tab) => {
+      const tabLeads = rows.filter((r) => r.tab === tab && r.empresa.trim());
+      const total = tabLeads.length;
+      const catalogSent = tabLeads.filter(
+        (r) => r.nivelProspeccao === "Catálogo enviado"
+      ).length;
+      const inContact = tabLeads.filter(
+        (r) => r.nivelProspeccao === "Em contato"
+      ).length;
+      const meetingBooked = tabLeads.filter(
+        (r) => r.nivelProspeccao === "Reunião agendada"
+      ).length;
+      const hotHighlighted = tabLeads.filter((r) => r.highlighted).length;
+
+      const engagedCount = catalogSent + inContact + meetingBooked;
+      const tractionRate = total > 0 ? Math.round((engagedCount / total) * 100) : 0;
+
+      return {
+        tab,
+        total,
+        catalogSent,
+        inContact,
+        meetingBooked,
+        hotHighlighted,
+        engagedCount,
+        tractionRate,
+      };
+    });
+
+    const sortedByTraction = [...stats].sort(
+      (a, b) => b.tractionRate - a.tractionRate || b.total - a.total
+    );
+    const topPerformingNiche = sortedByTraction[0];
+
+    // Sugestões inteligentes de novos nichos baseadas no setor de Aço/Metalurgia (Gofer Metais)
+    const candidateExpansions = [
+      {
+        niche: "Canteiros e Alojamentos Metálicos",
+        reason: "Nicho irmão de Casas Modulares (73%+ de tração) — compra contínua de chapas galvanizadas, telhas termoacústicas e perfis U.",
+        avgTicket: "Alto Recorrente",
+      },
+      {
+        niche: "Mezaninos e Porta-Pallets Logísticos",
+        reason: "Consome alto volume de vigas, perfis estruturais dobrados e chapas de piso xadrez.",
+        avgTicket: "Alto Ticket",
+      },
+      {
+        niche: "Implementos Rodoviários e Carrocerias",
+        reason: "Demanda semanal de chapas grossas A36, tubos estruturais e perfis dobrados sem sazonalidade.",
+        avgTicket: "Compra Mensal",
+      },
+      {
+        niche: "Suportes e Estruturas Fotovoltaicas",
+        reason: "Setor em expansão acelerada que exige perfis galvanizados a fogo e aço estrutural.",
+        avgTicket: "Escala Industrial",
+      },
+      {
+        niche: "Fabricantes de Guaritas e Eletrocentros",
+        reason: "Mesma cadeia de fornecedores dos fabricantes de módulos e contêineres.",
+        avgTicket: "Giro Rápido",
+      },
+    ].filter(
+      (item) =>
+        !tabs.some((t) => t.toLowerCase() === item.niche.toLowerCase())
+    );
+
+    return {
+      stats,
+      topPerformingNiche,
+      candidateExpansions,
+    };
+  }, [rows, tabs]);
 
   const updateCell = (
     id: string,
@@ -1089,7 +1166,136 @@ export function GoogleSheetsLeadHunter({
               {seg}
             </button>
           ))}
+
+          <button
+            type="button"
+            onClick={() => setShowNicheRadar((v) => !v)}
+            className="ml-auto rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1 text-[11px] font-mono font-bold text-amber-300 cursor-pointer"
+          >
+            {showNicheRadar ? "Ocultar Radar de Nichos" : "Abrir Radar de Inteligência de Nichos"}
+          </button>
         </div>
+
+        {/* CAMADA DE INTELIGÊNCIA DE NICHOS: QUAIS PROSPECTEI, QUAIS DÃO RESULTADO E QUAIS LIGAR A SEGUIR */}
+        {showNicheRadar && (
+          <div className="mt-5 rounded-2xl border border-white/10 bg-black/45 p-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400">
+                  ✦ Cérebro Comercial ({myCompany}) — Mapa de Tração por Nicho &amp; Próximos Alvos
+                </h3>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Cruzamento automático das abas da sua planilha mostrando onde estão atendendo/pedindo catálogo e quais novos setores explorar.
+                </p>
+              </div>
+              {nicheIntelligence.topPerformingNiche && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-mono text-emerald-300">
+                  🏆 Maior Tração Atual:{" "}
+                  <strong className="text-white">
+                    {nicheIntelligence.topPerformingNiche.tab}
+                  </strong>{" "}
+                  ({nicheIntelligence.topPerformingNiche.tractionRate}% avançaram)
+                </div>
+              )}
+            </div>
+
+            {/* 1. Termômetro dos Nichos Já Prospectados */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+              {nicheIntelligence.stats.map((st) => {
+                const isSelected = st.tab === activeTab;
+                return (
+                  <div
+                    key={st.tab}
+                    onClick={() => handleSelectTab(st.tab)}
+                    className={`rounded-xl border p-3 transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-emerald-500/50 bg-emerald-500/10"
+                        : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-white truncate">
+                        {st.tab}
+                      </span>
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold ${
+                          st.tractionRate >= 50
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : st.total > 0
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}
+                      >
+                        {st.total > 0 ? `${st.tractionRate}% tração` : "0 leads"}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 space-y-1 text-[11px] text-zinc-400 font-mono">
+                      <div className="flex justify-between">
+                        <span>Total na aba:</span>
+                        <strong className="text-zinc-200">{st.total}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Catálogo / Contato:</span>
+                        <strong className="text-emerald-400">
+                          {st.engagedCount} ({st.inContact + st.meetingBooked} quentes)
+                        </strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Destaques amarelos:</span>
+                        <strong className="text-amber-300">{st.hotHighlighted}</strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 2. Recomendação Inteligente: Próximos Nichos para Ligar (Baseado no Portfólio da Gofer Metais) */}
+            {nicheIntelligence.candidateExpansions.length > 0 && (
+              <div className="pt-2 border-t border-white/10 space-y-2">
+                <span className="block text-[11px] font-mono uppercase tracking-wider text-sky-300 font-bold">
+                  🎯 Próximos Nichos Recomendados p/ Ligar (Alta Demanda de Aço/Metal &amp; Ainda Inexplorados na Planilha):
+                </span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                  {nicheIntelligence.candidateExpansions.slice(0, 3).map((rec) => (
+                    <div
+                      key={rec.niche}
+                      className="flex flex-col justify-between rounded-xl border border-sky-500/25 bg-sky-950/15 p-3 gap-2"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-white">
+                            {rec.niche}
+                          </span>
+                          <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[9px] font-mono font-bold text-sky-300">
+                            {rec.avgTicket}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 leading-snug">
+                          {rec.reason}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!tabs.includes(rec.niche)) {
+                            setTabs((prev) => [...prev, rec.niche]);
+                          }
+                          setActiveTab(rec.niche);
+                          setTargetSegment(rec.niche);
+                        }}
+                        className="self-start rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 px-2.5 py-1 text-[11px] font-semibold text-sky-200 transition-colors cursor-pointer"
+                      >
+                        + Criar Aba &amp; Prospectar Este Nicho
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Playbook Dinâmico Gerado pelo Gemini para o Setor Alvo do Dia */}
         {activePlaybook && (
