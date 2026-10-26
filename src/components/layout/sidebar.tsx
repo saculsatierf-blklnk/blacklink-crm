@@ -47,7 +47,7 @@ export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
   },
   {
     id: "nichos",
-    label: "Mapa de Setores",
+    label: "Estudo & Mapa de Setores",
     shortLabel: "Setores",
     icon: Compass,
   },

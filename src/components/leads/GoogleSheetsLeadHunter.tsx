@@ -1312,13 +1312,43 @@ export function GoogleSheetsLeadHunter({
     [rows, activeTab]
   );
 
-  // CAMADA DE INTELIGÊNCIA DE NICHOS: Analisa quais abas/setores estão atendendo e convertendo mais
+  // Estado do Laboratório & Estudo de Setores para Atacar
+  const [selectedMacroCategory, setSelectedMacroCategory] = useState<string>("all");
+  const [selectedStudyNiche, setSelectedStudyNiche] = useState<string>(
+    "Canteiros e Alojamentos Metálicos"
+  );
+  const [customSectorInput, setCustomSectorInput] = useState<string>("");
+  const [customStudiedSectors, setCustomStudiedSectors] = useState<
+    Array<{
+      niche: string;
+      macroCategory: string;
+      recommendedSpreadsheet: string;
+      fitScore: number;
+      avgTicket: string;
+      salesCycle: string;
+      synergyWithExisting: string;
+      reason: string;
+      productsBought: string[];
+      buyerPersona: string;
+      mainPainPoint: string;
+      openingHook: string;
+      qualificationQuestion: string;
+    }>
+  >([]);
+
+  // CAMADA DE INTELIGÊNCIA & ESTUDO PROFUNDO DE SETORES B2B
   const nicheIntelligence = useMemo(() => {
     const stats = tabs.map((tab) => {
       const tabLeads = rows.filter((r) => r.tab === tab && r.empresa.trim());
       const total = tabLeads.length;
+      const waitingFirstTouch = tabLeads.filter(
+        (r) => r.nivelProspeccao === "Tentativa de contato"
+      ).length;
       const catalogSent = tabLeads.filter(
         (r) => r.nivelProspeccao === "Catálogo enviado"
+      ).length;
+      const answered = tabLeads.filter(
+        (r) => r.nivelProspeccao === "Atendeu"
       ).length;
       const inContact = tabLeads.filter(
         (r) => r.nivelProspeccao === "Em contato"
@@ -1327,19 +1357,40 @@ export function GoogleSheetsLeadHunter({
         (r) => r.nivelProspeccao === "Reunião agendada"
       ).length;
       const hotHighlighted = tabLeads.filter((r) => r.highlighted).length;
+      const emailOnlyCount = tabLeads.filter((r) =>
+        (r.observacoes || "").toLowerCase().includes("email")
+      ).length;
 
-      const engagedCount = catalogSent + inContact + meetingBooked;
+      const engagedCount = catalogSent + answered + inContact + meetingBooked;
       const tractionRate = total > 0 ? Math.round((engagedCount / total) * 100) : 0;
+
+      let diagnosticSummary = "";
+      if (total === 0) {
+        diagnosticSummary =
+          "Aba criada sem leads ainda. Use 'Captar Leads' na Planilha para abastecer 15–20 empresas.";
+      } else if (tractionRate >= 70) {
+        diagnosticSummary = `Alta aderência (${tractionRate}% já pediram catálogo ou avançaram). Priorize cobrar cotação em cima do PDF enviado.`;
+      } else if (waitingFirstTouch >= Math.ceil(total * 0.4)) {
+        diagnosticSummary = `${waitingFirstTouch} de ${total} empresas ainda estão em 'Tentativa de contato'${
+          emailOnlyCount > 0 ? ` (${emailOnlyCount} pedem envio por e-mail)` : ""
+        }. Oportunidade imediata de disparo.`;
+      } else {
+        diagnosticSummary = `${engagedCount} empresas com catálogo/contato ativo. Foque nos destaques amarelos para puxar orçamento.`;
+      }
 
       return {
         tab,
         total,
+        waitingFirstTouch,
         catalogSent,
+        answered,
         inContact,
         meetingBooked,
         hotHighlighted,
+        emailOnlyCount,
         engagedCount,
         tractionRate,
+        diagnosticSummary,
       };
     });
 
@@ -1348,44 +1399,398 @@ export function GoogleSheetsLeadHunter({
     );
     const topPerformingNiche = sortedByTraction[0];
 
-    // Sugestões inteligentes de novos nichos baseadas no setor de Aço/Metalurgia (Gofer Metais)
-    const candidateExpansions = [
+    const builtInStudies = [
       {
         niche: "Canteiros e Alojamentos Metálicos",
-        reason: "Nicho irmão de Casas Modulares (73%+ de tração) — compra contínua de chapas galvanizadas, telhas termoacústicas e perfis U.",
+        macroCategory: "Imobiliário & Construção Modular",
+        recommendedSpreadsheet: "Imobiliário.",
+        fitScore: 97,
         avgTicket: "Alto Recorrente",
+        salesCycle: "12 a 25 dias",
+        synergyWithExisting: "Irmão direto de Casas Modulares (79% de tração)",
+        reason:
+          "Fabricantes e locadores de módulos habitacionais, refeitórios de obras e containers compram exatamente a mesma família de aços que Casas Modulares, porém com giro de produção semanal.",
+        productsBought: [
+          "Chapas galvanizadas e galvalume",
+          "Perfis U/Z dobrados para chassis e colunas",
+          "Telhas termoacústicas (sanduíche PIR/EPS)",
+          "Tubos metalon retangulares e quadrados",
+        ],
+        buyerPersona: "Gerente de Compras / Engenheiro de Produção / Sócio Industrial",
+        mainPainPoint:
+          "Prazo de entrega travado em grandes distribuidoras quando fecham contratos emergenciais de obras e mineração.",
+        openingHook:
+          "Atendemos fabricantes de módulos habitacionais com perfis dobrados, chapas galvanizadas e telhas com corte sob medida e entrega rápida. Posso enviar nosso catálogo técnico em PDF no seu WhatsApp?",
+        qualificationQuestion:
+          "Vocês compram os perfis de estrutura já dobrados na medida do módulo ou dobram internamente na fábrica?",
+      },
+      {
+        niche: "Esquadrias Industriais, Brises & Pele de Vidro",
+        macroCategory: "Imobiliário & Construção Modular",
+        recommendedSpreadsheet: "Imobiliário.",
+        fitScore: 95,
+        avgTicket: "Médio/Alto Mensal",
+        salesCycle: "10 a 20 dias",
+        synergyWithExisting: "Complementar direto da sua aba Fachadas (23 empresas)",
+        reason:
+          "Empresas que executam fachadas comerciais, brises metálicos e revestimentos arquitetônicos compram chapas, perfis de fixação, insertos metálicos e corte/dobra a cada nova fachada contratada.",
+        productsBought: [
+          "Chapas finas a frio, galvanizadas e alumínio/ACM",
+          "Bandejas e cassetes metálicos dobrados",
+          "Tubos industriais e cantoneiras de ancoragem",
+          "Chapas perfuradas e expandidas para brises",
+        ],
+        buyerPersona: "Orçamentista Técnico / Comprador de Obras / Diretor Técnico",
+        mainPainPoint:
+          "Precisam de cotação rápida na fase de orçamento da obra e sofrem com fornecedores que demoram 3 dias para responder preço.",
+        openingHook:
+          "Já fornecemos metais e perfis para empresas de fachadas em SP. Queria deixar nossa tabela/catálogo em PDF com o setor de orçamentos de vocês para quando precisarem cotar obra nova.",
+        qualificationQuestion:
+          "Hoje quem cuida da cotação de chapas, tubos e perfis metálicos quando entra projeto novo de fachada?",
+      },
+      {
+        niche: "Galpões Metálicos & Estruturas Pré-Fabricadas",
+        macroCategory: "Imobiliário & Construção Modular",
+        recommendedSpreadsheet: "Imobiliário.",
+        fitScore: 94,
+        avgTicket: "Muito Alto (Por Obra)",
+        salesCycle: "20 a 40 dias",
+        synergyWithExisting: "Sinergia com Lajes (71% tração) e Casas Modulares",
+        reason:
+          "Construtoras de galpões industriais e estruturas metálicas compram toneladas de terças (Perfil U enrijecido), chapas grossas para sapatas/ligações e telhas metálicas.",
+        productsBought: [
+          "Terças em Perfil U simples e enrijecido",
+          "Chapas grossas A36 para placas de base e flanges",
+          "Telhas trapezoidais e zipadas",
+          "Barras chatas, cantoneiras e chumbadores",
+        ],
+        buyerPersona: "Engenheiro de Suprimentos / Diretor de Engenharia",
+        mainPainPoint:
+          "Ruptura de estoque de bitolas específicas de perfil U enrijecido e chapas de ligação no meio da montagem do galpão.",
+        openingHook:
+          "Trabalhamos com linha completa de perfis estruturais, chapas A36 e coberturas para estruturas metálicas. Posso encaminhar nosso catálogo em PDF para vocês homologarem como fornecedor?",
+        qualificationQuestion:
+          "Vocês estão com alguma estrutura ou cobertura em fase de compra de aço para este mês?",
+      },
+      {
+        niche: "Fôrmas Metálicas, Steel Deck & Escoramentos",
+        macroCategory: "Imobiliário & Construção Modular",
+        recommendedSpreadsheet: "Imobiliário.",
+        fitScore: 92,
+        avgTicket: "Alto Recorrente",
+        salesCycle: "15 a 30 dias",
+        synergyWithExisting: "Expansão direta da sua aba Lajes",
+        reason:
+          "Ao lado dos fabricantes de lajes treliçadas e pré-moldadas, empresas de fôrmas metálicas, lajes Steel Deck e escoramentos consomem bobinas e chapas galvanizadas estruturais o ano inteiro.",
+        productsBought: [
+          "Chapas galvanizadas estruturais (ZAR)",
+          "Perfis conformados a frio e cantoneiras",
+          "Tubos estruturais de parede grossa",
+          "Telas, treliças e acessórios de concretagem",
+        ],
+        buyerPersona: "Comprador Industrial / Gerente de Suprimentos",
+        mainPainPoint:
+          "Oscilação de preço e exigência de certificado de qualidade fluência/zincagem do material.",
+        openingHook:
+          "Atendemos o setor de lajes e estruturas com chapas galvanizadas, tubos e perfis certificados. Posso enviar nosso catálogo em PDF para o setor de compras?",
+        qualificationQuestion:
+          "Quais espessuras de chapa ou tubo estrutural vocês mais consomem na linha de produção hoje?",
       },
       {
         niche: "Mezaninos e Porta-Pallets Logísticos",
-        reason: "Consome alto volume de vigas, perfis estruturais dobrados e chapas de piso xadrez.",
-        avgTicket: "Alto Ticket",
+        macroCategory: "Logística & Armazenagem Industrial",
+        recommendedSpreadsheet: "Logística & Galpões",
+        fitScore: 96,
+        avgTicket: "Alto Ticket Recorrente",
+        salesCycle: "15 a 25 dias",
+        synergyWithExisting: "Consumo intensivo de perfis dobrados e piso metálico",
+        reason:
+          "Com o boom de centros de distribuição (e-commerce/3PL), fabricantes de sistemas de armazenagem, porta-pallets e mezaninos industriais compram aço toda semana sem sazonalidade.",
+        productsBought: [
+          "Perfis estruturais dobrados e perfurados (colunas/longarinas)",
+          "Chapas xadrez e piso metálico antiderrapante",
+          "Tubos estruturais e vigas laminadas",
+          "Bobinas slitadas fina frio e galvanizadas",
+        ],
+        buyerPersona: "Gerente de Compras / Diretor Industrial",
+        mainPainPoint:
+          "Necessidade de regularidade dimensional nas chapas/bobinas para perfiladeiras e dobra seriada.",
+        openingHook:
+          "Fornecemos chapas de piso, bobinas e perfis estruturais para fabricantes de mezaninos e sistemas de armazenagem. Posso enviar nosso catálogo técnico em PDF para avaliação?",
+        qualificationQuestion:
+          "Vocês compram bobina/chapa para perfilar internamente ou também compram perfis e pisos já cortados/dobrados?",
       },
       {
-        niche: "Implementos Rodoviários e Carrocerias",
-        reason: "Demanda semanal de chapas grossas A36, tubos estruturais e perfis dobrados sem sazonalidade.",
-        avgTicket: "Compra Mensal",
+        niche: "Docas, Niveladoras e Portas Seccionais Industriais",
+        macroCategory: "Logística & Armazenagem Industrial",
+        recommendedSpreadsheet: "Logística & Galpões",
+        fitScore: 90,
+        avgTicket: "Médio/Alto Mensal",
+        salesCycle: "10 a 20 dias",
+        synergyWithExisting: "Mesmos clientes finais de Galpões e Fachadas",
+        reason:
+          "Fabricantes de niveladoras de doca, portas rápidas/seccionais e abrigos para centros logísticos utilizam chapas xadrez grossas, perfis U, tubos e chapas galvanizadas em série.",
+        productsBought: [
+          "Chapas xadrez de alta resistência (pestanas e plataformas)",
+          "Perfis U laminados e dobrados",
+          "Chapas galvanizadas para painéis de portas",
+          "Eixos, barras redondas e tubos mecânicos",
+        ],
+        buyerPersona: "Comprador Técnico / PCP (Planejamento e Controle de Produção)",
+        mainPainPoint:
+          "Falta de fornecedor ágil que entregue tanto a chapa xadrez pesada quanto os perfis e chapas finas no mesmo pedido.",
+        openingHook:
+          "Trabalhamos com a linha completa de chapas xadrez, perfis U e chapas galvanizadas para fabricantes de docas e portas industriais. Posso enviar nosso catálogo PDF?",
+        qualificationQuestion:
+          "Hoje vocês concentram a compra de chapas xadrez e perfis em um único distribuidor ou dividem por item?",
       },
       {
         niche: "Suportes e Estruturas Fotovoltaicas",
-        reason: "Setor em expansão acelerada que exige perfis galvanizados a fogo e aço estrutural.",
+        macroCategory: "Energia Solar & Infraestrutura",
+        recommendedSpreadsheet: "Energia & Infra",
+        fitScore: 97,
         avgTicket: "Escala Industrial",
+        salesCycle: "15 a 30 dias",
+        synergyWithExisting: "Altíssimo volume de perfis galvanizados e alumínio",
+        reason:
+          "Fabricantes de estruturas de solo para usinas solares, carports solares e suportes de telhado têm demanda contínua de perfis conformados, aço galvanizado a fogo e alumínio.",
+        productsBought: [
+          "Perfis C/U/Z em aço galvanizado / Magnelis / Galvalume",
+          "Perfis estruturais para estacas cravadas de usinas solares",
+          "Cantoneiras, barras chatas e suportes estampados",
+          "Perfis de alumínio estrutural",
+        ],
+        buyerPersona: "Diretor de Supply Chain / Engenheiro de Produto / Comprador Sênior",
+        mainPainPoint:
+          "Exigência de resistência à corrosão e cumprimento rigoroso de cronograma de entrega para usinas GD.",
+        openingHook:
+          "Atendemos o segmento de estruturas solares e carports com perfis estruturais e aços revestidos. Posso enviar nosso catálogo em PDF para o time de suprimentos?",
+        qualificationQuestion:
+          "O foco maior de fabricação de vocês hoje é estrutura de solo para usinas/carports ou suportes para telhado?",
       },
       {
-        niche: "Fabricantes de Guaritas e Eletrocentros",
-        reason: "Mesma cadeia de fornecedores dos fabricantes de módulos e contêineres.",
-        avgTicket: "Giro Rápido",
+        niche: "Fabricantes de Eletrocentros e Quadros Elétricos",
+        macroCategory: "Energia Solar & Infraestrutura",
+        recommendedSpreadsheet: "Energia & Infra",
+        fitScore: 93,
+        avgTicket: "Compra Mensal Fiel",
+        salesCycle: "14 a 25 dias",
+        synergyWithExisting: "Mesma engenharia modular de Casas Modulares + WEG",
+        reason:
+          "Você já tem a WEG na aba Casas Modulares! Fabricantes de eletrocentros metálicos, subestações compactas (skids) e painéis elétricos compram chapas finas, perfis estruturais e bases metálicas todo mês.",
+        productsBought: [
+          "Chapas finas a frio e galvanizadas (painéis e invólucros)",
+          "Vigas W/I e perfis U pesados para base (Skid metálico)",
+          "Telhas e painéis termoacústicos para salas elétricas",
+          "Chapas de alumínio e cobre/inox para barramentos e flanges",
+        ],
+        buyerPersona: "Comprador Industrial / Coordenador de Engenharia Mecânica",
+        mainPainPoint:
+          "Planicidade da chapa para corte a laser e dobra CNC sem empenamento nos painéis e eletrocentros.",
+        openingHook:
+          "Fornecemos chapas selecionadas para corte/dobra e perfis pesados para skids e eletrocentros. Posso enviar nosso catálogo em PDF para o setor de compras?",
+        qualificationQuestion:
+          "Vocês fazem a caldeiraria do skid/painel internamente ou terceirizam parte do corte e dobra?",
       },
-    ].filter(
-      (item) =>
-        !tabs.some((t) => t.toLowerCase() === item.niche.toLowerCase())
+      {
+        niche: "Implementos Rodoviários, Baús e Carrocerias",
+        macroCategory: "Implementos Rodoviários & Agro",
+        recommendedSpreadsheet: "Agro & Rodoviário",
+        fitScore: 95,
+        avgTicket: "Compra Semanal/Mensal",
+        salesCycle: "10 a 20 dias",
+        synergyWithExisting: "Consumo pesado de chapas, perfis dobrados e ACM/Alumínio",
+        reason:
+          "Fabricantes e reformadoras de baús frigoríficos/carga seca, caçambas basculantes, pranchas e carretas consomem aço estrutural, chapas de piso e revestimento toda semana.",
+        productsBought: [
+          "Perfis U e ômega dobrados para longarinas e travessas",
+          "Chapas grossas A36 e chapas de alta resistência ao desgaste",
+          "Chapas xadrez para piso de carroceria e plataforma",
+          "Bobinas e chapas pré-pintadas / alumínio para baús",
+        ],
+        buyerPersona: "Sócio-Proprietário / Gerente de Compras / Chefe de Fábrica",
+        mainPainPoint:
+          "Necessidade de reposição rápida de chapas e perfis dobrados na medida do chassi sem empate de capital em estoque gigante.",
+        openingHook:
+          "Atendemos fabricantes de implementos e baús com perfis dobrados, chapas de piso e estruturais. Posso mandar nosso catálogo em PDF no seu WhatsApp para você comparar preços?",
+        qualificationQuestion:
+          "Qual item pesa mais na sua compra mensal hoje: chapas estruturais/piso ou perfis dobrados para chassi e caixa?",
+      },
+      {
+        niche: "Silos, Secadores e Equipamentos Agrícolas",
+        macroCategory: "Implementos Rodoviários & Agro",
+        recommendedSpreadsheet: "Agro & Rodoviário",
+        fitScore: 91,
+        avgTicket: "Muito Alto",
+        salesCycle: "20 a 35 dias",
+        synergyWithExisting: "Alto volume de chapas galvanizadas e perfis estruturais",
+        reason:
+          "Indústrias de equipamentos para armazenagem de grãos, elevadores de canecas, roscas transportadoras e estruturas agroindustriais compram grandes lotes de aço galvanizado e carbono.",
+        productsBought: [
+          "Chapas galvanizadas e bobinas de alta camada de zinco",
+          "Cantoneiras, barras chatas e perfis estruturais",
+          "Tubos mecânicos e chapas A36",
+          "Chapas perfuradas para aeração e peneiras",
+        ],
+        buyerPersona: "Gerente de Suprimentos / Diretor Industrial",
+        mainPainPoint:
+          "Picos de produção pré-safra onde as usinas pedem 60+ dias de lead time e eles precisam de pronta entrega.",
+        openingHook:
+          "Trabalhamos com pronta entrega de chapas galvanizadas, carbono e perfis para indústrias de equipamentos agrícolas. Posso enviar nosso catálogo em PDF?",
+        qualificationQuestion:
+          "Como está a programação de compras de chapas e perfis de vocês para os próximos 30 dias?",
+      },
+      {
+        niche: "Totens, Pórticos Metálicos e Comunicação Visual Pesada",
+        macroCategory: "Comunicação Visual, ACM & Varejo",
+        recommendedSpreadsheet: "Imobiliário.",
+        fitScore: 94,
+        avgTicket: "Giro Rápido Semanal",
+        salesCycle: "7 a 15 dias",
+        synergyWithExisting: "Mesmo perfil de Guarusign, GFMVisual e Evolve (aba Fachadas)",
+        reason:
+          "Na sua aba Fachadas, empresas de comunicação visual e revestimento (como Guarusign, GFMVisual, Novacm) já pediram catálogo! Expandir para fabricantes de totens de postos/redes, pórticos e fachadas de redes de varejo tem conversão rapidíssima.",
+        productsBought: [
+          "Chapas de ACM, alumínio e chapas galvanizadas para letras/totens",
+          "Tubos metalon (20x20, 30x30, 40x40, 50x30) para quadros internos",
+          "Perfis estruturais pesados para colunas de totens",
+          "Cantoneiras e barras de acabamento",
+        ],
+        buyerPersona: "Dono da Indústria Visual / Comprador / Gerente de Produção",
+        mainPainPoint:
+          "Precisam de entrega em 24h–48h quando aprovam rollout de fachadas para redes de farmácias, postos, bancos ou concessionárias.",
+        openingHook:
+          "Já fornecemos metalon, chapas galvanizadas e materiais de fachada para empresas de comunicação visual e revestimentos. Posso te mandar nosso catálogo em PDF aqui no WhatsApp?",
+        qualificationQuestion:
+          "Vocês estão comprando mais estrutura metálica (metalon/perfis) ou chapas e revestimentos nesta semana?",
+      },
+      {
+        niche: "Gôndolas, Checkouts e Instalações para Supermercados",
+        macroCategory: "Comunicação Visual, ACM & Varejo",
+        recommendedSpreadsheet: "Logística & Galpões",
+        fitScore: 93,
+        avgTicket: "Compra Mensal Contínua",
+        salesCycle: "15 a 25 dias",
+        synergyWithExisting: "Produção seriada em aço fino, tubos e perfis",
+        reason:
+          "Fabricantes de expositores metálicos, gôndolas de supermercado/atacarejo, balcões refrigerados e mobiliário comercial em aço compram bobinas, chapas finas e tubos todos os meses sem parar.",
+        productsBought: [
+          "Chapas finas a frio (FF) e galvanizadas para prateleiras e colunas",
+          "Tubos industriais redondos, quadrados e retangulares",
+          "Arames, telas e perfis conformados",
+          "Chapas de aço inox (para linha de refrigeração/gastronomia)",
+        ],
+        buyerPersona: "Gerente de Compras / PCP Industrial",
+        mainPainPoint:
+          "Qualidade superficial da chapa fina a frio para pintura eletrostática a pó (epóxi) sem manchas ou ondulações.",
+        openingHook:
+          "Fornecemos chapas finas a frio, galvanizadas e tubos com padrão ideal para pintura eletrostática e mobiliário comercial. Posso enviar nosso catálogo em PDF?",
+        qualificationQuestion:
+          "Qual é a espessura de chapa fina e medida de tubo que mais roda na fábrica de vocês todo mês?",
+      },
+    ];
+
+    const allStudies = [...customStudiedSectors, ...builtInStudies];
+    const candidateExpansions = allStudies.filter(
+      (item) => !tabs.some((t) => t.toLowerCase() === item.niche.toLowerCase())
     );
+
+    const macroCategories = [
+      "Imobiliário & Construção Modular",
+      "Logística & Armazenagem Industrial",
+      "Energia Solar & Infraestrutura",
+      "Implementos Rodoviários & Agro",
+      "Comunicação Visual, ACM & Varejo",
+    ];
 
     return {
       stats,
       topPerformingNiche,
       candidateExpansions,
+      allStudies,
+      macroCategories,
     };
-  }, [rows, tabs]);
+  }, [rows, tabs, customStudiedSectors]);
+
+  // Gera estudo de viabilidade instantâneo para qualquer setor digitado pelo usuário
+  const handleGenerateCustomSectorStudy = () => {
+    const clean = customSectorInput.trim();
+    if (!clean) return;
+
+    const lower = clean.toLowerCase();
+    const isAgroOrTruck =
+      lower.includes("agro") ||
+      lower.includes("implemento") ||
+      lower.includes("carreta") ||
+      lower.includes("reboque") ||
+      lower.includes("silo") ||
+      lower.includes("máquina");
+    const isSolarOrEnergy =
+      lower.includes("solar") ||
+      lower.includes("energia") ||
+      lower.includes("elétric") ||
+      lower.includes("painel") ||
+      lower.includes("torre");
+    const isLogistics =
+      lower.includes("logístic") ||
+      lower.includes("pallet") ||
+      lower.includes("armazen") ||
+      lower.includes("mezanino") ||
+      lower.includes("elevador") ||
+      lower.includes("gôndola");
+
+    const macroCategory = isAgroOrTruck
+      ? "Implementos Rodoviários & Agro"
+      : isSolarOrEnergy
+      ? "Energia Solar & Infraestrutura"
+      : isLogistics
+      ? "Logística & Armazenagem Industrial"
+      : "Imobiliário & Construção Modular";
+
+    const recommendedSpreadsheet = isAgroOrTruck
+      ? "Agro & Rodoviário"
+      : isSolarOrEnergy
+      ? "Energia & Infra"
+      : isLogistics
+      ? "Logística & Galpões"
+      : sheetTitle || "Imobiliário.";
+
+    const newStudy = {
+      niche: clean,
+      macroCategory,
+      recommendedSpreadsheet,
+      fitScore: 92,
+      avgTicket: "Alto Potencial B2B",
+      salesCycle: "12 a 25 dias",
+      synergyWithExisting: `Expansão mapeada para ${myCompany} a partir da tração de ${
+        nicheIntelligence.topPerformingNiche?.tab || "Casas Modulares"
+      }`,
+      reason: `Empresas do setor de "${clean}" demandam fornecimento recorrente de chapas metálicas, tubos estruturais e perfis dobrados sob medida, buscando fornecedores ágeis com pronta entrega e corte na medida.`,
+      productsBought: [
+        `Chapas de aço carbono, galvanizadas ou inox aplicadas em ${clean}`,
+        "Perfis U/Z dobrados e estruturais sob medida",
+        "Tubos metalon industriais (quadrados, retangulares e redondos)",
+        "Corte, dobra e bobinas slitadas para produção seriada",
+      ],
+      buyerPersona: `Comprador Técnico / Gerente Industrial / Sócio-Diretor em empresas de ${clean}`,
+      mainPainPoint:
+        "Demora na resposta de cotação dos distribuidores tradicionais e falta de flexibilidade em lotes fracionados ou medidas especiais.",
+      openingHook: `Olá! Falo da ${myCompany}. Já fornecemos chapas, tubos e perfis metálicos para indústrias do segmento de ${clean}. Posso te enviar nosso catálogo técnico em PDF no WhatsApp para vocês terem como opção de cotação rápida?`,
+      qualificationQuestion: `Hoje na linha de ${clean}, vocês compram o material já cortado/dobrado na medida ou compram chapas e barras padrão?`,
+    };
+
+    setCustomStudiedSectors((prev) => [
+      newStudy,
+      ...prev.filter((s) => s.niche.toLowerCase() !== clean.toLowerCase()),
+    ]);
+    setSelectedStudyNiche(clean);
+    setSelectedMacroCategory("all");
+    setCustomSectorInput("");
+    setFeedbackBanner({
+      type: "success",
+      text: `✦ Estudo de viabilidade gerado para o setor "${clean}"! Veja o Dossiê Estratégico ao lado para decidir se cria uma aba ou planilha nova.`,
+    });
+  };
 
   // CAMADA DE INTELIGÊNCIA DE CADÊNCIA SEMANAL (SEGUNDA A SEXTA — 5 TOQUES B2B)
   const [showCadenceEngine, setShowCadenceEngine] = useState<boolean>(true);
@@ -3359,15 +3764,15 @@ export function GoogleSheetsLeadHunter({
       {activeWorkspaceTab === "nichos" && (
         <section className="space-y-6">
           {/* Barra Superior de Planilhas no Mapa de Setores */}
-          <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
-                Planilhas de Prospecção:
+                Planilhas Conectadas ({spreadsheets.length}):
               </span>
               {spreadsheets.map((sheet) => {
                 const isCurrentSheet = sheet.id === activeSpreadsheet.id;
-                const sheetLeadsCount = rows.filter((r) =>
-                  sheet.tabs.includes(r.tab)
+                const sheetLeadsCount = rows.filter(
+                  (r) => sheet.tabs.includes(r.tab) && r.empresa.trim()
                 ).length;
                 return (
                   <button
@@ -3389,7 +3794,7 @@ export function GoogleSheetsLeadHunter({
                           : "bg-[#262626] text-[#afafaf]"
                       }`}
                     >
-                      {sheetLeadsCount}
+                      {sheet.tabs.length} abas · {sheetLeadsCount} leads
                     </span>
                   </button>
                 );
@@ -3401,7 +3806,7 @@ export function GoogleSheetsLeadHunter({
                 className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] transition-colors cursor-pointer shrink-0"
               >
                 <Plus className="size-3.5" />
-                <span>Criar Nova Planilha</span>
+                <span>+ Nova Planilha</span>
               </button>
 
               <button
@@ -3410,7 +3815,7 @@ export function GoogleSheetsLeadHunter({
                 className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer shrink-0"
               >
                 <Plus className="size-3.5 text-[#afafaf]" />
-                <span>Nova Aba em {sheetTitle}</span>
+                <span>+ Nova Aba em {sheetTitle}</span>
               </button>
             </div>
 
@@ -3428,72 +3833,103 @@ export function GoogleSheetsLeadHunter({
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-[#afafaf] uppercase tracking-wider">
-                Mapa de Setores · Planilha {sheetTitle} ({myCompany})
-              </p>
-              <h3 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
-                Tração por nicho prospectado
-              </h3>
-            </div>
-            {nicheIntelligence.topPerformingNiche && (
-              <div className="inline-flex items-center gap-2.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs">
-                <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 font-semibold text-[#14d06e] tabular-nums">
-                  {nicheIntelligence.topPerformingNiche.tractionRate}% tração
-                </span>
-                <span className="text-[#afafaf]">
-                  Melhor resposta em{" "}
-                  <strong className="text-white">
-                    {nicheIntelligence.topPerformingNiche.tab}
-                  </strong>
-                </span>
+          {/* =================================================================
+              PARTE 1: RAIO-X DOS SETORES JÁ ATACADOS NA PLANILHA ATIVA
+             ================================================================= */}
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-[#afafaf] uppercase tracking-wider">
+                  1. Diagnóstico do que você já prospectou · Planilha "{sheetTitle}"
+                </p>
+                <h3 className="mt-1 text-xl font-semibold tracking-[-0.03em] text-white">
+                  Desempenho e gargalos das abas atuais ({tabs.length} setores ativos)
+                </h3>
               </div>
-            )}
-          </div>
+              {nicheIntelligence.topPerformingNiche && (
+                <div className="inline-flex items-center gap-2.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs">
+                  <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 font-semibold text-[#14d06e] tabular-nums">
+                    {nicheIntelligence.topPerformingNiche.tractionRate}% tração
+                  </span>
+                  <span className="text-[#afafaf]">
+                    Setor campeão atual:{" "}
+                    <strong className="text-white">
+                      {nicheIntelligence.topPerformingNiche.tab}
+                    </strong>
+                  </span>
+                </div>
+              )}
+            </div>
 
-          {/* Grade com bordas compartilhadas idêntica ao catálogo de categorias da irvo.com.br */}
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 border-t border-l border-[#2e2e2e]">
-            {nicheIntelligence.stats.map((st) => {
-              const isSelected = st.tab === activeTab;
-              return (
-                <li
-                  key={st.tab}
-                  onClick={() => handleSelectTab(st.tab)}
-                  className={`flex min-h-48 flex-col justify-between border-r border-b border-[#2e2e2e] p-5 transition-colors cursor-pointer ${
-                    isSelected
-                      ? "bg-[#1a1a1a]"
-                      : "bg-[#000000] hover:bg-[#0d0d0d]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold tabular-nums ${
-                        st.tractionRate >= 50
-                          ? "bg-[#0c2b1c] text-[#14d06e]"
-                          : st.total > 0
-                          ? "bg-[#0f1b33] text-[#7fa9f7]"
-                          : "bg-[#1a1a1a] text-[#afafaf]"
-                      }`}
-                    >
-                      {st.total > 0 ? `${st.tractionRate}% engajamento` : "Vazia"}
-                    </span>
-                    {isSelected && (
-                      <span className="text-xs font-medium text-[#7fa9f7]">
-                        Ativa
-                      </span>
-                    )}
-                  </div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 border-t border-l border-[#2e2e2e]">
+              {nicheIntelligence.stats.map((st) => {
+                const isSelected = st.tab === activeTab;
+                return (
+                  <li
+                    key={st.tab}
+                    onClick={() => handleSelectTab(st.tab)}
+                    className={`flex flex-col justify-between border-r border-b border-[#2e2e2e] p-5 transition-colors cursor-pointer ${
+                      isSelected
+                        ? "bg-[#1a1a1a]"
+                        : "bg-[#000000] hover:bg-[#0d0d0d]"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold tabular-nums ${
+                            st.tractionRate >= 65
+                              ? "bg-[#0c2b1c] text-[#14d06e]"
+                              : st.total > 0
+                              ? "bg-[#0f1b33] text-[#7fa9f7]"
+                              : "bg-[#1a1a1a] text-[#afafaf]"
+                          }`}
+                        >
+                          {st.total > 0
+                            ? `${st.tractionRate}% pediram catálogo / atenderam`
+                            : "Aba sem leads"}
+                        </span>
+                        {isSelected && (
+                          <span className="text-xs font-semibold text-[#7fa9f7]">
+                            Aba Selecionada
+                          </span>
+                        )}
+                      </div>
 
-                  <div className="mt-6">
-                    <p className="text-base font-semibold text-white">
-                      {st.tab}
-                    </p>
-                    <div className="mt-1.5 flex items-baseline justify-between text-xs text-[#afafaf] tabular-nums">
-                      <span>{st.total} empresas</span>
-                      <span>
-                        {st.engagedCount} c/ PDF · {st.hotHighlighted} destaque
-                      </span>
+                      <div className="mt-4 flex items-baseline justify-between">
+                        <p className="text-lg font-semibold text-white">
+                          {st.tab}
+                        </p>
+                        <span className="text-sm font-semibold text-white tabular-nums">
+                          {st.total} empresas
+                        </span>
+                      </div>
+
+                      {/* Mini Funil Real da Aba */}
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-2">
+                          <p className="text-[10px] text-[#afafaf]">1º Toque Pendente</p>
+                          <p className="mt-0.5 text-sm font-semibold text-[#e8c267] tabular-nums">
+                            {st.waitingFirstTouch}
+                          </p>
+                        </div>
+                        <div className="rounded bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-2">
+                          <p className="text-[10px] text-[#afafaf]">Catálogo Enviado</p>
+                          <p className="mt-0.5 text-sm font-semibold text-[#7fa9f7] tabular-nums">
+                            {st.catalogSent}
+                          </p>
+                        </div>
+                        <div className="rounded bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-2">
+                          <p className="text-[10px] text-[#afafaf]">Atendeu / Quentes</p>
+                          <p className="mt-0.5 text-sm font-semibold text-[#14d06e] tabular-nums">
+                            {st.answered + st.inContact + st.meetingBooked}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-xs text-[#afafaf] leading-relaxed">
+                        {st.diagnosticSummary}
+                      </p>
                     </div>
 
                     <div className="mt-4 flex items-center gap-2 pt-3 border-t border-[#2e2e2e]">
@@ -3504,9 +3940,9 @@ export function GoogleSheetsLeadHunter({
                           handleSelectTab(st.tab);
                           onWorkspaceTabChange?.("planilha");
                         }}
-                        className="flex-1 rounded bg-[#262626] hover:bg-white hover:text-[#0d0d0d] px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors cursor-pointer text-center"
+                        className="flex-1 rounded bg-white hover:bg-white/90 px-2.5 py-1.5 text-xs font-semibold text-[#0d0d0d] transition-colors cursor-pointer text-center"
                       >
-                        Abrir Planilha
+                        Ver {st.total} Leads na Planilha &rarr;
                       </button>
                       <button
                         type="button"
@@ -3515,79 +3951,312 @@ export function GoogleSheetsLeadHunter({
                           handleSelectTab(st.tab);
                           onWorkspaceTabChange?.("cadencia");
                         }}
-                        className="flex-1 rounded bg-[#0d0d0d] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-[11px] font-semibold text-[#afafaf] hover:text-white transition-colors cursor-pointer text-center"
+                        className="rounded bg-[#0d0d0d] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-[#afafaf] hover:text-white transition-colors cursor-pointer text-center"
                       >
                         Cadência
                       </button>
                     </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
-          {/* Expansão de Novos Setores Recomendados */}
-          {nicheIntelligence.candidateExpansions.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-[#afafaf]">
-                Próximos setores recomendados para prospecção ({myCompany}):
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {nicheIntelligence.candidateExpansions.slice(0, 3).map((rec) => (
-                  <div
-                    key={rec.niche}
-                    className="rounded-lg bg-[#1a1a1a] p-4 text-left ring-1 ring-[#2e2e2e] flex flex-col justify-between gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
-                          {rec.avgTicket}
-                        </span>
-                        <span className="text-xs text-[#afafaf]">
-                          Novo nicho
-                        </span>
-                      </div>
-                      <p className="mt-3 text-base font-semibold text-white">
-                        {rec.niche}
-                      </p>
-                      <p className="mt-1.5 text-xs text-[#afafaf] leading-relaxed">
-                        {rec.reason}
-                      </p>
-                    </div>
+          {/* =================================================================
+              PARTE 2: LABORATÓRIO & ESTUDO DE QUAIS SETORES ATACAR AGORA
+             ================================================================= */}
+          <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 space-y-5">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-[#2e2e2e] pb-4">
+              <div>
+                <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
+                  2. Inteligência de Expansão Comercial · {myCompany}
+                </span>
+                <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">
+                  Estudo de Quais Setores Atacar (Matriz de Viabilidade & Dossiê Tático)
+                </h3>
+                <p className="mt-1 text-xs text-[#afafaf]">
+                  Estude o que cada setor compra, quem é o decisor, qual é a dor deles e o gancho de abordagem antes de criar a aba ou planilha.
+                </p>
+              </div>
 
-                    <div className="flex items-center justify-between border-t border-[#2e2e2e] pt-3">
-                      <span className="text-xs text-[#afafaf]">
-                        Criar aba e prospectar
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedTabs = tabs.includes(rec.niche)
-                            ? tabs
-                            : [...tabs, rec.niche];
-                          setTabs(updatedTabs);
-                          setSpreadsheets((prev) =>
-                            prev.map((s) =>
-                              s.id === activeSpreadsheet.id
-                                ? { ...s, tabs: updatedTabs }
-                                : s
-                            )
-                          );
-                          setActiveTab(rec.niche);
-                          setTargetSegment(rec.niche);
-                          onWorkspaceTabChange?.("planilha");
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] hover:bg-white/90 transition-colors cursor-pointer"
-                      >
-                        <Plus className="size-3.5" />
-                        <span>Explorar setor</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              {/* Simulador de Qualquer Setor Novo */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+                <input
+                  type="text"
+                  value={customSectorInput}
+                  onChange={(e) => setCustomSectorInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleGenerateCustomSectorStudy();
+                  }}
+                  placeholder="Testar outro setor (ex: Cozinhas Industriais, Elevadores...)"
+                  className="w-full sm:w-72 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerateCustomSectorStudy}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3.5 py-2 text-xs font-semibold text-[#0d0d0d] shrink-0 cursor-pointer"
+                >
+                  <Sparkles className="size-3.5" />
+                  <span>Gerar Estudo do Setor</span>
+                </button>
               </div>
             </div>
-          )}
+
+            {/* Filtros por Macro-Mercado (Cada Macro-Mercado pode ser uma Planilha separada!) */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1">
+                Filtrar por Macro-Mercado:
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedMacroCategory("all")}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  selectedMacroCategory === "all"
+                    ? "bg-white text-[#0d0d0d]"
+                    : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                }`}
+              >
+                Todos os Setores Mapeados ({nicheIntelligence.candidateExpansions.length})
+              </button>
+              {nicheIntelligence.macroCategories.map((macro) => {
+                const count = nicheIntelligence.candidateExpansions.filter(
+                  (c) => c.macroCategory === macro
+                ).length;
+                const isSelected = selectedMacroCategory === macro;
+                return (
+                  <button
+                    key={macro}
+                    type="button"
+                    onClick={() => setSelectedMacroCategory(macro)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                      isSelected
+                        ? "bg-white text-[#0d0d0d]"
+                        : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                    }`}
+                  >
+                    {macro} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Matriz 12 Colunas: Lista de Setores (Esquerda) + Dossiê Profundo de Ataque (Direita) */}
+            {(() => {
+              const filteredStudies =
+                selectedMacroCategory === "all"
+                  ? nicheIntelligence.candidateExpansions
+                  : nicheIntelligence.candidateExpansions.filter(
+                      (item) => item.macroCategory === selectedMacroCategory
+                    );
+
+              const activeStudy =
+                filteredStudies.find((s) => s.niche === selectedStudyNiche) ||
+                filteredStudies[0] ||
+                nicheIntelligence.allStudies[0];
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  {/* Coluna Esquerda (5 cols): Ranking de Setores para Estudar */}
+                  <div className="lg:col-span-5 space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
+                    {filteredStudies.map((study, index) => {
+                      const isCurrentStudy = activeStudy?.niche === study.niche;
+                      return (
+                        <div
+                          key={study.niche}
+                          onClick={() => setSelectedStudyNiche(study.niche)}
+                          className={`rounded-lg p-4 transition-all cursor-pointer ${
+                            isCurrentStudy
+                              ? "bg-[#1a1a1a] ring-1 ring-white"
+                              : "bg-[#000000] ring-1 ring-[#2e2e2e] hover:bg-[#1a1a1a]/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex h-5 items-center rounded-full bg-[#0c2b1c] px-2 text-[11px] font-semibold text-[#14d06e] tabular-nums">
+                              #{index + 1} · Aderência {study.fitScore}%
+                            </span>
+                            <span className="text-[11px] font-medium text-[#7fa9f7]">
+                              {study.avgTicket}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 text-sm font-semibold text-white">
+                            {study.niche}
+                          </p>
+                          <p className="mt-1 text-[11px] text-[#afafaf]">
+                            Macro-Mercado:{" "}
+                            <strong className="text-white">
+                              {study.macroCategory}
+                            </strong>{" "}
+                            · Planilha sugerida:{" "}
+                            <strong className="text-[#14d06e]">
+                              {study.recommendedSpreadsheet}
+                            </strong>
+                          </p>
+                          <p className="mt-1.5 text-xs text-[#afafaf] line-clamp-2 leading-relaxed">
+                            {study.reason}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Coluna Direita (7 cols): Dossiê Estratégico Completo do Setor Selecionado */}
+                  {activeStudy && (
+                    <div className="lg:col-span-7 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-5 flex flex-col justify-between space-y-5">
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#2e2e2e] pb-4">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 text-xs font-semibold text-[#14d06e] tabular-nums">
+                                Score de Ataque: {activeStudy.fitScore}/100
+                              </span>
+                              <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
+                                {activeStudy.macroCategory}
+                              </span>
+                              <span className="inline-flex h-6 items-center rounded-full bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-2.5 text-xs font-medium text-[#afafaf]">
+                                Ciclo: {activeStudy.salesCycle}
+                              </span>
+                            </div>
+                            <h4 className="mt-2.5 text-xl font-semibold tracking-[-0.03em] text-white">
+                              Dossiê de Ataque: {activeStudy.niche}
+                            </h4>
+                            <p className="mt-1 text-xs text-[#14d06e] font-medium">
+                              ✦ {activeStudy.synergyWithExisting}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Bloco 1: Por que atacar + O que eles compram */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                          <div className="rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-1.5">
+                            <p className="text-xs font-semibold text-white">
+                              1. Por que atacar este setor agora?
+                            </p>
+                            <p className="text-xs text-[#afafaf] leading-relaxed">
+                              {activeStudy.reason}
+                            </p>
+                          </div>
+
+                          <div className="rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-1.5">
+                            <p className="text-xs font-semibold text-white">
+                              2. O que eles compram da {myCompany}?
+                            </p>
+                            <ul className="space-y-1 text-xs text-[#afafaf]">
+                              {activeStudy.productsBought.map((prod) => (
+                                <li key={prod} className="flex items-start gap-1.5">
+                                  <span className="text-[#14d06e] font-bold">·</span>
+                                  <span>{prod}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        {/* Bloco 2: Quem é o Decisor + Qual é a Dor Principal */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                          <div className="rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-1.5">
+                            <p className="text-xs font-semibold text-white">
+                              3. Quem procurar na empresa (Decisor)
+                            </p>
+                            <p className="text-xs text-[#7fa9f7] font-semibold">
+                              {activeStudy.buyerPersona}
+                            </p>
+                            <p className="text-[11px] text-[#afafaf] leading-relaxed mt-1">
+                              <strong className="text-white">Pergunta de Triagem (30s):</strong>{" "}
+                              "{activeStudy.qualificationQuestion}"
+                            </p>
+                          </div>
+
+                          <div className="rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-1.5">
+                            <p className="text-xs font-semibold text-white">
+                              4. Dor principal que faz eles trocarem de fornecedor
+                            </p>
+                            <p className="text-xs text-[#afafaf] leading-relaxed">
+                              {activeStudy.mainPainPoint}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Bloco 3: Gancho de Abertura pronto para oferecer o Catálogo PDF */}
+                        <div className="rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-white">
+                              5. Script de Abertura (Gancho para enviar o Catálogo PDF)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(activeStudy.openingHook);
+                                setFeedbackBanner({
+                                  type: "success",
+                                  text: `✦ Script de abertura do setor "${activeStudy.niche}" copiado!`,
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 rounded bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-[11px] font-semibold text-white cursor-pointer"
+                            >
+                              <Copy className="size-3" />
+                              <span>Copiar Script</span>
+                            </button>
+                          </div>
+                          <p className="text-xs text-[#afafaf] italic leading-relaxed">
+                            "{activeStudy.openingHook}"
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Rodapé de Decisão: Criar Aba na Planilha Atual OU Criar Nova Planilha */}
+                      <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[#2e2e2e] pt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedTabs = tabs.includes(activeStudy.niche)
+                              ? tabs
+                              : [...tabs, activeStudy.niche];
+                            setTabs(updatedTabs);
+                            setSpreadsheets((prev) =>
+                              prev.map((s) =>
+                                s.id === activeSpreadsheet.id
+                                  ? { ...s, tabs: updatedTabs }
+                                  : s
+                              )
+                            );
+                            setActiveTab(activeStudy.niche);
+                            setTargetSegment(activeStudy.niche);
+                            onWorkspaceTabChange?.("planilha");
+                            setFeedbackBanner({
+                              type: "success",
+                              text: `✦ Aba "${activeStudy.niche}" adicionada em "${sheetTitle}"! Clique em 'Captar Leads' para abastecer 15–20 empresas deste setor.`,
+                            });
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-white hover:bg-white/90 px-4 py-2.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                        >
+                          <Plus className="size-3.5" />
+                          <span>
+                            Atacar na Planilha "{sheetTitle}" (Criar Aba &amp; Captar Leads) &rarr;
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewSpreadsheetTitle(activeStudy.recommendedSpreadsheet);
+                            setNewSpreadsheetFirstTab(activeStudy.niche);
+                            setNewSpreadsheetModalOpen(true);
+                          }}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3.5 py-2.5 text-xs font-semibold text-white cursor-pointer"
+                        >
+                          <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
+                          <span>
+                            Criar Nova Planilha "{activeStudy.recommendedSpreadsheet}"
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
         </section>
       )}
 
