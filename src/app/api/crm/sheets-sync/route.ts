@@ -17,81 +17,69 @@ export function extractSpreadsheetId(urlOrId?: string): string {
   return urlOrId.trim() || DEFAULT_SPREADSHEET_ID;
 }
 
-/**
- * GET /api/crm/sheets-sync
- * Lê em tempo real as colunas e linhas existentes na aba da planilha do Google Sheets (Data Warehouse)
- * para contextualizar buscas e alimentar o motor anti-duplicidade antes de novos inputs.
- */
-export async function GET(req: NextRequest) {
+async function discoverGoogleSheetMetadata(spreadsheetId: string): Promise<{
+  title: string | null;
+  tabs: string[];
+}> {
+  const discoveredTabs: string[] = [];
+  let title: string | null = null;
+
   try {
-    const { searchParams } = new URL(req.url);
-    const sheetUrl = searchParams.get("sheetUrl") || DEFAULT_SPREADSHEET_ID;
-    const tabName = searchParams.get("tabName") || "Casas Modulares";
-    const webhookUrl = (
-      searchParams.get("webhookUrl") ||
-      process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
-      ""
-    ).trim();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const htmlRes = await fetch(
+      `https://docs.google.com/spreadsheets/d/${spreadsheetId}/htmlview`,
+      {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: ctrl.signal,
+      }
+    );
+    clearTimeout(timer);
 
-    const spreadsheetId = extractSpreadsheetId(sheetUrl);
-    const validSpreadsheetId =
-      spreadsheetId && spreadsheetId !== DEFAULT_SPREADSHEET_ID
-        ? spreadsheetId
-        : "";
-
-    // 1. Se houver Apps Script Webhook com doGet configurado, tenta ler via Webhook primeiro
-    if (webhookUrl) {
-      try {
-        const whCtrl = new AbortController();
-        const whTimer = setTimeout(() => whCtrl.abort(), 7000);
-        const query = `tabName=${encodeURIComponent(tabName)}${
-          validSpreadsheetId
-            ? `&spreadsheetId=${encodeURIComponent(validSpreadsheetId)}`
-            : ""
-        }`;
-        const whRes = await fetch(
-          `${webhookUrl}${webhookUrl.includes("?") ? "&" : "?"}${query}`,
-          { method: "GET", redirect: "follow", signal: whCtrl.signal }
+    if (htmlRes.ok) {
+      const html = await htmlRes.text();
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+      if (titleMatch?.[1]) {
+        title = titleMatch[1]
+          .replace(/\s*-\s*Google\s*(Planilhas|Sheets|Drive).*$/i, "")
+          .trim();
+      }
+      // Extrai nomes das abas do menu do htmlview: items.push({name: "Casas Modulares", ...})
+      const nameMatches = html.matchAll(/name:\s*"([^"]+)"/g);
+      for (const m of nameMatches) {
+        const candidate = m[1]?.trim();
+        if (candidate && !discoveredTabs.includes(candidate)) {
+          discoveredTabs.push(candidate);
+        }
+      }
+      // Fallback: <li id="sheet-button-..."><a>Nome da Aba</a>
+      if (discoveredTabs.length === 0) {
+        const tabBtnMatches = html.matchAll(
+          /id="sheet-button-[^"]*"[^>]*>\s*<a[^>]*>([^<]+)<\/a>/gi
         );
-        clearTimeout(whTimer);
-
-        if (whRes.ok) {
-          const whJson = await whRes.json();
-          if (whJson && Array.isArray(whJson.rows)) {
-            return NextResponse.json({
-              success: true,
-              source: "apps_script_webhook",
-              spreadsheetId: whJson.spreadsheetId || validSpreadsheetId,
-              spreadsheetUrl: whJson.spreadsheetUrl || "",
-              tabName,
-              columns: whJson.columns || [
-                "Empresa",
-                "Responsável",
-                "E-mail",
-                "Contato",
-                "Nível de Prospecção",
-                "Observações",
-              ],
-              rows: whJson.rows,
-            });
+        for (const m of tabBtnMatches) {
+          const candidate = m[1]?.trim();
+          if (candidate && !discoveredTabs.includes(candidate)) {
+            discoveredTabs.push(candidate);
           }
         }
-      } catch {}
+      }
     }
+  } catch {}
 
-    if (!validSpreadsheetId) {
-      return NextResponse.json({
-        success: false,
-        needsSetup: true,
-        error:
-          "Cole o link da sua planilha do Google Sheets ou conecte o Apps Script na aba 'Conectar Google Sheets'.",
-      });
-    }
+  return { title, tabs: discoveredTabs };
+}
 
-    // 2. Leitura direta via Google Visualization API (gviz/tq) para planilhas acessíveis por link
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${validSpreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+async function fetchSingleTabViaGviz(
+  spreadsheetId: string,
+  tabName: string
+): Promise<{ ok: boolean; cols: string[]; rows: ExtractedSheetLead[] }> {
+  try {
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(
+      tabName
+    )}`;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), 7000);
 
     const res = await fetch(gvizUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -99,29 +87,13 @@ export async function GET(req: NextRequest) {
     });
     clearTimeout(timer);
 
-    if (!res.ok) {
-      return NextResponse.json({
-        success: false,
-        spreadsheetId: validSpreadsheetId,
-        tabName,
-        error:
-          "Sua planilha está privada para leitura por link. No Google Sheets, clique em 'Compartilhar -> Qualquer pessoa com o link' ou conecte o Apps Script.",
-      });
-    }
+    if (!res.ok) return { ok: false, cols: [], rows: [] };
 
     const rawText = await res.text();
     const jsonMatch = rawText.match(
       /google\.visualization\.Query\.setResponse\(([\s\S]+)\);?\s*$/
     );
-
-    if (!jsonMatch || !jsonMatch[1]) {
-      return NextResponse.json({
-        success: false,
-        spreadsheetId,
-        tabName,
-        error: "Formato inesperado ao ler planilha.",
-      });
-    }
+    if (!jsonMatch || !jsonMatch[1]) return { ok: false, cols: [], rows: [] };
 
     const parsed = JSON.parse(jsonMatch[1]);
     const cols: string[] = (parsed?.table?.cols || [])
@@ -163,23 +135,176 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    return { ok: true, cols, rows: mappedRows };
+  } catch {
+    return { ok: false, cols: [], rows: [] };
+  }
+}
+
+/**
+ * GET /api/crm/sheets-sync
+ * Lê em tempo real TODAS as abas e linhas existentes na planilha do Google Sheets
+ * (via Apps Script ou Google Visualization API) para que o usuário navegue entre todas as abas e planilhas.
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const sheetUrl = searchParams.get("sheetUrl") || DEFAULT_SPREADSHEET_ID;
+    const tabName = searchParams.get("tabName") || "Casas Modulares";
+    const readAllTabs = searchParams.get("readAllTabs") !== "false";
+    const knownTabsParam = searchParams.get("knownTabs") || "";
+    const webhookUrl = (
+      searchParams.get("webhookUrl") ||
+      process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
+      ""
+    ).trim();
+
+    const spreadsheetId = extractSpreadsheetId(sheetUrl);
+    const validSpreadsheetId =
+      spreadsheetId && spreadsheetId !== DEFAULT_SPREADSHEET_ID
+        ? spreadsheetId
+        : "";
+
+    // 1. Se houver Apps Script Webhook com doGet configurado, lê todas as abas e planilhas via Webhook
+    if (webhookUrl) {
+      try {
+        const whCtrl = new AbortController();
+        const whTimer = setTimeout(() => whCtrl.abort(), 9000);
+        const query = `tabName=${encodeURIComponent(
+          tabName
+        )}&readAllTabs=${readAllTabs ? "true" : "false"}${
+          validSpreadsheetId
+            ? `&spreadsheetId=${encodeURIComponent(validSpreadsheetId)}`
+            : ""
+        }`;
+        const whRes = await fetch(
+          `${webhookUrl}${webhookUrl.includes("?") ? "&" : "?"}${query}`,
+          { method: "GET", redirect: "follow", signal: whCtrl.signal }
+        );
+        clearTimeout(whTimer);
+
+        if (whRes.ok) {
+          const whJson = await whRes.json();
+          if (whJson && Array.isArray(whJson.rows)) {
+            return NextResponse.json({
+              success: true,
+              source: "apps_script_webhook",
+              title: whJson.title || null,
+              spreadsheetId: whJson.spreadsheetId || validSpreadsheetId,
+              spreadsheetUrl: whJson.spreadsheetUrl || "",
+              tabs: Array.isArray(whJson.tabs) ? whJson.tabs : undefined,
+              driveSpreadsheets: Array.isArray(whJson.driveSpreadsheets)
+                ? whJson.driveSpreadsheets
+                : undefined,
+              tabName,
+              columns: whJson.columns || [
+                "Empresa",
+                "Responsável",
+                "E-mail",
+                "Contato",
+                "Nível de Prospecção",
+                "Observações",
+              ],
+              rows: whJson.rows,
+            });
+          }
+        }
+      } catch {}
+    }
+
+    if (!validSpreadsheetId) {
+      return NextResponse.json({
+        success: false,
+        needsSetup: true,
+        error:
+          "Cole o link da sua planilha do Google Sheets ou conecte o Apps Script na aba 'Conectar Google Sheets'.",
+      });
+    }
+
+    // 2. Descobre automaticamente o título e TODAS as abas da planilha Google Sheets
+    const metadata = await discoverGoogleSheetMetadata(validSpreadsheetId);
+    const knownTabs = knownTabsParam
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const tabsToRead = readAllTabs
+      ? Array.from(
+          new Set([
+            ...(metadata.tabs.length > 0 ? metadata.tabs : []),
+            ...knownTabs,
+            tabName,
+          ])
+        )
+      : [tabName];
+
+    const tabResults = await Promise.all(
+      tabsToRead.map(async (tName) => {
+        const res = await fetchSingleTabViaGviz(validSpreadsheetId, tName);
+        return { tabName: tName, ...res };
+      })
+    );
+
+    const successfulTabs = tabResults.filter((r) => r.ok);
+    if (successfulTabs.length === 0) {
+      return NextResponse.json({
+        success: false,
+        spreadsheetId: validSpreadsheetId,
+        tabName,
+        error:
+          "Sua planilha está restrita. No Google Sheets, clique no botão azul 'Compartilhar' (canto superior direito) -> mude para 'Qualquer pessoa com o link' OU conecte o Apps Script.",
+      });
+    }
+
+    // Se uma aba conhecida não existe na planilha remota, o gviz retorna a 1ª aba repetida; deduplicamos se não veio do htmlview
+    const finalTabs =
+      metadata.tabs.length > 0
+        ? metadata.tabs
+        : successfulTabs.map((t) => t.tabName);
+
+    const allMappedRows: ExtractedSheetLead[] = [];
+    const seenPerTabSignature = new Set<string>();
+
+    for (const tabRes of successfulTabs) {
+      if (
+        metadata.tabs.length > 0 &&
+        !metadata.tabs.includes(tabRes.tabName)
+      ) {
+        continue;
+      }
+      // Evita duplicar a primeira aba quando uma aba pesquisada não existe no documento e o Google retorna a aba 0
+      const signature = tabRes.rows
+        .slice(0, 3)
+        .map((r) => `${r.empresa}:${r.contato}`)
+        .join("|");
+      if (
+        metadata.tabs.length === 0 &&
+        tabRes.tabName !== tabName &&
+        signature &&
+        seenPerTabSignature.has(signature)
+      ) {
+        continue;
+      }
+      if (signature) seenPerTabSignature.add(signature);
+      allMappedRows.push(...tabRes.rows);
+    }
+
     return NextResponse.json({
       success: true,
       source: "google_gviz_live",
-      spreadsheetId,
+      title: metadata.title || null,
+      spreadsheetId: validSpreadsheetId,
+      tabs: finalTabs,
       tabName,
-      columns:
-        cols.length > 0
-          ? cols
-          : [
-              "Empresa",
-              "Responsável",
-              "E-mail",
-              "Contato",
-              "Nível de Prospecção",
-              "Observações",
-            ],
-      rows: mappedRows,
+      columns: [
+        "Empresa",
+        "Responsável",
+        "E-mail",
+        "Contato",
+        "Nível de Prospecção",
+        "Observações",
+      ],
+      rows: allMappedRows,
     });
   } catch (error: any) {
     return NextResponse.json(

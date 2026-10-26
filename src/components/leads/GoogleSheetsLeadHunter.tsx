@@ -387,31 +387,60 @@ function resolveSpreadsheet(spreadsheetId) {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-// 1. LEITURA EM TEMPO REAL DAS COLUNAS E LINHAS DA PLANILHA
+// 1. LEITURA EM TEMPO REAL DE TODAS AS ABAS E LINHAS DA PLANILHA
 function doGet(e) {
   var tabName = (e && e.parameter && e.parameter.tabName) || "Casas Modulares";
+  var readAllTabs = !e || !e.parameter || e.parameter.readAllTabs !== "false";
   var spreadsheetId = (e && e.parameter && e.parameter.spreadsheetId) || "";
   var ss = resolveSpreadsheet(spreadsheetId);
-  var sheet = ss.getSheetByName(tabName) || ss.getSheets()[0];
-  var data = sheet.getDataRange().getValues();
-  var headers = data.length > 0 ? data[0] : ["Empresa","Responsável","E-mail","Contato","Nível de Prospecção","Observações"];
-  var rows = [];
-  for (var i = 1; i < data.length; i++) {
-    if (!data[i][0]) continue;
-    rows.push({
-      id: "sheet-" + i,
-      empresa: String(data[i][0] || ""),
-      responsavel: String(data[i][1] || ""),
-      email: String(data[i][2] || ""),
-      contato: cleanPhoneE164(data[i][3]),
-      nivelProspeccao: String(data[i][4] || "Tentativa de contato"),
-      observacoes: String(data[i][5] || ""),
-      cnpj: String(data[i][6] || ""),
-      tab: tabName
-    });
+  var allSheets = ss.getSheets();
+  var allTabNames = [];
+  for (var s = 0; s < allSheets.length; s++) {
+    allTabNames.push(allSheets[s].getName());
   }
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, columns: headers, rows: rows }))
-    .setMimeType(ContentService.MimeType.JSON);
+
+  var targetSheets = readAllTabs
+    ? allSheets
+    : [ss.getSheetByName(tabName) || allSheets[0]];
+
+  var headers = ["Empresa","Responsável","E-mail","Contato","Nível de Prospecção","Observações"];
+  var rows = [];
+
+  for (var t = 0; t < targetSheets.length; t++) {
+    var sheet = targetSheets[t];
+    if (!sheet) continue;
+    var currentTabName = sheet.getName();
+    var range = sheet.getDataRange();
+    var data = range.getValues();
+    var bgs = range.getBackgrounds();
+    if (data.length > 0 && t === 0) headers = data[0];
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][0] || String(data[i][0]).toLowerCase() === "empresa") continue;
+      var bg = (bgs[i] && bgs[i][0]) ? String(bgs[i][0]).toLowerCase() : "";
+      rows.push({
+        id: "sheet-" + currentTabName + "-" + i,
+        empresa: String(data[i][0] || ""),
+        responsavel: String(data[i][1] || ""),
+        email: String(data[i][2] || ""),
+        contato: cleanPhoneE164(data[i][3]) || String(data[i][3] || ""),
+        nivelProspeccao: String(data[i][4] || "Tentativa de contato"),
+        observacoes: String(data[i][5] || ""),
+        cnpj: String(data[i][6] || ""),
+        highlighted: bg === "#ffff00" || bg === "#fff2cc",
+        tab: currentTabName
+      });
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    title: ss.getName(),
+    spreadsheetId: ss.getId(),
+    spreadsheetUrl: ss.getUrl(),
+    tabs: allTabNames,
+    columns: headers,
+    rows: rows
+  })).setMimeType(ContentService.MimeType.JSON);
 }
 
 // 2. CRIAÇÃO DE NOVAS PLANILHAS + INSERÇÃO E MERGE COM TRAVA ANTI-DUPLICIDADE TRIPLA
@@ -745,23 +774,68 @@ export function GoogleSheetsLeadHunter({
 
   const handleCreateNewSpreadsheet = async () => {
     const cleanTitle = newSpreadsheetTitle.trim();
-    if (!cleanTitle) return;
+    const hasValidUrl = isRealGoogleSheetUrl(newSpreadsheetUrl);
+    if (!cleanTitle && !hasValidUrl) return;
+
     const firstTab = newSpreadsheetFirstTab.trim() || "Geral";
-    let finalSheetUrl = isRealGoogleSheetUrl(newSpreadsheetUrl)
-      ? newSpreadsheetUrl.trim()
-      : "";
+    let finalSheetUrl = hasValidUrl ? newSpreadsheetUrl.trim() : "";
+    let discoveredTitle = cleanTitle || "Planilha Conectada";
+    let discoveredTabs: string[] = [firstTab];
 
     setIsCreatingRemoteSheet(true);
     try {
-      // Se o Apps Script estiver conectado e o usuário não colou um link manual, cria a planilha real no Google Drive!
-      if (!finalSheetUrl && webhookUrl.trim()) {
+      // Caso 1: O usuário colou o link de uma planilha que JÁ EXISTE no Google Sheets -> descobre todas as abas e importa os leads!
+      if (finalSheetUrl) {
+        const params = new URLSearchParams({
+          sheetUrl: finalSheetUrl,
+          tabName: firstTab,
+          readAllTabs: "true",
+          knownTabs: firstTab,
+          webhookUrl: webhookUrl.trim(),
+          spreadsheetId: extractSheetIdFromUrl(finalSheetUrl) || "",
+        });
+        const res = await fetch(`/api/crm/sheets-sync?${params.toString()}`);
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (!cleanTitle && typeof data.title === "string" && data.title.trim()) {
+            discoveredTitle = data.title.trim();
+          }
+          if (Array.isArray(data.tabs) && data.tabs.length > 0) {
+            discoveredTabs = Array.from(
+              new Set(
+                newSpreadsheetFirstTab.trim()
+                  ? [...data.tabs, firstTab]
+                  : data.tabs
+              )
+            );
+          }
+          const incomingFromSheet: ExtractedSheetLead[] = data.rows || [];
+          if (incomingFromSheet.length > 0) {
+            const touchedTabs = Array.from(
+              new Set(incomingFromSheet.map((r) => r.tab || discoveredTabs[0]))
+            );
+            let updatedRows = [...rows];
+            for (const tName of touchedTabs) {
+              const incomingForTab = incomingFromSheet.filter(
+                (r) => (r.tab || discoveredTabs[0]) === tName
+              );
+              const existingForTab = updatedRows.filter((r) => r.tab === tName);
+              const otherTabsRows = updatedRows.filter((r) => r.tab !== tName);
+              const dedup = deduplicateAndMergeLeads(existingForTab, incomingForTab);
+              updatedRows = [...otherTabsRows, ...dedup.updatedExistingRows];
+            }
+            setRows(updatedRows);
+          }
+        }
+      } else if (webhookUrl.trim()) {
+        // Caso 2: Sem link manual, mas com Apps Script conectado -> cria planilha nova no Google Drive
         const res = await fetch("/api/crm/sheets-sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "create_spreadsheet",
             webhookUrl: webhookUrl.trim(),
-            spreadsheetTitle: cleanTitle,
+            spreadsheetTitle: discoveredTitle,
             initialTabs: [firstTab],
           }),
         });
@@ -771,24 +845,25 @@ export function GoogleSheetsLeadHunter({
         }
       }
     } catch {
-      // Segue com a criação local mesmo se o webhook falhar
+      // Segue com a vinculação local mesmo se a leitura remota exigir permissão de compartilhamento
     } finally {
       setIsCreatingRemoteSheet(false);
     }
 
+    const primaryTab = discoveredTabs[0] || firstTab;
     const newSheet: ManagedSpreadsheet = {
       id: `sheet-${Date.now()}`,
-      title: cleanTitle,
+      title: discoveredTitle,
       sheetUrl: finalSheetUrl,
-      tabs: [firstTab],
+      tabs: discoveredTabs,
     };
 
     setSpreadsheets((prev) => [...prev, newSheet]);
     setActiveSpreadsheetId(newSheet.id);
     setSheetTitle(newSheet.title);
     setTabs(newSheet.tabs);
-    setActiveTab(firstTab);
-    setTargetSegment(firstTab);
+    setActiveTab(primaryTab);
+    setTargetSegment(primaryTab);
     setSheetUrl(finalSheetUrl);
     setSelectedRowIds([]);
 
@@ -800,8 +875,8 @@ export function GoogleSheetsLeadHunter({
     setFeedbackBanner({
       type: "success",
       text: finalSheetUrl
-        ? `✦ Nova planilha "${cleanTitle}" criada e vinculada ao seu Google Sheets com a aba "${firstTab}"!`
-        : `✦ Nova planilha "${cleanTitle}" criada com a aba "${firstTab}"! Cole o link do Google Sheets ou conecte o Apps Script para sincronizar na nuvem.`,
+        ? `✦ Planilha "${discoveredTitle}" conectada com ${discoveredTabs.length} aba(s) (${discoveredTabs.join(", ")})!`
+        : `✦ Nova planilha "${discoveredTitle}" criada com a aba "${primaryTab}"! Cole o link do Google Sheets para sincronizar na nuvem.`,
     });
   };
 
@@ -1208,12 +1283,12 @@ export function GoogleSheetsLeadHunter({
     }
   };
 
-  // Lê colunas e leads existentes diretamente do Google Sheets antes de novos inputs
+  // Lê TODAS as abas e leads existentes diretamente do Google Sheets
   const handleReadFromGoogleSheets = async () => {
     if (!isRealGoogleSheetUrl(sheetUrl) && !webhookUrl.trim()) {
       setFeedbackBanner({
         type: "info",
-        text: "Para ler sua planilha do Google Sheets, cole o link real da sua planilha na barra abaixo ou conecte o Apps Script na aba 'Conectar Google Sheets'.",
+        text: "Cole o link da sua planilha Google Sheets no Campo 1 abaixo (com acesso 'Qualquer pessoa com o link') ou cole a URL do Apps Script no Campo 2.",
       });
       return;
     }
@@ -1224,6 +1299,8 @@ export function GoogleSheetsLeadHunter({
       const params = new URLSearchParams({
         sheetUrl: sheetUrl.trim(),
         tabName: activeTab,
+        readAllTabs: "true",
+        knownTabs: tabs.join(","),
         webhookUrl: webhookUrl.trim(),
         spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
       });
@@ -1236,17 +1313,59 @@ export function GoogleSheetsLeadHunter({
         );
       }
 
-      const incomingFromSheet: ExtractedSheetLead[] = data.rows || [];
-      const currentTabRows = rows.filter((r) => r.tab === activeTab);
-      const otherTabRows = rows.filter((r) => r.tab !== activeTab);
+      // Atualiza automaticamente todas as abas descobertas na planilha Google Sheets (ex: Casas Modulares, Fachadas, Lajes...)
+      const discoveredTabs: string[] =
+        Array.isArray(data.tabs) && data.tabs.length > 0 ? data.tabs : [];
+      const mergedTabs = Array.from(new Set([...discoveredTabs, ...tabs]));
+      const discoveredTitle =
+        typeof data.title === "string" && data.title.trim()
+          ? data.title.trim()
+          : sheetTitle;
 
-      const dedup = deduplicateAndMergeLeads(currentTabRows, incomingFromSheet);
-      setRows([...otherTabRows, ...dedup.updatedExistingRows]);
-      setAuditLogs((prev) => [...dedup.auditLogs, ...prev].slice(0, 50));
+      if (mergedTabs.length > 0) {
+        setTabs(mergedTabs);
+        setSheetTitle(discoveredTitle);
+        setSpreadsheets((prev) =>
+          prev.map((s) =>
+            s.id === activeSpreadsheet.id
+              ? { ...s, title: discoveredTitle, tabs: mergedTabs, sheetUrl: sheetUrl.trim() || s.sheetUrl }
+              : s
+          )
+        );
+      }
+
+      const incomingFromSheet: ExtractedSheetLead[] = data.rows || [];
+      const touchedTabs = Array.from(
+        new Set(incomingFromSheet.map((r) => r.tab || activeTab))
+      );
+
+      let updatedRows = [...rows];
+      let totalInserted = 0;
+      let totalMerged = 0;
+      let totalBlocked = 0;
+      const newLogs: DeduplicationAuditEntry[] = [];
+
+      for (const tName of touchedTabs) {
+        const incomingForTab = incomingFromSheet.filter(
+          (r) => (r.tab || activeTab) === tName
+        );
+        const existingForTab = updatedRows.filter((r) => r.tab === tName);
+        const otherTabsRows = updatedRows.filter((r) => r.tab !== tName);
+
+        const dedup = deduplicateAndMergeLeads(existingForTab, incomingForTab);
+        updatedRows = [...otherTabsRows, ...dedup.updatedExistingRows];
+        totalInserted += dedup.insertedCount;
+        totalMerged += dedup.mergedCount;
+        totalBlocked += dedup.blockedCount;
+        newLogs.push(...dedup.auditLogs);
+      }
+
+      setRows(updatedRows);
+      setAuditLogs((prev) => [...newLogs, ...prev].slice(0, 50));
 
       setFeedbackBanner({
         type: "success",
-        text: `✦ Leitura do Google Sheets concluída (${data.source}): ${dedup.insertedCount} novos, ${dedup.mergedCount} complementados e ${dedup.blockedCount} duplicados travados.`,
+        text: `✦ Planilha "${discoveredTitle}" sincronizada (${mergedTabs.length} abas: ${mergedTabs.join(", ")}): ${totalInserted} novos leads importados, ${totalMerged} complementados e ${totalBlocked} já existentes mantidos!`,
       });
     } catch (err: any) {
       setFeedbackBanner({
@@ -3044,247 +3163,386 @@ export function GoogleSheetsLeadHunter({
           ABA: CONEXÃO GOOGLE SHEETS & AUDITORIA ANTI-DUPLICIDADE
          ===================================================================== */}
       {activeWorkspaceTab === "integracao" && (
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Coluna Esquerda: Conector Google Sheets Passo a Passo */}
-          <div className="lg:col-span-6 rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-4">
-              <div>
-                <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
-                  Ponte Google Sheets · Planilha "{sheetTitle}"
+        <section className="space-y-5">
+          {/* BARRA SUPERIOR: SELETOR DE MÚLTIPLAS PLANILHAS + VISUALIZADOR DE TODAS AS ABAS */}
+          <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#2e2e2e] pb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1">
+                  Minhas Planilhas ({spreadsheets.length}):
                 </span>
-                <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
-                  Conectar e sincronizar seu Google Sheets
-                </h3>
+                {spreadsheets.map((sheet) => {
+                  const isCurrent = sheet.id === activeSpreadsheet.id;
+                  return (
+                    <button
+                      key={sheet.id}
+                      type="button"
+                      onClick={() => handleSelectSpreadsheet(sheet.id)}
+                      className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                        isCurrent
+                          ? "bg-white text-[#0d0d0d]"
+                          : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:bg-[#262626] hover:text-white"
+                      }`}
+                    >
+                      <FileSpreadsheet
+                        className={`size-3.5 ${
+                          isCurrent ? "text-[#0d0d0d]" : "text-[#14d06e]"
+                        }`}
+                      />
+                      <span>{sheet.title}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] tabular-nums ${
+                          isCurrent
+                            ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
+                            : "bg-[#0d0d0d] text-[#757575]"
+                        }`}
+                      >
+                        {sheet.tabs.length} abas
+                      </span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setNewSpreadsheetModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3.5 py-2 text-xs font-semibold text-white cursor-pointer"
+                >
+                  <Plus className="size-3.5 text-[#14d06e]" />
+                  <span>+ Conectar Outra Planilha que Já Tenho / Criar Nova</span>
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
-                <a
-                  href="https://sheets.new"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 px-3 py-2 text-xs font-semibold text-[#0d0d0d]"
-                >
-                  <Plus className="size-3.5" />
-                  <span>Criar Planilha no Google</span>
-                </a>
-                {isRealGoogleSheetUrl(sheetUrl) && (
-                  <a
-                    href={sheetUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white"
-                  >
-                    <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
-                    <span>Abrir Planilha</span>
-                    <ExternalLink className="size-3 text-[#757575]" />
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Passo a Passo Direto */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-              <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
-                <span className="font-semibold text-white">1. Crie ou abra a planilha</span>
-                <p className="mt-1 text-[11px] text-[#afafaf]">
-                  Clique em <strong>Criar Planilha no Google</strong> acima (ou abra uma já existente) e cole o link abaixo.
-                </p>
-              </div>
-              <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
-                <span className="font-semibold text-white">2. Cole o Apps Script</span>
-                <p className="mt-1 text-[11px] text-[#afafaf]">
-                  Na planilha Google, vá em <strong>Extensões &rarr; Apps Script</strong>, cole o código abaixo e clique em <strong>Implantar &rarr; App da Web</strong> (Acesso: <em>Qualquer pessoa</em>).
-                </p>
-              </div>
-              <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
-                <span className="font-semibold text-white">3. Sincronize em 1 clique</span>
-                <p className="mt-1 text-[11px] text-[#afafaf]">
-                  Cole a URL <code>/exec</code> gerada pelo Google no campo abaixo e clique em <strong>Sincronizar Agora</strong>.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">
-                  1. Link da sua planilha Google Sheets ({sheetTitle})
-                </label>
-                <input
-                  type="text"
-                  value={sheetUrl}
-                  onChange={(e) => handleUpdateActiveSheetUrl(e.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/edit"
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">
-                  2. URL do App da Web (Google Apps Script — permite criar abas e gravar automático)
-                </label>
-                <input
-                  type="text"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#afafaf] mb-1">
-                  Webhook externo de campanha (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={campaignWebhookUrl}
-                  onChange={(e) => setCampaignWebhookUrl(e.target.value)}
-                  placeholder="https://seu-n8n.com/webhook/campanha-gofer"
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-[#afafaf]">
-                  Código para Extensões &rarr; Apps Script
-                </span>
                 <button
                   type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
-                    setCopiedScript(true);
-                    setTimeout(() => setCopiedScript(false), 3000);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                  onClick={() => onWorkspaceTabChange?.("planilha")}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 px-3.5 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
                 >
-                  {copiedScript ? (
-                    <>
-                      <Check className="size-3.5" />
-                      <span>Código copiado</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="size-3.5" />
-                      <span>Copiar Apps Script</span>
-                    </>
-                  )}
+                  <span>Abrir Aba "{activeTab}" na Tabela &rarr;</span>
                 </button>
               </div>
-              <pre className="max-h-40 overflow-y-auto rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3 text-[11px] font-mono text-[#afafaf]">
-                {GOOGLE_APPS_SCRIPT_CODE}
-              </pre>
+            </div>
+
+            {/* NAVEGADOR ENTRE AS ABAS DA PLANILHA ATIVA (Ex: Casas Modulares, Fachadas, Lajes...) */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1">
+                  Abas de "{sheetTitle}" ({tabs.length}):
+                </span>
+                {tabs.map((tab) => {
+                  const isSelected = tab === activeTab;
+                  const count = rows.filter(
+                    (r) => r.tab === tab && r.empresa.trim()
+                  ).length;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setTargetSegment(tab);
+                      }}
+                      className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-[#0f1b33] text-[#7fa9f7] ring-1 ring-[#7fa9f7]/50"
+                          : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:bg-[#262626] hover:text-white"
+                      }`}
+                    >
+                      <span>{tab}</span>
+                      <span className="rounded-full bg-[#0d0d0d] px-1.5 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+                        {count} leads
+                      </span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setNewTabModalOpen(true)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-[#afafaf] hover:text-white cursor-pointer"
+                >
+                  <Plus className="size-3" />
+                  <span>Nova Aba</span>
+                </button>
+              </div>
+
+              <span className="text-[11px] text-[#afafaf]">
+                Clique em qualquer aba acima para alternar ou clique em{" "}
+                <strong className="text-white">Importar Todas as Abas</strong>{" "}
+                abaixo para puxar novas abas do Google Sheets.
+              </span>
             </div>
           </div>
 
-          {/* Coluna Direita: Registro de Auditoria Anti-Duplicidade */}
-          <div className="lg:col-span-6 rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 flex flex-col justify-between space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Coluna Esquerda: Conector Google Sheets Passo a Passo */}
+            <div className="lg:col-span-6 rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-4">
                 <div>
-                  <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 text-xs font-semibold text-[#14d06e]">
-                    Integridade de Dados
+                  <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
+                    Ponte Google Sheets · Planilha "{sheetTitle}"
                   </span>
                   <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
-                    Auditoria Anti-Duplicidade (CNPJ · Domínio · E.164)
+                    Conectar e sincronizar todas as abas do seu Google Sheets
                   </h3>
                 </div>
-                <span className="text-xs font-semibold text-[#afafaf] tabular-nums">
-                  {auditLogs.length} eventos
-                </span>
-              </div>
 
-              <div className="grid grid-cols-3 border-t border-l border-[#2e2e2e]">
-                <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
-                  <p className="text-[11px] text-[#afafaf]">Planilhas Criadas</p>
-                  <p className="mt-1 text-xl font-semibold text-white tabular-nums">
-                    {spreadsheets.length}
-                  </p>
-                </div>
-                <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
-                  <p className="text-[11px] text-[#afafaf]">Abas em {sheetTitle}</p>
-                  <p className="mt-1 text-xl font-semibold text-white tabular-nums">
-                    {tabs.length}
-                  </p>
-                </div>
-                <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
-                  <p className="text-[11px] text-[#afafaf]">Status da Ponte</p>
-                  <p className="mt-1 text-sm font-semibold text-[#14d06e]">
-                    {webhookUrl.trim()
-                      ? "Bidirecional Ativa"
-                      : isRealGoogleSheetUrl(sheetUrl)
-                      ? "Leitura CSV Ativa"
-                      : "Aguardando Link"}
-                  </p>
-                </div>
-              </div>
-
-              {auditLogs.length === 0 ? (
-                <div className="rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-center text-xs text-[#afafaf]">
-                  Nenhuma colisão registrada ainda nesta sessão. Quando você captar leads ou ler a planilha, cada validação de CNPJ, domínio e telefone aparecerá aqui.
-                </div>
-              ) : (
-                <div className="max-h-72 overflow-y-auto divide-y divide-[#2e2e2e] rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-xs">
-                  {auditLogs.map((log, i) => (
-                    <div
-                      key={i}
-                      className="px-3.5 py-2.5 flex items-center justify-between gap-2"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewSpreadsheetModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 px-3 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Adicionar Outra Planilha</span>
+                  </button>
+                  {isRealGoogleSheetUrl(sheetUrl) && (
+                    <a
+                      href={sheetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white"
                     >
-                      <span className="text-white">
-                        <strong className="text-[#7fa9f7] mr-1.5">
-                          [{log.action.toUpperCase()}]
-                        </strong>
-                        {log.empresa} —{" "}
-                        <span className="text-[#afafaf]">{log.details}</span>
-                      </span>
-                      <span className="text-[11px] text-[#757575] tabular-nums shrink-0">
-                        {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
-                      </span>
-                    </div>
-                  ))}
+                      <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
+                      <span>Abrir no Google</span>
+                      <ExternalLink className="size-3 text-[#757575]" />
+                    </a>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Passo a Passo Direto */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
+                  <span className="font-semibold text-white">
+                    1. Compartilhe e cole o link
+                  </span>
+                  <p className="mt-1 text-[11px] text-[#afafaf]">
+                    Na sua planilha Google (ex: <em>Imobiliário.</em>), clique em{" "}
+                    <strong>Compartilhar &rarr; Qualquer pessoa com o link</strong>{" "}
+                    e cole o link no Campo 1 abaixo.
+                  </p>
+                </div>
+                <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
+                  <span className="font-semibold text-white">
+                    2. Importe todas as abas
+                  </span>
+                  <p className="mt-1 text-[11px] text-[#afafaf]">
+                    Clique em <strong>Importar Todas as Abas &amp; Leads</strong>{" "}
+                    ao lado do link. O CRM descobre todas as abas (<em>Casas Modulares</em>,{" "}
+                    <em>Fachadas</em>, <em>Lajes</em>...) de uma só vez.
+                  </p>
+                </div>
+                <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
+                  <span className="font-semibold text-white">
+                    3. Gravação automática (Opcional)
+                  </span>
+                  <p className="mt-1 text-[11px] text-[#afafaf]">
+                    Para o CRM também escrever novos leads e criar abas na sua planilha, cole o{" "}
+                    <strong>Apps Script</strong> em{" "}
+                    <em>Extensões &rarr; Apps Script</em>.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-white mb-1">
+                    1. Link da sua planilha Google Sheets ({sheetTitle})
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={sheetUrl}
+                      onChange={(e) => handleUpdateActiveSheetUrl(e.target.value)}
+                      placeholder="https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/edit"
+                      className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={isReadingSheets}
+                      onClick={handleReadFromGoogleSheets}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3.5 py-2 text-xs font-semibold text-[#0d0d0d] shrink-0 cursor-pointer"
+                    >
+                      <CloudDownload className="size-3.5" />
+                      <span>
+                        {isReadingSheets
+                          ? "Importando abas..."
+                          : "Importar Todas as Abas & Leads"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-white mb-1">
+                    2. URL do App da Web (Google Apps Script — permite criar abas e gravar automático)
+                  </label>
+                  <input
+                    type="text"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                    Webhook externo de campanha (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={campaignWebhookUrl}
+                    onChange={(e) => setCampaignWebhookUrl(e.target.value)}
+                    placeholder="https://seu-n8n.com/webhook/campanha-gofer"
+                    className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-[#afafaf]">
+                    Código para Extensões &rarr; Apps Script
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                      setCopiedScript(true);
+                      setTimeout(() => setCopiedScript(false), 3000);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                  >
+                    {copiedScript ? (
+                      <>
+                        <Check className="size-3.5" />
+                        <span>Código copiado</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5" />
+                        <span>Copiar Apps Script</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <pre className="max-h-40 overflow-y-auto rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3 text-[11px] font-mono text-[#afafaf]">
+                  {GOOGLE_APPS_SCRIPT_CODE}
+                </pre>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#2e2e2e] pt-4">
-              <button
-                type="button"
-                disabled={isReadingSheets}
-                onClick={handleReadFromGoogleSheets}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-4 py-2 text-xs font-semibold text-white cursor-pointer"
-              >
-                <CloudDownload className="size-3.5 text-[#afafaf]" />
-                <span>
-                  {isReadingSheets ? "Lendo planilha..." : "Ler Google Sheets Agora"}
-                </span>
-              </button>
+            {/* Coluna Direita: Registro de Auditoria Anti-Duplicidade */}
+            <div className="lg:col-span-6 rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 flex flex-col justify-between space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-4">
+                  <div>
+                    <span className="inline-flex h-6 items-center rounded-full bg-[#0c2b1c] px-2.5 text-xs font-semibold text-[#14d06e]">
+                      Integridade de Dados
+                    </span>
+                    <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
+                      Auditoria Anti-Duplicidade (CNPJ · Domínio · E.164)
+                    </h3>
+                  </div>
+                  <span className="text-xs font-semibold text-[#afafaf] tabular-nums">
+                    {auditLogs.length} eventos
+                  </span>
+                </div>
 
-              <button
-                type="button"
-                disabled={isSyncingSheets}
-                onClick={handleSyncToGoogleSheets}
-                className="inline-flex items-center gap-2 rounded-lg bg-white hover:bg-white/90 text-[#0d0d0d] px-4 py-2 text-xs font-semibold cursor-pointer"
-              >
-                <Send className="size-3.5" />
-                <span>
-                  {isSyncingSheets
-                    ? "Sincronizando..."
-                    : `Testar & Sincronizar Aba "${activeTab}"`}
-                </span>
-              </button>
+                <div className="grid grid-cols-3 border-t border-l border-[#2e2e2e]">
+                  <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
+                    <p className="text-[11px] text-[#afafaf]">Planilhas Conectadas</p>
+                    <p className="mt-1 text-xl font-semibold text-white tabular-nums">
+                      {spreadsheets.length}
+                    </p>
+                  </div>
+                  <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
+                    <p className="text-[11px] text-[#afafaf]">Abas em {sheetTitle}</p>
+                    <p className="mt-1 text-xl font-semibold text-white tabular-nums">
+                      {tabs.length}
+                    </p>
+                  </div>
+                  <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
+                    <p className="text-[11px] text-[#afafaf]">Status da Ponte</p>
+                    <p className="mt-1 text-sm font-semibold text-[#14d06e]">
+                      {webhookUrl.trim()
+                        ? "Bidirecional Ativa"
+                        : isRealGoogleSheetUrl(sheetUrl)
+                        ? "Multi-Abas Ativo"
+                        : "Aguardando Link"}
+                    </p>
+                  </div>
+                </div>
+
+                {auditLogs.length === 0 ? (
+                  <div className="rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-center text-xs text-[#afafaf]">
+                    Nenhuma colisão registrada ainda nesta sessão. Quando você captar leads ou importar as abas da sua planilha, cada validação de CNPJ, domínio e telefone aparecerá aqui.
+                  </div>
+                ) : (
+                  <div className="max-h-72 overflow-y-auto divide-y divide-[#2e2e2e] rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-xs">
+                    {auditLogs.map((log, i) => (
+                      <div
+                        key={i}
+                        className="px-3.5 py-2.5 flex items-center justify-between gap-2"
+                      >
+                        <span className="text-white">
+                          <strong className="text-[#7fa9f7] mr-1.5">
+                            [{log.action.toUpperCase()}]
+                          </strong>
+                          {log.empresa} —{" "}
+                          <span className="text-[#afafaf]">{log.details}</span>
+                        </span>
+                        <span className="text-[11px] text-[#757575] tabular-nums shrink-0">
+                          {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#2e2e2e] pt-4">
+                <button
+                  type="button"
+                  disabled={isReadingSheets}
+                  onClick={handleReadFromGoogleSheets}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-4 py-2 text-xs font-semibold text-white cursor-pointer"
+                >
+                  <CloudDownload className="size-3.5 text-[#afafaf]" />
+                  <span>
+                    {isReadingSheets
+                      ? "Lendo todas as abas..."
+                      : "Ler Todas as Abas Agora"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSyncingSheets}
+                  onClick={handleSyncToGoogleSheets}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white hover:bg-white/90 text-[#0d0d0d] px-4 py-2 text-xs font-semibold cursor-pointer"
+                >
+                  <Send className="size-3.5" />
+                  <span>
+                    {isSyncingSheets
+                      ? "Sincronizando..."
+                      : `Testar & Sincronizar Aba "${activeTab}"`}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* MODAL PARA CRIAR NOVA PLANILHA (ESTÉTICA IRVO.COM.BR) */}
+      {/* MODAL PARA CONECTAR PLANILHA JÁ EXISTENTE OU CRIAR NOVA (ESTÉTICA IRVO.COM.BR) */}
       {newSpreadsheetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-white space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-white">
-                Criar nova planilha de prospecção
+                Conectar planilha existente ou criar nova
               </h3>
               <button
                 type="button"
@@ -3297,35 +3555,9 @@ export function GoogleSheetsLeadHunter({
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-[#afafaf] mb-1">
-                  Nome da nova planilha
-                </label>
-                <input
-                  type="text"
-                  value={newSpreadsheetTitle}
-                  onChange={(e) => setNewSpreadsheetTitle(e.target.value)}
-                  placeholder="Ex: Metalúrgicas SP, Energia Solar, Agronegócio..."
-                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-[#afafaf] mb-1">
-                  Primeira aba de setor
-                </label>
-                <input
-                  type="text"
-                  value={newSpreadsheetFirstTab}
-                  onChange={(e) => setNewSpreadsheetFirstTab(e.target.value)}
-                  placeholder="Ex: Estruturas Fotovoltaicas, Galpões Metálicos..."
-                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-[#afafaf]">
-                    Link no Google Sheets (opcional)
+                  <label className="block text-xs font-medium text-white">
+                    Link da planilha no Google Sheets (já existente ou nova)
                   </label>
                   <a
                     href="https://sheets.new"
@@ -3333,19 +3565,44 @@ export function GoogleSheetsLeadHunter({
                     rel="noopener noreferrer"
                     className="text-[11px] font-semibold text-[#7fa9f7] hover:underline"
                   >
-                    + Abrir sheets.new
+                    + Criar em sheets.new
                   </a>
                 </div>
                 <input
                   type="text"
                   value={newSpreadsheetUrl}
                   onChange={(e) => setNewSpreadsheetUrl(e.target.value)}
-                  placeholder={
-                    webhookUrl.trim()
-                      ? "Deixe em branco p/ criar automático via Apps Script"
-                      : "Cole o link da planilha criada no Google Sheets"
-                  }
+                  placeholder="https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/edit"
                   className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                />
+                <p className="mt-1 text-[11px] text-[#afafaf]">
+                  Se a planilha já tiver várias abas (ex: <em>Casas Modulares</em>, <em>Fachadas</em>, <em>Lajes</em>), todas serão importadas automaticamente.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                  Nome da planilha (opcional se colar o link acima)
+                </label>
+                <input
+                  type="text"
+                  value={newSpreadsheetTitle}
+                  onChange={(e) => setNewSpreadsheetTitle(e.target.value)}
+                  placeholder="Ex: Imobiliário., Metalúrgicas SP, Energia Solar..."
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                  Aba inicial (opcional — para planilhas novas)
+                </label>
+                <input
+                  type="text"
+                  value={newSpreadsheetFirstTab}
+                  onChange={(e) => setNewSpreadsheetFirstTab(e.target.value)}
+                  placeholder="Ex: Casas Modulares, Estruturas Fotovoltaicas..."
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                 />
               </div>
             </div>
@@ -3364,7 +3621,9 @@ export function GoogleSheetsLeadHunter({
                 onClick={handleCreateNewSpreadsheet}
                 className="rounded-lg bg-white hover:bg-white/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
               >
-                {isCreatingRemoteSheet ? "Criando..." : "Criar Planilha"}
+                {isCreatingRemoteSheet
+                  ? "Importando abas..."
+                  : "Conectar & Importar Abas"}
               </button>
             </div>
           </div>
