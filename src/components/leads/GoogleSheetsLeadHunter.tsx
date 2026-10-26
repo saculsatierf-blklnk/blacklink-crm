@@ -41,6 +41,8 @@ import {
   sanitizeCnpj,
   extractCanonicalDomain,
   sanitizePhoneE164,
+  formatPhoneBrDisplay,
+  decodeHtmlEntities,
   deduplicateAndMergeLeads,
   type DeduplicationAuditEntry,
 } from "@/lib/deduplication";
@@ -61,7 +63,7 @@ export interface ManagedSpreadsheet {
 const DEFAULT_SPREADSHEETS: ManagedSpreadsheet[] = [
   {
     id: "sheet-imobiliario",
-    title: "Imobiliário.",
+    title: "Leads",
     sheetUrl: DEFAULT_USER_SHEET_URL,
     tabs: ["Casas Modulares", "Fachadas", "Lajes"],
   },
@@ -997,7 +999,7 @@ export function GoogleSheetsLeadHunter({
   currentUserId,
   currentCompanyId,
 }: GoogleSheetsLeadHunterProps) {
-  // Gestão de Múltiplas Planilhas (Ex: "Imobiliário.", "Metalúrgicas SP", "Energia Solar")
+  // Gestão de Múltiplas Planilhas (Ex: "Leads", "Logística & Galpões", "Energia & Infra")
   const [spreadsheets, setSpreadsheets] =
     useState<ManagedSpreadsheet[]>(DEFAULT_SPREADSHEETS);
   const [activeSpreadsheetId, setActiveSpreadsheetId] =
@@ -1011,10 +1013,16 @@ export function GoogleSheetsLeadHunter({
     [spreadsheets, activeSpreadsheetId]
   );
 
-  const [sheetTitle, setSheetTitle] = useState("Imobiliário.");
+  const [sheetTitle, setSheetTitle] = useState("Leads");
   const [tabs, setTabs] = useState<string[]>(DEFAULT_SPREADSHEETS[0].tabs);
   const [activeTab, setActiveTab] = useState<string>("Casas Modulares");
-  const [rows, setRows] = useState<ExtractedSheetLead[]>(INITIAL_PRINT_LEADS);
+  const [rows, setRows] = useState<ExtractedSheetLead[]>(() =>
+    INITIAL_PRINT_LEADS.map((r) => ({
+      ...r,
+      empresa: decodeHtmlEntities(r.empresa),
+      contato: formatPhoneBrDisplay(r.contato) || r.contato,
+    }))
+  );
 
   // Seleção de Leads na Planilha para enviar em lote ou individualmente ao Kanban
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
@@ -1061,6 +1069,8 @@ export function GoogleSheetsLeadHunter({
   const [newTabName, setNewTabName] = useState("");
 
   useEffect(() => {
+    let initialUrlToSync = DEFAULT_USER_SHEET_URL;
+    let initialWebhookToSync = "";
     try {
       const savedRows = localStorage.getItem("gofer_sheets_leads_v3");
       const savedTabs = localStorage.getItem("gofer_sheets_tabs_v3");
@@ -1075,7 +1085,15 @@ export function GoogleSheetsLeadHunter({
 
       if (savedRows) {
         const parsed = JSON.parse(savedRows);
-        if (Array.isArray(parsed) && parsed.length > 0) setRows(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setRows(
+            parsed.map((r: ExtractedSheetLead) => ({
+              ...r,
+              empresa: decodeHtmlEntities(r.empresa || ""),
+              contato: formatPhoneBrDisplay(r.contato) || r.contato || "",
+            }))
+          );
+        }
       }
       if (savedKanbanSent) {
         const parsedSent = JSON.parse(savedKanbanSent);
@@ -1085,12 +1103,19 @@ export function GoogleSheetsLeadHunter({
         ? savedSheetUrl!
         : DEFAULT_USER_SHEET_URL;
       setSheetUrl(cleanSavedUrl);
+      initialUrlToSync = cleanSavedUrl;
 
       if (savedSpreadsheets) {
         const parsedSheets: ManagedSpreadsheet[] = JSON.parse(savedSpreadsheets);
         if (Array.isArray(parsedSheets) && parsedSheets.length > 0) {
           const sanitized = parsedSheets.map((s) => ({
             ...s,
+            title:
+              !s.title ||
+              s.title.toLowerCase().startsWith("imobiliário") ||
+              s.title.toLowerCase().startsWith("imobiliario")
+                ? "Leads"
+                : s.title,
             sheetUrl: isRealGoogleSheetUrl(s.sheetUrl)
               ? s.sheetUrl
               : DEFAULT_USER_SHEET_URL,
@@ -1106,7 +1131,10 @@ export function GoogleSheetsLeadHunter({
           setTabs(current.tabs);
           setActiveTab(current.tabs[0] || "Casas Modulares");
           setTargetSegment(current.tabs[0] || "Casas Modulares");
-          if (current.sheetUrl) setSheetUrl(current.sheetUrl);
+          if (current.sheetUrl) {
+            setSheetUrl(current.sheetUrl);
+            initialUrlToSync = current.sheetUrl;
+          }
         }
       } else if (savedTabs) {
         const parsedTabs = JSON.parse(savedTabs);
@@ -1115,7 +1143,7 @@ export function GoogleSheetsLeadHunter({
           setSpreadsheets([
             {
               id: "sheet-imobiliario",
-              title: "Imobiliário.",
+              title: "Leads",
               sheetUrl: cleanSavedUrl,
               tabs: parsedTabs,
             },
@@ -1123,12 +1151,217 @@ export function GoogleSheetsLeadHunter({
         }
       }
 
-      if (savedWebhook) setWebhookUrl(savedWebhook);
+      if (savedWebhook) {
+        setWebhookUrl(savedWebhook);
+        initialWebhookToSync = savedWebhook;
+      }
       if (savedCampWebhook) setCampaignWebhookUrl(savedCampWebhook);
       if (savedMyCompany) setMyCompany(savedMyCompany);
       if (savedRepSite) setRepresentedWebsite(savedRepSite);
     } catch {}
+
+    // Sincroniza automaticamente o nome oficial da planilha ("Leads") e as abas definidas no Google Sheets conectado
+    if (isRealGoogleSheetUrl(initialUrlToSync) || initialWebhookToSync) {
+      const params = new URLSearchParams({
+        sheetUrl: initialUrlToSync,
+        tabName: "Casas Modulares",
+        readAllTabs: "true",
+        knownTabs: "Casas Modulares,Fachadas,Lajes",
+        webhookUrl: initialWebhookToSync,
+        spreadsheetId: extractSheetIdFromUrl(initialUrlToSync) || "",
+      });
+      fetch(`/api/crm/sheets-sync?${params.toString()}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data || !data.success) return;
+          const remoteTitle =
+            typeof data.title === "string" && data.title.trim()
+              ? data.title.trim()
+              : "Leads";
+          const remoteTabs: string[] =
+            Array.isArray(data.tabs) && data.tabs.length > 0 ? data.tabs : [];
+
+          setSheetTitle(remoteTitle);
+          setSpreadsheets((prev) =>
+            prev.map((s, idx) =>
+              idx === 0 || s.sheetUrl === initialUrlToSync
+                ? {
+                    ...s,
+                    title: remoteTitle,
+                    tabs:
+                      remoteTabs.length > 0
+                        ? Array.from(new Set([...remoteTabs, ...s.tabs]))
+                        : s.tabs,
+                  }
+                : s
+            )
+          );
+          if (remoteTabs.length > 0) {
+            setTabs((prev) => Array.from(new Set([...remoteTabs, ...prev])));
+          }
+          if (Array.isArray(data.rows) && data.rows.length > 0) {
+            const formattedIncoming: ExtractedSheetLead[] = data.rows.map(
+              (r: ExtractedSheetLead) => ({
+                ...r,
+                empresa: decodeHtmlEntities(r.empresa || ""),
+                contato: formatPhoneBrDisplay(r.contato) || r.contato || "",
+              })
+            );
+            setRows((prevRows) => {
+              const touchedTabs = Array.from(
+                new Set(formattedIncoming.map((r) => r.tab || "Casas Modulares"))
+              );
+              let updated = [...prevRows];
+              for (const tName of touchedTabs) {
+                const inc = formattedIncoming.filter(
+                  (r) => (r.tab || "Casas Modulares") === tName
+                );
+                const ex = updated.filter((r) => r.tab === tName);
+                const others = updated.filter((r) => r.tab !== tName);
+                const dedup = deduplicateAndMergeLeads(ex, inc);
+                updated = [...others, ...dedup.updatedExistingRows];
+              }
+              return updated;
+            });
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
+
+  // Sincronização Bidirecional Kanban -> Planilha & Google Sheets:
+  // Sempre que o usuário criar ou mover um lead no Pipeline Kanban, atualiza a planilha "Leads" e dispara o sync para o Google Sheets
+  useEffect(() => {
+    const handleKanbanToSheetsSync = (event: Event) => {
+      const customEvt = event as CustomEvent<{
+        lead?: Lead;
+        action?: "created" | "status_changed";
+      }>;
+      const kLead = customEvt.detail?.lead;
+      if (!kLead || !kLead.leadName) return;
+
+      const mappedLevel: ProspectionLevel =
+        kLead.status === "closed"
+          ? "Reunião agendada"
+          : kLead.status === "negotiation"
+          ? "Em contato"
+          : "Tentativa de contato";
+
+      // Extrai Nome do Contato e Empresa de "Contato - Empresa" (formato padrão do Kanban)
+      const nameParts = kLead.leadName.split(" - ").map((p) => p.trim());
+      const parsedEmpresa =
+        nameParts.length > 1
+          ? nameParts.slice(1).join(" - ")
+          : kLead.leadName.trim();
+      const parsedResponsavel =
+        nameParts.length > 1 ? nameParts[0] : "";
+
+      // Resolve em qual aba de setor da planilha "Leads" o lead deve ficar
+      const originOrRole =
+        kLead.cadenceState?.roleTitle || kLead.origin || "";
+      const originParts = originOrRole.split("·").map((p) => p.trim());
+      const candidateSegment =
+        originParts.length > 1 ? originParts[1] : originParts[0] || "";
+
+      const matchedTab =
+        tabs.find(
+          (t) => t.toLowerCase() === candidateSegment.toLowerCase()
+        ) || activeTab || "Casas Modulares";
+
+      const firstNoteText =
+        Array.isArray(kLead.notes) && kLead.notes.length > 0
+          ? kLead.notes[0]?.text || ""
+          : "";
+
+      const sheetCandidate: ExtractedSheetLead = {
+        id: `kanban-${kLead.id}`,
+        empresa: decodeHtmlEntities(parsedEmpresa),
+        cnpj: "",
+        responsavel: parsedResponsavel,
+        email: (kLead.leadEmail || "").toLowerCase().trim(),
+        contato:
+          formatPhoneBrDisplay(kLead.leadPhone || "") ||
+          kLead.leadPhone ||
+          "",
+        nivelProspeccao: mappedLevel,
+        observacoes:
+          firstNoteText || `[Sincronizado do Kanban • ${mappedLevel}]`,
+        website: extractCanonicalDomain(kLead.leadEmail || "", ""),
+        campanha: `KANBAN-${matchedTab.toUpperCase()}`,
+        highlighted:
+          kLead.status === "closed" || kLead.status === "negotiation",
+        tab: matchedTab,
+      };
+
+      setRows((prevRows) => {
+        const existingInTab = prevRows.filter((r) => r.tab === matchedTab);
+        const otherTabs = prevRows.filter((r) => r.tab !== matchedTab);
+        const dedup = deduplicateAndMergeLeads(existingInTab, [sheetCandidate]);
+        // Se já existia na aba e mudou de coluna no Kanban, atualiza também o Nível de Prospecção
+        const withUpdatedStatus = dedup.updatedExistingRows.map((r) => {
+          const sameName =
+            r.empresa.toLowerCase().trim() ===
+            sheetCandidate.empresa.toLowerCase().trim();
+          const samePhone =
+            Boolean(sanitizePhoneE164(r.contato)) &&
+            sanitizePhoneE164(r.contato) ===
+              sanitizePhoneE164(sheetCandidate.contato);
+          if (sameName || samePhone) {
+            return {
+              ...r,
+              nivelProspeccao: mappedLevel,
+              responsavel: r.responsavel || sheetCandidate.responsavel,
+              email: r.email || sheetCandidate.email,
+              contato:
+                formatPhoneBrDisplay(r.contato || sheetCandidate.contato) ||
+                r.contato,
+            };
+          }
+          return r;
+        });
+        return [...otherTabs, ...withUpdatedStatus];
+      });
+
+      // Dispara sincronização em background com o Google Sheets
+      fetch("/api/crm/sheets-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          webhookUrl: webhookUrl.trim(),
+          campaignWebhookUrl: campaignWebhookUrl.trim(),
+          spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
+          spreadsheetTitle: sheetTitle || "Leads",
+          myCompany,
+          targetSector: matchedTab,
+          tabName: matchedTab,
+          leads: [sheetCandidate],
+          replaceAllInTab: false,
+        }),
+      }).catch(() => {});
+
+      setFeedbackBanner({
+        type: "success",
+        text: `✦ Lead "${parsedEmpresa}" sincronizado automaticamente do Kanban para a planilha "${sheetTitle}" (aba "${matchedTab}")!`,
+      });
+    };
+
+    window.addEventListener("blacklink:kanban-to-sheets-sync", handleKanbanToSheetsSync);
+    return () => {
+      window.removeEventListener(
+        "blacklink:kanban-to-sheets-sync",
+        handleKanbanToSheetsSync
+      );
+    };
+  }, [
+    tabs,
+    activeTab,
+    activeSpreadsheet.id,
+    webhookUrl,
+    campaignWebhookUrl,
+    sheetUrl,
+    sheetTitle,
+    myCompany,
+  ]);
 
   useEffect(() => {
     try {
@@ -1403,7 +1636,7 @@ export function GoogleSheetsLeadHunter({
       {
         niche: "Canteiros e Alojamentos Metálicos",
         macroCategory: "Imobiliário & Construção Modular",
-        recommendedSpreadsheet: "Imobiliário.",
+        recommendedSpreadsheet: "Leads",
         fitScore: 97,
         avgTicket: "Alto Recorrente",
         salesCycle: "12 a 25 dias",
@@ -1427,7 +1660,7 @@ export function GoogleSheetsLeadHunter({
       {
         niche: "Esquadrias Industriais, Brises & Pele de Vidro",
         macroCategory: "Imobiliário & Construção Modular",
-        recommendedSpreadsheet: "Imobiliário.",
+        recommendedSpreadsheet: "Leads",
         fitScore: 95,
         avgTicket: "Médio/Alto Mensal",
         salesCycle: "10 a 20 dias",
@@ -1451,7 +1684,7 @@ export function GoogleSheetsLeadHunter({
       {
         niche: "Galpões Metálicos & Estruturas Pré-Fabricadas",
         macroCategory: "Imobiliário & Construção Modular",
-        recommendedSpreadsheet: "Imobiliário.",
+        recommendedSpreadsheet: "Leads",
         fitScore: 94,
         avgTicket: "Muito Alto (Por Obra)",
         salesCycle: "20 a 40 dias",
@@ -1475,7 +1708,7 @@ export function GoogleSheetsLeadHunter({
       {
         niche: "Fôrmas Metálicas, Steel Deck & Escoramentos",
         macroCategory: "Imobiliário & Construção Modular",
-        recommendedSpreadsheet: "Imobiliário.",
+        recommendedSpreadsheet: "Leads",
         fitScore: 92,
         avgTicket: "Alto Recorrente",
         salesCycle: "15 a 30 dias",
@@ -1643,7 +1876,7 @@ export function GoogleSheetsLeadHunter({
       {
         niche: "Totens, Pórticos Metálicos e Comunicação Visual Pesada",
         macroCategory: "Comunicação Visual, ACM & Varejo",
-        recommendedSpreadsheet: "Imobiliário.",
+        recommendedSpreadsheet: "Leads",
         fitScore: 94,
         avgTicket: "Giro Rápido Semanal",
         salesCycle: "7 a 15 dias",
@@ -1753,7 +1986,7 @@ export function GoogleSheetsLeadHunter({
       ? "Energia & Infra"
       : isLogistics
       ? "Logística & Galpões"
-      : sheetTitle || "Imobiliário.";
+      : sheetTitle || "Leads";
 
     const newStudy = {
       niche: clean,
@@ -3036,7 +3269,7 @@ export function GoogleSheetsLeadHunter({
                     <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[220px]">
                       E-mail
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[155px]">
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[205px] min-w-[195px]">
                       Contato
                     </th>
                     <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[175px]">
@@ -3143,7 +3376,7 @@ export function GoogleSheetsLeadHunter({
                         </td>
 
                         {/* Contato */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5">
+                        <td className="border-r border-[#2e2e2e] px-3 py-1.5 w-[205px] min-w-[195px]">
                           <div className="flex items-center justify-between gap-1">
                             <input
                               type="text"
@@ -3152,17 +3385,18 @@ export function GoogleSheetsLeadHunter({
                                 updateCell(row.id, "contato", e.target.value)
                               }
                               onBlur={(e) => {
-                                const cleaned = sanitizePhoneE164(e.target.value);
-                                if (cleaned) updateCell(row.id, "contato", cleaned);
+                                const formatted = formatPhoneBrDisplay(e.target.value);
+                                if (formatted) updateCell(row.id, "contato", formatted);
                               }}
-                              className="w-full bg-transparent text-white tabular-nums focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
+                              placeholder="(11) 99999-9999"
+                              className="w-full min-w-[145px] bg-transparent text-white font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                             />
                             {whatsappHref && (
                               <a
                                 href={whatsappHref}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title="Abrir conversa no WhatsApp"
+                                title={`Abrir WhatsApp (${cleanE164})`}
                                 className="text-[#14d06e] hover:opacity-80 p-1 shrink-0"
                               >
                                 <MessageCircle className="size-3.5" />
@@ -4418,7 +4652,7 @@ export function GoogleSheetsLeadHunter({
                     1. Compartilhe e cole o link
                   </span>
                   <p className="mt-1 text-[11px] text-[#afafaf]">
-                    Na sua planilha Google (ex: <em>Imobiliário.</em>), clique em{" "}
+                    Na sua planilha Google (ex: <em>Leads</em>), clique em{" "}
                     <strong>Compartilhar &rarr; Qualquer pessoa com o link</strong>{" "}
                     e cole o link no Campo 1 abaixo.
                   </p>
@@ -4689,7 +4923,7 @@ export function GoogleSheetsLeadHunter({
                   type="text"
                   value={newSpreadsheetTitle}
                   onChange={(e) => setNewSpreadsheetTitle(e.target.value)}
-                  placeholder="Ex: Imobiliário., Metalúrgicas SP, Energia Solar..."
+                  placeholder="Ex: Leads, Metalúrgicas SP, Energia Solar..."
                   className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                 />
               </div>

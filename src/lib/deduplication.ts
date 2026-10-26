@@ -124,13 +124,35 @@ export function extractCanonicalDomain(
 }
 
 /**
+ * Decodifica entidades HTML comuns vindas de títulos de páginas web (ex: &#8211;, &amp;, &#038;)
+ */
+export function decodeHtmlEntities(raw?: string | null): string {
+  if (!raw) return "";
+  return String(raw)
+    .replace(/&#8211;|&ndash;/gi, "–")
+    .replace(/&#8212;|&mdash;/gi, "—")
+    .replace(/&#038;|&amp;/gi, "&")
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#039;|&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (_, dec) => {
+      const code = Number(dec);
+      return !isNaN(code) ? String.fromCharCode(code) : "";
+    })
+    .trim();
+}
+
+/**
  * C) Higieniza Telefone / WhatsApp para o formato limpo de dígitos com DDI 55:
  * Ex: '(11) 96909-3975' -> '5511969093975'
  * Ex: '47 3439-1666'   -> '554734391666'
  */
 export function sanitizePhoneE164(raw?: string | null): string {
   if (!raw) return "";
-  let digits = String(raw).replace(/\D/g, "");
+  const firstNumberPart = String(raw).split("/")[0]?.trim() || String(raw);
+  let digits = firstNumberPart.replace(/\D/g, "");
   if (!digits) return "";
 
   // Remove zero inicial de operadora/DDD (ex: 011999999999 -> 11999999999)
@@ -138,17 +160,73 @@ export function sanitizePhoneE164(raw?: string | null): string {
     digits = digits.slice(1);
   }
 
-  // Se já tem 10 ou 11 dígitos (DDD + número), prefixa com 55
-  if (digits.length === 10 || digits.length === 11) {
-    return `55${digits}`;
-  }
-
   // Se já começa com 55 e tem 12 ou 13 dígitos, mantém
   if (digits.startsWith("55") && (digits.length === 12 || digits.length === 13)) {
     return digits;
   }
 
-  return digits.length >= 8 ? digits : "";
+  // Se já tem 10 ou 11 dígitos (DDD + número), prefixa com 55
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+
+  return digits.length >= 10 ? digits : "";
+}
+
+/**
+ * Formata o telefone para leitura humana completa no padrão brasileiro (DDD) XXXXX-XXXX ou (DDD) XXXX-XXXX,
+ * sem exibir o prefixo 55 que espremia os últimos dígitos no campo visual.
+ */
+export function formatPhoneBrDisplay(raw?: string | null): string {
+  if (!raw) return "";
+  const trimmed = String(raw).trim();
+  if (!trimmed) return "";
+
+  // Se tiver múltiplos telefones separados por barra, formata o principal
+  if (trimmed.includes("/")) {
+    return trimmed
+      .split("/")
+      .map((part) => formatPhoneBrDisplay(part))
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  const e164 = sanitizePhoneE164(trimmed);
+  const digits = e164 || trimmed.replace(/\D/g, "");
+
+  // Caso padrão com DDI 55 + DDD (2) + 9 dígitos = 13 dígitos
+  if (digits.startsWith("55") && digits.length === 13) {
+    const ddd = digits.slice(2, 4);
+    const part1 = digits.slice(4, 9);
+    const part2 = digits.slice(9, 13);
+    return `(${ddd}) ${part1}-${part2}`;
+  }
+
+  // Caso padrão com DDI 55 + DDD (2) + 8 dígitos (fixo) = 12 dígitos
+  if (digits.startsWith("55") && digits.length === 12) {
+    const ddd = digits.slice(2, 4);
+    const part1 = digits.slice(4, 8);
+    const part2 = digits.slice(8, 12);
+    return `(${ddd}) ${part1}-${part2}`;
+  }
+
+  // Caso 11 dígitos sem 55 (DDD + 9 dígitos)
+  if (digits.length === 11) {
+    const ddd = digits.slice(0, 2);
+    const part1 = digits.slice(2, 7);
+    const part2 = digits.slice(7, 11);
+    return `(${ddd}) ${part1}-${part2}`;
+  }
+
+  // Caso 10 dígitos sem 55 (DDD + 8 dígitos)
+  if (digits.length === 10) {
+    const ddd = digits.slice(0, 2);
+    const part1 = digits.slice(2, 6);
+    const part2 = digits.slice(6, 10);
+    return `(${ddd}) ${part1}-${part2}`;
+  }
+
+  return trimmed;
 }
 
 /**
@@ -291,7 +369,8 @@ export function deduplicateAndMergeLeads<T extends DeduplicationCandidate>(
         updatedFields.push("E-mail");
       }
       if (!target.contato?.trim() && incoming.contato?.trim()) {
-        target.contato = sanitizePhoneE164(incoming.contato) || incoming.contato.trim();
+        target.contato =
+          formatPhoneBrDisplay(incoming.contato) || incoming.contato.trim();
         updatedFields.push("Contato");
       }
       if (!target.observacoes?.trim() && incoming.observacoes?.trim()) {
@@ -331,12 +410,14 @@ export function deduplicateAndMergeLeads<T extends DeduplicationCandidate>(
       continue;
     }
 
-    // Lead 100% inédito: higieniza campos canônicos e adiciona
+    // Lead 100% inédito: higieniza campos canônicos e formata telefone completo (DD) XXXXX-XXXX
     const sanitizedLead: T = {
       ...incoming,
+      empresa: decodeHtmlEntities(incoming.empresa),
       cnpj: incCnpj ? formatCnpjDisplay(incCnpj) : incoming.cnpj || "",
       email: (incoming.email || "").trim().toLowerCase(),
-      contato: incPhone || (incoming.contato || "").trim(),
+      contato:
+        formatPhoneBrDisplay(incoming.contato) || (incoming.contato || "").trim(),
     };
 
     const newIndex = workingRows.length;

@@ -4,6 +4,8 @@ import {
   formatCnpjDisplay,
   extractCanonicalDomain,
   sanitizePhoneE164,
+  formatPhoneBrDisplay,
+  decodeHtmlEntities,
   deduplicateAndMergeLeads,
   type DeduplicationAuditEntry,
 } from "@/lib/deduplication";
@@ -444,7 +446,9 @@ function extractContactsFromHtml(html: string): {
   title: string;
 } {
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  const rawTitle = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim() : "";
+  const rawTitle = titleMatch
+    ? decodeHtmlEntities(titleMatch[1].replace(/\s+/g, " ").trim())
+    : "";
 
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   const rawEmails = html.match(emailRegex) || [];
@@ -469,21 +473,22 @@ function extractContactsFromHtml(html: string): {
   const cnpjRegex = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g;
   const cnpjs = Array.from(new Set(html.match(cnpjRegex) || []));
 
+  // Exige separador real (parênteses no DDD ou espaço/hífen) e dígito inicial válido (2-9) para nunca capturar timestamps Unix de 10 dígitos
   const phoneRegex =
-    /(?:\+?55\s?)?(?:\(?\d{2}\)?[\s.-]?)(?:9?\d{4}[\s.-]?\d{4})/g;
-  const waRegex = /wa\.me\/55(\d{10,11})/gi;
+    /(?:\+?55\s*)?(?:\([1-9]\d\)\s*(?:9\s*)?[2-9]\d{3}[\s.-]?\d{4}|\b[1-9]\d[\s.-]+(?:9[\s.-]?)?[2-9]\d{3}[\s.-]\d{4}\b)/g;
+  const waRegex = /(?:wa\.me\/55|api\.whatsapp\.com\/send\?phone=55|tel:\+?55?)([1-9]\d9?[2-9]\d{7})/gi;
 
   const phonesSet = new Set<string>();
   let waMatch;
   while ((waMatch = waRegex.exec(html)) !== null) {
-    const e164 = sanitizePhoneE164(waMatch[1]);
-    if (e164) phonesSet.add(e164);
+    const formatted = formatPhoneBrDisplay(waMatch[1]);
+    if (formatted) phonesSet.add(formatted);
   }
 
   const rawPhones = html.match(phoneRegex) || [];
   for (const p of rawPhones) {
-    const e164 = sanitizePhoneE164(p);
-    if (e164) phonesSet.add(e164);
+    const formatted = formatPhoneBrDisplay(p);
+    if (formatted) phonesSet.add(formatted);
   }
 
   return {
@@ -710,7 +715,7 @@ Responda APENAS JSON válido.`;
         parsed?.leads
       )
         ? parsed.leads.map((item: any) => {
-            const empresa = String(item.empresa || "").trim();
+            const empresa = decodeHtmlEntities(String(item.empresa || "").trim());
             const responsavel =
               String(item.responsavel || "").trim() || "Compras / Engenharia";
             return {
@@ -719,6 +724,7 @@ Responda APENAS JSON válido.`;
               responsavel,
               email: String(item.email || "").trim().toLowerCase(),
               contato:
+                formatPhoneBrDisplay(item.contato) ||
                 sanitizePhoneE164(item.contato) ||
                 String(item.contato || "").trim(),
               nivelProspeccao: "Tentativa de contato" as ProspectionLevel,
@@ -808,25 +814,28 @@ export async function POST(req: NextRequest) {
       ...webExtracted,
       ...geminiResult.leads,
       ...directoryMatches,
-    ].map((c, idx) => ({
-      id: `lead-${Date.now()}-${idx}`,
-      empresa: c.empresa,
-      cnpj: formatCnpjDisplay(c.cnpj),
-      responsavel: c.responsavel || "Compras / Suprimentos",
-      email: (c.email || "").toLowerCase().trim(),
-      contato: sanitizePhoneE164(c.contato) || c.contato,
-      nivelProspeccao: c.nivelProspeccao || "Tentativa de contato",
-      observacoes: c.observacoes,
-      website: extractCanonicalDomain(c.email, c.website),
-      campanha: c.campanha || activePlaybook.campaignTag,
-      scriptAbordagem:
-        c.scriptAbordagem ||
-        activePlaybook.whatsappScriptTemplate
-          .replace(/\{\{responsavel\}\}/g, c.responsavel || "gestor de compras")
-          .replace(/\{\{empresa\}\}/g, c.empresa),
-      highlighted: false,
-      tab: tabName,
-    }));
+    ].map((c, idx) => {
+      const cleanEmpresa = decodeHtmlEntities(c.empresa);
+      return {
+        id: `lead-${Date.now()}-${idx}`,
+        empresa: cleanEmpresa,
+        cnpj: formatCnpjDisplay(c.cnpj),
+        responsavel: c.responsavel || "Compras / Suprimentos",
+        email: (c.email || "").toLowerCase().trim(),
+        contato: formatPhoneBrDisplay(c.contato) || sanitizePhoneE164(c.contato) || c.contato,
+        nivelProspeccao: c.nivelProspeccao || "Tentativa de contato",
+        observacoes: c.observacoes,
+        website: extractCanonicalDomain(c.email, c.website),
+        campanha: c.campanha || activePlaybook.campaignTag,
+        scriptAbordagem:
+          c.scriptAbordagem ||
+          activePlaybook.whatsappScriptTemplate
+            .replace(/\{\{responsavel\}\}/g, c.responsavel || "gestor de compras")
+            .replace(/\{\{empresa\}\}/g, cleanEmpresa),
+        highlighted: false,
+        tab: tabName,
+      };
+    });
 
     // 3. APLICA O MOTOR ANTI-DUPLICIDADE RIGOROSO (CNPJ + DOMÍNIO + TELEFONE E.164)
     const dedupResult = deduplicateAndMergeLeads(

@@ -4,6 +4,8 @@ import {
   sanitizeCnpj,
   extractCanonicalDomain,
   sanitizePhoneE164,
+  formatPhoneBrDisplay,
+  decodeHtmlEntities,
 } from "@/lib/deduplication";
 
 export const dynamic = "force-dynamic";
@@ -123,11 +125,11 @@ async function fetchSingleTabViaGviz(
 
       mappedRows.push({
         id: `gviz-${tabName}-${i}`,
-        empresa,
+        empresa: decodeHtmlEntities(empresa),
         cnpj,
         responsavel,
         email,
-        contato: sanitizePhoneE164(rawPhone) || rawPhone,
+        contato: formatPhoneBrDisplay(rawPhone) || sanitizePhoneE164(rawPhone) || rawPhone,
         nivelProspeccao: nivel,
         observacoes,
         website: extractCanonicalDomain(email, ""),
@@ -346,8 +348,7 @@ export async function POST(req: NextRequest) {
     const tabName = (body.tabName || "Casas Modulares").trim();
     const leads = Array.isArray(body.leads) ? body.leads : [];
     const extractedId = body.spreadsheetId || (body.sheetUrl ? extractSpreadsheetId(body.sheetUrl) : "");
-    const validSpreadsheetId =
-      extractedId && extractedId !== DEFAULT_SPREADSHEET_ID ? extractedId : "";
+    const validSpreadsheetId = extractedId || DEFAULT_SPREADSHEET_ID;
 
     if (!webhookUrl) {
       return NextResponse.json(
@@ -363,7 +364,7 @@ export async function POST(req: NextRequest) {
 
     const payload = {
       action: body.action || "sync",
-      spreadsheetTitle: body.spreadsheetTitle || "Nova Planilha Prospecção",
+      spreadsheetTitle: body.spreadsheetTitle || "Leads",
       initialTabs: body.initialTabs || [tabName],
       spreadsheetId: validSpreadsheetId,
       tabName,
@@ -371,12 +372,12 @@ export async function POST(req: NextRequest) {
       targetSector: body.targetSector || tabName,
       replaceAllInTab: Boolean(body.replaceAllInTab),
       rows: leads.map((l) => ({
-        empresa: (l.empresa || "").trim(),
+        empresa: decodeHtmlEntities((l.empresa || "").trim()),
         cnpj: sanitizeCnpj(l.cnpj),
         domain: extractCanonicalDomain(l.email, l.website),
         responsavel: (l.responsavel || "").trim(),
         email: (l.email || "").trim().toLowerCase(),
-        contato: sanitizePhoneE164(l.contato) || (l.contato || "").trim(),
+        contato: formatPhoneBrDisplay(l.contato) || sanitizePhoneE164(l.contato) || (l.contato || "").trim(),
         nivelProspeccao: l.nivelProspeccao || "Tentativa de contato",
         observacoes: (l.observacoes || "").trim(),
         campanha: l.campanha || `${body.myCompany || "Gofer Metais"} • ${tabName}`,

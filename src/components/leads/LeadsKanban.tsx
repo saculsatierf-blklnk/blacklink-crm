@@ -262,8 +262,9 @@ export function LeadsKanban({
     }
   };
 
-  // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional
+  // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional (Kanban <-> Planilha Leads)
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
+    const targetLead = leadsList.find((l) => l.id === leadId);
     setLeadsList((prev) =>
       prev.map((lead) =>
         lead.id === leadId ? { ...lead, status: newStatus } : lead
@@ -274,6 +275,17 @@ export function LeadsKanban({
       setSelectedLead((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
 
+    if (typeof window !== "undefined" && targetLead) {
+      window.dispatchEvent(
+        new CustomEvent("blacklink:kanban-to-sheets-sync", {
+          detail: {
+            lead: { ...targetLead, status: newStatus },
+            action: "status_changed",
+          },
+        })
+      );
+    }
+
     try {
       await updateLeadStatusAction(leadId, newStatus);
     } catch (err) {
@@ -282,7 +294,7 @@ export function LeadsKanban({
   };
 
   // Callback de novo lead cadastrado via AddLeadModal ou importado da Planilha
-  const handleLeadCreated = (newLead: Lead) => {
+  const handleLeadCreated = (newLead: Lead, fromKanbanModal = false) => {
     setLeadsList((prev) => {
       const alreadyExists = prev.some(
         (l) =>
@@ -298,6 +310,13 @@ export function LeadsKanban({
         ...prev,
         [newLead.id]: newLead.cadenceState.completedSteps,
       }));
+    }
+    if (typeof window !== "undefined" && fromKanbanModal) {
+      window.dispatchEvent(
+        new CustomEvent("blacklink:kanban-to-sheets-sync", {
+          detail: { lead: newLead, action: "created" },
+        })
+      );
     }
   };
 
@@ -348,6 +367,7 @@ export function LeadsKanban({
     }
 
     const destStatus = destination.droppableId as LeadStatus;
+    const movedTarget = leadsList.find((item) => item.id === draggableId);
 
     // Atualização Otimista Precisa
     setLeadsList((prev) => {
@@ -368,6 +388,17 @@ export function LeadsKanban({
 
     if (selectedLead && selectedLead.id === draggableId) {
       setSelectedLead((prev) => (prev ? { ...prev, status: destStatus } : null));
+    }
+
+    if (typeof window !== "undefined" && movedTarget) {
+      window.dispatchEvent(
+        new CustomEvent("blacklink:kanban-to-sheets-sync", {
+          detail: {
+            lead: { ...movedTarget, status: destStatus },
+            action: "status_changed",
+          },
+        })
+      );
     }
 
     try {
@@ -745,7 +776,7 @@ export function LeadsKanban({
       <AddLeadModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onLeadCreated={handleLeadCreated}
+        onLeadCreated={(newLead) => handleLeadCreated(newLead, true)}
         defaultOwnerId={
           isCommercial && myUserId
             ? myUserId
