@@ -1061,6 +1061,9 @@ export function GoogleSheetsLeadHunter({
 
   const [sheetUrl, setSheetUrl] = useState(DEFAULT_USER_SHEET_URL);
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [googleAccessToken, setGoogleAccessToken] = useState("");
+  const [googleRefreshToken, setGoogleRefreshToken] = useState("");
+  const [showInlineWriteSetup, setShowInlineWriteSetup] = useState(false);
   const [campaignWebhookUrl, setCampaignWebhookUrl] = useState("");
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
@@ -1068,15 +1071,22 @@ export function GoogleSheetsLeadHunter({
   const [newTabModalOpen, setNewTabModalOpen] = useState(false);
   const [newTabName, setNewTabName] = useState("");
 
+  const isWriteSyncConfigured = Boolean(
+    webhookUrl.trim() || googleAccessToken.trim()
+  );
+
   useEffect(() => {
     let initialUrlToSync = DEFAULT_USER_SHEET_URL;
     let initialWebhookToSync = "";
+    let loadedRowTabs: string[] = [];
     try {
       const savedRows = localStorage.getItem("gofer_sheets_leads_v3");
       const savedTabs = localStorage.getItem("gofer_sheets_tabs_v3");
       const savedSpreadsheets = localStorage.getItem("gofer_spreadsheets_v3");
       const savedActiveSheetId = localStorage.getItem("gofer_active_spreadsheet_id_v3");
       const savedWebhook = localStorage.getItem("gofer_sheets_webhook_v1");
+      const savedGoogleAccess = localStorage.getItem("gofer_google_oauth_access_v1");
+      const savedGoogleRefresh = localStorage.getItem("gofer_google_oauth_refresh_v1");
       const savedCampWebhook = localStorage.getItem("gofer_campaign_webhook_v1");
       const savedSheetUrl = localStorage.getItem("gofer_sheets_url_v3");
       const savedMyCompany = localStorage.getItem("gofer_my_company_v1");
@@ -1086,12 +1096,16 @@ export function GoogleSheetsLeadHunter({
       if (savedRows) {
         const parsed = JSON.parse(savedRows);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setRows(
-            parsed.map((r: ExtractedSheetLead) => ({
+          const cleanedRows: ExtractedSheetLead[] = parsed.map(
+            (r: ExtractedSheetLead) => ({
               ...r,
               empresa: decodeHtmlEntities(r.empresa || ""),
               contato: formatPhoneBrDisplay(r.contato) || r.contato || "",
-            }))
+            })
+          );
+          setRows(cleanedRows);
+          loadedRowTabs = Array.from(
+            new Set(cleanedRows.map((r) => (r.tab || "").trim()).filter(Boolean))
           );
         }
       }
@@ -1108,25 +1122,57 @@ export function GoogleSheetsLeadHunter({
       if (savedSpreadsheets) {
         const parsedSheets: ManagedSpreadsheet[] = JSON.parse(savedSpreadsheets);
         if (Array.isArray(parsedSheets) && parsedSheets.length > 0) {
-          const sanitized = parsedSheets.map((s) => ({
-            ...s,
-            title:
+          // Unifica planilhas duplicadas que apontam para o mesmo Google Sheet ID ou mesmo nome ("Leads")
+          const unifiedMap = new Map<string, ManagedSpreadsheet>();
+          for (const s of parsedSheets) {
+            const normalizedTitle =
               !s.title ||
               s.title.toLowerCase().startsWith("imobiliário") ||
               s.title.toLowerCase().startsWith("imobiliario")
                 ? "Leads"
-                : s.title,
-            sheetUrl: isRealGoogleSheetUrl(s.sheetUrl)
+                : s.title.trim();
+            const normalizedUrl = isRealGoogleSheetUrl(s.sheetUrl)
               ? s.sheetUrl
-              : DEFAULT_USER_SHEET_URL,
-          }));
-          setSpreadsheets(sanitized);
+              : DEFAULT_USER_SHEET_URL;
+            const sheetKey =
+              extractSheetIdFromUrl(normalizedUrl) ||
+              normalizedTitle.toLowerCase();
+
+            const existing = unifiedMap.get(sheetKey);
+            if (existing) {
+              existing.tabs = Array.from(
+                new Set([...existing.tabs, ...(s.tabs || [])])
+              );
+            } else {
+              unifiedMap.set(sheetKey, {
+                id: s.id || "sheet-imobiliario",
+                title: normalizedTitle,
+                sheetUrl: normalizedUrl,
+                tabs: Array.from(new Set([...(s.tabs || [])])),
+              });
+            }
+          }
+
+          const deduplicated = Array.from(unifiedMap.values());
+          // Garante que qualquer aba criada nos leads locais (ex: Fabricante de Portão, Empresas de comunicação visual) esteja na planilha principal
+          if (deduplicated.length > 0 && loadedRowTabs.length > 0) {
+            deduplicated[0] = {
+              ...deduplicated[0],
+              tabs: Array.from(
+                new Set([...deduplicated[0].tabs, ...loadedRowTabs])
+              ),
+            };
+          }
+
+          setSpreadsheets(deduplicated);
           const targetId =
-            savedActiveSheetId && sanitized.some((s) => s.id === savedActiveSheetId)
+            savedActiveSheetId &&
+            deduplicated.some((s) => s.id === savedActiveSheetId)
               ? savedActiveSheetId
-              : sanitized[0].id;
+              : deduplicated[0].id;
           setActiveSpreadsheetId(targetId);
-          const current = sanitized.find((s) => s.id === targetId) || sanitized[0];
+          const current =
+            deduplicated.find((s) => s.id === targetId) || deduplicated[0];
           setSheetTitle(current.title);
           setTabs(current.tabs);
           setActiveTab(current.tabs[0] || "Casas Modulares");
@@ -1139,13 +1185,16 @@ export function GoogleSheetsLeadHunter({
       } else if (savedTabs) {
         const parsedTabs = JSON.parse(savedTabs);
         if (Array.isArray(parsedTabs) && parsedTabs.length > 0) {
-          setTabs(parsedTabs);
+          const combinedTabs = Array.from(
+            new Set([...parsedTabs, ...loadedRowTabs])
+          );
+          setTabs(combinedTabs);
           setSpreadsheets([
             {
               id: "sheet-imobiliario",
               title: "Leads",
               sheetUrl: cleanSavedUrl,
-              tabs: parsedTabs,
+              tabs: combinedTabs,
             },
           ]);
         }
@@ -1155,6 +1204,8 @@ export function GoogleSheetsLeadHunter({
         setWebhookUrl(savedWebhook);
         initialWebhookToSync = savedWebhook;
       }
+      if (savedGoogleAccess) setGoogleAccessToken(savedGoogleAccess);
+      if (savedGoogleRefresh) setGoogleRefreshToken(savedGoogleRefresh);
       if (savedCampWebhook) setCampaignWebhookUrl(savedCampWebhook);
       if (savedMyCompany) setMyCompany(savedMyCompany);
       if (savedRepSite) setRepresentedWebsite(savedRepSite);
@@ -1166,7 +1217,12 @@ export function GoogleSheetsLeadHunter({
         sheetUrl: initialUrlToSync,
         tabName: "Casas Modulares",
         readAllTabs: "true",
-        knownTabs: "Casas Modulares,Fachadas,Lajes",
+        knownTabs: [
+          "Casas Modulares",
+          "Fachadas",
+          "Lajes",
+          ...loadedRowTabs,
+        ].join(","),
         webhookUrl: initialWebhookToSync,
         spreadsheetId: extractSheetIdFromUrl(initialUrlToSync) || "",
       });
@@ -1228,6 +1284,72 @@ export function GoogleSheetsLeadHunter({
         .catch(() => {});
     }
   }, []);
+
+  // Escuta retorno do Pop-up Google OAuth (1 Clique) para ativar gravação direta via Google Sheets API v4
+  useEffect(() => {
+    const handleOAuthMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if (
+        (data.type === "GOOGLE_SHEETS_AUTH_SUCCESS" ||
+          data.type === "GOOGLE_AUTH_SUCCESS") &&
+        data.googleAccessToken
+      ) {
+        const access = String(data.googleAccessToken);
+        const refresh = String(data.googleRefreshToken || "");
+        setGoogleAccessToken(access);
+        if (refresh) setGoogleRefreshToken(refresh);
+        try {
+          localStorage.setItem("gofer_google_oauth_access_v1", access);
+          if (refresh) {
+            localStorage.setItem("gofer_google_oauth_refresh_v1", refresh);
+          }
+        } catch {}
+        setShowInlineWriteSetup(false);
+
+        // Dispara sincronização imediata de todas as abas para o Google Sheets
+        const allBatches = tabs.map((tName) => ({
+          tabName: tName,
+          leads: rows.filter((r) => r.tab === tName && r.empresa.trim()),
+          replaceAllInTab: false,
+        }));
+        fetch("/api/crm/sheets-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            googleAccessToken: access,
+            googleRefreshToken: refresh,
+            webhookUrl: webhookUrl.trim(),
+            spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
+            spreadsheetTitle: sheetTitle || "Leads",
+            myCompany,
+            tabName: activeTab,
+            batches: allBatches,
+          }),
+        })
+          .then((r) => r.json())
+          .then((resData) => {
+            if (resData?.success) {
+              setFeedbackBanner({
+                type: "success",
+                text: `✦ Conta Google conectada! Todas as ${allBatches.length} abas (${tabs.join(", ")}) foram inseridas e sincronizadas no Google Sheets!`,
+              });
+            } else {
+              setFeedbackBanner({
+                type: "info",
+                text:
+                  resData?.error ||
+                  "Conta Google conectada! Se sua conta Google exigir o conector Apps Script na planilha, cole a URL do App da Web abaixo.",
+              });
+            }
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener("message", handleOAuthMessage);
+    return () => window.removeEventListener("message", handleOAuthMessage);
+  }, [tabs, rows, webhookUrl, sheetUrl, sheetTitle, myCompany, activeTab]);
 
   // Sincronização Bidirecional Kanban -> Planilha & Google Sheets:
   // Sempre que o usuário criar ou mover um lead no Pipeline Kanban, atualiza a planilha "Leads" e dispara o sync para o Google Sheets
@@ -1322,11 +1444,13 @@ export function GoogleSheetsLeadHunter({
         return [...otherTabs, ...withUpdatedStatus];
       });
 
-      // Dispara sincronização em background com o Google Sheets
+      // Dispara sincronização em background com o Google Sheets (via OAuth ou Apps Script)
       fetch("/api/crm/sheets-sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          googleAccessToken: googleAccessToken.trim(),
+          googleRefreshToken: googleRefreshToken.trim(),
           webhookUrl: webhookUrl.trim(),
           campaignWebhookUrl: campaignWebhookUrl.trim(),
           spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
@@ -1357,6 +1481,8 @@ export function GoogleSheetsLeadHunter({
     activeTab,
     activeSpreadsheet.id,
     webhookUrl,
+    googleAccessToken,
+    googleRefreshToken,
     campaignWebhookUrl,
     sheetUrl,
     sheetTitle,
@@ -2496,37 +2622,35 @@ export function GoogleSheetsLeadHunter({
         return;
       }
 
-      // Sincroniza em tempo real com o Google Sheets se o Webhook estiver conectado
-      if (webhookUrl.trim()) {
-        const syncRes = await fetch("/api/crm/sheets-sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            webhookUrl: webhookUrl.trim(),
-            campaignWebhookUrl: campaignWebhookUrl.trim(),
-            spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
-            myCompany,
-            targetSector: targetSegment,
-            tabName: targetTab,
-            leads: dedup.newUniqueLeads,
-            replaceAllInTab: false,
-          }),
-        });
-        if (syncRes.ok) {
-          setFeedbackBanner({
-            type: "success",
-            text: `✦ ${dedup.insertedCount} novos leads únicos inseridos, ${dedup.mergedCount} complementados e ${dedup.blockedCount} duplicatas travadas — sincronizado em tempo real no Google Sheets!`,
-          });
-        } else {
-          setFeedbackBanner({
-            type: "success",
-            text: `✦ ${dedup.insertedCount} novos leads únicos validados (${dedup.blockedCount} duplicatas travadas). Clique em 'Sincronizar Google Sheets' para enviar à nuvem.`,
-          });
-        }
-      } else {
+      // Sincroniza em tempo real com o Google Sheets (via OAuth ou Apps Script Webhook)
+      const syncRes = await fetch("/api/crm/sheets-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          googleAccessToken: googleAccessToken.trim(),
+          googleRefreshToken: googleRefreshToken.trim(),
+          webhookUrl: webhookUrl.trim(),
+          campaignWebhookUrl: campaignWebhookUrl.trim(),
+          spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
+          spreadsheetTitle: sheetTitle || "Leads",
+          myCompany,
+          targetSector: targetSegment,
+          tabName: targetTab,
+          leads: dedup.newUniqueLeads,
+          replaceAllInTab: false,
+        }),
+      });
+      const syncData = await syncRes.json().catch(() => ({}));
+      if (syncRes.ok && syncData?.success) {
         setFeedbackBanner({
           type: "success",
-          text: `✦ ${dedup.insertedCount} novos leads únicos adicionados (${dedup.mergedCount} enriquecidos | ${dedup.blockedCount} duplicatas travadas por CNPJ/Domínio/Telefone)!`,
+          text: `✦ ${dedup.insertedCount} novos leads únicos inseridos na aba "${targetTab}" e gravados automaticamente no seu Google Sheets ("${sheetTitle}")!`,
+        });
+      } else {
+        setShowInlineWriteSetup(true);
+        setFeedbackBanner({
+          type: "info",
+          text: `✦ ${dedup.insertedCount} leads captados na aba "${targetTab}"! Para o CRM gravar abas e leads direto no seu Google Sheets, ative a Gravação no painel amarelo logo abaixo.`,
         });
       }
     } catch (err: any) {
@@ -2539,45 +2663,72 @@ export function GoogleSheetsLeadHunter({
     }
   };
 
-  const handleSyncToGoogleSheets = async () => {
-    if (!webhookUrl.trim()) {
-      if (onWorkspaceTabChange) {
-        onWorkspaceTabChange("integracao");
-      }
-      setFeedbackBanner({
-        type: "info",
-        text: "Conecte a URL do Google Apps Script abaixo (leva 1 minuto) para sincronizar automaticamente suas planilhas com o Google Sheets.",
-      });
-      return;
-    }
+  const handleAuthorizeGoogleSheetsPopup = () => {
+    const width = 540;
+    const height = 660;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    window.open(
+      "/api/auth/google?scope=sheets",
+      "GoogleSheetsOAuthPopup",
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+  };
+
+  const handleSyncToGoogleSheets = async (overrideWebhookUrl?: string) => {
+    const effectiveWebhook =
+      typeof overrideWebhookUrl === "string"
+        ? overrideWebhookUrl.trim()
+        : webhookUrl.trim();
 
     setIsSyncingSheets(true);
     setFeedbackBanner(null);
 
     try {
+      // Monta o lote com TODAS as abas da planilha ativa (ex: Casas Modulares, Fachadas, Lajes, Fabricante de Portão, Empresas de comunicação visual...)
+      const allBatches = tabs.map((tName) => ({
+        tabName: tName,
+        leads: rows.filter((r) => r.tab === tName && r.empresa.trim()),
+        replaceAllInTab: false,
+      }));
+
       const res = await fetch("/api/crm/sheets-sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          webhookUrl: webhookUrl.trim(),
+          googleAccessToken: googleAccessToken.trim(),
+          googleRefreshToken: googleRefreshToken.trim(),
+          webhookUrl: effectiveWebhook,
           campaignWebhookUrl: campaignWebhookUrl.trim(),
           spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
+          spreadsheetTitle: sheetTitle || "Leads",
           myCompany,
           targetSector: targetSegment,
           tabName: activeTab,
           leads: activeTabRows.filter((r) => r.empresa.trim()),
+          batches: allBatches,
           replaceAllInTab: false,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Erro ao sincronizar planilha.");
+        if (data?.needsSetup) {
+          setShowInlineWriteSetup(true);
+        }
+        throw new Error(
+          data.error ||
+            "Ative a Gravação Direta (via Google 1 Clique ou Apps Script) no painel abaixo para inserir no Google Sheets."
+        );
       }
 
+      setShowInlineWriteSetup(false);
+      const syncedTabsNames = Array.isArray(data.tabsSynced)
+        ? data.tabsSynced.join(", ")
+        : tabs.join(", ");
       setFeedbackBanner({
         type: "success",
-        text: `✦ Aba "${activeTab}" da planilha "${sheetTitle}" sincronizada com Google Sheets!`,
+        text: `✦ Todas as ${tabs.length} abas (${syncedTabsNames}) da planilha "${sheetTitle}" foram inseridas e sincronizadas diretamente no seu Google Sheets!`,
       });
     } catch (err: any) {
       setFeedbackBanner({
@@ -2815,6 +2966,28 @@ export function GoogleSheetsLeadHunter({
     setTargetSegment(clean);
     setNewTabName("");
     setNewTabModalOpen(false);
+
+    // Cria imediatamente a nova aba no Google Sheets se a gravação estiver ativa
+    if (isWriteSyncConfigured) {
+      fetch("/api/crm/sheets-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          googleAccessToken: googleAccessToken.trim(),
+          googleRefreshToken: googleRefreshToken.trim(),
+          webhookUrl: webhookUrl.trim(),
+          spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
+          spreadsheetTitle: sheetTitle || "Leads",
+          myCompany,
+          targetSector: clean,
+          tabName: clean,
+          leads: [],
+          batches: [{ tabName: clean, leads: [] }],
+        }),
+      }).catch(() => {});
+    } else {
+      setShowInlineWriteSetup(true);
+    }
   };
 
   const getIrvoLevelBadge = (level: ProspectionLevel) => {
@@ -2912,34 +3085,36 @@ export function GoogleSheetsLeadHunter({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold ${
-                    webhookUrl.trim() || isRealGoogleSheetUrl(sheetUrl)
+                <button
+                  type="button"
+                  onClick={() => setShowInlineWriteSetup((v) => !v)}
+                  className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold cursor-pointer ${
+                    isWriteSyncConfigured
                       ? "bg-[#0c2b1c] text-[#14d06e]"
-                      : "bg-[#2b2410] text-[#e8c267]"
+                      : "bg-[#2b2410] text-[#e8c267] ring-1 ring-[#e8c267]/40"
                   }`}
                 >
                   <span
                     className={`size-1.5 rounded-full ${
-                      webhookUrl.trim() || isRealGoogleSheetUrl(sheetUrl)
-                        ? "bg-[#14d06e]"
-                        : "bg-[#e8c267]"
+                      isWriteSyncConfigured ? "bg-[#14d06e]" : "bg-[#e8c267]"
                     }`}
                   />
-                  {webhookUrl.trim()
-                    ? "Google Sheets Sincronizado (Apps Script)"
-                    : isRealGoogleSheetUrl(sheetUrl)
-                    ? "Planilha Google Vinculada"
-                    : "Google Sheets não conectado"}
-                </span>
+                  {isWriteSyncConfigured
+                    ? "Gravação Bidirecional Google Sheets Ativa"
+                    : "Modo Somente Leitura · Clique p/ Ativar Gravação no Sheets"}
+                </button>
 
                 <button
                   type="button"
-                  onClick={() => onWorkspaceTabChange?.("integracao")}
+                  onClick={() => setShowInlineWriteSetup((v) => !v)}
                   className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-semibold text-[#7fa9f7] cursor-pointer"
                 >
                   <Link2 className="size-3.5" />
-                  <span>Configurar Sincronização</span>
+                  <span>
+                    {isWriteSyncConfigured
+                      ? "Configurar Sincronização"
+                      : "Ativar Gravação Direta"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -2993,7 +3168,7 @@ export function GoogleSheetsLeadHunter({
                 ) : (
                   <button
                     type="button"
-                    onClick={() => onWorkspaceTabChange?.("integracao")}
+                    onClick={() => setShowInlineWriteSetup(true)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-[#e8c267] transition-colors cursor-pointer"
                   >
                     <FileSpreadsheet className="size-3.5" />
@@ -3002,6 +3177,115 @@ export function GoogleSheetsLeadHunter({
                 )}
               </div>
             </div>
+
+            {/* PAINEL INLINE DE ATIVAÇÃO DE GRAVAÇÃO DIRETA NO GOOGLE SHEETS (Visível quando a escrita ainda não foi ativada ou sob demanda) */}
+            {(!isWriteSyncConfigured || showInlineWriteSetup) && (
+              <div className="rounded-lg bg-[#1a1a1a] ring-1 ring-[#e8c267]/40 p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-white">
+                      ⚡ Por que as novas abas ({tabs.join(", ")}) ainda não entraram na planilha "Leads" do Google?
+                    </p>
+                    <p className="text-[11px] text-[#afafaf] mt-0.5">
+                      O link público do Google Sheets permite que o CRM <strong>leia</strong> suas abas, mas para o CRM <strong>inserir abas e leads lá dentro automaticamente</strong>, escolha 1 das 2 opções abaixo (leva 30 segundos, uma única vez):
+                    </p>
+                  </div>
+                  {isWriteSyncConfigured && (
+                    <button
+                      type="button"
+                      onClick={() => setShowInlineWriteSetup(false)}
+                      className="text-xs text-[#afafaf] hover:text-white cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+                  {/* Opção A: 1 Clique Google OAuth */}
+                  <div className="lg:col-span-4 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 flex flex-col justify-between gap-2">
+                    <div>
+                      <span className="text-[11px] font-semibold text-[#14d06e]">
+                        Opção A · Login Direto Google
+                      </span>
+                      <p className="text-[11px] text-[#afafaf] mt-0.5">
+                        Autorize sua conta Google dona da planilha <strong>Leads</strong> em 1 clique:
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAuthorizeGoogleSheetsPopup}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-2 text-xs font-semibold cursor-pointer"
+                    >
+                      <Globe className="size-3.5" />
+                      <span>Autorizar Gravação com Google (1 Clique)</span>
+                    </button>
+                  </div>
+
+                  {/* Opção B: Conector Apps Script (100% Garantido em qualquer conta Google) */}
+                  <div className="lg:col-span-8 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[11px] font-semibold text-[#7fa9f7]">
+                          Opção B · Conector Direto na Planilha (100% Garantido)
+                        </span>
+                        <p className="text-[11px] text-[#afafaf]">
+                          Na planilha <strong>Leads</strong> aberta: menu <strong>Extensões &rarr; Apps Script</strong>, cole o código, clique em <strong>Implantar &rarr; Nova implantação &rarr; App da Web (Qualquer pessoa)</strong> e cole a URL abaixo:
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                          setCopiedScript(true);
+                          setTimeout(() => setCopiedScript(false), 4000);
+                          setFeedbackBanner({
+                            type: "info",
+                            text: "✦ Código Apps Script copiado! Na planilha 'Leads' do Google, clique em Extensões -> Apps Script, cole o código e clique em Implantar -> Nova implantação -> App da Web.",
+                          });
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white cursor-pointer shrink-0"
+                      >
+                        {copiedScript ? (
+                          <>
+                            <Check className="size-3.5 text-[#14d06e]" />
+                            <span className="text-[#14d06e]">1. Código Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="size-3.5 text-[#7fa9f7]" />
+                            <span>1. Copiar Código Apps Script</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        type="text"
+                        value={webhookUrl}
+                        onChange={(e) => setWebhookUrl(e.target.value)}
+                        placeholder="2. Cole aqui a URL do App da Web gerada (https://script.google.com/macros/s/.../exec)"
+                        className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={isSyncingSheets}
+                        onClick={() => handleSyncToGoogleSheets(webhookUrl)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] px-3.5 py-1.5 text-xs font-semibold shrink-0 cursor-pointer"
+                      >
+                        <Send className="size-3.5" />
+                        <span>
+                          {isSyncingSheets
+                            ? "Inserindo abas..."
+                            : `3. Ativar & Inserir Todas as ${tabs.length} Abas`}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* 2. Barra Compacta de Captação de Leads por Setor */}
@@ -3225,7 +3509,7 @@ export function GoogleSheetsLeadHunter({
                 <button
                   type="button"
                   disabled={isSyncingSheets}
-                  onClick={handleSyncToGoogleSheets}
+                  onClick={() => handleSyncToGoogleSheets()}
                   className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Send className="size-3.5" />
@@ -4855,7 +5139,7 @@ export function GoogleSheetsLeadHunter({
                 <button
                   type="button"
                   disabled={isSyncingSheets}
-                  onClick={handleSyncToGoogleSheets}
+                  onClick={() => handleSyncToGoogleSheets()}
                   className="inline-flex items-center gap-2 rounded-lg bg-white hover:bg-white/90 text-[#0d0d0d] px-4 py-2 text-xs font-semibold cursor-pointer"
                 >
                   <Send className="size-3.5" />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import type { ExtractedSheetLead, ProspectionLevel } from "../lead-extractor/route";
 import {
   sanitizeCnpj,
@@ -313,6 +314,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
+interface TabBatchPayload {
+  tabName: string;
+  leads: ExtractedSheetLead[];
+  replaceAllInTab?: boolean;
+}
+
 interface SheetsSyncRequestBody {
   action?: "sync" | "create_spreadsheet";
   spreadsheetTitle?: string;
@@ -320,17 +327,297 @@ interface SheetsSyncRequestBody {
   webhookUrl?: string;
   sheetUrl?: string;
   spreadsheetId?: string;
-  tabName: string;
+  tabName?: string;
   myCompany?: string;
   targetSector?: string;
-  leads: ExtractedSheetLead[];
+  leads?: ExtractedSheetLead[];
+  batches?: TabBatchPayload[];
   replaceAllInTab?: boolean;
   campaignWebhookUrl?: string;
+  googleAccessToken?: string;
+  googleRefreshToken?: string;
+}
+
+async function resolveGoogleOAuthToken(
+  reqAccessToken?: string,
+  reqRefreshToken?: string
+): Promise<string | null> {
+  let accessToken = (reqAccessToken || "").trim();
+  let refreshToken = (reqRefreshToken || "").trim();
+
+  try {
+    const cookieStore = await cookies();
+    if (!accessToken) {
+      accessToken = cookieStore.get("google_sheets_access_token")?.value || "";
+    }
+    if (!refreshToken) {
+      refreshToken =
+        cookieStore.get("google_sheets_refresh_token")?.value || "";
+    }
+  } catch {}
+
+  if (!accessToken && refreshToken) {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (clientId && clientSecret) {
+      try {
+        const res = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: "refresh_token",
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.access_token) {
+          return String(data.access_token);
+        }
+      } catch {}
+    }
+  }
+
+  return accessToken || null;
+}
+
+async function syncViaGoogleSheetsApiV4(
+  accessToken: string,
+  spreadsheetId: string,
+  batches: TabBatchPayload[]
+): Promise<{
+  ok: boolean;
+  added: number;
+  merged: number;
+  tabsSynced: string[];
+  error?: string;
+}> {
+  try {
+    // 1. Descobre abas atuais na planilha via Google Sheets API v4
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+        spreadsheetId
+      )}?fields=sheets.properties`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (!metaRes.ok) {
+      const errData = await metaRes.json().catch(() => ({}));
+      return {
+        ok: false,
+        added: 0,
+        merged: 0,
+        tabsSynced: [],
+        error:
+          errData?.error?.message ||
+          `Google Sheets API retornou status ${metaRes.status}.`,
+      };
+    }
+
+    const metaJson = await metaRes.json();
+    const existingSheetNames = new Set<string>(
+      (metaJson?.sheets || [])
+        .map((s: any) => String(s?.properties?.title || "").trim())
+        .filter(Boolean)
+    );
+
+    // 2. Cria automaticamente qualquer aba que ainda não exista na planilha Google Sheets
+    const missingTabs = batches
+      .map((b) => b.tabName.trim())
+      .filter((t) => t && !existingSheetNames.has(t));
+
+    if (missingTabs.length > 0) {
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}:batchUpdate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            requests: missingTabs.map((title) => ({
+              addSheet: { properties: { title } },
+            })),
+          }),
+        }
+      );
+    }
+
+    let totalAdded = 0;
+    let totalMerged = 0;
+    const tabsSynced: string[] = [];
+
+    // 3. Para cada aba, lê as linhas atuais, faz o merge anti-duplicidade e grava no Google Sheets
+    for (const batch of batches) {
+      const tName = batch.tabName.trim();
+      if (!tName) continue;
+
+      const getRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}/values/${encodeURIComponent(tName)}!A1:F500`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      let existingValues: string[][] = [];
+      if (getRes.ok) {
+        const getJson = await getRes.json();
+        if (Array.isArray(getJson?.values)) {
+          existingValues = getJson.values;
+        }
+      }
+
+      const headerRow = [
+        "Empresa",
+        "Responsável",
+        "E-mail",
+        "Contato",
+        "Nível de Prospecção",
+        "Observações",
+      ];
+
+      const dataRows: string[][] = batch.replaceAllInTab
+        ? []
+        : existingValues
+            .slice(1)
+            .filter(
+              (r) =>
+                r &&
+                r[0] &&
+                String(r[0]).trim().toLowerCase() !== "empresa"
+            )
+            .map((r) => [
+              String(r[0] || ""),
+              String(r[1] || ""),
+              String(r[2] || ""),
+              String(r[3] || ""),
+              String(r[4] || "Tentativa de contato"),
+              String(r[5] || ""),
+            ]);
+
+      const domainIdx = new Map<string, number>();
+      const phoneIdx = new Map<string, number>();
+      const nameIdx = new Map<string, number>();
+
+      dataRows.forEach((r, idx) => {
+        const dom = extractCanonicalDomain(r[2], "");
+        const ph = sanitizePhoneE164(r[3]);
+        const nm = r[0].toLowerCase().trim();
+        if (dom && !dom.startsWith("freemail:")) domainIdx.set(dom, idx);
+        if (ph) phoneIdx.set(ph, idx);
+        if (nm) nameIdx.set(nm, idx);
+      });
+
+      for (const lead of batch.leads) {
+        const emp = decodeHtmlEntities((lead.empresa || "").trim());
+        if (!emp) continue;
+        const resp = (lead.responsavel || "").trim();
+        const em = (lead.email || "").trim().toLowerCase();
+        const cont =
+          formatPhoneBrDisplay(lead.contato) ||
+          sanitizePhoneE164(lead.contato) ||
+          (lead.contato || "").trim();
+        const niv = lead.nivelProspeccao || "Tentativa de contato";
+        const obs = (lead.observacoes || "").trim();
+
+        const dom = extractCanonicalDomain(em, lead.website);
+        const ph = sanitizePhoneE164(cont);
+        const nm = emp.toLowerCase();
+
+        const matchIndex =
+          (dom && !dom.startsWith("freemail:") ? domainIdx.get(dom) : undefined) ??
+          (ph ? phoneIdx.get(ph) : undefined) ??
+          nameIdx.get(nm);
+
+        if (matchIndex !== undefined && !batch.replaceAllInTab) {
+          const cur = dataRows[matchIndex];
+          let changed = false;
+          if (!cur[1] && resp) {
+            cur[1] = resp;
+            changed = true;
+          }
+          if (!cur[2] && em) {
+            cur[2] = em;
+            changed = true;
+          }
+          if (!cur[3] && cont) {
+            cur[3] = cont;
+            changed = true;
+          }
+          if (niv && cur[4] !== niv && niv !== "Tentativa de contato") {
+            cur[4] = niv;
+            changed = true;
+          }
+          if (obs && cur[5] !== obs) {
+            cur[5] = obs;
+            changed = true;
+          }
+          if (changed) totalMerged++;
+        } else {
+          const newIdx = dataRows.length;
+          dataRows.push([emp, resp, em, cont, niv, obs]);
+          if (dom && !dom.startsWith("freemail:")) domainIdx.set(dom, newIdx);
+          if (ph) phoneIdx.set(ph, newIdx);
+          nameIdx.set(nm, newIdx);
+          totalAdded++;
+        }
+      }
+
+      const finalValues = [headerRow, ...dataRows];
+      const putRes = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(
+          spreadsheetId
+        )}/values/${encodeURIComponent(
+          tName
+        )}!A1:F${finalValues.length}?valueInputOption=USER_ENTERED`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            range: `${tName}!A1:F${finalValues.length}`,
+            majorDimension: "ROWS",
+            values: finalValues,
+          }),
+        }
+      );
+
+      if (putRes.ok) {
+        tabsSynced.push(tName);
+      }
+    }
+
+    return {
+      ok: tabsSynced.length > 0,
+      added: totalAdded,
+      merged: totalMerged,
+      tabsSynced,
+    };
+  } catch (err: any) {
+    return {
+      ok: false,
+      added: 0,
+      merged: 0,
+      tabsSynced: [],
+      error: err?.message || "Erro na API do Google Sheets.",
+    };
+  }
 }
 
 /**
  * POST /api/crm/sheets-sync
- * Sincroniza leads ou cria novas planilhas no Google Sheets aplicando higienização canônica (CNPJ, Domínio e Telefone 5511999999999)
+ * Sincroniza todas as abas e leads ou cria novas planilhas no Google Sheets
+ * via Google Sheets API v4 (OAuth 1 Clique) OU Google Apps Script Webhook.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -347,8 +634,53 @@ export async function POST(req: NextRequest) {
     ).trim();
     const tabName = (body.tabName || "Casas Modulares").trim();
     const leads = Array.isArray(body.leads) ? body.leads : [];
-    const extractedId = body.spreadsheetId || (body.sheetUrl ? extractSpreadsheetId(body.sheetUrl) : "");
+    const extractedId =
+      body.spreadsheetId ||
+      (body.sheetUrl ? extractSpreadsheetId(body.sheetUrl) : "");
     const validSpreadsheetId = extractedId || DEFAULT_SPREADSHEET_ID;
+
+    const batches: TabBatchPayload[] =
+      Array.isArray(body.batches) && body.batches.length > 0
+        ? body.batches
+        : [{ tabName, leads, replaceAllInTab: Boolean(body.replaceAllInTab) }];
+
+    // 1. Tenta gravar diretamente via Google Sheets REST API v4 (OAuth 1 Clique)
+    const oauthToken = await resolveGoogleOAuthToken(
+      body.googleAccessToken,
+      body.googleRefreshToken
+    );
+
+    if (oauthToken && body.action !== "create_spreadsheet") {
+      const apiResult = await syncViaGoogleSheetsApiV4(
+        oauthToken,
+        validSpreadsheetId,
+        batches
+      );
+      if (apiResult.ok) {
+        return NextResponse.json({
+          success: true,
+          source: "google_sheets_api_v4",
+          tabName,
+          tabsSynced: apiResult.tabsSynced,
+          added: apiResult.added,
+          merged: apiResult.merged,
+          syncedCount: batches.reduce((acc, b) => acc + b.leads.length, 0),
+        });
+      }
+      // Se falhou e não há webhookUrl, retorna o motivo exato
+      if (!webhookUrl) {
+        return NextResponse.json(
+          {
+            success: false,
+            needsSetup: true,
+            error:
+              apiResult.error ||
+              "Sua sessão Google OAuth não tem permissão de escrita nesta planilha. Conecte o Apps Script ou autorize o Google Sheets.",
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     if (!webhookUrl) {
       return NextResponse.json(
@@ -356,65 +688,108 @@ export async function POST(req: NextRequest) {
           success: false,
           needsSetup: true,
           error:
-            "Conecte a URL do Google Apps Script na aba 'Conectar Google Sheets' para sincronizar e criar planilhas automaticamente.",
+            "Para o CRM inserir abas e leads diretamente dentro do seu Google Sheets ('Leads'), ative a Gravação no botão 'Ativar Gravação Direta no Google Sheets' (leva 30 segundos).",
         },
         { status: 400 }
       );
     }
 
-    const payload = {
-      action: body.action || "sync",
-      spreadsheetTitle: body.spreadsheetTitle || "Leads",
-      initialTabs: body.initialTabs || [tabName],
-      spreadsheetId: validSpreadsheetId,
-      tabName,
-      myCompany: body.myCompany || "Gofer Metais",
-      targetSector: body.targetSector || tabName,
-      replaceAllInTab: Boolean(body.replaceAllInTab),
-      rows: leads.map((l) => ({
-        empresa: decodeHtmlEntities((l.empresa || "").trim()),
-        cnpj: sanitizeCnpj(l.cnpj),
-        domain: extractCanonicalDomain(l.email, l.website),
-        responsavel: (l.responsavel || "").trim(),
-        email: (l.email || "").trim().toLowerCase(),
-        contato: formatPhoneBrDisplay(l.contato) || sanitizePhoneE164(l.contato) || (l.contato || "").trim(),
-        nivelProspeccao: l.nivelProspeccao || "Tentativa de contato",
-        observacoes: (l.observacoes || "").trim(),
-        campanha: l.campanha || `${body.myCompany || "Gofer Metais"} • ${tabName}`,
-        scriptAbordagem: l.scriptAbordagem || "",
-        highlighted: Boolean(l.highlighted),
-      })),
-    };
+    // 2. Grava via Google Apps Script Web App (suporta múltiplas abas em lote ou chamada por aba)
+    let totalSyncedCount = 0;
+    const syncedTabsList: string[] = [];
+    let lastDetails: any = null;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
-
-    const res = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      redirect: "follow",
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-
-    const text = await res.text();
-    let parsed: any = null;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = { raw: text };
+    if (body.action === "create_spreadsheet") {
+      const createPayload = {
+        action: "create_spreadsheet",
+        spreadsheetTitle: body.spreadsheetTitle || "Leads",
+        initialTabs: body.initialTabs || [tabName],
+        spreadsheetId: validSpreadsheetId,
+      };
+      const res = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createPayload),
+        redirect: "follow",
+      });
+      const text = await res.text();
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = { raw: text };
+      }
+      return NextResponse.json({
+        success: res.ok,
+        ...parsed,
+      });
     }
 
-    if (!res.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Google Sheets retornou status ${res.status}. Verifique se o Web App está publicado como 'Qualquer pessoa'.`,
-          details: parsed,
-        },
-        { status: 502 }
-      );
+    // Sincroniza cada aba do lote para garantir compatibilidade total com qualquer versão do Apps Script instalada
+    for (const batch of batches) {
+      const currentTab = (batch.tabName || tabName).trim();
+      const currentLeads = Array.isArray(batch.leads) ? batch.leads : [];
+
+      const payload = {
+        action: "sync",
+        spreadsheetTitle: body.spreadsheetTitle || "Leads",
+        initialTabs: batches.map((b) => b.tabName),
+        spreadsheetId: validSpreadsheetId,
+        tabName: currentTab,
+        myCompany: body.myCompany || "Gofer Metais",
+        targetSector: body.targetSector || currentTab,
+        replaceAllInTab: Boolean(batch.replaceAllInTab),
+        rows: currentLeads.map((l) => ({
+          empresa: decodeHtmlEntities((l.empresa || "").trim()),
+          cnpj: sanitizeCnpj(l.cnpj),
+          domain: extractCanonicalDomain(l.email, l.website),
+          responsavel: (l.responsavel || "").trim(),
+          email: (l.email || "").trim().toLowerCase(),
+          contato:
+            formatPhoneBrDisplay(l.contato) ||
+            sanitizePhoneE164(l.contato) ||
+            (l.contato || "").trim(),
+          nivelProspeccao: l.nivelProspeccao || "Tentativa de contato",
+          observacoes: (l.observacoes || "").trim(),
+          campanha:
+            l.campanha || `${body.myCompany || "Gofer Metais"} • ${currentTab}`,
+          scriptAbordagem: l.scriptAbordagem || "",
+          highlighted: Boolean(l.highlighted),
+        })),
+      };
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+
+      const res = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        redirect: "follow",
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      const text = await res.text();
+      try {
+        lastDetails = JSON.parse(text);
+      } catch {
+        lastDetails = { raw: text };
+      }
+
+      if (!res.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Google Sheets retornou status ${res.status}. Verifique se o Web App está publicado como 'Qualquer pessoa'.`,
+            details: lastDetails,
+          },
+          { status: 502 }
+        );
+      }
+
+      totalSyncedCount += currentLeads.length;
+      syncedTabsList.push(currentTab);
     }
 
     // Dispara Webhook de Campanha (n8n / WhatsApp / Automação) se configurado
@@ -429,8 +804,8 @@ export async function POST(req: NextRequest) {
             myCompany: body.myCompany || "Gofer Metais",
             targetSector: body.targetSector || tabName,
             tabName,
-            count: payload.rows.length,
-            leads: payload.rows,
+            tabsSynced: syncedTabsList,
+            count: totalSyncedCount,
             timestamp: new Date().toISOString(),
           }),
         });
@@ -442,10 +817,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      source: "apps_script_webhook",
       tabName,
-      syncedCount: leads.length,
+      tabsSynced: syncedTabsList,
+      syncedCount: totalSyncedCount,
       campaignDispatched,
-      details: parsed,
+      details: lastDetails,
     });
   } catch (error: any) {
     console.error("Erro ao sincronizar com Google Sheets:", error);

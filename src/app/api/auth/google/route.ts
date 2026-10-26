@@ -29,13 +29,19 @@ export async function GET(request: NextRequest) {
   const baseUrl = `${scheme}://${host}`;
   const redirectUri = `${baseUrl}/api/auth/callback/google`;
 
+  const wantSheetsScope =
+    request.nextUrl.searchParams.get("scope") === "sheets";
+
   const params = new URLSearchParams({
     client_id: googleClientId,
     redirect_uri: redirectUri,
     response_type: "code",
-    scope: "openid email profile",
-    access_type: "online",
-    prompt: "select_account",
+    scope: wantSheetsScope
+      ? "openid email profile https://www.googleapis.com/auth/spreadsheets"
+      : "openid email profile",
+    access_type: wantSheetsScope ? "offline" : "online",
+    prompt: wantSheetsScope ? "consent" : "select_account",
+    state: wantSheetsScope ? "sheets_sync" : "login",
   });
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;

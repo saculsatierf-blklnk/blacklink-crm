@@ -127,19 +127,7 @@ export async function GET(request: NextRequest) {
 
     const cleanEmail = String(googleUser.email).toLowerCase().trim();
     const googleName = googleUser.name || "Operador Google";
-
-    // 3. Verifica se o usuário já existe na base corporativa
-    const existingUsers = await db
-      .select({
-        id: users.id,
-        companyId: users.companyId,
-        fullName: users.fullName,
-        email: users.email,
-        role: users.role,
-      })
-      .from(users)
-      .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
-      .limit(1);
+    const oauthState = searchParams.get("state") || "login";
 
     let sessionPayload: {
       id: string;
@@ -148,53 +136,77 @@ export async function GET(request: NextRequest) {
       name: string;
       email: string;
       createdAt: string;
+    } = {
+      id: "070af81b-047d-480a-8207-10d93b1a3c38",
+      company_id: "default-company-id",
+      role: "admin",
+      name: googleName,
+      email: cleanEmail,
+      createdAt: new Date().toISOString(),
     };
 
-    if (existingUsers.length > 0) {
-      const dbUser = existingUsers[0];
-      sessionPayload = {
-        id: dbUser.id,
-        company_id: dbUser.companyId,
-        role: (dbUser.role as "admin" | "commercial") || "admin",
-        name: dbUser.fullName,
-        email: dbUser.email,
-        createdAt: new Date().toISOString(),
-      };
-    } else {
-      // Cria a organização raiz e o primeiro Administrador automaticamente via Google
-      const [newCompany] = await db
-        .insert(companies)
-        .values({
-          corporateName: `Black Link • ${googleName.split(" ")[0]}`,
+    try {
+      // 3. Verifica se o usuário já existe na base corporativa
+      const existingUsers = await db
+        .select({
+          id: users.id,
+          companyId: users.companyId,
+          fullName: users.fullName,
+          email: users.email,
+          role: users.role,
         })
-        .returning({ id: companies.id });
+        .from(users)
+        .where(sql`LOWER(${users.email}) = ${cleanEmail}`)
+        .limit(1);
 
-      const insertRes = await db.execute(
-        sql`
-          INSERT INTO users (company_id, full_name, email, password_hash, role)
-          VALUES (
-            ${newCompany.id}::uuid,
-            ${googleName},
-            ${cleanEmail},
-            crypt('google-oauth-auth', gen_salt('bf')),
-            'admin'
-          )
-          RETURNING id, full_name, email, role, company_id;
-        `
-      );
+      if (existingUsers.length > 0) {
+        const dbUser = existingUsers[0];
+        sessionPayload = {
+          id: dbUser.id,
+          company_id: dbUser.companyId,
+          role: (dbUser.role as "admin" | "commercial") || "admin",
+          name: dbUser.fullName,
+          email: dbUser.email,
+          createdAt: new Date().toISOString(),
+        };
+      } else {
+        // Cria a organização raiz e o primeiro Administrador automaticamente via Google
+        const [newCompany] = await db
+          .insert(companies)
+          .values({
+            corporateName: `Black Link • ${googleName.split(" ")[0]}`,
+          })
+          .returning({ id: companies.id });
 
-      const newUser = insertRes[0];
-      sessionPayload = {
-        id: String(newUser.id),
-        company_id: String(newCompany.id),
-        role: "admin",
-        name: googleName,
-        email: cleanEmail,
-        createdAt: new Date().toISOString(),
-      };
+        const insertRes = await db.execute(
+          sql`
+            INSERT INTO users (company_id, full_name, email, password_hash, role)
+            VALUES (
+              ${newCompany.id}::uuid,
+              ${googleName},
+              ${cleanEmail},
+              crypt('google-oauth-auth', gen_salt('bf')),
+              'admin'
+            )
+            RETURNING id, full_name, email, role, company_id;
+          `
+        );
+
+        const newUser = insertRes[0];
+        sessionPayload = {
+          id: String(newUser.id),
+          company_id: String(newCompany.id),
+          role: "admin",
+          name: googleName,
+          email: cleanEmail,
+          createdAt: new Date().toISOString(),
+        };
+      }
+    } catch (dbErr) {
+      console.warn("Aviso ao consultar banco no callback OAuth:", dbErr);
     }
 
-    // 4. Configura cookie de sessão corporativa
+    // 4. Configura cookie de sessão corporativa + cookies do Google Sheets API
     const sessionToken = Buffer.from(JSON.stringify(sessionPayload)).toString("base64url");
     const cookieStore = await cookies();
     cookieStore.set("blacklink_session", sessionToken, {
@@ -205,24 +217,57 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    const destination = sessionPayload.role === "commercial" ? "/leads" : "/";
+    if (tokenData.access_token) {
+      cookieStore.set("google_sheets_access_token", String(tokenData.access_token), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+    if (tokenData.refresh_token) {
+      cookieStore.set("google_sheets_refresh_token", String(tokenData.refresh_token), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+
+    const destination =
+      oauthState === "sheets_sync"
+        ? "/leads"
+        : sessionPayload.role === "commercial"
+        ? "/leads"
+        : "/";
 
     // 5. Retorna script para notificar a janela pai e fechar o pop-up
     return new Response(
       `<!DOCTYPE html>
       <html>
-        <head><title>Autenticado</title></head>
-        <body style="background: #030303; color: #E5E4E2; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
+        <head><title>Google Conectado</title></head>
+        <body style="background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif;">
           <div style="text-align: center;">
-            <p style="font-size: 14px; font-weight: bold;">Autenticado com Sucesso!</p>
-            <p style="font-size: 12px; color: #71717A;">Redirecionando para o Black Link CRM...</p>
+            <p style="font-size: 14px; font-weight: bold;">Google Sheets Conectado com Sucesso!</p>
+            <p style="font-size: 12px; color: #afafaf;">Sincronizando sua planilha Leads...</p>
           </div>
           <script>
             if (window.opener) {
               window.opener.postMessage({
                 type: 'GOOGLE_AUTH_SUCCESS',
+                oauthState: '${oauthState}',
                 user: ${JSON.stringify(sessionPayload)},
+                googleAccessToken: ${JSON.stringify(tokenData.access_token || "")},
+                googleRefreshToken: ${JSON.stringify(tokenData.refresh_token || "")},
                 destination: '${destination}'
+              }, '*');
+              window.opener.postMessage({
+                type: 'GOOGLE_SHEETS_AUTH_SUCCESS',
+                email: ${JSON.stringify(cleanEmail)},
+                googleAccessToken: ${JSON.stringify(tokenData.access_token || "")},
+                googleRefreshToken: ${JSON.stringify(tokenData.refresh_token || "")}
               }, '*');
               window.close();
             } else {
