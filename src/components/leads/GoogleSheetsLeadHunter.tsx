@@ -540,7 +540,7 @@ interface GoogleSheetsLeadHunterProps {
 export function GoogleSheetsLeadHunter({
   onLeadImportedToKanban,
   companyName = "Gofer Metais",
-  activeWorkspaceTab = "nichos",
+  activeWorkspaceTab = "integracao",
   onWorkspaceTabChange,
   currentUserId,
   currentCompanyId,

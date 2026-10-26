@@ -40,6 +40,12 @@ export interface VendasSidebarTabItem {
 
 export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
   {
+    id: "integracao",
+    label: "Conectar Google Sheets",
+    shortLabel: "Conexão",
+    icon: Terminal,
+  },
+  {
     id: "nichos",
     label: "Mapa de Setores",
     shortLabel: "Setores",
@@ -62,12 +68,6 @@ export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
     label: "Cadência & Catálogo PDF",
     shortLabel: "Cadência",
     icon: Calendar,
-  },
-  {
-    id: "integracao",
-    label: "Conectar Google Sheets",
-    shortLabel: "Conexão",
-    icon: Terminal,
   },
 ];
 
