@@ -40,22 +40,16 @@ export interface VendasSidebarTabItem {
 
 export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
   {
+    id: "nichos",
+    label: "Mapa de Setores",
+    shortLabel: "Setores",
+    icon: Compass,
+  },
+  {
     id: "planilha",
     label: "Planilha & Captação",
     shortLabel: "Planilha",
     icon: FileSpreadsheet,
-  },
-  {
-    id: "cadencia",
-    label: "Cadência & Catálogo PDF",
-    shortLabel: "Cadência",
-    icon: Calendar,
-  },
-  {
-    id: "nichos",
-    label: "Mapa de Nichos",
-    shortLabel: "Nichos",
-    icon: Compass,
   },
   {
     id: "kanban",
@@ -64,8 +58,14 @@ export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
     icon: KanbanIcon,
   },
   {
+    id: "cadencia",
+    label: "Cadência & Catálogo PDF",
+    shortLabel: "Cadência",
+    icon: Calendar,
+  },
+  {
     id: "integracao",
-    label: "Conexão & Auditoria",
+    label: "Conectar Google Sheets",
     shortLabel: "Conexão",
     icon: Terminal,
   },

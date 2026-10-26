@@ -47,8 +47,42 @@ import {
 import { createLeadAction } from "@/actions/leads";
 import type { Lead } from "@/db/schema";
 
-const DEFAULT_SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFfYXSGDJpUXA/edit?gid=0#gid=0";
+const PLACEHOLDER_SHEET_ID = "1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFfYXSGDJpUXA";
+
+export interface ManagedSpreadsheet {
+  id: string;
+  title: string;
+  sheetUrl: string;
+  tabs: string[];
+}
+
+const DEFAULT_SPREADSHEETS: ManagedSpreadsheet[] = [
+  {
+    id: "sheet-imobiliario",
+    title: "Imobiliário.",
+    sheetUrl: "",
+    tabs: [
+      "Casas Modulares",
+      "Fachadas",
+      "Lajes",
+      "Corte e Solda",
+      "Esquadrias",
+    ],
+  },
+];
+
+function isRealGoogleSheetUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.includes(PLACEHOLDER_SHEET_ID)) return false;
+  return trimmed.includes("docs.google.com/spreadsheets/d/");
+}
+
+function extractSheetIdFromUrl(url: string | undefined | null): string | null {
+  if (!isRealGoogleSheetUrl(url)) return null;
+  const match = String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return match?.[1] || null;
+}
 
 const PROSPECTION_LEVELS: ProspectionLevel[] = [
   "Tentativa de contato",
@@ -327,7 +361,7 @@ const INITIAL_PRINT_LEADS: ExtractedSheetLead[] = [
   },
 ];
 
-// Script Google Apps Script Bidirecional (doGet + doPost) com Trava Tripla (CNPJ, Domínio e Telefone E.164)
+// Script Google Apps Script Bidirecional (doGet + doPost + Criação de Novas Planilhas) com Trava Tripla
 const GOOGLE_APPS_SCRIPT_CODE = `// CONECTOR BIDIRECIONAL DATA WAREHOUSE — GOFER METAIS (REA-DESCONSTRUÇÃO)
 function cleanDigits(v) { return String(v || "").replace(/\\D/g, ""); }
 function cleanDomain(email, site) {
@@ -346,11 +380,18 @@ function cleanPhoneE164(v) {
   if (d.length === 10 || d.length === 11) return "55" + d;
   return d;
 }
+function resolveSpreadsheet(spreadsheetId) {
+  if (spreadsheetId && String(spreadsheetId).length > 10) {
+    try { return SpreadsheetApp.openById(String(spreadsheetId)); } catch (e) {}
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
 
 // 1. LEITURA EM TEMPO REAL DAS COLUNAS E LINHAS DA PLANILHA
 function doGet(e) {
   var tabName = (e && e.parameter && e.parameter.tabName) || "Casas Modulares";
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var spreadsheetId = (e && e.parameter && e.parameter.spreadsheetId) || "";
+  var ss = resolveSpreadsheet(spreadsheetId);
   var sheet = ss.getSheetByName(tabName) || ss.getSheets()[0];
   var data = sheet.getDataRange().getValues();
   var headers = data.length > 0 ? data[0] : ["Empresa","Responsável","E-mail","Contato","Nível de Prospecção","Observações"];
@@ -373,15 +414,38 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// 2. INSERÇÃO E MERGE COMPLEMENTAR COM TRAVA ANTI-DUPLICIDADE TRIPLA (CNPJ + DOMÍNIO + TELEFONE)
+// 2. CRIAÇÃO DE NOVAS PLANILHAS + INSERÇÃO E MERGE COM TRAVA ANTI-DUPLICIDADE TRIPLA
 function doPost(e) {
   var data = JSON.parse(e.postData.contents);
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var headers = [["Empresa", "Responsável", "E-mail", "Contato", "Nível de Prospecção", "Observações"]];
+
+  // Permite criar uma planilha nova diretamente no Google Drive do usuário
+  if (data.action === "create_spreadsheet") {
+    var newSs = SpreadsheetApp.create(data.spreadsheetTitle || "Nova Planilha Gofer Metais");
+    var tabs = data.initialTabs && data.initialTabs.length ? data.initialTabs : ["Casas Modulares"];
+    var firstSheet = newSs.getSheets()[0];
+    firstSheet.setName(tabs[0]);
+    for (var t = 0; t < tabs.length; t++) {
+      var sh = t === 0 ? firstSheet : (newSs.getSheetByName(tabs[t]) || newSs.insertSheet(tabs[t]));
+      sh.getRange(1, 1, 1, 6).setValues(headers)
+        .setBackground("#202b5b").setFontColor("#ffffff").setFontWeight("bold")
+        .setHorizontalAlignment("center").setVerticalAlignment("middle");
+      sh.setRowHeight(1, 32);
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      ok: true,
+      spreadsheetId: newSs.getId(),
+      spreadsheetUrl: newSs.getUrl(),
+      title: newSs.getName(),
+      tabs: tabs
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var ss = resolveSpreadsheet(data.spreadsheetId);
   var tabName = data.tabName || "Casas Modulares";
   var sheet = ss.getSheetByName(tabName);
   if (!sheet) sheet = ss.insertSheet(tabName);
 
-  var headers = [["Empresa", "Responsável", "E-mail", "Contato", "Nível de Prospecção", "Observações"]];
   sheet.getRange(1, 1, 1, 6).setValues(headers)
     .setBackground("#202b5b").setFontColor("#ffffff").setFontWeight("bold")
     .setHorizontalAlignment("center").setVerticalAlignment("middle");
@@ -403,7 +467,7 @@ function doPost(e) {
   }
 
   var rowsToAdd = [], highlights = [], merged = 0, blocked = 0;
-  for (var j = 0; j < data.rows.length; j++) {
+  for (var j = 0; j < (data.rows || []).length; j++) {
     var r = data.rows[j];
     var rDom = cleanDomain(r.email, r.domain);
     var rPh = cleanPhoneE164(r.contato);
@@ -411,7 +475,6 @@ function doPost(e) {
     var matchRow = (rDom && domainMap[rDom]) || (rPh && phoneMap[rPh]) || (rNm && nameMap[rNm]);
 
     if (!data.replaceAllInTab && matchRow) {
-      // Atualiza apenas dados complementares vazios na linha já existente
       var curRow = sheet.getRange(matchRow, 1, 1, 6).getValues()[0];
       var changed = false;
       if (!curRow[1] && r.responsavel) { curRow[1] = r.responsavel; changed = true; }
@@ -470,24 +533,47 @@ interface GoogleSheetsLeadHunterProps {
   companyName?: string;
   activeWorkspaceTab?: VendasWorkspaceTab;
   onWorkspaceTabChange?: (tab: VendasWorkspaceTab) => void;
+  currentUserId?: string;
+  currentCompanyId?: string;
 }
 
 export function GoogleSheetsLeadHunter({
   onLeadImportedToKanban,
   companyName = "Gofer Metais",
-  activeWorkspaceTab = "planilha",
+  activeWorkspaceTab = "nichos",
   onWorkspaceTabChange,
+  currentUserId,
+  currentCompanyId,
 }: GoogleSheetsLeadHunterProps) {
+  // Gestão de Múltiplas Planilhas (Ex: "Imobiliário.", "Metalúrgicas SP", "Energia Solar")
+  const [spreadsheets, setSpreadsheets] =
+    useState<ManagedSpreadsheet[]>(DEFAULT_SPREADSHEETS);
+  const [activeSpreadsheetId, setActiveSpreadsheetId] =
+    useState<string>("sheet-imobiliario");
+
+  const activeSpreadsheet = useMemo(
+    () =>
+      spreadsheets.find((s) => s.id === activeSpreadsheetId) ||
+      spreadsheets[0] ||
+      DEFAULT_SPREADSHEETS[0],
+    [spreadsheets, activeSpreadsheetId]
+  );
+
   const [sheetTitle, setSheetTitle] = useState("Imobiliário.");
-  const [tabs, setTabs] = useState<string[]>([
-    "Casas Modulares",
-    "Fachadas",
-    "Lajes",
-    "Corte e Solda",
-    "Esquadrias",
-  ]);
+  const [tabs, setTabs] = useState<string[]>(DEFAULT_SPREADSHEETS[0].tabs);
   const [activeTab, setActiveTab] = useState<string>("Casas Modulares");
   const [rows, setRows] = useState<ExtractedSheetLead[]>(INITIAL_PRINT_LEADS);
+
+  // Seleção de Leads na Planilha para enviar em lote ou individualmente ao Kanban
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [kanbanSentRowIds, setKanbanSentRowIds] = useState<string[]>([]);
+
+  // Modal de Criar Nova Planilha
+  const [newSpreadsheetModalOpen, setNewSpreadsheetModalOpen] = useState(false);
+  const [newSpreadsheetTitle, setNewSpreadsheetTitle] = useState("");
+  const [newSpreadsheetFirstTab, setNewSpreadsheetFirstTab] = useState("");
+  const [newSpreadsheetUrl, setNewSpreadsheetUrl] = useState("");
+  const [isCreatingRemoteSheet, setIsCreatingRemoteSheet] = useState(false);
 
   // 1. VARIÁVEIS GLOBAIS DE SESSÃO ATIVA (SÉRIE REA-DESCONSTRUÇÃO)
   const [myCompany, setMyCompany] = useState<string>(companyName || "Gofer Metais");
@@ -513,7 +599,7 @@ export function GoogleSheetsLeadHunter({
     text: string;
   } | null>(null);
 
-  const [sheetUrl, setSheetUrl] = useState(DEFAULT_SHEET_URL);
+  const [sheetUrl, setSheetUrl] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [campaignWebhookUrl, setCampaignWebhookUrl] = useState("");
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
@@ -526,23 +612,63 @@ export function GoogleSheetsLeadHunter({
     try {
       const savedRows = localStorage.getItem("gofer_sheets_leads_v2");
       const savedTabs = localStorage.getItem("gofer_sheets_tabs_v2");
+      const savedSpreadsheets = localStorage.getItem("gofer_spreadsheets_v1");
+      const savedActiveSheetId = localStorage.getItem("gofer_active_spreadsheet_id_v1");
       const savedWebhook = localStorage.getItem("gofer_sheets_webhook_v1");
       const savedCampWebhook = localStorage.getItem("gofer_campaign_webhook_v1");
       const savedSheetUrl = localStorage.getItem("gofer_sheets_url_v1");
       const savedMyCompany = localStorage.getItem("gofer_my_company_v1");
       const savedRepSite = localStorage.getItem("gofer_represented_site_v1");
+      const savedKanbanSent = localStorage.getItem("gofer_kanban_sent_rows_v1");
 
       if (savedRows) {
         const parsed = JSON.parse(savedRows);
         if (Array.isArray(parsed) && parsed.length > 0) setRows(parsed);
       }
-      if (savedTabs) {
-        const parsedTabs = JSON.parse(savedTabs);
-        if (Array.isArray(parsedTabs) && parsedTabs.length > 0) setTabs(parsedTabs);
+      if (savedKanbanSent) {
+        const parsedSent = JSON.parse(savedKanbanSent);
+        if (Array.isArray(parsedSent)) setKanbanSentRowIds(parsedSent);
       }
+      const cleanSavedUrl = isRealGoogleSheetUrl(savedSheetUrl) ? savedSheetUrl! : "";
+      if (cleanSavedUrl) setSheetUrl(cleanSavedUrl);
+
+      if (savedSpreadsheets) {
+        const parsedSheets: ManagedSpreadsheet[] = JSON.parse(savedSpreadsheets);
+        if (Array.isArray(parsedSheets) && parsedSheets.length > 0) {
+          const sanitized = parsedSheets.map((s) => ({
+            ...s,
+            sheetUrl: isRealGoogleSheetUrl(s.sheetUrl) ? s.sheetUrl : "",
+          }));
+          setSpreadsheets(sanitized);
+          const targetId =
+            savedActiveSheetId && sanitized.some((s) => s.id === savedActiveSheetId)
+              ? savedActiveSheetId
+              : sanitized[0].id;
+          setActiveSpreadsheetId(targetId);
+          const current = sanitized.find((s) => s.id === targetId) || sanitized[0];
+          setSheetTitle(current.title);
+          setTabs(current.tabs);
+          setActiveTab(current.tabs[0] || "Casas Modulares");
+          setTargetSegment(current.tabs[0] || "Casas Modulares");
+          if (current.sheetUrl) setSheetUrl(current.sheetUrl);
+        }
+      } else if (savedTabs) {
+        const parsedTabs = JSON.parse(savedTabs);
+        if (Array.isArray(parsedTabs) && parsedTabs.length > 0) {
+          setTabs(parsedTabs);
+          setSpreadsheets([
+            {
+              id: "sheet-imobiliario",
+              title: "Imobiliário.",
+              sheetUrl: cleanSavedUrl,
+              tabs: parsedTabs,
+            },
+          ]);
+        }
+      }
+
       if (savedWebhook) setWebhookUrl(savedWebhook);
       if (savedCampWebhook) setCampaignWebhookUrl(savedCampWebhook);
-      if (savedSheetUrl) setSheetUrl(savedSheetUrl);
       if (savedMyCompany) setMyCompany(savedMyCompany);
       if (savedRepSite) setRepresentedWebsite(savedRepSite);
     } catch {}
@@ -552,20 +678,131 @@ export function GoogleSheetsLeadHunter({
     try {
       localStorage.setItem("gofer_sheets_leads_v2", JSON.stringify(rows));
       localStorage.setItem("gofer_sheets_tabs_v2", JSON.stringify(tabs));
+      localStorage.setItem("gofer_spreadsheets_v1", JSON.stringify(spreadsheets));
+      localStorage.setItem("gofer_active_spreadsheet_id_v1", activeSpreadsheetId);
+      localStorage.setItem("gofer_kanban_sent_rows_v1", JSON.stringify(kanbanSentRowIds));
       localStorage.setItem("gofer_my_company_v1", myCompany);
       localStorage.setItem("gofer_represented_site_v1", representedWebsite);
       if (webhookUrl) localStorage.setItem("gofer_sheets_webhook_v1", webhookUrl);
       if (campaignWebhookUrl)
         localStorage.setItem("gofer_campaign_webhook_v1", campaignWebhookUrl);
-      if (sheetUrl) localStorage.setItem("gofer_sheets_url_v1", sheetUrl);
+      localStorage.setItem(
+        "gofer_sheets_url_v1",
+        isRealGoogleSheetUrl(sheetUrl) ? sheetUrl : ""
+      );
     } catch {}
-  }, [rows, tabs, myCompany, representedWebsite, webhookUrl, campaignWebhookUrl, sheetUrl]);
+  }, [
+    rows,
+    tabs,
+    spreadsheets,
+    activeSpreadsheetId,
+    kanbanSentRowIds,
+    myCompany,
+    representedWebsite,
+    webhookUrl,
+    campaignWebhookUrl,
+    sheetUrl,
+  ]);
 
   const [showNicheRadar, setShowNicheRadar] = useState<boolean>(true);
 
   const handleSelectTab = (tab: string) => {
     setActiveTab(tab);
     setTargetSegment(tab);
+    setSelectedRowIds([]);
+  };
+
+  const handleSelectSpreadsheet = (sheetId: string) => {
+    const found = spreadsheets.find((s) => s.id === sheetId);
+    if (!found) return;
+    setActiveSpreadsheetId(found.id);
+    setSheetTitle(found.title);
+    setTabs(found.tabs);
+    const firstTab = found.tabs[0] || "Geral";
+    setActiveTab(firstTab);
+    setTargetSegment(firstTab);
+    setSheetUrl(found.sheetUrl || "");
+    setSelectedRowIds([]);
+  };
+
+  const handleUpdateActiveSheetUrl = (urlValue: string) => {
+    setSheetUrl(urlValue);
+    setSpreadsheets((prev) =>
+      prev.map((s) =>
+        s.id === activeSpreadsheet.id ? { ...s, sheetUrl: urlValue } : s
+      )
+    );
+  };
+
+  const handleUpdateActiveSheetTitle = (titleValue: string) => {
+    setSheetTitle(titleValue);
+    setSpreadsheets((prev) =>
+      prev.map((s) =>
+        s.id === activeSpreadsheet.id ? { ...s, title: titleValue } : s
+      )
+    );
+  };
+
+  const handleCreateNewSpreadsheet = async () => {
+    const cleanTitle = newSpreadsheetTitle.trim();
+    if (!cleanTitle) return;
+    const firstTab = newSpreadsheetFirstTab.trim() || "Geral";
+    let finalSheetUrl = isRealGoogleSheetUrl(newSpreadsheetUrl)
+      ? newSpreadsheetUrl.trim()
+      : "";
+
+    setIsCreatingRemoteSheet(true);
+    try {
+      // Se o Apps Script estiver conectado e o usuário não colou um link manual, cria a planilha real no Google Drive!
+      if (!finalSheetUrl && webhookUrl.trim()) {
+        const res = await fetch("/api/crm/sheets-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "create_spreadsheet",
+            webhookUrl: webhookUrl.trim(),
+            spreadsheetTitle: cleanTitle,
+            initialTabs: [firstTab],
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.spreadsheetUrl) {
+          finalSheetUrl = data.spreadsheetUrl;
+        }
+      }
+    } catch {
+      // Segue com a criação local mesmo se o webhook falhar
+    } finally {
+      setIsCreatingRemoteSheet(false);
+    }
+
+    const newSheet: ManagedSpreadsheet = {
+      id: `sheet-${Date.now()}`,
+      title: cleanTitle,
+      sheetUrl: finalSheetUrl,
+      tabs: [firstTab],
+    };
+
+    setSpreadsheets((prev) => [...prev, newSheet]);
+    setActiveSpreadsheetId(newSheet.id);
+    setSheetTitle(newSheet.title);
+    setTabs(newSheet.tabs);
+    setActiveTab(firstTab);
+    setTargetSegment(firstTab);
+    setSheetUrl(finalSheetUrl);
+    setSelectedRowIds([]);
+
+    setNewSpreadsheetTitle("");
+    setNewSpreadsheetFirstTab("");
+    setNewSpreadsheetUrl("");
+    setNewSpreadsheetModalOpen(false);
+
+    setFeedbackBanner({
+      type: "success",
+      text: finalSheetUrl
+        ? `✦ Nova planilha "${cleanTitle}" criada e vinculada ao seu Google Sheets com a aba "${firstTab}"!`
+        : `✦ Nova planilha "${cleanTitle}" criada com a aba "${firstTab}"! Cole o link do Google Sheets ou conecte o Apps Script para sincronizar na nuvem.`,
+    });
   };
 
   const activeTabRows = useMemo(
@@ -944,17 +1181,51 @@ export function GoogleSheetsLeadHunter({
 
   const deleteRow = (id: string) => {
     setRows((prev) => prev.filter((r) => r.id !== id));
+    setSelectedRowIds((prev) => prev.filter((item) => item !== id));
+  };
+
+  const toggleRowSelection = (rowId: string) => {
+    setSelectedRowIds((prev) =>
+      prev.includes(rowId)
+        ? prev.filter((id) => id !== rowId)
+        : [...prev, rowId]
+    );
+  };
+
+  const toggleSelectAllActiveTab = () => {
+    const validIds = activeTabRows
+      .filter((r) => r.empresa.trim())
+      .map((r) => r.id);
+    if (
+      validIds.length > 0 &&
+      validIds.every((id) => selectedRowIds.includes(id))
+    ) {
+      setSelectedRowIds((prev) => prev.filter((id) => !validIds.includes(id)));
+    } else {
+      setSelectedRowIds((prev) =>
+        Array.from(new Set([...prev, ...validIds]))
+      );
+    }
   };
 
   // Lê colunas e leads existentes diretamente do Google Sheets antes de novos inputs
   const handleReadFromGoogleSheets = async () => {
+    if (!isRealGoogleSheetUrl(sheetUrl) && !webhookUrl.trim()) {
+      setFeedbackBanner({
+        type: "info",
+        text: "Para ler sua planilha do Google Sheets, cole o link real da sua planilha na barra abaixo ou conecte o Apps Script na aba 'Conectar Google Sheets'.",
+      });
+      return;
+    }
+
     setIsReadingSheets(true);
     setFeedbackBanner(null);
     try {
       const params = new URLSearchParams({
-        sheetUrl,
+        sheetUrl: sheetUrl.trim(),
         tabName: activeTab,
-        webhookUrl,
+        webhookUrl: webhookUrl.trim(),
+        spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
       });
       const res = await fetch(`/api/crm/sheets-sync?${params.toString()}`);
       const data = await res.json();
@@ -1044,6 +1315,7 @@ export function GoogleSheetsLeadHunter({
           body: JSON.stringify({
             webhookUrl: webhookUrl.trim(),
             campaignWebhookUrl: campaignWebhookUrl.trim(),
+            spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
             myCompany,
             targetSector: targetSegment,
             tabName: targetTab,
@@ -1059,7 +1331,7 @@ export function GoogleSheetsLeadHunter({
         } else {
           setFeedbackBanner({
             type: "success",
-            text: `✦ ${dedup.insertedCount} novos leads únicos validados (${dedup.blockedCount} duplicatas travadas). Clique em 'Abastecer Google Sheets' para enviar à nuvem.`,
+            text: `✦ ${dedup.insertedCount} novos leads únicos validados (${dedup.blockedCount} duplicatas travadas). Clique em 'Sincronizar Google Sheets' para enviar à nuvem.`,
           });
         }
       } else {
@@ -1080,7 +1352,13 @@ export function GoogleSheetsLeadHunter({
 
   const handleSyncToGoogleSheets = async () => {
     if (!webhookUrl.trim()) {
-      setIsSetupModalOpen(true);
+      if (onWorkspaceTabChange) {
+        onWorkspaceTabChange("integracao");
+      }
+      setFeedbackBanner({
+        type: "info",
+        text: "Conecte a URL do Google Apps Script abaixo (leva 1 minuto) para sincronizar automaticamente suas planilhas com o Google Sheets.",
+      });
       return;
     }
 
@@ -1094,6 +1372,7 @@ export function GoogleSheetsLeadHunter({
         body: JSON.stringify({
           webhookUrl: webhookUrl.trim(),
           campaignWebhookUrl: campaignWebhookUrl.trim(),
+          spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
           myCompany,
           targetSector: targetSegment,
           tabName: activeTab,
@@ -1109,7 +1388,7 @@ export function GoogleSheetsLeadHunter({
 
       setFeedbackBanner({
         type: "success",
-        text: `✦ Aba "${activeTab}" sincronizada com Google Sheets (Trava Anti-Duplicidade Tripla ativa)!`,
+        text: `✦ Aba "${activeTab}" da planilha "${sheetTitle}" sincronizada com Google Sheets!`,
       });
     } catch (err: any) {
       setFeedbackBanner({
@@ -1177,7 +1456,7 @@ export function GoogleSheetsLeadHunter({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Imobiliario-${activeTab.replace(/\s+/g, "-")}-${myCompany.replace(/\s+/g, "")}.xls`;
+    a.download = `${sheetTitle.replace(/\s+/g, "-")}-${activeTab.replace(/\s+/g, "-")}-${myCompany.replace(/\s+/g, "")}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1208,37 +1487,126 @@ export function GoogleSheetsLeadHunter({
     setTimeout(() => setCopiedTable(false), 3000);
   };
 
+  const buildOptimisticLeadFromRow = (row: ExtractedSheetLead): Lead => {
+    const cleanPhone = sanitizePhoneE164(row.contato) || row.contato.trim();
+    const cleanEmail =
+      row.email.trim() ||
+      `contato@${row.empresa.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.br`;
+    const contactName = row.responsavel.trim() || "Compras / Engenharia";
+    const companyLabel = row.empresa.trim();
+    const mappedStatus: "new" | "negotiation" | "closed" =
+      row.nivelProspeccao === "Reunião agendada" ||
+      row.nivelProspeccao === "Em contato"
+        ? "negotiation"
+        : "new";
+
+    return {
+      id: `kanban-${row.id}-${Date.now()}`,
+      companyId: currentCompanyId || "default-company-id",
+      leadName: `${contactName} - ${companyLabel}`,
+      leadEmail: cleanEmail,
+      leadPhone: cleanPhone || null,
+      origin: `${sheetTitle} · ${row.tab}`,
+      status: mappedStatus,
+      dealScore: row.highlighted ? 92 : 78,
+      telemetryEvents: [],
+      cadenceState: {
+        completedSteps:
+          row.nivelProspeccao === "Catálogo enviado" ? ["D1", "D2"] : [],
+        roleTitle: `${sheetTitle} · ${row.tab}`,
+      },
+      notes: [
+        {
+          id: `note-${Date.now()}`,
+          text: `[Planilha ${sheetTitle} • ${row.tab} • ${row.nivelProspeccao}] ${
+            row.observacoes || `Prospecção ${myCompany}`
+          }`,
+          createdAt: new Date().toISOString(),
+          author: myCompany,
+        },
+      ],
+      scriptVersion: "v1_direct",
+      ownerId: currentUserId || "070af81b-047d-480a-8207-10d93b1a3c38",
+      nextActivityDate: null,
+      nextActivityType: null,
+      createdAt: new Date(),
+    };
+  };
+
+  const importSingleRowToKanban = async (
+    row: ExtractedSheetLead
+  ): Promise<Lead | null> => {
+    if (!row.empresa.trim()) return null;
+    const optimisticLead = buildOptimisticLeadFromRow(row);
+    const contactName = row.responsavel.trim() || "Compras / Engenharia";
+    try {
+      const res = await createLeadAction({
+        name: contactName,
+        company: row.empresa.trim(),
+        roleTitle: `${sheetTitle} · ${row.tab}`,
+        email: optimisticLead.leadEmail || "",
+        phone: optimisticLead.leadPhone || undefined,
+        initialNote:
+          optimisticLead.notes?.[0]?.text ||
+          `[${row.tab}] Prospecção ${myCompany}`,
+      });
+      if (res.success && res.lead) {
+        return res.lead;
+      }
+      return optimisticLead;
+    } catch {
+      return optimisticLead;
+    }
+  };
+
   const handleSendRowToKanban = async (row: ExtractedSheetLead) => {
     if (!row.empresa.trim()) return;
     setIsImportingKanban(true);
     try {
-      const res = await createLeadAction({
-        name: row.responsavel.trim() || `Contato ${row.empresa.trim()}`,
-        company: row.empresa.trim(),
-        roleTitle: row.tab,
-        email:
-          row.email.trim() ||
-          `contato@${row.empresa.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.br`,
-        phone: sanitizePhoneE164(row.contato) || row.contato.trim(),
-        initialNote: `[${row.campanha || row.tab} • ${row.nivelProspeccao}] ${row.observacoes || `Prospecção ${myCompany}`}`,
-      });
-      if (res.success && res.lead) {
-        onLeadImportedToKanban?.(res.lead);
+      const createdLead = await importSingleRowToKanban(row);
+      if (createdLead) {
+        onLeadImportedToKanban?.(createdLead);
+        setKanbanSentRowIds((prev) =>
+          prev.includes(row.id) ? prev : [...prev, row.id]
+        );
         setFeedbackBanner({
           type: "success",
-          text: `✦ "${row.empresa}" enviado para a sua carteira no Kanban!`,
+          text: `✦ "${row.empresa}" enviado para o Pipeline Kanban!`,
         });
-      } else {
-        setFeedbackBanner({
-          type: "info",
-          text: res.error || "Empresa já cadastrada no Kanban.",
-        });
+        onWorkspaceTabChange?.("kanban");
       }
-    } catch {
+    } finally {
+      setIsImportingKanban(false);
+    }
+  };
+
+  const handleSendSelectedToKanban = async () => {
+    const selectedRows = activeTabRows.filter(
+      (r) => selectedRowIds.includes(r.id) && r.empresa.trim()
+    );
+    if (selectedRows.length === 0) return;
+
+    setIsImportingKanban(true);
+    try {
+      const importedIds: string[] = [];
+      for (const row of selectedRows) {
+        const createdLead = await importSingleRowToKanban(row);
+        if (createdLead) {
+          onLeadImportedToKanban?.(createdLead);
+          importedIds.push(row.id);
+        }
+      }
+      setKanbanSentRowIds((prev) =>
+        Array.from(new Set([...prev, ...importedIds]))
+      );
+      setSelectedRowIds([]);
       setFeedbackBanner({
-        type: "error",
-        text: "Erro ao enviar para o Kanban.",
+        type: "success",
+        text: `✦ ${importedIds.length} ${
+          importedIds.length === 1 ? "lead enviado" : "leads enviados"
+        } para o Pipeline Kanban!`,
       });
+      onWorkspaceTabChange?.("kanban");
     } finally {
       setIsImportingKanban(false);
     }
@@ -1247,9 +1615,13 @@ export function GoogleSheetsLeadHunter({
   const handleCreateTab = () => {
     const clean = newTabName.trim();
     if (!clean) return;
-    if (!tabs.includes(clean)) {
-      setTabs((prev) => [...prev, clean]);
-    }
+    const updatedTabs = tabs.includes(clean) ? tabs : [...tabs, clean];
+    setTabs(updatedTabs);
+    setSpreadsheets((prev) =>
+      prev.map((s) =>
+        s.id === activeSpreadsheet.id ? { ...s, tabs: updatedTabs } : s
+      )
+    );
     setActiveTab(clean);
     setTargetSegment(clean);
     setNewTabName("");
@@ -1298,11 +1670,152 @@ export function GoogleSheetsLeadHunter({
       )}
 
       {/* =====================================================================
-          ABA 1: PLANILHA & CAPTAÇÃO (ESPELHO GOOGLE SHEETS + EXTRATOR COMPACTO)
+          ABA: PLANILHA & CAPTAÇÃO (MÚLTIPLAS PLANILHAS + SELEÇÃO P/ KANBAN + SYNC)
          ===================================================================== */}
       {activeWorkspaceTab === "planilha" && (
         <div className="space-y-4">
-          {/* Barra Compacta de Captação de Leads por Setor */}
+          {/* 1. Barra de Múltiplas Planilhas + Conexão Direta Google Sheets */}
+          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
+                  Planilhas:
+                </span>
+                {spreadsheets.map((sheet) => {
+                  const isCurrentSheet = sheet.id === activeSpreadsheet.id;
+                  const sheetLeadsCount = rows.filter((r) =>
+                    sheet.tabs.includes(r.tab)
+                  ).length;
+                  return (
+                    <button
+                      key={sheet.id}
+                      type="button"
+                      onClick={() => handleSelectSpreadsheet(sheet.id)}
+                      className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                        isCurrentSheet
+                          ? "bg-white text-[#0d0d0d]"
+                          : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
+                      }`}
+                    >
+                      <FileSpreadsheet className="size-3.5" />
+                      <span>{sheet.title}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
+                          isCurrentSheet
+                            ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
+                            : "bg-[#262626] text-[#afafaf]"
+                        }`}
+                      >
+                        {sheetLeadsCount}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => setNewSpreadsheetModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer shrink-0"
+                >
+                  <Plus className="size-3.5 text-[#14d06e]" />
+                  <span>Nova Planilha</span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold ${
+                    webhookUrl.trim() || isRealGoogleSheetUrl(sheetUrl)
+                      ? "bg-[#0c2b1c] text-[#14d06e]"
+                      : "bg-[#2b2410] text-[#e8c267]"
+                  }`}
+                >
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      webhookUrl.trim() || isRealGoogleSheetUrl(sheetUrl)
+                        ? "bg-[#14d06e]"
+                        : "bg-[#e8c267]"
+                    }`}
+                  />
+                  {webhookUrl.trim()
+                    ? "Google Sheets Sincronizado (Apps Script)"
+                    : isRealGoogleSheetUrl(sheetUrl)
+                    ? "Planilha Google Vinculada"
+                    : "Google Sheets não conectado"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => onWorkspaceTabChange?.("integracao")}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-semibold text-[#7fa9f7] cursor-pointer"
+                >
+                  <Link2 className="size-3.5" />
+                  <span>Configurar Sincronização</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Linha de Link Direto do Google Sheets da Planilha Ativa */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5">
+                <Link2 className="size-3.5 text-[#afafaf] shrink-0" />
+                <input
+                  type="text"
+                  value={sheetUrl}
+                  onChange={(e) => handleUpdateActiveSheetUrl(e.target.value)}
+                  placeholder={`Cole aqui o link real do Google Sheets para "${sheetTitle}" (https://docs.google.com/spreadsheets/d/...)`}
+                  className="w-full bg-transparent text-xs text-white placeholder:text-[#757575] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <a
+                  href="https://sheets.new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Cria uma planilha em branco diretamente na sua conta Google e abre em nova guia"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors"
+                >
+                  <Plus className="size-3.5 text-[#14d06e]" />
+                  <span>Criar no Google Sheets</span>
+                </a>
+
+                <button
+                  type="button"
+                  disabled={isReadingSheets}
+                  onClick={handleReadFromGoogleSheets}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
+                >
+                  <CloudDownload className="size-3.5 text-[#afafaf]" />
+                  <span>{isReadingSheets ? "Lendo..." : "Ler Sheets"}</span>
+                </button>
+
+                {isRealGoogleSheetUrl(sheetUrl) ? (
+                  <a
+                    href={sheetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors"
+                  >
+                    <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
+                    <span>Abrir Google Sheets</span>
+                    <ExternalLink className="size-3 text-[#757575]" />
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onWorkspaceTabChange?.("integracao")}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-[#e8c267] transition-colors cursor-pointer"
+                  >
+                    <FileSpreadsheet className="size-3.5" />
+                    <span>Conectar Google Sheets</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* 2. Barra Compacta de Captação de Leads por Setor */}
           <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-12 border-b border-[#2e2e2e]">
               <div className="md:col-span-2 p-3.5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1">
@@ -1385,11 +1898,11 @@ export function GoogleSheetsLeadHunter({
               </div>
             </div>
 
-            {/* Linha de Abas da Planilha + Ações Rápidas */}
+            {/* Linha de Abas da Planilha Ativa */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#000000]">
               <div className="flex items-center gap-1.5 overflow-x-auto">
                 <span className="text-[11px] font-medium text-[#afafaf] mr-1 shrink-0">
-                  Abas da planilha:
+                  Abas de {sheetTitle}:
                 </span>
                 {tabs.map((tab) => {
                   const isCurrent = tab === activeTab;
@@ -1421,7 +1934,7 @@ export function GoogleSheetsLeadHunter({
                 <button
                   type="button"
                   onClick={() => setNewTabModalOpen(true)}
-                  title="Criar nova aba de setor"
+                  title="Criar nova aba de setor nesta planilha"
                   className="inline-flex items-center gap-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-medium text-[#afafaf] hover:text-white cursor-pointer shrink-0"
                 >
                   <Plus className="size-3" />
@@ -1429,32 +1942,14 @@ export function GoogleSheetsLeadHunter({
                 </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={isReadingSheets}
-                  onClick={handleReadFromGoogleSheets}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-semibold text-white transition-colors cursor-pointer"
-                >
-                  <CloudDownload className="size-3.5 text-[#afafaf]" />
-                  <span>{isReadingSheets ? "Lendo..." : "Ler Sheets"}</span>
-                </button>
-
-                <a
-                  href={sheetUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-semibold text-white transition-colors"
-                >
-                  <FileSpreadsheet className="size-3.5 text-[#afafaf]" />
-                  <span>Abrir Google Sheets</span>
-                  <ExternalLink className="size-3 text-[#757575]" />
-                </a>
+              <div className="text-[11px] text-[#afafaf]">
+                Marque os leads abaixo que você decidiu começar e clique em{" "}
+                <strong className="text-white">Enviar para o Kanban</strong>
               </div>
             </div>
           </section>
 
-          {/* Tabela Data Warehouse (Foco Total em 1 Tela) */}
+          {/* 3. Tabela Data Warehouse com Seleção de Leads para o Kanban */}
           <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[#2e2e2e]">
               <div className="flex items-center gap-2.5">
@@ -1465,8 +1960,8 @@ export function GoogleSheetsLeadHunter({
                   <input
                     type="text"
                     value={sheetTitle}
-                    onChange={(e) => setSheetTitle(e.target.value)}
-                    className="font-semibold text-sm text-white bg-transparent border border-transparent hover:border-[#2e2e2e] focus:border-white focus:bg-[#1a1a1a] rounded px-1.5 py-0.5 focus:outline-none w-32"
+                    onChange={(e) => handleUpdateActiveSheetTitle(e.target.value)}
+                    className="font-semibold text-sm text-white bg-transparent border border-transparent hover:border-[#2e2e2e] focus:border-white focus:bg-[#1a1a1a] rounded px-1.5 py-0.5 focus:outline-none w-36"
                   />
                   <span className="inline-flex h-5 items-center rounded-full bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 text-[11px] font-semibold text-[#afafaf] tabular-nums">
                     {activeTabRows.length} empresas em {activeTab}
@@ -1475,6 +1970,33 @@ export function GoogleSheetsLeadHunter({
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
+                {/* Botão Principal: Enviar leads decididos para o Kanban */}
+                <button
+                  type="button"
+                  disabled={isImportingKanban}
+                  onClick={() => {
+                    if (selectedRowIds.length === 0) {
+                      toggleSelectAllActiveTab();
+                      return;
+                    }
+                    handleSendSelectedToKanban();
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                    selectedRowIds.length > 0
+                      ? "bg-[#14d06e] text-[#0d0d0d] hover:bg-[#14d06e]/90"
+                      : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-white hover:bg-[#262626]"
+                  }`}
+                >
+                  <Kanban className="size-3.5" />
+                  <span>
+                    {isImportingKanban
+                      ? "Enviando ao Kanban..."
+                      : selectedRowIds.length > 0
+                      ? `Enviar selecionados para o Kanban (${selectedRowIds.length}) →`
+                      : "Selecionar todos p/ Kanban"}
+                  </span>
+                </button>
+
                 <button
                   type="button"
                   onClick={addEmptyRow}
@@ -1514,13 +2036,7 @@ export function GoogleSheetsLeadHunter({
                 <button
                   type="button"
                   disabled={isSyncingSheets}
-                  onClick={() => {
-                    if (!webhookUrl.trim() && onWorkspaceTabChange) {
-                      onWorkspaceTabChange("integracao");
-                      return;
-                    }
-                    handleSyncToGoogleSheets();
-                  }}
+                  onClick={handleSyncToGoogleSheets}
                   className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Send className="size-3.5" />
@@ -1533,39 +2049,57 @@ export function GoogleSheetsLeadHunter({
               </div>
             </div>
 
-            {/* Grade de Dados com Altura Controlada p/ Zero Scroll de Página */}
-            <div className="overflow-x-auto max-h-[calc(100vh-320px)] min-h-[420px] overflow-y-auto">
+            {/* Grade de Dados com Altura Controlada */}
+            <div className="overflow-x-auto max-h-[calc(100vh-350px)] min-h-[420px] overflow-y-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-20 bg-[#1a1a1a] border-b border-[#2e2e2e]">
                   <tr className="text-xs font-semibold text-[#afafaf]">
-                    <th className="w-10 border-r border-[#2e2e2e] py-2.5 text-center tabular-nums">
+                    <th className="w-10 border-r border-[#2e2e2e] py-2.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={
+                          activeTabRows.filter((r) => r.empresa.trim()).length > 0 &&
+                          activeTabRows
+                            .filter((r) => r.empresa.trim())
+                            .every((r) => selectedRowIds.includes(r.id))
+                        }
+                        onChange={toggleSelectAllActiveTab}
+                        title="Selecionar todos os leads desta aba para enviar ao Kanban"
+                        className="size-3.5 rounded accent-white cursor-pointer"
+                      />
+                    </th>
+                    <th className="w-9 border-r border-[#2e2e2e] py-2.5 text-center tabular-nums">
                       #
                     </th>
                     <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[210px]">
                       Empresa
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[145px]">
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[140px]">
                       Responsável
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[230px]">
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[220px]">
                       E-mail
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[160px]">
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[155px]">
                       Contato
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[180px]">
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[175px]">
                       Nível de Prospecção
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[240px]">
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[210px]">
                       Observações
                     </th>
-                    <th className="w-28 px-2 py-2.5 text-center">Ações</th>
+                    <th className="w-40 px-2 py-2.5 text-center">
+                      Iniciar / Ações
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-[#2e2e2e] text-xs">
                   {activeTabRows.map((row, idx) => {
                     const rowNumber = idx + 1;
+                    const isSelected = selectedRowIds.includes(row.id);
+                    const isAlreadyInKanban = kanbanSentRowIds.includes(row.id);
                     const cleanE164 = sanitizePhoneE164(row.contato);
                     const domainKey = extractCanonicalDomain(row.email, row.website);
                     const defaultMsg =
@@ -1580,11 +2114,22 @@ export function GoogleSheetsLeadHunter({
                       <tr
                         key={row.id}
                         className={`transition-colors ${
-                          row.highlighted
+                          isSelected
+                            ? "bg-[#1a1a1a]"
+                            : row.highlighted
                             ? "bg-[#2b2410]/60 hover:bg-[#2b2410]"
                             : "bg-[#000000] hover:bg-[#1a1a1a]/60"
                         }`}
                       >
+                        <td className="border-r border-[#2e2e2e] text-center py-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRowSelection(row.id)}
+                            className="size-3.5 rounded accent-white cursor-pointer"
+                          />
+                        </td>
+
                         <td className="border-r border-[#2e2e2e] text-center text-[#757575] tabular-nums py-2 select-none">
                           {rowNumber}
                         </td>
@@ -1710,9 +2255,24 @@ export function GoogleSheetsLeadHunter({
                           />
                         </td>
 
-                        {/* Ações */}
+                        {/* Ações: Botão explícito p/ enviar ao Kanban */}
                         <td className="px-2 py-1.5 text-center">
                           <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              disabled={isImportingKanban}
+                              onClick={() => handleSendRowToKanban(row)}
+                              title="Iniciar prospecção deste lead no Pipeline Kanban"
+                              className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
+                                isAlreadyInKanban
+                                  ? "bg-[#0c2b1c] text-[#14d06e]"
+                                  : "bg-white text-[#0d0d0d] hover:bg-white/90"
+                              }`}
+                            >
+                              <Kanban className="size-3" />
+                              <span>{isAlreadyInKanban ? "No Kanban" : "+ Kanban"}</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => {
@@ -1742,16 +2302,6 @@ export function GoogleSheetsLeadHunter({
 
                             <button
                               type="button"
-                              disabled={isImportingKanban}
-                              onClick={() => handleSendRowToKanban(row)}
-                              title="Enviar para o Kanban"
-                              className="p-1.5 rounded text-[#afafaf] hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                            >
-                              <Kanban className="size-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
                               onClick={() => deleteRow(row.id)}
                               title="Remover linha"
                               className="p-1.5 rounded text-[#afafaf] hover:text-[#ff5d48] hover:bg-[#2b1310] transition-colors cursor-pointer"
@@ -1771,7 +2321,7 @@ export function GoogleSheetsLeadHunter({
       )}
 
       {/* =====================================================================
-          ABA 2: CADÊNCIA SEMANAL (SEGUNDA A SEXTA) & CATÁLOGO EM PDF
+          ABA: CADÊNCIA SEMANAL (SEGUNDA A SEXTA) & CATÁLOGO EM PDF
          ===================================================================== */}
       {activeWorkspaceTab === "cadencia" && (
         <section className="space-y-4">
@@ -2030,6 +2580,14 @@ export function GoogleSheetsLeadHunter({
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
+                          onClick={() => handleSendRowToKanban(selectedCadenceLead)}
+                          className="inline-flex items-center gap-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#0d0d0d] px-2.5 py-1 text-xs font-semibold text-[#14d06e] cursor-pointer"
+                        >
+                          <Kanban className="size-3.5" />
+                          <span>Enviar p/ Kanban</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() =>
                             handleAdvanceLeadCadence(selectedCadenceLead, false)
                           }
@@ -2245,14 +2803,84 @@ export function GoogleSheetsLeadHunter({
       )}
 
       {/* =====================================================================
-          ABA 3: MAPA DE NICHOS & EXPANSÃO DE SETORES (GRADE IRVO.COM.BR)
+          1ª ABA (PADRÃO): MAPA DE SETORES & PLANILHAS (GRADE IRVO.COM.BR)
          ===================================================================== */}
       {activeWorkspaceTab === "nichos" && (
         <section className="space-y-6">
+          {/* Barra Superior de Planilhas no Mapa de Setores */}
+          <div className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
+                Planilhas de Prospecção:
+              </span>
+              {spreadsheets.map((sheet) => {
+                const isCurrentSheet = sheet.id === activeSpreadsheet.id;
+                const sheetLeadsCount = rows.filter((r) =>
+                  sheet.tabs.includes(r.tab)
+                ).length;
+                return (
+                  <button
+                    key={sheet.id}
+                    type="button"
+                    onClick={() => handleSelectSpreadsheet(sheet.id)}
+                    className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                      isCurrentSheet
+                        ? "bg-white text-[#0d0d0d]"
+                        : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
+                    }`}
+                  >
+                    <FileSpreadsheet className="size-3.5" />
+                    <span>{sheet.title}</span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
+                        isCurrentSheet
+                          ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
+                          : "bg-[#262626] text-[#afafaf]"
+                      }`}
+                    >
+                      {sheetLeadsCount}
+                    </span>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setNewSpreadsheetModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] transition-colors cursor-pointer shrink-0"
+              >
+                <Plus className="size-3.5" />
+                <span>Criar Nova Planilha</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setNewTabModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer shrink-0"
+              >
+                <Plus className="size-3.5 text-[#afafaf]" />
+                <span>Nova Aba em {sheetTitle}</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onWorkspaceTabChange?.("integracao")}
+              className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-[#7fa9f7] cursor-pointer"
+            >
+              <Link2 className="size-3.5" />
+              <span>
+                {webhookUrl.trim() || isRealGoogleSheetUrl(sheetUrl)
+                  ? "Google Sheets Conectado"
+                  : "Conectar Google Sheets"}
+              </span>
+            </button>
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold text-[#afafaf] uppercase tracking-wider">
-                Inteligência de Portfólio · {myCompany}
+                Mapa de Setores · Planilha {sheetTitle} ({myCompany})
               </p>
               <h3 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
                 Tração por nicho prospectado
@@ -2383,9 +3011,17 @@ export function GoogleSheetsLeadHunter({
                       <button
                         type="button"
                         onClick={() => {
-                          if (!tabs.includes(rec.niche)) {
-                            setTabs((prev) => [...prev, rec.niche]);
-                          }
+                          const updatedTabs = tabs.includes(rec.niche)
+                            ? tabs
+                            : [...tabs, rec.niche];
+                          setTabs(updatedTabs);
+                          setSpreadsheets((prev) =>
+                            prev.map((s) =>
+                              s.id === activeSpreadsheet.id
+                                ? { ...s, tabs: updatedTabs }
+                                : s
+                            )
+                          );
                           setActiveTab(rec.niche);
                           setTargetSegment(rec.niche);
                           onWorkspaceTabChange?.("planilha");
@@ -2405,49 +3041,86 @@ export function GoogleSheetsLeadHunter({
       )}
 
       {/* =====================================================================
-          ABA 5: CONEXÃO GOOGLE SHEETS & AUDITORIA ANTI-DUPLICIDADE
+          ABA: CONEXÃO GOOGLE SHEETS & AUDITORIA ANTI-DUPLICIDADE
          ===================================================================== */}
       {activeWorkspaceTab === "integracao" && (
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Coluna Esquerda: Conector Google Sheets Apps Script */}
+          {/* Coluna Esquerda: Conector Google Sheets Passo a Passo */}
           <div className="lg:col-span-6 rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-4">
               <div>
                 <span className="inline-flex h-6 items-center rounded-full bg-[#0f1b33] px-2.5 text-xs font-semibold text-[#7fa9f7]">
-                  Ponte Google Sheets
+                  Ponte Google Sheets · Planilha "{sheetTitle}"
                 </span>
                 <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-white">
-                  Leitura e escrita sem login OAuth
+                  Conectar e sincronizar seu Google Sheets
                 </h3>
               </div>
-              <a
-                href={sheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white"
-              >
-                <FileSpreadsheet className="size-3.5 text-[#afafaf]" />
-                <span>Abrir Planilha</span>
-                <ExternalLink className="size-3 text-[#757575]" />
-              </a>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://sheets.new"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 px-3 py-2 text-xs font-semibold text-[#0d0d0d]"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Criar Planilha no Google</span>
+                </a>
+                {isRealGoogleSheetUrl(sheetUrl) && (
+                  <a
+                    href={sheetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white"
+                  >
+                    <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
+                    <span>Abrir Planilha</span>
+                    <ExternalLink className="size-3 text-[#757575]" />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Passo a Passo Direto */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+              <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
+                <span className="font-semibold text-white">1. Crie ou abra a planilha</span>
+                <p className="mt-1 text-[11px] text-[#afafaf]">
+                  Clique em <strong>Criar Planilha no Google</strong> acima (ou abra uma já existente) e cole o link abaixo.
+                </p>
+              </div>
+              <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
+                <span className="font-semibold text-white">2. Cole o Apps Script</span>
+                <p className="mt-1 text-[11px] text-[#afafaf]">
+                  Na planilha Google, vá em <strong>Extensões &rarr; Apps Script</strong>, cole o código abaixo e clique em <strong>Implantar &rarr; App da Web</strong> (Acesso: <em>Qualquer pessoa</em>).
+                </p>
+              </div>
+              <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
+                <span className="font-semibold text-white">3. Sincronize em 1 clique</span>
+                <p className="mt-1 text-[11px] text-[#afafaf]">
+                  Cole a URL <code>/exec</code> gerada pelo Google no campo abaixo e clique em <strong>Sincronizar Agora</strong>.
+                </p>
+              </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-[#afafaf] mb-1">
-                  URL da planilha Google Sheets
+                <label className="block text-xs font-medium text-white mb-1">
+                  1. Link da sua planilha Google Sheets ({sheetTitle})
                 </label>
                 <input
                   type="text"
                   value={sheetUrl}
-                  onChange={(e) => setSheetUrl(e.target.value)}
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white focus:ring-white focus:outline-none"
+                  onChange={(e) => handleUpdateActiveSheetUrl(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/edit"
+                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-white mb-1">
-                  URL do App da Web (Google Apps Script)
+                  2. URL do App da Web (Google Apps Script — permite criar abas e gravar automático)
                 </label>
                 <input
                   type="text"
@@ -2499,7 +3172,7 @@ export function GoogleSheetsLeadHunter({
                   )}
                 </button>
               </div>
-              <pre className="max-h-44 overflow-y-auto rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3 text-[11px] font-mono text-[#afafaf]">
+              <pre className="max-h-40 overflow-y-auto rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3 text-[11px] font-mono text-[#afafaf]">
                 {GOOGLE_APPS_SCRIPT_CODE}
               </pre>
             </div>
@@ -2524,21 +3197,25 @@ export function GoogleSheetsLeadHunter({
 
               <div className="grid grid-cols-3 border-t border-l border-[#2e2e2e]">
                 <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
-                  <p className="text-[11px] text-[#afafaf]">Total na Planilha</p>
+                  <p className="text-[11px] text-[#afafaf]">Planilhas Criadas</p>
                   <p className="mt-1 text-xl font-semibold text-white tabular-nums">
-                    {rows.length}
+                    {spreadsheets.length}
                   </p>
                 </div>
                 <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
-                  <p className="text-[11px] text-[#afafaf]">Abas Mapeadas</p>
+                  <p className="text-[11px] text-[#afafaf]">Abas em {sheetTitle}</p>
                   <p className="mt-1 text-xl font-semibold text-white tabular-nums">
                     {tabs.length}
                   </p>
                 </div>
                 <div className="border-r border-b border-[#2e2e2e] p-3.5 bg-[#1a1a1a]">
-                  <p className="text-[11px] text-[#afafaf]">Ponte Sheets</p>
+                  <p className="text-[11px] text-[#afafaf]">Status da Ponte</p>
                   <p className="mt-1 text-sm font-semibold text-[#14d06e]">
-                    {webhookUrl ? "Conectada" : "Local / CSV"}
+                    {webhookUrl.trim()
+                      ? "Bidirecional Ativa"
+                      : isRealGoogleSheetUrl(sheetUrl)
+                      ? "Leitura CSV Ativa"
+                      : "Aguardando Link"}
                   </p>
                 </div>
               </div>
@@ -2593,12 +3270,105 @@ export function GoogleSheetsLeadHunter({
                 <span>
                   {isSyncingSheets
                     ? "Sincronizando..."
-                    : `Sincronizar Aba "${activeTab}"`}
+                    : `Testar & Sincronizar Aba "${activeTab}"`}
                 </span>
               </button>
             </div>
           </div>
         </section>
+      )}
+
+      {/* MODAL PARA CRIAR NOVA PLANILHA (ESTÉTICA IRVO.COM.BR) */}
+      {newSpreadsheetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-white space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-white">
+                Criar nova planilha de prospecção
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNewSpreadsheetModalOpen(false)}
+                className="text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                  Nome da nova planilha
+                </label>
+                <input
+                  type="text"
+                  value={newSpreadsheetTitle}
+                  onChange={(e) => setNewSpreadsheetTitle(e.target.value)}
+                  placeholder="Ex: Metalúrgicas SP, Energia Solar, Agronegócio..."
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#afafaf] mb-1">
+                  Primeira aba de setor
+                </label>
+                <input
+                  type="text"
+                  value={newSpreadsheetFirstTab}
+                  onChange={(e) => setNewSpreadsheetFirstTab(e.target.value)}
+                  placeholder="Ex: Estruturas Fotovoltaicas, Galpões Metálicos..."
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-sm text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-[#afafaf]">
+                    Link no Google Sheets (opcional)
+                  </label>
+                  <a
+                    href="https://sheets.new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-[#7fa9f7] hover:underline"
+                  >
+                    + Abrir sheets.new
+                  </a>
+                </div>
+                <input
+                  type="text"
+                  value={newSpreadsheetUrl}
+                  onChange={(e) => setNewSpreadsheetUrl(e.target.value)}
+                  placeholder={
+                    webhookUrl.trim()
+                      ? "Deixe em branco p/ criar automático via Apps Script"
+                      : "Cole o link da planilha criada no Google Sheets"
+                  }
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3.5 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setNewSpreadsheetModalOpen(false)}
+                className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-4 py-2 text-xs font-semibold text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isCreatingRemoteSheet}
+                onClick={handleCreateNewSpreadsheet}
+                className="rounded-lg bg-white hover:bg-white/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+              >
+                {isCreatingRemoteSheet ? "Criando..." : "Criar Planilha"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL PARA CRIAR NOVA ABA (ESTÉTICA IRVO.COM.BR) */}
@@ -2607,7 +3377,7 @@ export function GoogleSheetsLeadHunter({
           <div className="w-full max-w-md rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-white space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-white">
-                Nova aba de setor
+                Nova aba de setor em {sheetTitle}
               </h3>
               <button
                 type="button"

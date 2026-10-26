@@ -155,10 +155,8 @@ export function LeadsKanban({
   const isCommercial = currentUser?.role === "commercial";
   const myUserId = currentUser?.id || "";
 
-  // Silo de Propriedade: se for comercial, trava por padrão no ID do usuário logado
-  const [activeOperator, setActiveOperator] = useState<string>(
-    isCommercial && myUserId ? myUserId : "todos"
-  );
+  // Mostra todos os leads da operação por padrão para que nenhum lead enviado da planilha fique oculto
+  const [activeOperator, setActiveOperator] = useState<string>("todos");
 
   // Sincroniza operadores dinâmicos
   useEffect(() => {
@@ -177,12 +175,41 @@ export function LeadsKanban({
   useEffect(() => {
     setIsMounted(true);
 
+    try {
+      const savedLocal = localStorage.getItem("gofer_kanban_leads_v1");
+      if (savedLocal) {
+        const parsedLocal: Lead[] = JSON.parse(savedLocal);
+        if (Array.isArray(parsedLocal) && parsedLocal.length > 0) {
+          setLeadsList((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            const existingNames = new Set(
+              prev.map((l) => (l.leadName || "").toLowerCase().trim())
+            );
+            const extras = parsedLocal.filter(
+              (l) =>
+                !existingIds.has(l.id) &&
+                !existingNames.has((l.leadName || "").toLowerCase().trim())
+            );
+            return [...extras, ...prev];
+          });
+        }
+      }
+    } catch {}
+
     const map: Record<string, string[]> = {};
     initialLeads.forEach((lead) => {
       map[lead.id] = lead.cadenceState?.completedSteps || [];
     });
     setCadenceMap(map);
   }, [initialLeads]);
+
+  // Persiste espelho local do Kanban para garantir que leads enviados da planilha nunca sumam
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(leadsList));
+    } catch {}
+  }, [leadsList, isMounted]);
 
   // Sincroniza novos leads do servidor sem sobrescrever as alterações locais do operador
   useEffect(() => {
@@ -254,9 +281,18 @@ export function LeadsKanban({
     }
   };
 
-  // Callback de novo lead cadastrado via AddLeadModal
+  // Callback de novo lead cadastrado via AddLeadModal ou importado da Planilha
   const handleLeadCreated = (newLead: Lead) => {
-    setLeadsList((prev) => [newLead, ...prev]);
+    setLeadsList((prev) => {
+      const alreadyExists = prev.some(
+        (l) =>
+          l.id === newLead.id ||
+          (l.leadName || "").toLowerCase().trim() ===
+            (newLead.leadName || "").toLowerCase().trim()
+      );
+      if (alreadyExists) return prev;
+      return [newLead, ...prev];
+    });
     if (newLead.cadenceState?.completedSteps) {
       setCadenceMap((prev) => ({
         ...prev,
@@ -341,18 +377,15 @@ export function LeadsKanban({
     }
   };
 
-  // Filtragem estrita pelo Silo de Propriedade (Ownership)
-  // Operadores comerciais têm visão 100% isolada da sua carteira (sem cruzar dados com colegas)
+  // Filtragem de visualização do Kanban
   const displayedLeads =
-    isCommercial && myUserId
-      ? leadsList.filter(
-          (l) =>
-            l.ownerId === myUserId ||
-            (currentUser?.email && l.ownerId === currentUser.email)
-        )
-      : activeOperator === "todos"
+    activeOperator === "todos"
       ? leadsList
-      : leadsList.filter((l) => (l.ownerId || operators[0]?.id) === activeOperator);
+      : leadsList.filter(
+          (l) =>
+            (l.ownerId || operators[0]?.id) === activeOperator ||
+            (currentUser?.email && l.ownerId === currentUser.email)
+        );
 
   const getLeadsByStatus = (status: LeadStatus) => {
     return displayedLeads.filter((lead) => lead.status === status);
@@ -378,6 +411,8 @@ export function LeadsKanban({
           onLeadImportedToKanban={handleLeadCreated}
           activeWorkspaceTab={activeWorkspaceTab}
           onWorkspaceTabChange={setActiveWorkspaceTab}
+          currentUserId={currentUser?.id}
+          currentCompanyId={currentUser?.company_id}
         />
       </div>
 

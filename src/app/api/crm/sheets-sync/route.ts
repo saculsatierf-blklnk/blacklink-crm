@@ -34,14 +34,23 @@ export async function GET(req: NextRequest) {
     ).trim();
 
     const spreadsheetId = extractSpreadsheetId(sheetUrl);
+    const validSpreadsheetId =
+      spreadsheetId && spreadsheetId !== DEFAULT_SPREADSHEET_ID
+        ? spreadsheetId
+        : "";
 
     // 1. Se houver Apps Script Webhook com doGet configurado, tenta ler via Webhook primeiro
     if (webhookUrl) {
       try {
         const whCtrl = new AbortController();
         const whTimer = setTimeout(() => whCtrl.abort(), 7000);
+        const query = `tabName=${encodeURIComponent(tabName)}${
+          validSpreadsheetId
+            ? `&spreadsheetId=${encodeURIComponent(validSpreadsheetId)}`
+            : ""
+        }`;
         const whRes = await fetch(
-          `${webhookUrl}${webhookUrl.includes("?") ? "&" : "?"}tabName=${encodeURIComponent(tabName)}`,
+          `${webhookUrl}${webhookUrl.includes("?") ? "&" : "?"}${query}`,
           { method: "GET", redirect: "follow", signal: whCtrl.signal }
         );
         clearTimeout(whTimer);
@@ -52,7 +61,8 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({
               success: true,
               source: "apps_script_webhook",
-              spreadsheetId,
+              spreadsheetId: whJson.spreadsheetId || validSpreadsheetId,
+              spreadsheetUrl: whJson.spreadsheetUrl || "",
               tabName,
               columns: whJson.columns || [
                 "Empresa",
@@ -69,8 +79,17 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
+    if (!validSpreadsheetId) {
+      return NextResponse.json({
+        success: false,
+        needsSetup: true,
+        error:
+          "Cole o link da sua planilha do Google Sheets ou conecte o Apps Script na aba 'Conectar Google Sheets'.",
+      });
+    }
+
     // 2. Leitura direta via Google Visualization API (gviz/tq) para planilhas acessíveis por link
-    const gvizUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+    const gvizUrl = `https://docs.google.com/spreadsheets/d/${validSpreadsheetId}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
 
@@ -83,10 +102,10 @@ export async function GET(req: NextRequest) {
     if (!res.ok) {
       return NextResponse.json({
         success: false,
-        spreadsheetId,
+        spreadsheetId: validSpreadsheetId,
         tabName,
         error:
-          "Planilha com acesso restrito para leitura direta. Conecte o Apps Script ou habilite visualização por link.",
+          "Sua planilha está privada para leitura por link. No Google Sheets, clique em 'Compartilhar -> Qualquer pessoa com o link' ou conecte o Apps Script.",
       });
     }
 
@@ -174,7 +193,11 @@ export async function GET(req: NextRequest) {
 }
 
 interface SheetsSyncRequestBody {
+  action?: "sync" | "create_spreadsheet";
+  spreadsheetTitle?: string;
+  initialTabs?: string[];
   webhookUrl?: string;
+  sheetUrl?: string;
   spreadsheetId?: string;
   tabName: string;
   myCompany?: string;
@@ -186,8 +209,7 @@ interface SheetsSyncRequestBody {
 
 /**
  * POST /api/crm/sheets-sync
- * Sincroniza leads com o Google Sheets aplicando higienização canônica (CNPJ, Domínio e Telefone 5511999999999)
- * e dispara webhook de campanha se configurado.
+ * Sincroniza leads ou cria novas planilhas no Google Sheets aplicando higienização canônica (CNPJ, Domínio e Telefone 5511999999999)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -204,6 +226,9 @@ export async function POST(req: NextRequest) {
     ).trim();
     const tabName = (body.tabName || "Casas Modulares").trim();
     const leads = Array.isArray(body.leads) ? body.leads : [];
+    const extractedId = body.spreadsheetId || (body.sheetUrl ? extractSpreadsheetId(body.sheetUrl) : "");
+    const validSpreadsheetId =
+      extractedId && extractedId !== DEFAULT_SPREADSHEET_ID ? extractedId : "";
 
     if (!webhookUrl) {
       return NextResponse.json(
@@ -211,13 +236,17 @@ export async function POST(req: NextRequest) {
           success: false,
           needsSetup: true,
           error:
-            "Cole a URL do Web App do Google Apps Script da sua planilha para sincronizar automaticamente.",
+            "Conecte a URL do Google Apps Script na aba 'Conectar Google Sheets' para sincronizar e criar planilhas automaticamente.",
         },
         { status: 400 }
       );
     }
 
     const payload = {
+      action: body.action || "sync",
+      spreadsheetTitle: body.spreadsheetTitle || "Nova Planilha Prospecção",
+      initialTabs: body.initialTabs || [tabName],
+      spreadsheetId: validSpreadsheetId,
       tabName,
       myCompany: body.myCompany || "Gofer Metais",
       targetSector: body.targetSector || tabName,
