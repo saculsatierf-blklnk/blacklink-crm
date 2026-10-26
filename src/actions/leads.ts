@@ -447,7 +447,7 @@ export interface CollidedLeadData {
 
 export interface CollisionCheckResult {
   collision: boolean;
-  collidedWith?: "email" | "domain";
+  collidedWith?: "email" | "domain" | "phone";
   domain?: string;
   collidedLead?: CollidedLeadData;
 }
@@ -466,23 +466,81 @@ const GENERIC_FREEMAIL_DOMAINS = new Set([
 ]);
 
 /**
- * Radar Anti-Colisão: Varre o banco em tempo real por e-mail ou domínio corporativo
+ * Radar Anti-Colisão Triplo: Varre o banco em tempo real por e-mail, domínio corporativo ou telefone higienizado (5511999999999)
  */
 export async function checkLeadCollisionAction(
   email: string,
-  companyIdOverride?: string
+  companyIdOverride?: string,
+  phone?: string
 ): Promise<CollisionCheckResult> {
   try {
-    const cleanEmail = email?.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes("@")) {
+    const cleanEmail = email?.trim().toLowerCase() || "";
+    const cleanPhoneDigits = (phone || "").replace(/\D/g, "");
+    const normalizedPhone =
+      cleanPhoneDigits.length === 10 || cleanPhoneDigits.length === 11
+        ? `55${cleanPhoneDigits}`
+        : cleanPhoneDigits;
+
+    if (!cleanEmail && !normalizedPhone) {
       return { collision: false };
     }
 
     const session = await getSessionContext();
     const companyId = companyIdOverride || session?.company_id;
 
-    const domain = cleanEmail.split("@")[1]?.trim().toLowerCase();
-    const isCorporateDomain = domain && !GENERIC_FREEMAIL_DOMAINS.has(domain);
+    const domain = cleanEmail.includes("@")
+      ? cleanEmail.split("@")[1]?.trim().toLowerCase()
+      : "";
+    const isCorporateDomain = Boolean(
+      domain && !GENERIC_FREEMAIL_DOMAINS.has(domain)
+    );
+
+    // 0. Busca por Telefone / WhatsApp higienizado (se informado)
+    if (normalizedPhone.length >= 10) {
+      const phoneTail = normalizedPhone.slice(-8);
+      const phoneMatches = await db
+        .select({
+          id: leads.id,
+          leadName: leads.leadName,
+          leadEmail: leads.leadEmail,
+          leadPhone: leads.leadPhone,
+          ownerId: leads.ownerId,
+          status: leads.status,
+          notes: leads.notes,
+        })
+        .from(leads)
+        .where(
+          companyId
+            ? and(ilike(leads.leadPhone, `%${phoneTail}%`), eq(leads.companyId, companyId))
+            : ilike(leads.leadPhone, `%${phoneTail}%`)
+        )
+        .limit(5);
+
+      const exactPhoneMatch = phoneMatches.find((m) => {
+        const mDigits = (m.leadPhone || "").replace(/\D/g, "");
+        const mNorm =
+          mDigits.length === 10 || mDigits.length === 11
+            ? `55${mDigits}`
+            : mDigits;
+        return mNorm === normalizedPhone || mDigits.slice(-9) === cleanPhoneDigits.slice(-9);
+      });
+
+      if (exactPhoneMatch) {
+        const ownerDisplayName = getOperator(exactPhoneMatch.ownerId).name;
+        return {
+          collision: true,
+          collidedWith: "phone",
+          collidedLead: {
+            ...exactPhoneMatch,
+            ownerName: ownerDisplayName,
+          },
+        };
+      }
+    }
+
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      return { collision: false };
+    }
 
     // 1. Busca por e-mail exato
     let exactQuery = db
@@ -666,13 +724,13 @@ export async function createLeadAction(
       return { success: false, leadId: "", error: "Nome, empresa e e-mail são obrigatórios." };
     }
 
-    // Validação estrita anti-colisão antes de persistir
-    const collisionCheck = await checkLeadCollisionAction(email);
+    // Validação estrita anti-colisão (Domínio Corporativo, E-mail e Telefone E.164) antes de persistir
+    const collisionCheck = await checkLeadCollisionAction(email, undefined, phone);
     if (collisionCheck.collision && collisionCheck.collidedLead) {
       return {
         success: false,
         leadId: collisionCheck.collidedLead.id,
-        error: `Colisão detectada: A conta '${collisionCheck.collidedLead.leadName}' já pertence a ${collisionCheck.collidedLead.ownerName}.`,
+        error: `Colisão detectada (${collisionCheck.collidedWith}): A conta '${collisionCheck.collidedLead.leadName}' já pertence a ${collisionCheck.collidedLead.ownerName}.`,
       };
     }
 
