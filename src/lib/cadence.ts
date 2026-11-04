@@ -232,16 +232,9 @@ export function buildDefaultInterpolatedScript({
   role: string;
   value: string;
 }): string {
-  const contactName = name || "Prezado(a)";
-  const companyName = company || "sua organização";
-  const roleTitle = role || "Executivo";
-  const estimatedDealValue = value || "alto impacto";
-
-  return `Olá ${contactName}, tudo bem? Notei que a ${companyName} vem estruturando novas iniciativas comerciais no mercado corporativo.
-
-Como ${roleTitle}, você provavelmente busca mitigar gargalos operacionais e acelerar a captação de clientes B2B de alto valor.
-
-Desenvolvemos uma estrutura sob medida com potencial de retorno estimado na ordem de ${estimatedDealValue}.
-
-Você teria 10 minutos nesta quinta-feira para conversarmos sobre como aplicar essa estratégia na ${companyName}?`;
+  const contactName = name || company || "Prezado(a)";
+  return `Olá, ${contactName}! Aqui é o Lucas da Gofer Metais.
+Somos distribuidores de aço e o meu objetivo hoje é claro: quero ter a oportunidade de participar da sua próxima cotação de tubos, chapas e perfis.
+Segue o nosso catálogo em anexo. Podemos enviar os nossos valores sem compromisso na sua próxima demanda?`;
 }
+

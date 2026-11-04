@@ -20,6 +20,7 @@ import {
   Phone,
   Plus,
   RotateCcw,
+  Send,
   Sparkles,
   Trash2,
   User,
@@ -44,7 +45,14 @@ import {
   parseLeadInfo,
   toStartOfDay,
 } from "@/lib/cadence";
-import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
+import { OPERATORS, getOperator, formatNoteAuthor, type Operator } from "@/lib/operators";
+import {
+  GOFER_TEMPLATES,
+  extractLeadContext,
+  interpolateGoferTemplateText,
+  type TemplatePhaseKey,
+  type TemplateChannel,
+} from "@/lib/templates-gofer";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
@@ -83,7 +91,12 @@ export function LeadDetailsSheet({
   // Checklist de Cadência (persistido no PostgreSQL)
   const [completedCadence, setCompletedCadence] = useState<string[]>([]);
 
-  // Roteiro Operacional de Abordagem (persistido no PostgreSQL)
+  // Roteiro Operacional & Templates Gofer Metais (Multi-Fase & Multi-Canal)
+  const [selectedChannel, setSelectedChannel] = useState<TemplateChannel>("whatsapp");
+  const [selectedPhaseKey, setSelectedPhaseKey] = useState<TemplatePhaseKey>("contato_1");
+  const [templateSubject, setTemplateSubject] = useState("");
+  const [templateBody, setTemplateBody] = useState("");
+  const [copiedTarget, setCopiedTarget] = useState<"subject" | "body" | "all" | null>(null);
   const [scriptText, setScriptText] = useState("");
   const [isCopied, setIsCopied] = useState(false);
 
@@ -119,23 +132,28 @@ export function LeadDetailsSheet({
     const currentCompleted = dbCadenceState.completedSteps || [];
     setCompletedCadence(currentCompleted);
 
-    // 3. Roteiro Dinâmico com Interpolação Imediata
-    if (dbCadenceState.customScript && dbCadenceState.customScript.trim()) {
-      const resolved = dbCadenceState.customScript
-        .replace(/{Nome}/g, parsed.name || "Prezado(a)")
-        .replace(/{Empresa}/g, parsed.company || "sua organização")
-        .replace(/{Cargo}/g, resolvedRole)
-        .replace(/{Valor}/g, resolvedValue);
-      setScriptText(resolved);
-    } else {
-      const generated = buildDefaultInterpolatedScript({
-        name: parsed.name,
-        company: parsed.company,
-        role: resolvedRole,
-        value: resolvedValue,
-      });
-      setScriptText(generated);
+    // 3. Resolução de Templates Gofer Metais de acordo com a fase do lead
+    let initialPhase: TemplatePhaseKey = "contato_1";
+    if (lead.status === "negotiation") {
+      initialPhase = "contato_2";
+    } else if (lead.status === "closed") {
+      initialPhase = "orcamento_base";
     }
+    setSelectedPhaseKey(initialPhase);
+
+    const ctx = extractLeadContext(lead);
+    const tmpl =
+      GOFER_TEMPLATES.find((t) => t.key === initialPhase) || GOFER_TEMPLATES[0];
+
+    const initialSubj = interpolateGoferTemplateText(tmpl.email.subject, ctx);
+    const initialBody = interpolateGoferTemplateText(
+      selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
+      ctx
+    );
+
+    setTemplateSubject(initialSubj);
+    setTemplateBody(initialBody);
+    setScriptText(initialBody);
 
     // 4. Histórico de Anotações
     setNotes(lead.notes || []);
@@ -231,26 +249,75 @@ export function LeadDetailsSheet({
     );
   };
 
-  // Cópia direta do script pronto para uso
-  const handleCopyScript = async () => {
+  // Contexto derivado e template ativo do lead
+  const leadCtx = lead
+    ? extractLeadContext(lead)
+    : {
+        person: "Cliente",
+        company: "sua empresa",
+        email: "",
+        phone: "",
+        cleanPhone: "",
+        estimatedValue: "1.850,00",
+      };
+
+  const currentTmpl =
+    GOFER_TEMPLATES.find((t) => t.key === selectedPhaseKey) || GOFER_TEMPLATES[0];
+
+  const handleSelectChannel = (channel: TemplateChannel) => {
+    setSelectedChannel(channel);
+    const ctx = extractLeadContext(lead);
+    const tmpl =
+      GOFER_TEMPLATES.find((t) => t.key === selectedPhaseKey) || GOFER_TEMPLATES[0];
+    const newBody = interpolateGoferTemplateText(
+      channel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
+      ctx
+    );
+    setTemplateBody(newBody);
+    handleScriptChange(newBody);
+  };
+
+  const handleSelectPhase = (phaseKey: TemplatePhaseKey) => {
+    setSelectedPhaseKey(phaseKey);
+    const ctx = extractLeadContext(lead);
+    const tmpl =
+      GOFER_TEMPLATES.find((t) => t.key === phaseKey) || GOFER_TEMPLATES[0];
+    const newSubj = interpolateGoferTemplateText(tmpl.email.subject, ctx);
+    const newBody = interpolateGoferTemplateText(
+      selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
+      ctx
+    );
+    setTemplateSubject(newSubj);
+    setTemplateBody(newBody);
+    handleScriptChange(newBody);
+  };
+
+  const handleCopyTarget = async (
+    text: string,
+    target: "subject" | "body" | "all"
+  ) => {
     try {
-      await navigator.clipboard.writeText(scriptText);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      await navigator.clipboard.writeText(text);
+      setCopiedTarget(target);
+      setTimeout(() => setCopiedTarget(null), 2000);
     } catch {
       // Fallback
     }
   };
 
-  // Restaurar roteiro padrão interpolado
+  // Restaurar roteiro padrão Gofer Metais para a fase selecionada
   const handleResetScript = () => {
-    const resetText = buildDefaultInterpolatedScript({
-      name: parsed.name,
-      company: parsed.company,
-      role: roleTitle,
-      value: estimatedValue,
-    });
-    handleScriptChange(resetText);
+    const ctx = extractLeadContext(lead);
+    const tmpl =
+      GOFER_TEMPLATES.find((t) => t.key === selectedPhaseKey) || GOFER_TEMPLATES[0];
+    const newSubj = interpolateGoferTemplateText(tmpl.email.subject, ctx);
+    const newBody = interpolateGoferTemplateText(
+      selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
+      ctx
+    );
+    setTemplateSubject(newSubj);
+    setTemplateBody(newBody);
+    handleScriptChange(newBody);
   };
 
   // Adicionar nova anotação ao histórico relacional no PostgreSQL
@@ -261,11 +328,12 @@ export function LeadDetailsSheet({
     setNewNoteText("");
 
     const activeOp = getOperator(ownerId);
+    const cleanAuthor = formatNoteAuthor(activeOp.name);
     const tempNote: NoteEntry = {
       id: "note-" + Date.now(),
       text: notePayload,
       createdAt: new Date().toISOString(),
-      author: `${activeOp.name} (${activeOp.role})`,
+      author: cleanAuthor,
     };
     setNotes((prev) => [tempNote, ...prev]);
 
@@ -954,63 +1022,239 @@ export function LeadDetailsSheet({
             </div>
           </div>
 
-          {/* 3. ROTEIRO OPERACIONAL DE ABORDAGEM */}
-          <div className="rounded-xl border border-white/10 bg-black/25 p-4 space-y-3">
-            <div className="flex items-center justify-between">
+          {/* 3. TEMPLATES & ROTEIROS DE PROSPECÇÃO GOFER METAIS */}
+          <div className="rounded-xl border border-white/10 bg-black/40 p-4 space-y-3.5 ring-1 ring-white/5">
+            {/* Cabeçalho do Roteiro */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-accent" />
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-white">
-                  Roteiro de Abordagem do Hunter
-                </h3>
+                <FileText className="h-4 w-4 text-[#14d06e]" />
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                    Templates Gofer Metais
+                  </h3>
+                  <p className="text-[10px] text-zinc-400">
+                    Adaptado para <strong className="text-white">{leadCtx.person}</strong> ({leadCtx.company})
+                  </p>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Seletor de Canal (WhatsApp vs E-mail) */}
+              <div className="inline-flex rounded-lg bg-[#0d0d0d] p-0.5 ring-1 ring-[#2e2e2e]">
                 <button
                   type="button"
-                  onClick={handleResetScript}
-                  className="flex items-center gap-1 text-[11px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  title="Restaurar roteiro padrão"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Restaurar</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopyScript}
-                  className={`flex items-center gap-1 rounded px-2.5 py-1 text-xs font-mono font-semibold transition-all cursor-pointer ${
-                    isCopied
-                      ? "bg-emerald-500 text-void"
-                      : "bg-accent text-void hover:bg-accent-hover shadow-sm"
+                  onClick={() => handleSelectChannel("whatsapp")}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                    selectedChannel === "whatsapp"
+                      ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
+                      : "text-zinc-400 hover:text-white"
                   }`}
                 >
-                  {isCopied ? (
-                    <>
-                      <Check className="h-3 w-3" />
-                      <span>Copiado!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3" />
-                      <span>Copiar Roteiro</span>
-                    </>
-                  )}
+                  <MessageSquare className="size-3" />
+                  <span>WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectChannel("email")}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                    selectedChannel === "email"
+                      ? "bg-white text-[#0d0d0d] shadow-sm"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <Mail className="size-3" />
+                  <span>E-mail</span>
                 </button>
               </div>
             </div>
 
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Mensagem com variáveis interpoladas pronta para envio via WhatsApp ou E-mail.
-            </p>
+            {/* Pílulas de Seleção de Fase do Cliente */}
+            <div className="flex flex-wrap gap-1.5">
+              {GOFER_TEMPLATES.map((tmpl) => {
+                const isSelected = tmpl.key === selectedPhaseKey;
+                const isRecommended = tmpl.defaultForStatus === lead.status;
+                return (
+                  <button
+                    key={tmpl.key}
+                    type="button"
+                    onClick={() => handleSelectPhase(tmpl.key)}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-white text-[#0d0d0d] font-semibold ring-1 ring-white"
+                        : "bg-[#1a1a1a] text-zinc-400 hover:text-white ring-1 ring-[#2e2e2e] hover:bg-[#262626]"
+                    }`}
+                  >
+                    <span>{tmpl.badge}</span>
+                    {isRecommended && (
+                      <span className="inline-block size-1.5 rounded-full bg-[#14d06e]" title="Fase atual do lead" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-            {/* Textarea do Roteiro */}
-            <textarea
-              value={scriptText}
-              onChange={(e) => handleScriptChange(e.target.value)}
-              rows={5}
-              className="w-full rounded-lg border border-white/10 bg-[#0A0A0A] p-3 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none"
-              placeholder="Digite o roteiro da abordagem..."
-            />
+            {/* Objetivo da Fase Selecionada */}
+            <div className="rounded-md bg-[#0d0d0d] px-3 py-2 ring-1 ring-[#2e2e2e] text-[11px] text-zinc-400 flex items-center justify-between gap-2">
+              <span className="line-clamp-1">
+                🎯 {selectedChannel === "whatsapp" ? currentTmpl.whatsapp.objective : currentTmpl.subtitle}
+              </span>
+              <button
+                type="button"
+                onClick={handleResetScript}
+                className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-1 shrink-0 cursor-pointer"
+                title="Restaurar texto padrão da Gofer Metais"
+              >
+                <RotateCcw className="size-3" />
+                <span>Restaurar</span>
+              </button>
+            </div>
+
+            {/* Campos de Conteúdo */}
+            {selectedChannel === "email" ? (
+              <div className="space-y-2.5">
+                {/* Linha de Assunto */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                      Assunto do E-mail
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyTarget(templateSubject, "subject")}
+                      className="text-[10px] text-zinc-400 hover:text-white inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedTarget === "subject" ? (
+                        <>
+                          <Check className="size-3 text-[#14d06e]" />
+                          <span className="text-[#14d06e]">Assunto Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3" />
+                          <span>Copiar Assunto</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={templateSubject}
+                    onChange={(e) => setTemplateSubject(e.target.value)}
+                    className="w-full rounded-md border border-white/10 bg-[#0A0A0A] px-3 py-2 text-xs font-mono text-white focus:border-white/30 focus:outline-none"
+                  />
+                </div>
+
+                {/* Corpo do E-mail */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Mensagem do E-mail
+                  </label>
+                  <textarea
+                    value={templateBody}
+                    onChange={(e) => {
+                      setTemplateBody(e.target.value);
+                      handleScriptChange(e.target.value);
+                    }}
+                    rows={8}
+                    className="w-full rounded-md border border-white/10 bg-[#0A0A0A] p-3 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none"
+                    placeholder="Corpo do e-mail..."
+                  />
+                </div>
+
+                {/* Barra de Ações do E-mail */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleCopyTarget(
+                        `Assunto: ${templateSubject}\n\n${templateBody}`,
+                        "all"
+                      )
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
+                  >
+                    {copiedTarget === "all" ? (
+                      <>
+                        <Check className="size-3 text-[#14d06e]" />
+                        <span className="text-[#14d06e]">E-mail Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3" />
+                        <span>Copiar E-mail Completo</span>
+                      </>
+                    )}
+                  </button>
+
+                  <a
+                    href={`mailto:${leadCtx.email}?subject=${encodeURIComponent(
+                      templateSubject
+                    )}&body=${encodeURIComponent(templateBody)}`}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                  >
+                    <Send className="size-3" />
+                    <span>Abrir Webmail / Enviar E-mail ↗</span>
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {/* Mensagem do WhatsApp */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Mensagem de WhatsApp
+                  </label>
+                  <textarea
+                    value={templateBody}
+                    onChange={(e) => {
+                      setTemplateBody(e.target.value);
+                      handleScriptChange(e.target.value);
+                    }}
+                    rows={5}
+                    className="w-full rounded-md border border-white/10 bg-[#0A0A0A] p-3 text-xs font-mono text-white leading-relaxed focus:border-white/30 focus:outline-none"
+                    placeholder="Mensagem do WhatsApp..."
+                  />
+                </div>
+
+                {/* Barra de Ações do WhatsApp */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyTarget(templateBody, "body")}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
+                  >
+                    {copiedTarget === "body" ? (
+                      <>
+                        <Check className="size-3 text-[#14d06e]" />
+                        <span className="text-[#14d06e]">Mensagem Copiada!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3" />
+                        <span>Copiar Mensagem</span>
+                      </>
+                    )}
+                  </button>
+
+                  <a
+                    href={
+                      leadCtx.cleanPhone
+                        ? `https://wa.me/${leadCtx.cleanPhone}?text=${encodeURIComponent(
+                            templateBody
+                          )}`
+                        : `https://web.whatsapp.com/send?text=${encodeURIComponent(
+                            templateBody
+                          )}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                  >
+                    <MessageSquare className="size-3" />
+                    <span>Abrir no WhatsApp Web ↗</span>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 4. HISTÓRICO DE ANOTAÇÕES */}
@@ -1060,7 +1304,7 @@ export function LeadDetailsSheet({
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400">
-                        <span className="font-semibold text-white">{note.author}</span>
+                        <span className="font-semibold text-white">{formatNoteAuthor(note.author)}</span>
                         <span>•</span>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-2.5 w-2.5" />
