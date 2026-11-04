@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { sql } from "drizzle-orm";
+import { db } from "@/db";
 import type { ExtractedSheetLead, ProspectionLevel } from "../lead-extractor/route";
 import {
   sanitizeCnpj,
@@ -13,11 +15,146 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_SPREADSHEET_ID = "1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFFyXSGDJpUXA";
 
+export function isValidAppsScriptUrl(url?: string | null): boolean {
+  if (!url) return false;
+  const clean = url.trim();
+  return (
+    clean.startsWith("https://script.google.com/macros/s/") ||
+    clean.startsWith("https://script.googleusercontent.com/")
+  );
+}
+
 export function extractSpreadsheetId(urlOrId?: string): string {
   if (!urlOrId) return DEFAULT_SPREADSHEET_ID;
   const match = urlOrId.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   if (match && match[1]) return match[1];
+  if (urlOrId.startsWith("http")) return DEFAULT_SPREADSHEET_ID;
   return urlOrId.trim() || DEFAULT_SPREADSHEET_ID;
+}
+
+interface StoredCrmSnapshot {
+  spreadsheetId: string;
+  title: string;
+  batches: Array<{
+    tabName: string;
+    leads: ExtractedSheetLead[];
+    replaceAllInTab?: boolean;
+  }>;
+  updatedAt: string;
+}
+
+const memorySnapshots: Map<string, StoredCrmSnapshot> =
+  (globalThis as any).__crmSheetsSnapshots ||
+  ((globalThis as any).__crmSheetsSnapshots = new Map<
+    string,
+    StoredCrmSnapshot
+  >());
+
+async function saveCrmSnapshot(
+  spreadsheetId: string,
+  title: string,
+  batches: Array<{
+    tabName: string;
+    leads: ExtractedSheetLead[];
+    replaceAllInTab?: boolean;
+  }>
+): Promise<void> {
+  const existing = await getCrmSnapshot(spreadsheetId);
+  const mergedTabMap = new Map<
+    string,
+    { tabName: string; leads: ExtractedSheetLead[]; replaceAllInTab?: boolean }
+  >();
+
+  if (existing && Array.isArray(existing.batches)) {
+    for (const b of existing.batches) {
+      if (b?.tabName) mergedTabMap.set(b.tabName, b);
+    }
+  }
+  for (const b of batches) {
+    if (!b?.tabName) continue;
+    const prev = mergedTabMap.get(b.tabName);
+    if (prev && !b.replaceAllInTab && prev.leads.length > 0 && b.leads.length > 0) {
+      const seenKeys = new Set<string>();
+      const combined: ExtractedSheetLead[] = [];
+      for (const item of [...b.leads, ...prev.leads]) {
+        const key = `${(item.empresa || "").toLowerCase().trim()}|${sanitizePhoneE164(
+          item.contato || ""
+        )}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          combined.push(item);
+        }
+      }
+      mergedTabMap.set(b.tabName, {
+        tabName: b.tabName,
+        leads: combined,
+        replaceAllInTab: false,
+      });
+    } else {
+      mergedTabMap.set(b.tabName, b);
+    }
+  }
+
+  const finalSnapshot: StoredCrmSnapshot = {
+    spreadsheetId,
+    title: title || existing?.title || "Leads",
+    batches: Array.from(mergedTabMap.values()),
+    updatedAt: new Date().toISOString(),
+  };
+
+  memorySnapshots.set(spreadsheetId, finalSnapshot);
+
+  try {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS crm_sheets_snapshots (
+        spreadsheet_id TEXT PRIMARY KEY,
+        title TEXT NOT NULL DEFAULT 'Leads',
+        batches JSONB NOT NULL DEFAULT '[]'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    const batchesJson = JSON.stringify(finalSnapshot.batches);
+    await db.execute(sql`
+      INSERT INTO crm_sheets_snapshots (spreadsheet_id, title, batches, updated_at)
+      VALUES (${spreadsheetId}, ${finalSnapshot.title}, ${batchesJson}::jsonb, NOW())
+      ON CONFLICT (spreadsheet_id)
+      DO UPDATE SET
+        title = EXCLUDED.title,
+        batches = EXCLUDED.batches,
+        updated_at = NOW()
+    `);
+  } catch {}
+}
+
+async function getCrmSnapshot(
+  spreadsheetId: string
+): Promise<StoredCrmSnapshot | null> {
+  try {
+    const res: any = await db.execute(sql`
+      SELECT spreadsheet_id, title, batches, updated_at
+      FROM crm_sheets_snapshots
+      WHERE spreadsheet_id = ${spreadsheetId}
+      LIMIT 1
+    `);
+    const rows = Array.isArray(res) ? res : res?.rows || [];
+    if (rows.length > 0 && rows[0]) {
+      const row = rows[0];
+      const parsedBatches =
+        typeof row.batches === "string"
+          ? JSON.parse(row.batches)
+          : row.batches || [];
+      const snap: StoredCrmSnapshot = {
+        spreadsheetId: String(row.spreadsheet_id || spreadsheetId),
+        title: String(row.title || "Leads"),
+        batches: Array.isArray(parsedBatches) ? parsedBatches : [],
+        updatedAt: String(row.updated_at || new Date().toISOString()),
+      };
+      memorySnapshots.set(spreadsheetId, snap);
+      return snap;
+    }
+  } catch {}
+
+  return memorySnapshots.get(spreadsheetId) || null;
 }
 
 async function discoverGoogleSheetMetadata(spreadsheetId: string): Promise<{
@@ -153,20 +290,45 @@ async function fetchSingleTabViaGviz(
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const sheetUrl = searchParams.get("sheetUrl") || DEFAULT_SPREADSHEET_ID;
+    const action = searchParams.get("action") || "";
+    const sheetUrl =
+      searchParams.get("sheetUrl") ||
+      searchParams.get("spreadsheetId") ||
+      DEFAULT_SPREADSHEET_ID;
     const tabName = searchParams.get("tabName") || "Casas Modulares";
     const readAllTabs = searchParams.get("readAllTabs") !== "false";
     const knownTabsParam = searchParams.get("knownTabs") || "";
-    const webhookUrl = (
+    const rawWebhookUrl = (
       searchParams.get("webhookUrl") ||
       process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
       ""
     ).trim();
+    const webhookUrl = isValidAppsScriptUrl(rawWebhookUrl) ? rawWebhookUrl : "";
 
     const spreadsheetId = extractSpreadsheetId(sheetUrl);
     const validSpreadsheetId = spreadsheetId || DEFAULT_SPREADSHEET_ID;
 
-    // 1. Se houver Apps Script Webhook com doGet configurado, lê todas as abas e planilhas via Webhook
+    // Endpoint de Ponte Direta CRM -> Google Sheets (chamado pelo script sincronizarAgora() dentro da planilha)
+    if (action === "pull_crm_snapshot") {
+      const snap = await getCrmSnapshot(validSpreadsheetId);
+      return NextResponse.json(
+        {
+          ok: true,
+          spreadsheetId: validSpreadsheetId,
+          title: snap?.title || "Leads",
+          batches: snap?.batches || [],
+          updatedAt: snap?.updatedAt || null,
+        },
+        {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    // 1. Se houver Apps Script Webhook válido com doGet configurado, lê todas as abas e planilhas via Webhook
     if (webhookUrl) {
       try {
         const whCtrl = new AbortController();
@@ -224,6 +386,11 @@ export async function GET(req: NextRequest) {
 
     // 2. Descobre automaticamente o título e TODAS as abas da planilha Google Sheets
     const metadata = await discoverGoogleSheetMetadata(validSpreadsheetId);
+    const storedSnap = await getCrmSnapshot(validSpreadsheetId);
+    const snapshotTabNames = (storedSnap?.batches || [])
+      .map((b) => b.tabName)
+      .filter(Boolean);
+
     const knownTabs = knownTabsParam
       .split(",")
       .map((t) => t.trim())
@@ -232,7 +399,7 @@ export async function GET(req: NextRequest) {
     const tabsToRead = readAllTabs
       ? metadata.tabs.length > 0
         ? metadata.tabs
-        : Array.from(new Set([...knownTabs, tabName]))
+        : Array.from(new Set([...knownTabs, ...snapshotTabNames, tabName]))
       : [tabName];
 
     const tabResults = await Promise.all(
@@ -253,11 +420,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Se uma aba conhecida não existe na planilha remota, o gviz retorna a 1ª aba repetida; deduplicamos se não veio do htmlview
-    const finalTabs =
+    // Combina as abas da planilha Google com eventuais abas salvas no snapshot do CRM
+    const remoteTabs =
       metadata.tabs.length > 0
         ? metadata.tabs
         : successfulTabs.map((t) => t.tabName);
+    const finalTabs = Array.from(new Set([...remoteTabs, ...snapshotTabNames]));
 
     const allMappedRows: ExtractedSheetLead[] = [];
     const seenPerTabSignature = new Set<string>();
@@ -286,10 +454,24 @@ export async function GET(req: NextRequest) {
       allMappedRows.push(...tabRes.rows);
     }
 
+    // Adiciona leads de abas criadas no CRM que ainda estão aguardando execução no Google Sheets
+    if (storedSnap && Array.isArray(storedSnap.batches)) {
+      for (const batch of storedSnap.batches) {
+        if (!remoteTabs.includes(batch.tabName) && Array.isArray(batch.leads)) {
+          allMappedRows.push(
+            ...batch.leads.map((l) => ({
+              ...l,
+              tab: batch.tabName,
+            }))
+          );
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       source: "google_gviz_live",
-      title: metadata.title || null,
+      title: metadata.title || storedSnap?.title || null,
       spreadsheetId: validSpreadsheetId,
       tabs: finalTabs,
       tabName,
@@ -616,17 +798,19 @@ async function syncViaGoogleSheetsApiV4(
 
 /**
  * POST /api/crm/sheets-sync
- * Sincroniza todas as abas e leads ou cria novas planilhas no Google Sheets
- * via Google Sheets API v4 (OAuth 1 Clique) OU Google Apps Script Webhook.
+ * Salva o snapshot completo no servidor CRM e grava no Google Sheets
+ * via Google Sheets API v4 (OAuth 1 Clique) OU Google Apps Script.
  */
 export async function POST(req: NextRequest) {
   try {
     const body: SheetsSyncRequestBody = await req.json();
-    const webhookUrl = (
+    const rawWebhookUrl = (
       body.webhookUrl ||
       process.env.GOOGLE_SHEETS_WEBHOOK_URL ||
       ""
     ).trim();
+    const webhookUrl = isValidAppsScriptUrl(rawWebhookUrl) ? rawWebhookUrl : "";
+
     const campaignWebhookUrl = (
       body.campaignWebhookUrl ||
       process.env.CAMPAIGN_OUTBOUND_WEBHOOK_URL ||
@@ -643,6 +827,14 @@ export async function POST(req: NextRequest) {
       Array.isArray(body.batches) && body.batches.length > 0
         ? body.batches
         : [{ tabName, leads, replaceAllInTab: Boolean(body.replaceAllInTab) }];
+
+    // Sempre salva o snapshot atualizado no servidor CRM (PostgreSQL + Memória)
+    // Assim o script sincronizarAgora() na planilha Google puxa todas as abas e leads sem precisar de URL!
+    await saveCrmSnapshot(
+      validSpreadsheetId,
+      body.spreadsheetTitle || "Leads",
+      batches
+    );
 
     // 1. Tenta gravar diretamente via Google Sheets REST API v4 (OAuth 1 Clique)
     const oauthToken = await resolveGoogleOAuthToken(
@@ -667,28 +859,21 @@ export async function POST(req: NextRequest) {
           syncedCount: batches.reduce((acc, b) => acc + b.leads.length, 0),
         });
       }
-      // Se falhou e não há webhookUrl, retorna o motivo exato
-      if (!webhookUrl) {
-        return NextResponse.json(
-          {
-            success: false,
-            needsSetup: true,
-            error:
-              apiResult.error ||
-              "Sua sessão Google OAuth não tem permissão de escrita nesta planilha. Conecte o Apps Script ou autorize o Google Sheets.",
-          },
-          { status: 400 }
-        );
-      }
     }
 
+    // Se não há Apps Script Web App válido configurado, informa que o snapshot já está salvo e pronto
     if (!webhookUrl) {
       return NextResponse.json(
         {
           success: false,
           needsSetup: true,
+          snapshotSaved: true,
+          spreadsheetId: validSpreadsheetId,
+          tabsSaved: batches.map((b) => b.tabName),
           error:
-            "Para o CRM inserir abas e leads diretamente dentro do seu Google Sheets ('Leads'), ative a Gravação no botão 'Ativar Gravação Direta no Google Sheets' (leva 30 segundos).",
+            rawWebhookUrl && !isValidAppsScriptUrl(rawWebhookUrl)
+              ? "Você colou o link normal da planilha no campo do Apps Script (por isso deu erro 405). Agora ficou muito mais fácil: clique em '1. Copiar Código Sincronizador' abaixo, cole em Extensões -> Apps Script na sua planilha Leads e clique apenas em '▷ Executar' no topo!"
+              : "Para inserir todas as abas e leads dentro da planilha 'Leads' do Google agora mesmo: clique em '1. Copiar Código Sincronizador' abaixo, cole em Extensões -> Apps Script na sua planilha e clique em '▷ Executar'!",
         },
         { status: 400 }
       );

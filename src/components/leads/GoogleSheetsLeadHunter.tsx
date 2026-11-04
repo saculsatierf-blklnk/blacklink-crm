@@ -785,8 +785,145 @@ const INITIAL_PRINT_LEADS: ExtractedSheetLead[] = [
   },
 ];
 
-// Script Google Apps Script Bidirecional (doGet + doPost + Criação de Novas Planilhas) com Trava Tripla
-const GOOGLE_APPS_SCRIPT_CODE = `// CONECTOR BIDIRECIONAL DATA WAREHOUSE — GOFER METAIS (REA-DESCONSTRUÇÃO)
+function isValidAppsScriptUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  const clean = url.trim();
+  return (
+    clean.startsWith("https://script.google.com/macros/s/") ||
+    clean.startsWith("https://script.googleusercontent.com/")
+  );
+}
+
+function buildDynamicAppsScriptCode(
+  sheetUrl: string,
+  sheetTitle: string,
+  tabs: string[],
+  rows: ExtractedSheetLead[],
+  crmOrigin?: string
+): string {
+  const spreadsheetId =
+    extractSheetIdFromUrl(sheetUrl) ||
+    "1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFFyXSGDJpUXA";
+  const baseUrl =
+    crmOrigin && crmOrigin.startsWith("http")
+      ? crmOrigin.replace(/\/$/, "")
+      : "https://blacklink-crm.netlify.app";
+
+  const embeddedBatches = tabs.map((tName) => ({
+    tabName: tName,
+    leads: rows
+      .filter((r) => r.tab === tName && r.empresa && r.empresa.trim())
+      .map((l) => ({
+        empresa: decodeHtmlEntities((l.empresa || "").trim()),
+        responsavel: (l.responsavel || "").trim(),
+        email: (l.email || "").trim().toLowerCase(),
+        contato:
+          formatPhoneBrDisplay(l.contato) ||
+          sanitizePhoneE164(l.contato) ||
+          (l.contato || "").trim(),
+        nivelProspeccao: l.nivelProspeccao || "Tentativa de contato",
+        observacoes: (l.observacoes || "").trim(),
+        highlighted: Boolean(l.highlighted),
+      })),
+  }));
+
+  const embeddedJson = JSON.stringify(embeddedBatches);
+
+  return `// ============================================================================
+// ⚡ SINCRONIZADOR DIRETO GOFER METAIS CRM <-> GOOGLE SHEETS ("${sheetTitle || "Leads"}")
+// COMO USAR (NÃO PRECISA IMPLANTAR WEB APP NEM COPIAR URL!):
+// 1. Cole este código em Extensões -> Apps Script na sua planilha "${sheetTitle || "Leads"}".
+// 2. Clique no ícone de Disquete (Salvar) e clique no botão "▷ Executar" aí no topo!
+// 3. Pronto! Ele cria todas as ${tabs.length} abas (${tabs.join(", ")}),
+//    insere todos os leads e ativa a sincronização automática a cada 1 minuto!
+// ============================================================================
+
+var CRM_SPREADSHEET_ID = "${spreadsheetId}";
+var CRM_SNAPSHOT_API = "${baseUrl}/api/crm/sheets-sync?action=pull_crm_snapshot&spreadsheetId=" + encodeURIComponent(CRM_SPREADSHEET_ID);
+var SNAPSHOT_INICIAL_CRM = ${embeddedJson};
+
+// ► 1ª FUNÇÃO (SELECIONADA POR PADRÃO NO TOPO): CLIQUE APENAS EM "▷ EXECUTAR"!
+function sincronizarAgora() {
+  var ss = resolveSpreadsheet(CRM_SPREADSHEET_ID);
+  var batches = SNAPSHOT_INICIAL_CRM.slice();
+
+  // Busca também eventuais novas abas e leads salvos no CRM em tempo real
+  try {
+    var resp = UrlFetchApp.fetch(CRM_SNAPSHOT_API, { muteHttpExceptions: true });
+    if (resp.getResponseCode() === 200) {
+      var remote = JSON.parse(resp.getContentText());
+      if (remote && remote.ok && remote.batches && remote.batches.length > 0) {
+        batches = mesclarBatches(SNAPSHOT_INICIAL_CRM, remote.batches);
+      }
+    }
+  } catch (err) {}
+
+  var totalAdicionados = 0;
+  var totalAtualizados = 0;
+  var abasSincronizadas = [];
+
+  for (var b = 0; b < batches.length; b++) {
+    var batch = batches[b];
+    if (!batch || !batch.tabName) continue;
+    var res = gravarAbaNoSheets(ss, batch.tabName, batch.leads || [], Boolean(batch.replaceAllInTab));
+    totalAdicionados += res.added;
+    totalAtualizados += res.merged;
+    abasSincronizadas.push(batch.tabName);
+  }
+
+  // Instala gatilho automático de 1 minuto para puxar futuras abas/leads do CRM sozinho
+  try { instalarGatilhoAutomatico(); } catch (e) {}
+
+  Logger.log("✅ Sincronização concluída! Abas: " + abasSincronizadas.join(", ") + " | Novos: " + totalAdicionados + " | Atualizados: " + totalAtualizados);
+  return { ok: true, tabs: abasSincronizadas, added: totalAdicionados, merged: totalAtualizados };
+}
+
+function onOpen() {
+  try {
+    SpreadsheetApp.getUi()
+      .createMenu("⚡ Gofer CRM")
+      .addItem("Sincronizar Abas e Leads do CRM Agora", "sincronizarAgora")
+      .addToUi();
+  } catch (e) {}
+}
+
+function instalarGatilhoAutomatico() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "sincronizarAgora") return;
+  }
+  ScriptApp.newTrigger("sincronizarAgora").timeBased().everyMinutes(1).create();
+}
+
+function mesclarBatches(baseBatches, remoteBatches) {
+  var map = {};
+  var order = [];
+  for (var i = 0; i < baseBatches.length; i++) {
+    var b = baseBatches[i];
+    if (!b || !b.tabName) continue;
+    map[b.tabName] = (b.leads || []).slice();
+    order.push(b.tabName);
+  }
+  for (var j = 0; j < remoteBatches.length; j++) {
+    var rb = remoteBatches[j];
+    if (!rb || !rb.tabName) continue;
+    if (!map[rb.tabName]) {
+      map[rb.tabName] = [];
+      order.push(rb.tabName);
+    }
+    var incoming = rb.leads || [];
+    for (var k = 0; k < incoming.length; k++) {
+      map[rb.tabName].push(incoming[k]);
+    }
+  }
+  var result = [];
+  for (var m = 0; m < order.length; m++) {
+    var tName = order[m];
+    result.push({ tabName: tName, leads: map[tName] });
+  }
+  return result;
+}
+
 function cleanDigits(v) { return String(v || "").replace(/\\D/g, ""); }
 function cleanDomain(email, site) {
   var raw = String(site || email || "").trim().toLowerCase();
@@ -804,98 +941,27 @@ function cleanPhoneE164(v) {
   if (d.length === 10 || d.length === 11) return "55" + d;
   return d;
 }
+function formatPhoneBr(v) {
+  var d = cleanDigits(v);
+  if (!d) return "";
+  var n = (d.indexOf("55") === 0 && d.length >= 12) ? d.substring(2) : d;
+  if (n.length === 11) return "(" + n.substring(0,2) + ") " + n.substring(2,7) + "-" + n.substring(7,11);
+  if (n.length === 10) return "(" + n.substring(0,2) + ") " + n.substring(2,6) + "-" + n.substring(6,10);
+  return String(v || "");
+}
 function resolveSpreadsheet(spreadsheetId) {
+  try {
+    var active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) {}
   if (spreadsheetId && String(spreadsheetId).length > 10) {
-    try { return SpreadsheetApp.openById(String(spreadsheetId)); } catch (e) {}
+    try { return SpreadsheetApp.openById(String(spreadsheetId)); } catch (e2) {}
   }
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-// 1. LEITURA EM TEMPO REAL DE TODAS AS ABAS E LINHAS DA PLANILHA
-function doGet(e) {
-  var tabName = (e && e.parameter && e.parameter.tabName) || "Casas Modulares";
-  var readAllTabs = !e || !e.parameter || e.parameter.readAllTabs !== "false";
-  var spreadsheetId = (e && e.parameter && e.parameter.spreadsheetId) || "";
-  var ss = resolveSpreadsheet(spreadsheetId);
-  var allSheets = ss.getSheets();
-  var allTabNames = [];
-  for (var s = 0; s < allSheets.length; s++) {
-    allTabNames.push(allSheets[s].getName());
-  }
-
-  var targetSheets = readAllTabs
-    ? allSheets
-    : [ss.getSheetByName(tabName) || allSheets[0]];
-
-  var headers = ["Empresa","Responsável","E-mail","Contato","Nível de Prospecção","Observações"];
-  var rows = [];
-
-  for (var t = 0; t < targetSheets.length; t++) {
-    var sheet = targetSheets[t];
-    if (!sheet) continue;
-    var currentTabName = sheet.getName();
-    var range = sheet.getDataRange();
-    var data = range.getValues();
-    var bgs = range.getBackgrounds();
-    if (data.length > 0 && t === 0) headers = data[0];
-    for (var i = 1; i < data.length; i++) {
-      if (!data[i][0] || String(data[i][0]).toLowerCase() === "empresa") continue;
-      var bg = (bgs[i] && bgs[i][0]) ? String(bgs[i][0]).toLowerCase() : "";
-      rows.push({
-        id: "sheet-" + currentTabName + "-" + i,
-        empresa: String(data[i][0] || ""),
-        responsavel: String(data[i][1] || ""),
-        email: String(data[i][2] || ""),
-        contato: cleanPhoneE164(data[i][3]) || String(data[i][3] || ""),
-        nivelProspeccao: String(data[i][4] || "Tentativa de contato"),
-        observacoes: String(data[i][5] || ""),
-        cnpj: String(data[i][6] || ""),
-        highlighted: bg === "#ffff00" || bg === "#fff2cc",
-        tab: currentTabName
-      });
-    }
-  }
-
-  return ContentService.createTextOutput(JSON.stringify({
-    ok: true,
-    title: ss.getName(),
-    spreadsheetId: ss.getId(),
-    spreadsheetUrl: ss.getUrl(),
-    tabs: allTabNames,
-    columns: headers,
-    rows: rows
-  })).setMimeType(ContentService.MimeType.JSON);
-}
-
-// 2. CRIAÇÃO DE NOVAS PLANILHAS + INSERÇÃO E MERGE COM TRAVA ANTI-DUPLICIDADE TRIPLA
-function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
+function gravarAbaNoSheets(ss, tabName, incomingRows, replaceAllInTab) {
   var headers = [["Empresa", "Responsável", "E-mail", "Contato", "Nível de Prospecção", "Observações"]];
-
-  // Permite criar uma planilha nova diretamente no Google Drive do usuário
-  if (data.action === "create_spreadsheet") {
-    var newSs = SpreadsheetApp.create(data.spreadsheetTitle || "Nova Planilha Gofer Metais");
-    var tabs = data.initialTabs && data.initialTabs.length ? data.initialTabs : ["Casas Modulares"];
-    var firstSheet = newSs.getSheets()[0];
-    firstSheet.setName(tabs[0]);
-    for (var t = 0; t < tabs.length; t++) {
-      var sh = t === 0 ? firstSheet : (newSs.getSheetByName(tabs[t]) || newSs.insertSheet(tabs[t]));
-      sh.getRange(1, 1, 1, 6).setValues(headers)
-        .setBackground("#202b5b").setFontColor("#ffffff").setFontWeight("bold")
-        .setHorizontalAlignment("center").setVerticalAlignment("middle");
-      sh.setRowHeight(1, 32);
-    }
-    return ContentService.createTextOutput(JSON.stringify({
-      ok: true,
-      spreadsheetId: newSs.getId(),
-      spreadsheetUrl: newSs.getUrl(),
-      title: newSs.getName(),
-      tabs: tabs
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-
-  var ss = resolveSpreadsheet(data.spreadsheetId);
-  var tabName = data.tabName || "Casas Modulares";
   var sheet = ss.getSheetByName(tabName);
   if (!sheet) sheet = ss.insertSheet(tabName);
 
@@ -904,7 +970,7 @@ function doPost(e) {
     .setHorizontalAlignment("center").setVerticalAlignment("middle");
   sheet.setRowHeight(1, 32);
 
-  if (data.replaceAllInTab && sheet.getLastRow() > 1) {
+  if (replaceAllInTab && sheet.getLastRow() > 1) {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).clearContent().setBackground(null);
   }
 
@@ -920,34 +986,41 @@ function doPost(e) {
   }
 
   var rowsToAdd = [], highlights = [], merged = 0, blocked = 0;
-  for (var j = 0; j < (data.rows || []).length; j++) {
-    var r = data.rows[j];
+  for (var j = 0; j < (incomingRows || []).length; j++) {
+    var r = incomingRows[j];
+    if (!r || !r.empresa) continue;
     var rDom = cleanDomain(r.email, r.domain);
     var rPh = cleanPhoneE164(r.contato);
+    var rFormattedPh = formatPhoneBr(r.contato) || r.contato || "";
     var rNm = String(r.empresa || "").toLowerCase().trim();
     var matchRow = (rDom && domainMap[rDom]) || (rPh && phoneMap[rPh]) || (rNm && nameMap[rNm]);
 
-    if (!data.replaceAllInTab && matchRow) {
+    if (!replaceAllInTab && matchRow) {
       var curRow = sheet.getRange(matchRow, 1, 1, 6).getValues()[0];
       var changed = false;
       if (!curRow[1] && r.responsavel) { curRow[1] = r.responsavel; changed = true; }
       if (!curRow[2] && r.email) { curRow[2] = r.email; changed = true; }
-      if (!curRow[3] && rPh) { curRow[3] = rPh; changed = true; }
+      if ((!curRow[3] || String(curRow[3]).indexOf("(") === -1) && rFormattedPh) { curRow[3] = rFormattedPh; changed = true; }
+      if (r.nivelProspeccao && curRow[4] !== r.nivelProspeccao && r.nivelProspeccao !== "Tentativa de contato") { curRow[4] = r.nivelProspeccao; changed = true; }
       if (!curRow[5] && r.observacoes) { curRow[5] = r.observacoes; changed = true; }
       if (changed) { sheet.getRange(matchRow, 1, 1, 6).setValues([curRow]); merged++; }
       else { blocked++; }
       continue;
     }
 
-    rowsToAdd.push([r.empresa, r.responsavel, r.email, rPh || r.contato, r.nivelProspeccao || "Tentativa de contato", r.observacoes]);
+    rowsToAdd.push([r.empresa, r.responsavel || "", r.email || "", rFormattedPh, r.nivelProspeccao || "Tentativa de contato", r.observacoes || ""]);
     highlights.push(Boolean(r.highlighted));
+    var newRowNum = existing.length + rowsToAdd.length + 1;
+    if (rDom) domainMap[rDom] = newRowNum;
+    if (rPh) phoneMap[rPh] = newRowNum;
+    if (rNm) nameMap[rNm] = newRowNum;
   }
 
   if (rowsToAdd.length > 0) {
     var startRow = sheet.getLastRow() + 1;
     sheet.getRange(startRow, 1, rowsToAdd.length, 6).setValues(rowsToAdd).setVerticalAlignment("middle");
     var rule = SpreadsheetApp.newDataValidation()
-      .requireValueInList(["Tentativa de contato", "Catálogo enviado", "Em contato", "Reunião agendada"], true)
+      .requireValueInList(["Tentativa de contato", "Catálogo enviado", "Atendeu", "Em contato", "Reunião agendada"], true)
       .setAllowInvalid(true).build();
     sheet.getRange(startRow, 5, rowsToAdd.length, 1).setDataValidation(rule);
     for (var k = 0; k < highlights.length; k++) {
@@ -955,9 +1028,50 @@ function doPost(e) {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify({ ok: true, added: rowsToAdd.length, merged: merged, blocked: blocked }))
+  return { added: rowsToAdd.length, merged: merged, blocked: blocked };
+}
+
+// Compatibilidade adicional caso você também queira implantar como App da Web (doGet / doPost)
+function doGet(e) {
+  var ss = resolveSpreadsheet((e && e.parameter && e.parameter.spreadsheetId) || CRM_SPREADSHEET_ID);
+  var allSheets = ss.getSheets();
+  var allTabNames = [];
+  var rows = [];
+  for (var s = 0; s < allSheets.length; s++) {
+    var sheet = allSheets[s];
+    var currentTabName = sheet.getName();
+    allTabNames.push(currentTabName);
+    var data = sheet.getDataRange().getValues();
+    var bgs = sheet.getDataRange().getBackgrounds();
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][0] || String(data[i][0]).toLowerCase() === "empresa") continue;
+      var bg = (bgs[i] && bgs[i][0]) ? String(bgs[i][0]).toLowerCase() : "";
+      rows.push({
+        id: "sheet-" + currentTabName + "-" + i,
+        empresa: String(data[i][0] || ""),
+        responsavel: String(data[i][1] || ""),
+        email: String(data[i][2] || ""),
+        contato: formatPhoneBr(data[i][3]) || String(data[i][3] || ""),
+        nivelProspeccao: String(data[i][4] || "Tentativa de contato"),
+        observacoes: String(data[i][5] || ""),
+        highlighted: bg === "#ffff00" || bg === "#fff2cc",
+        tab: currentTabName
+      });
+    }
+  }
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true, title: ss.getName(), spreadsheetId: ss.getId(), tabs: allTabNames, rows: rows
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var ss = resolveSpreadsheet(data.spreadsheetId || CRM_SPREADSHEET_ID);
+  var res = gravarAbaNoSheets(ss, data.tabName || "Casas Modulares", data.rows || [], Boolean(data.replaceAllInTab));
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, added: res.added, merged: res.merged, blocked: res.blocked }))
     .setMimeType(ContentService.MimeType.JSON);
 }`;
+}
 
 function getPillStyle(level: ProspectionLevel): string {
   switch (level) {
@@ -1072,8 +1186,66 @@ export function GoogleSheetsLeadHunter({
   const [newTabName, setNewTabName] = useState("");
 
   const isWriteSyncConfigured = Boolean(
-    webhookUrl.trim() || googleAccessToken.trim()
+    isValidAppsScriptUrl(webhookUrl) || googleAccessToken.trim()
   );
+
+  const dynamicAppsScriptCode = useMemo(
+    () =>
+      buildDynamicAppsScriptCode(
+        sheetUrl,
+        sheetTitle,
+        tabs,
+        rows,
+        typeof window !== "undefined" ? window.location.origin : undefined
+      ),
+    [sheetUrl, sheetTitle, tabs, rows]
+  );
+
+  const handleCopyAppsScriptCode = () => {
+    navigator.clipboard.writeText(dynamicAppsScriptCode);
+    setCopiedScript(true);
+    setTimeout(() => setCopiedScript(false), 5000);
+
+    // Salva também o snapshot atualizado no servidor CRM para o sincronizarAgora() puxar em tempo real
+    const allBatches = tabs.map((tName) => ({
+      tabName: tName,
+      leads: rows.filter((r) => r.tab === tName && r.empresa.trim()),
+      replaceAllInTab: false,
+    }));
+    fetch("/api/crm/sheets-sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
+        spreadsheetTitle: sheetTitle || "Leads",
+        myCompany,
+        tabName: activeTab,
+        batches: allBatches,
+      }),
+    }).catch(() => {});
+
+    setFeedbackBanner({
+      type: "success",
+      text: `✦ Código copiado com todas as ${tabs.length} abas (${tabs.join(", ")}) e ${rows.filter((r) => r.empresa.trim()).length} leads! Agora na planilha "Leads" do Google: clique em Extensões -> Apps Script, cole o código e clique apenas no botão "▷ Executar" no topo!`,
+    });
+  };
+
+  const handleWebhookInputChange = (rawVal: string) => {
+    const trimmed = rawVal.trim();
+    if (isRealGoogleSheetUrl(trimmed) && !isValidAppsScriptUrl(trimmed)) {
+      handleUpdateActiveSheetUrl(trimmed);
+      setWebhookUrl("");
+      try {
+        localStorage.removeItem("gofer_sheets_webhook_v1");
+      } catch {}
+      setFeedbackBanner({
+        type: "info",
+        text: "Esse link (docs.google.com/spreadsheets) é o link da planilha e já está salvo! Para inserir as abas lá dentro sem precisar de URL, clique em '1. Copiar Código Sincronizador' e clique em '▷ Executar' no Apps Script.",
+      });
+      return;
+    }
+    setWebhookUrl(rawVal);
+  };
 
   useEffect(() => {
     let initialUrlToSync = DEFAULT_USER_SHEET_URL;
@@ -1200,9 +1372,13 @@ export function GoogleSheetsLeadHunter({
         }
       }
 
-      if (savedWebhook) {
+      if (savedWebhook && isValidAppsScriptUrl(savedWebhook)) {
         setWebhookUrl(savedWebhook);
         initialWebhookToSync = savedWebhook;
+      } else if (savedWebhook) {
+        // Limpa automaticamente links normais do Google Sheets colados por engano no campo de Webhook (evita erro 405)
+        localStorage.removeItem("gofer_sheets_webhook_v1");
+        setWebhookUrl("");
       }
       if (savedGoogleAccess) setGoogleAccessToken(savedGoogleAccess);
       if (savedGoogleRefresh) setGoogleRefreshToken(savedGoogleRefresh);
@@ -1319,7 +1495,7 @@ export function GoogleSheetsLeadHunter({
           body: JSON.stringify({
             googleAccessToken: access,
             googleRefreshToken: refresh,
-            webhookUrl: webhookUrl.trim(),
+            webhookUrl: isValidAppsScriptUrl(webhookUrl) ? webhookUrl.trim() : "",
             spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
             spreadsheetTitle: sheetTitle || "Leads",
             myCompany,
@@ -1339,7 +1515,7 @@ export function GoogleSheetsLeadHunter({
                 type: "info",
                 text:
                   resData?.error ||
-                  "Conta Google conectada! Se sua conta Google exigir o conector Apps Script na planilha, cole a URL do App da Web abaixo.",
+                  "Conta Google conectada! Se sua conta Google exigir o conector Apps Script na planilha, clique em '1. Copiar Código Sincronizador' e execute na planilha.",
               });
             }
           })
@@ -1444,14 +1620,14 @@ export function GoogleSheetsLeadHunter({
         return [...otherTabs, ...withUpdatedStatus];
       });
 
-      // Dispara sincronização em background com o Google Sheets (via OAuth ou Apps Script)
+      // Dispara sincronização em background com o Google Sheets (via OAuth ou Apps Script + Snapshot Servidor)
       fetch("/api/crm/sheets-sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           googleAccessToken: googleAccessToken.trim(),
           googleRefreshToken: googleRefreshToken.trim(),
-          webhookUrl: webhookUrl.trim(),
+          webhookUrl: isValidAppsScriptUrl(webhookUrl) ? webhookUrl.trim() : "",
           campaignWebhookUrl: campaignWebhookUrl.trim(),
           spreadsheetId: extractSheetIdFromUrl(sheetUrl) || "",
           spreadsheetTitle: sheetTitle || "Leads",
@@ -1498,7 +1674,11 @@ export function GoogleSheetsLeadHunter({
       localStorage.setItem("gofer_kanban_sent_rows_v1", JSON.stringify(kanbanSentRowIds));
       localStorage.setItem("gofer_my_company_v1", myCompany);
       localStorage.setItem("gofer_represented_site_v1", representedWebsite);
-      if (webhookUrl) localStorage.setItem("gofer_sheets_webhook_v1", webhookUrl);
+      if (isValidAppsScriptUrl(webhookUrl)) {
+        localStorage.setItem("gofer_sheets_webhook_v1", webhookUrl.trim());
+      } else {
+        localStorage.removeItem("gofer_sheets_webhook_v1");
+      }
       if (campaignWebhookUrl)
         localStorage.setItem("gofer_campaign_webhook_v1", campaignWebhookUrl);
       localStorage.setItem(
@@ -3184,103 +3364,105 @@ export function GoogleSheetsLeadHunter({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-xs font-semibold text-white">
-                      ⚡ Por que as novas abas ({tabs.join(", ")}) ainda não entraram na planilha "Leads" do Google?
+                      ⚡ Inserir todas as {tabs.length} abas ({tabs.join(", ")}) e {rows.filter((r) => r.empresa.trim()).length} leads direto na sua planilha "{sheetTitle}" do Google
                     </p>
                     <p className="text-[11px] text-[#afafaf] mt-0.5">
-                      O link público do Google Sheets permite que o CRM <strong>leia</strong> suas abas, mas para o CRM <strong>inserir abas e leads lá dentro automaticamente</strong>, escolha 1 das 2 opções abaixo (leva 30 segundos, uma única vez):
+                      Você <strong>não precisa implantar Web App nem copiar nenhuma URL</strong>! Basta copiar o código abaixo (já vem com todas as suas {tabs.length} abas e leads embutidos) e clicar em <strong>▷ Executar</strong> dentro da planilha:
                     </p>
                   </div>
-                  {isWriteSyncConfigured && (
-                    <button
-                      type="button"
-                      onClick={() => setShowInlineWriteSetup(false)}
-                      className="text-xs text-[#afafaf] hover:text-white cursor-pointer"
-                    >
-                      Fechar
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineWriteSetup(false)}
+                    className="text-xs text-[#afafaf] hover:text-white cursor-pointer"
+                  >
+                    Fechar
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-                  {/* Opção A: 1 Clique Google OAuth */}
-                  <div className="lg:col-span-4 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 flex flex-col justify-between gap-2">
-                    <div>
-                      <span className="text-[11px] font-semibold text-[#14d06e]">
-                        Opção A · Login Direto Google
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+                  {/* MÉTODO PRINCIPAL (ZERO URL): Copiar Código -> Colar em Apps Script -> Clicar Executar */}
+                  <div className="lg:col-span-8 rounded-md bg-[#0d0d0d] ring-1 ring-[#14d06e]/40 p-3 flex flex-col justify-between gap-2.5">
+                    <div className="space-y-1">
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#14d06e]">
+                        ✦ Passo Único (Sem URL · 100% Garantido)
                       </span>
-                      <p className="text-[11px] text-[#afafaf] mt-0.5">
-                        Autorize sua conta Google dona da planilha <strong>Leads</strong> em 1 clique:
+                      <p className="text-xs text-white leading-relaxed">
+                        <strong>1.</strong> Clique no botão verde ao lado para copiar o código com suas <strong>{tabs.length} abas</strong>.<br />
+                        <strong>2.</strong> Na sua planilha <strong>{sheetTitle}</strong> aberta no Google, clique no menu superior <strong>Extensões &rarr; Apps Script</strong>, apague o que estiver lá, cole o código, salve (Ctrl+S) e clique apenas no botão <strong>▷ Executar</strong> no topo!
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAuthorizeGoogleSheetsPopup}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-2 text-xs font-semibold cursor-pointer"
-                    >
-                      <Globe className="size-3.5" />
-                      <span>Autorizar Gravação com Google (1 Clique)</span>
-                    </button>
-                  </div>
 
-                  {/* Opção B: Conector Apps Script (100% Garantido em qualquer conta Google) */}
-                  <div className="lg:col-span-8 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[11px] font-semibold text-[#7fa9f7]">
-                          Opção B · Conector Direto na Planilha (100% Garantido)
-                        </span>
-                        <p className="text-[11px] text-[#afafaf]">
-                          Na planilha <strong>Leads</strong> aberta: menu <strong>Extensões &rarr; Apps Script</strong>, cole o código, clique em <strong>Implantar &rarr; Nova implantação &rarr; App da Web (Qualquer pessoa)</strong> e cole a URL abaixo:
-                        </p>
-                      </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
-                          setCopiedScript(true);
-                          setTimeout(() => setCopiedScript(false), 4000);
-                          setFeedbackBanner({
-                            type: "info",
-                            text: "✦ Código Apps Script copiado! Na planilha 'Leads' do Google, clique em Extensões -> Apps Script, cole o código e clique em Implantar -> Nova implantação -> App da Web.",
-                          });
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white cursor-pointer shrink-0"
+                        onClick={handleCopyAppsScriptCode}
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] px-4 py-2 text-xs font-semibold cursor-pointer"
                       >
                         {copiedScript ? (
                           <>
-                            <Check className="size-3.5 text-[#14d06e]" />
-                            <span className="text-[#14d06e]">1. Código Copiado!</span>
+                            <Check className="size-3.5" />
+                            <span>Código Copiado! Agora clique em "▷ Executar" no Apps Script</span>
                           </>
                         ) : (
                           <>
-                            <Copy className="size-3.5 text-[#7fa9f7]" />
-                            <span>1. Copiar Código Apps Script</span>
+                            <Copy className="size-3.5" />
+                            <span>
+                              1. Copiar Código Sincronizador (Com as {tabs.length} Abas e {rows.filter((r) => r.empresa.trim()).length} Leads)
+                            </span>
                           </>
                         )}
                       </button>
+
+                      {isRealGoogleSheetUrl(sheetUrl) && (
+                        <a
+                          href={sheetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white"
+                        >
+                          <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
+                          <span>2. Abrir Planilha "{sheetTitle}"</span>
+                          <ExternalLink className="size-3 text-[#757575]" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Opção Secundária: Login Google OAuth ou URL opcional de Web App */}
+                  <div className="lg:col-span-4 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 flex flex-col justify-between gap-2">
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-semibold text-[#7fa9f7]">
+                        Alternativa · Login Google ou Web App
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAuthorizeGoogleSheetsPopup}
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-1.5 text-xs font-semibold cursor-pointer"
+                      >
+                        <Globe className="size-3.5" />
+                        <span>Autorizar com Google (1 Clique)</span>
+                      </button>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-[#2e2e2e]">
                       <input
                         type="text"
                         value={webhookUrl}
-                        onChange={(e) => setWebhookUrl(e.target.value)}
-                        placeholder="2. Cole aqui a URL do App da Web gerada (https://script.google.com/macros/s/.../exec)"
-                        className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                        onChange={(e) => handleWebhookInputChange(e.target.value)}
+                        placeholder="Opcional: URL script.google.com/.../exec"
+                        className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1 text-[11px] text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                       />
-                      <button
-                        type="button"
-                        disabled={isSyncingSheets}
-                        onClick={() => handleSyncToGoogleSheets(webhookUrl)}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] px-3.5 py-1.5 text-xs font-semibold shrink-0 cursor-pointer"
-                      >
-                        <Send className="size-3.5" />
-                        <span>
-                          {isSyncingSheets
-                            ? "Inserindo abas..."
-                            : `3. Ativar & Inserir Todas as ${tabs.length} Abas`}
-                        </span>
-                      </button>
+                      {isValidAppsScriptUrl(webhookUrl) && (
+                        <button
+                          type="button"
+                          disabled={isSyncingSheets}
+                          onClick={() => handleSyncToGoogleSheets(webhookUrl)}
+                          className="inline-flex items-center justify-center gap-1 rounded-md bg-white text-[#0d0d0d] px-2.5 py-1 text-[11px] font-semibold shrink-0 cursor-pointer"
+                        >
+                          <Send className="size-3" />
+                          <span>Enviar</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -4953,12 +5135,12 @@ export function GoogleSheetsLeadHunter({
                 </div>
                 <div className="rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3">
                   <span className="font-semibold text-white">
-                    3. Gravação automática (Opcional)
+                    3. Inserir abas (1 Clique)
                   </span>
                   <p className="mt-1 text-[11px] text-[#afafaf]">
-                    Para o CRM também escrever novos leads e criar abas na sua planilha, cole o{" "}
-                    <strong>Apps Script</strong> em{" "}
-                    <em>Extensões &rarr; Apps Script</em>.
+                    Copie o <strong>Código Sincronizador</strong> abaixo, cole em{" "}
+                    <em>Extensões &rarr; Apps Script</em> na sua planilha e clique apenas em{" "}
+                    <strong>▷ Executar</strong> no topo!
                   </p>
                 </div>
               </div>
@@ -4994,13 +5176,13 @@ export function GoogleSheetsLeadHunter({
 
                 <div>
                   <label className="block text-xs font-medium text-white mb-1">
-                    2. URL do App da Web (Google Apps Script — permite criar abas e gravar automático)
+                    2. URL do App da Web (Opcional — somente se implantar como Web App)
                   </label>
                   <input
                     type="text"
                     value={webhookUrl}
-                    onChange={(e) => setWebhookUrl(e.target.value)}
-                    placeholder="https://script.google.com/macros/s/.../exec"
+                    onChange={(e) => handleWebhookInputChange(e.target.value)}
+                    placeholder="https://script.google.com/macros/s/.../exec (não cole o link docs.google.com aqui)"
                     className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
                   />
                 </div>
@@ -5022,32 +5204,28 @@ export function GoogleSheetsLeadHunter({
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-[#afafaf]">
-                    Código para Extensões &rarr; Apps Script
+                    Código para Extensões &rarr; Apps Script (já com suas {tabs.length} abas e {rows.filter((r) => r.empresa.trim()).length} leads)
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
-                      setCopiedScript(true);
-                      setTimeout(() => setCopiedScript(false), 3000);
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                    onClick={handleCopyAppsScriptCode}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
                   >
                     {copiedScript ? (
                       <>
                         <Check className="size-3.5" />
-                        <span>Código copiado</span>
+                        <span>Código copiado! Clique em "▷ Executar" no Apps Script</span>
                       </>
                     ) : (
                       <>
                         <Copy className="size-3.5" />
-                        <span>Copiar Apps Script</span>
+                        <span>Copiar Código Sincronizador ({tabs.length} Abas)</span>
                       </>
                     )}
                   </button>
                 </div>
                 <pre className="max-h-40 overflow-y-auto rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-3 text-[11px] font-mono text-[#afafaf]">
-                  {GOOGLE_APPS_SCRIPT_CODE}
+                  {dynamicAppsScriptCode}
                 </pre>
               </div>
             </div>
