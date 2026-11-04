@@ -262,6 +262,16 @@ export function LeadsKanban({
     }
   };
 
+  // Atualização direta dos dados do lead a partir do slide-over lateral
+  const handleLeadUpdate = (updatedLead: Lead) => {
+    setLeadsList((prev) =>
+      prev.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead))
+    );
+    if (selectedLead && selectedLead.id === updatedLead.id) {
+      setSelectedLead(updatedLead);
+    }
+  };
+
   // Alteração de status pelo modal ou arrasto com atualização otimista bidirecional (Kanban <-> Planilha Leads)
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
     const targetLead = leadsList.find((l) => l.id === leadId);
@@ -769,6 +779,7 @@ export function LeadsKanban({
         onCadenceChange={handleCadenceChange}
         onOwnerChange={handleOwnerChange}
         onActivityScheduled={handleActivityScheduled}
+        onLeadUpdate={handleLeadUpdate}
         operators={operators}
       />
 

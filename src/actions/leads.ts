@@ -142,6 +142,97 @@ export async function updateLeadCadenceAction(
   }
 }
 
+export interface UpdateLeadDetailsInput {
+  leadId: string;
+  leadName?: string;
+  company?: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  roleTitle?: string;
+  estimatedValue?: string;
+}
+
+/**
+ * Atualiza dados cadastrais e comerciais do lead diretamente a partir do Card/Slide-over do Kanban
+ */
+export async function updateLeadDetailsAction(
+  input: UpdateLeadDetailsInput
+): Promise<ActionResponse & { lead?: Lead }> {
+  try {
+    const { leadId, leadName, company, contactPerson, email, phone, roleTitle, estimatedValue } = input;
+    if (!leadId) {
+      return { success: false, leadId: "", error: "Identificador do lead ausente." };
+    }
+
+    if (!UUID_REGEX.test(leadId)) {
+      return { success: true, leadId };
+    }
+
+    // Busca o lead atual para merge atômico
+    const [existing] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+
+    if (!existing) {
+      return { success: false, leadId, error: "Lead não encontrado." };
+    }
+
+    // Resolve o novo leadName caso contactPerson e/ou company tenham sido passados
+    let resolvedLeadName = leadName;
+    if (!resolvedLeadName) {
+      if (contactPerson && company) {
+        resolvedLeadName = `${contactPerson} (${company})`;
+      } else if (company) {
+        resolvedLeadName = company;
+      } else if (contactPerson) {
+        resolvedLeadName = contactPerson;
+      }
+    }
+
+    const currentCadence = (existing.cadenceState as CadenceState) || { completedSteps: [] };
+    const updatedCadence: CadenceState = {
+      ...currentCadence,
+      roleTitle: roleTitle !== undefined ? roleTitle.trim() : currentCadence.roleTitle,
+      estimatedValue: estimatedValue !== undefined ? estimatedValue.trim() : currentCadence.estimatedValue,
+    };
+
+    const updatePayload: Partial<typeof leads.$inferInsert> = {
+      cadenceState: updatedCadence,
+    };
+
+    if (resolvedLeadName !== undefined && resolvedLeadName.trim()) {
+      updatePayload.leadName = resolvedLeadName.trim();
+    }
+    if (email !== undefined) {
+      updatePayload.leadEmail = email.trim() || null;
+    }
+    if (phone !== undefined) {
+      updatePayload.leadPhone = phone.trim() || null;
+    }
+
+    const [updated] = await db
+      .update(leads)
+      .set(updatePayload)
+      .where(eq(leads.id, leadId))
+      .returning();
+
+    revalidatePath("/vendas");
+    revalidatePath("/leads");
+
+    return { success: true, leadId, lead: updated };
+  } catch (error) {
+    console.error("Falha ao atualizar detalhes do lead:", error);
+    return {
+      success: false,
+      leadId: input.leadId,
+      error: error instanceof Error ? error.message : "Erro ao atualizar informações do lead.",
+    };
+  }
+}
+
 /**
  * Adiciona uma anotação cronológica ao histórico persistido no PostgreSQL
  */

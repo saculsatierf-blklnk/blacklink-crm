@@ -13,6 +13,7 @@ import {
   Clock,
   Coins,
   Copy,
+  Edit2,
   FileText,
   ListTodo,
   Mail,
@@ -31,6 +32,7 @@ import {
 import type { Lead, NoteEntry } from "@/db/schema";
 import {
   updateLeadCadenceAction,
+  updateLeadDetailsAction,
   addLeadNoteAction,
   deleteLeadNoteAction,
   updateLeadScriptAction,
@@ -67,6 +69,7 @@ interface LeadDetailsSheetProps {
     activityType: string,
     newOwnerId?: string
   ) => void;
+  onLeadUpdate?: (updatedLead: Lead) => void;
   operators?: Operator[];
 }
 
@@ -78,9 +81,21 @@ export function LeadDetailsSheet({
   onCadenceChange,
   onOwnerChange,
   onActivityScheduled,
+  onLeadUpdate,
   operators = OPERATORS,
 }: LeadDetailsSheetProps) {
   const parsed = lead ? parseLeadInfo(lead.leadName) : { name: "", company: "" };
+
+  // Estados para edição direta das informações cadastrais e comerciais do lead
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [editCompanyName, setEditCompanyName] = useState("");
+  const [editContactPerson, setEditContactPerson] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editRoleTitle, setEditRoleTitle] = useState("");
+  const [editEstimatedValue, setEditEstimatedValue] = useState("");
+  const [saveDetailsFeedback, setSaveDetailsFeedback] = useState<string | null>(null);
 
   // Metadados operacionais do Hunter (persistidos no PostgreSQL)
   const [roleTitle, setRoleTitle] = useState("");
@@ -128,6 +143,17 @@ export function LeadDetailsSheet({
     setEstimatedValue(resolvedValue);
     setOwnerId(lead.ownerId || "lucas.leite");
 
+    // Sincroniza campos de edição direta
+    const ctx = extractLeadContext(lead);
+    setEditCompanyName(ctx.company);
+    setEditContactPerson(ctx.person);
+    setEditEmail(lead.leadEmail || "");
+    setEditPhone(lead.leadPhone || "");
+    setEditRoleTitle(resolvedRole);
+    setEditEstimatedValue(resolvedValue);
+    setIsEditingDetails(false);
+    setSaveDetailsFeedback(null);
+
     // 2. Checklist de Cadência
     const currentCompleted = dbCadenceState.completedSteps || [];
     setCompletedCadence(currentCompleted);
@@ -141,7 +167,6 @@ export function LeadDetailsSheet({
     }
     setSelectedPhaseKey(initialPhase);
 
-    const ctx = extractLeadContext(lead);
     const tmpl =
       GOFER_TEMPLATES.find((t) => t.key === initialPhase) || GOFER_TEMPLATES[0];
 
@@ -209,6 +234,52 @@ export function LeadDetailsSheet({
       });
     } catch (error) {
       console.error("Falha ao persistir metadados no banco:", error);
+    }
+  };
+
+  // Salvar Informações Cadastrais e Comerciais do Lead (Empresa, Contato, Email, Tel, etc.)
+  const handleSaveLeadDetails = async () => {
+    if (!lead) return;
+    setIsSavingDetails(true);
+    setSaveDetailsFeedback(null);
+
+    try {
+      const res = await updateLeadDetailsAction({
+        leadId: lead.id,
+        company: editCompanyName.trim(),
+        contactPerson: editContactPerson.trim(),
+        email: editEmail.trim(),
+        phone: editPhone.trim(),
+        roleTitle: editRoleTitle.trim(),
+        estimatedValue: editEstimatedValue.trim(),
+      });
+
+      if (res.success && res.lead) {
+        setRoleTitle(editRoleTitle.trim());
+        setEstimatedValue(editEstimatedValue.trim());
+        setIsEditingDetails(false);
+        setSaveDetailsFeedback("Informações atualizadas com sucesso!");
+        setTimeout(() => setSaveDetailsFeedback(null), 3000);
+
+        onLeadUpdate?.(res.lead);
+
+        const updatedCtx = extractLeadContext(res.lead);
+        const tmpl =
+          GOFER_TEMPLATES.find((t) => t.key === selectedPhaseKey) || GOFER_TEMPLATES[0];
+        const newSubj = interpolateGoferTemplateText(tmpl.email.subject, updatedCtx);
+        const newBody = interpolateGoferTemplateText(
+          selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
+          updatedCtx
+        );
+        setTemplateSubject(newSubj);
+        setTemplateBody(newBody);
+      } else {
+        setSaveDetailsFeedback(res.error || "Erro ao salvar informações.");
+      }
+    } catch (err: any) {
+      setSaveDetailsFeedback(err?.message || "Erro de conexão ao salvar.");
+    } finally {
+      setIsSavingDetails(false);
     }
   };
 
@@ -497,125 +568,305 @@ export function LeadDetailsSheet({
         className="relative z-50 flex h-full w-full max-w-xl flex-col justify-between border-l border-white/10 bg-[#0A0A0A] p-6 shadow-2xl sm:p-8"
       >
         <div className="space-y-6 overflow-y-auto pr-1">
-          {/* 1. TOPO: Cabeçalho com Nome, Empresa, Cargo e Dono */}
+          {/* 1. TOPO: Cabeçalho com Nome, Empresa, Cargo, Contatos e Edição Imediata */}
           <div className="border-b border-white/10 pb-5 space-y-4">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
                 Dossiê da Conta
               </span>
 
-              <button
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
-                title="Fechar (ESC)"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Identificação Principal do Lead */}
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
-                {parsed.name}
-              </h2>
-              <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
-                <Building2 className="h-3.5 w-3.5 text-white" />
-                <span className="font-semibold text-white">
-                  {parsed.company}
-                </span>
-              </div>
-            </div>
-
-            {/* Grid Operacional: Cargo, Valor Estimado e Dono da Conta */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              {/* Cargo / Posição */}
-              <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                    Cargo / Função
-                  </span>
-                  <UserCheck className="h-3.5 w-3.5 text-zinc-400" />
-                </div>
-                {isEditingMeta ? (
-                  <input
-                    type="text"
-                    value={roleTitle}
-                    onChange={(e) => setRoleTitle(e.target.value)}
-                    className="w-full rounded border border-white/10 bg-[#0A0A0A] px-2 py-1 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
-                    placeholder="Ex: Diretor de Operações"
-                  />
-                ) : (
-                  <div className="text-xs font-mono font-medium text-white truncate">
-                    {roleTitle || "Cargo a definir"}
-                  </div>
-                )}
-              </div>
-
-              {/* Valor Estimado do Contrato */}
-              <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                    Valor Estimado
-                  </span>
-                  <Coins className="h-3.5 w-3.5 text-accent" />
-                </div>
-                {isEditingMeta ? (
-                  <input
-                    type="text"
-                    value={estimatedValue}
-                    onChange={(e) => setEstimatedValue(e.target.value)}
-                    className="w-full rounded border border-white/10 bg-[#0A0A0A] px-2 py-1 text-xs text-white font-mono focus:border-white/30 focus:outline-none"
-                    placeholder="Ex: R$ 45.000,00"
-                  />
-                ) : (
-                  <div className="text-xs font-mono font-bold text-accent truncate">
-                    {estimatedValue || "A Definir (Pós-Qualificação)"}
-                  </div>
-                )}
-              </div>
-
-              {/* Dono da Conta (Silo de Propriedade) */}
-              <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                    Proprietário
-                  </span>
-                  <User className="h-3.5 w-3.5 text-zinc-400" />
-                </div>
-                <select
-                  value={ownerId}
-                  onChange={(e) => handleOwnerSelect(e.target.value)}
-                  className="w-full rounded border border-white/10 bg-[#0A0A0A] px-2 py-1 text-xs text-white font-mono focus:border-white/30 focus:outline-none cursor-pointer"
-                >
-                  {operators.map((op) => (
-                    <option key={op.id} value={op.id} className="bg-[#0A0A0A] text-white">
-                      {op.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Alternar edição dos metadados */}
-            <div className="flex justify-end">
-              {isEditingMeta ? (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleSaveMeta}
-                  className="text-[11px] font-mono text-accent hover:underline cursor-pointer"
+                  onClick={() => setIsEditingDetails((prev) => !prev)}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                    isEditingDetails
+                      ? "bg-white text-[#0d0d0d]"
+                      : "border border-[#2e2e2e] bg-[#1a1a1a] text-zinc-300 hover:text-white hover:bg-[#262626]"
+                  }`}
                 >
-                  Salvar Alterações
+                  <Edit2 className="size-3 text-[#14d06e]" />
+                  <span>{isEditingDetails ? "Fechar Edição" : "Editar Dados"}</span>
                 </button>
-              ) : (
+
                 <button
-                  type="button"
-                  onClick={() => setIsEditingMeta(true)}
-                  className="text-[11px] font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  onClick={onClose}
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                  title="Fechar (ESC)"
                 >
-                  Editar Cargo / Valor
+                  <X className="h-4 w-4" />
                 </button>
-              )}
+              </div>
             </div>
+
+            {/* Alerta de Feedback de Salvamento */}
+            {saveDetailsFeedback && (
+              <div className="rounded-md bg-[#0c2b1c] border border-[#14d06e]/40 p-2.5 text-xs font-medium text-[#14d06e]">
+                ✓ {saveDetailsFeedback}
+              </div>
+            )}
+
+            {/* FORMULÁRIO DE EDIÇÃO DIRETA DAS INFORMAÇÕES */}
+            {isEditingDetails ? (
+              <div className="rounded-xl border border-[#14d06e]/30 bg-[#121212] p-4 space-y-3.5 ring-1 ring-[#14d06e]/15 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-2">
+                  <div className="flex items-center gap-2">
+                    <Edit2 className="size-3.5 text-[#14d06e]" />
+                    <span className="text-xs font-semibold text-white">
+                      Editar Informações Cadastrais do Lead
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-zinc-400">
+                    Salva no PostgreSQL e reflete no Kanban
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                      Empresa / Razão Social
+                    </label>
+                    <input
+                      type="text"
+                      value={editCompanyName}
+                      onChange={(e) => setEditCompanyName(e.target.value)}
+                      placeholder="Ex: Sempre Serralheria"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                      Contato / Decisor (Pessoa)
+                    </label>
+                    <input
+                      type="text"
+                      value={editContactPerson}
+                      onChange={(e) => setEditContactPerson(e.target.value)}
+                      placeholder="Ex: Marcos (Comprador)"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                      E-mail de Contato
+                    </label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      placeholder="contato@sempreserralheria.com.br"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                      WhatsApp / Telefone
+                    </label>
+                    <input
+                      type="text"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="Ex: (19) 93395-1795"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                      Cargo / Função
+                    </label>
+                    <input
+                      type="text"
+                      value={editRoleTitle}
+                      onChange={(e) => setEditRoleTitle(e.target.value)}
+                      placeholder="Ex: Comprador / Serralheiro"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                      Valor Estimado (R$)
+                    </label>
+                    <input
+                      type="text"
+                      value={editEstimatedValue}
+                      onChange={(e) => setEditEstimatedValue(e.target.value)}
+                      placeholder="Ex: R$ 25.000,00"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#2e2e2e]">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDetails(false)}
+                    className="rounded-md border border-[#2e2e2e] bg-[#0d0d0d] px-3 py-1.5 text-xs text-zinc-400 hover:text-white cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingDetails}
+                    onClick={handleSaveLeadDetails}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] font-semibold px-4 py-1.5 text-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingDetails ? (
+                      <span>Salvando...</span>
+                    ) : (
+                      <>
+                        <Check className="size-3.5" />
+                        <span>Salvar Informações</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Identificação Principal do Lead (Modo Leitura com Edição Rápida) */}
+                <div>
+                  <h2 className="text-xl font-bold text-white tracking-tight">
+                    {editCompanyName || parsed.company || parsed.name}
+                  </h2>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
+                    <User className="h-3.5 w-3.5 text-[#14d06e]" />
+                    <span className="font-semibold text-zinc-200">
+                      {editContactPerson
+                        ? `Contato: ${editContactPerson}`
+                        : parsed.name && parsed.name !== parsed.company
+                        ? `Contato: ${parsed.name}`
+                        : "Contato não definido (clique em Editar Dados)"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Grid Operacional: Cargo, Valor Estimado e Dono da Conta */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Cargo / Posição */}
+                  <div
+                    onClick={() => setIsEditingDetails(true)}
+                    className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1 hover:border-white/30 transition-colors cursor-pointer group"
+                    title="Clique para editar"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                        Cargo / Função
+                      </span>
+                      <UserCheck className="h-3.5 w-3.5 text-zinc-400 group-hover:text-white" />
+                    </div>
+                    <div className="text-xs font-mono font-medium text-white truncate">
+                      {editRoleTitle || roleTitle || "A definir"}
+                    </div>
+                  </div>
+
+                  {/* Valor Estimado do Contrato */}
+                  <div
+                    onClick={() => setIsEditingDetails(true)}
+                    className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1 hover:border-white/30 transition-colors cursor-pointer group"
+                    title="Clique para editar"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                        Valor Estimado
+                      </span>
+                      <Coins className="h-3.5 w-3.5 text-accent" />
+                    </div>
+                    <div className="text-xs font-mono font-bold text-accent truncate">
+                      {editEstimatedValue || estimatedValue || "A Definir"}
+                    </div>
+                  </div>
+
+                  {/* Dono da Conta (Silo de Propriedade) */}
+                  <div className="rounded-lg border border-white/10 bg-black/30 p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                        Proprietário
+                      </span>
+                      <User className="h-3.5 w-3.5 text-zinc-400" />
+                    </div>
+                    <select
+                      value={ownerId}
+                      onChange={(e) => handleOwnerSelect(e.target.value)}
+                      className="w-full rounded border border-white/10 bg-[#0A0A0A] px-2 py-1 text-xs text-white font-mono focus:border-white/30 focus:outline-none cursor-pointer"
+                    >
+                      {operators.map((op) => (
+                        <option key={op.id} value={op.id} className="bg-[#0A0A0A] text-white">
+                          {op.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Contatos Rápidos (E-mail e WhatsApp com botão direto) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-zinc-400 pt-1">
+                  {editEmail ? (
+                    <div className="flex items-center justify-between rounded border border-white/10 bg-black/20 p-2 text-white">
+                      <a
+                        href={`mailto:${editEmail}`}
+                        className="flex items-center gap-1.5 truncate text-white hover:underline"
+                        title="Enviar e-mail"
+                      >
+                        <Mail className="h-3 w-3 text-zinc-400 shrink-0" />
+                        <span className="truncate">{editEmail}</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingDetails(true)}
+                        className="text-zinc-500 hover:text-white ml-1 p-0.5"
+                        title="Editar e-mail"
+                      >
+                        <Edit2 className="size-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDetails(true)}
+                      className="flex items-center gap-1.5 rounded border border-dashed border-[#2e2e2e] bg-black/20 p-2 text-zinc-400 hover:text-white hover:border-white/30 transition-colors cursor-pointer text-left"
+                    >
+                      <Mail className="h-3 w-3 text-zinc-500 shrink-0" />
+                      <span>+ Inserir E-mail</span>
+                    </button>
+                  )}
+
+                  {editPhone ? (
+                    <div className="flex items-center justify-between rounded border border-white/10 bg-black/20 p-2 text-white">
+                      <a
+                        href={`tel:${editPhone}`}
+                        className="flex items-center gap-1.5 truncate text-white hover:underline"
+                        title="Ligar"
+                      >
+                        <Phone className="h-3 w-3 text-zinc-400 shrink-0" />
+                        <span className="truncate">{editPhone}</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingDetails(true)}
+                        className="text-zinc-500 hover:text-white ml-1 p-0.5"
+                        title="Editar telefone"
+                      >
+                        <Edit2 className="size-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingDetails(true)}
+                      className="flex items-center gap-1.5 rounded border border-dashed border-[#2e2e2e] bg-black/20 p-2 text-zinc-400 hover:text-white hover:border-white/30 transition-colors cursor-pointer text-left"
+                    >
+                      <Phone className="h-3 w-3 text-zinc-500 shrink-0" />
+                      <span>+ Inserir WhatsApp / Telefone</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Seletor Rápido de Estágio do Funil */}
             <div className="rounded-lg border border-white/10 bg-black/20 p-3 space-y-2">
@@ -662,28 +913,6 @@ export function LeadDetailsSheet({
                   <span>Fechado</span>
                 </button>
               </div>
-            </div>
-
-            {/* Contatos Rápidos */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono text-zinc-400">
-              {lead.leadEmail && (
-                <a
-                  href={`mailto:${lead.leadEmail}`}
-                  className="flex items-center gap-1.5 truncate rounded border border-white/10 bg-black/20 p-2 text-white hover:border-white/20 transition-colors"
-                >
-                  <Mail className="h-3 w-3 text-zinc-400 shrink-0" />
-                  <span className="truncate">{lead.leadEmail}</span>
-                </a>
-              )}
-              {lead.leadPhone && (
-                <a
-                  href={`tel:${lead.leadPhone}`}
-                  className="flex items-center gap-1.5 truncate rounded border border-white/10 bg-black/20 p-2 text-white hover:border-white/20 transition-colors"
-                >
-                  <Phone className="h-3 w-3 text-zinc-400 shrink-0" />
-                  <span className="truncate">{lead.leadPhone}</span>
-                </a>
-              )}
             </div>
           </div>
 
