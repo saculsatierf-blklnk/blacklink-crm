@@ -1184,6 +1184,7 @@ export function GoogleSheetsLeadHunter({
   const [copiedTable, setCopiedTable] = useState(false);
   const [newTabModalOpen, setNewTabModalOpen] = useState(false);
   const [newTabName, setNewTabName] = useState("");
+  const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
 
   const isWriteSyncConfigured = Boolean(
     isValidAppsScriptUrl(webhookUrl) || googleAccessToken.trim()
@@ -3212,13 +3213,14 @@ export function GoogleSheetsLeadHunter({
       )}
 
       {/* =====================================================================
-          ABA: PLANILHA & CAPTAÇÃO (MÚLTIPLAS PLANILHAS + SELEÇÃO P/ KANBAN + SYNC)
+          ABA: PLANILHA & CAPTAÇÃO (VISUAL ULTRA-LIMPO IRVO.COM.BR)
          ===================================================================== */}
       {activeWorkspaceTab === "planilha" && (
-        <div className="space-y-4">
-          {/* 1. Barra de Múltiplas Planilhas + Conexão Direta Google Sheets */}
-          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3.5 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-3">
+        <div className="space-y-3">
+          {/* BARRA SUPERIOR ÚNICA: SELETOR DE PLANILHAS + ABAS + AÇÕES DIRETAS */}
+          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 space-y-2.5">
+            {/* Linha 1: Seleção de Planilhas + Status de Sincronização e Captação */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-2.5">
               <div className="flex items-center gap-1.5 overflow-x-auto">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
                   Planilhas:
@@ -3257,81 +3259,23 @@ export function GoogleSheetsLeadHunter({
                 <button
                   type="button"
                   onClick={() => setNewSpreadsheetModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer shrink-0"
                 >
                   <Plus className="size-3.5 text-[#14d06e]" />
                   <span>Nova Planilha</span>
                 </button>
               </div>
 
+              {/* Ações da Planilha: Sincronizar, Abrir no Google e Captar */}
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowInlineWriteSetup((v) => !v)}
-                  className={`inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-semibold cursor-pointer ${
-                    isWriteSyncConfigured
-                      ? "bg-[#0c2b1c] text-[#14d06e]"
-                      : "bg-[#2b2410] text-[#e8c267] ring-1 ring-[#e8c267]/40"
-                  }`}
+                  disabled={isSyncingSheets}
+                  onClick={() => handleSyncToGoogleSheets()}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
                 >
-                  <span
-                    className={`size-1.5 rounded-full ${
-                      isWriteSyncConfigured ? "bg-[#14d06e]" : "bg-[#e8c267]"
-                    }`}
-                  />
-                  {isWriteSyncConfigured
-                    ? "Gravação Bidirecional Google Sheets Ativa"
-                    : "Modo Somente Leitura · Clique p/ Ativar Gravação no Sheets"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowInlineWriteSetup((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-semibold text-[#7fa9f7] cursor-pointer"
-                >
-                  <Link2 className="size-3.5" />
-                  <span>
-                    {isWriteSyncConfigured
-                      ? "Configurar Sincronização"
-                      : "Ativar Gravação Direta"}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Linha de Link Direto do Google Sheets da Planilha Ativa */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-1.5">
-                <Link2 className="size-3.5 text-[#afafaf] shrink-0" />
-                <input
-                  type="text"
-                  value={sheetUrl}
-                  onChange={(e) => handleUpdateActiveSheetUrl(e.target.value)}
-                  placeholder={`Cole aqui o link real do Google Sheets para "${sheetTitle}" (https://docs.google.com/spreadsheets/d/...)`}
-                  className="w-full bg-transparent text-xs text-white placeholder:text-[#757575] focus:outline-none"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                <a
-                  href="https://sheets.new"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Cria uma planilha em branco diretamente na sua conta Google e abre em nova guia"
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors"
-                >
-                  <Plus className="size-3.5 text-[#14d06e]" />
-                  <span>Criar no Google Sheets</span>
-                </a>
-
-                <button
-                  type="button"
-                  disabled={isReadingSheets}
-                  onClick={handleReadFromGoogleSheets}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
-                >
-                  <CloudDownload className="size-3.5 text-[#afafaf]" />
-                  <span>{isReadingSheets ? "Lendo..." : "Ler Sheets"}</span>
+                  <RefreshCw className={`size-3.5 text-[#14d06e] ${isSyncingSheets ? "animate-spin" : ""}`} />
+                  <span>{isSyncingSheets ? "Sincronizando..." : "Sincronizar Sheets"}</span>
                 </button>
 
                 {isRealGoogleSheetUrl(sheetUrl) ? (
@@ -3339,225 +3283,38 @@ export function GoogleSheetsLeadHunter({
                     href={sheetUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-[#afafaf] hover:text-white"
                   >
-                    <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
-                    <span>Abrir Google Sheets</span>
-                    <ExternalLink className="size-3 text-[#757575]" />
+                    <ExternalLink className="size-3.5 text-[#7fa9f7]" />
+                    <span>Abrir Google Sheets ↗</span>
                   </a>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowInlineWriteSetup(true)}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-[#e8c267] transition-colors cursor-pointer"
+                    onClick={() => onWorkspaceTabChange?.("integracao")}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#2b2410] ring-1 ring-[#e8c267]/40 px-3 py-1.5 text-xs font-semibold text-[#e8c267] cursor-pointer"
                   >
-                    <FileSpreadsheet className="size-3.5" />
+                    <Link2 className="size-3.5" />
                     <span>Conectar Google Sheets</span>
                   </button>
                 )}
-              </div>
-            </div>
 
-            {/* PAINEL INLINE DE ATIVAÇÃO DE GRAVAÇÃO DIRETA NO GOOGLE SHEETS (Visível quando a escrita ainda não foi ativada ou sob demanda) */}
-            {(!isWriteSyncConfigured || showInlineWriteSetup) && (
-              <div className="rounded-lg bg-[#1a1a1a] ring-1 ring-[#e8c267]/40 p-3.5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold text-white">
-                      ⚡ Inserir todas as {tabs.length} abas ({tabs.join(", ")}) e {rows.filter((r) => r.empresa.trim()).length} leads direto na sua planilha "{sheetTitle}" do Google
-                    </p>
-                    <p className="text-[11px] text-[#afafaf] mt-0.5">
-                      Você <strong>não precisa implantar Web App nem copiar nenhuma URL</strong>! Basta copiar o código abaixo (já vem com todas as suas {tabs.length} abas e leads embutidos) e clicar em <strong>▷ Executar</strong> dentro da planilha:
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowInlineWriteSetup(false)}
-                    className="text-xs text-[#afafaf] hover:text-white cursor-pointer"
-                  >
-                    Fechar
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
-                  {/* MÉTODO PRINCIPAL (ZERO URL): Copiar Código -> Colar em Apps Script -> Clicar Executar */}
-                  <div className="lg:col-span-8 rounded-md bg-[#0d0d0d] ring-1 ring-[#14d06e]/40 p-3 flex flex-col justify-between gap-2.5">
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#14d06e]">
-                        ✦ Passo Único (Sem URL · 100% Garantido)
-                      </span>
-                      <p className="text-xs text-white leading-relaxed">
-                        <strong>1.</strong> Clique no botão verde ao lado para copiar o código com suas <strong>{tabs.length} abas</strong>.<br />
-                        <strong>2.</strong> Na sua planilha <strong>{sheetTitle}</strong> aberta no Google, clique no menu superior <strong>Extensões &rarr; Apps Script</strong>, apague o que estiver lá, cole o código, salve (Ctrl+S) e clique apenas no botão <strong>▷ Executar</strong> no topo!
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleCopyAppsScriptCode}
-                        className="inline-flex items-center justify-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] px-4 py-2 text-xs font-semibold cursor-pointer"
-                      >
-                        {copiedScript ? (
-                          <>
-                            <Check className="size-3.5" />
-                            <span>Código Copiado! Agora clique em "▷ Executar" no Apps Script</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="size-3.5" />
-                            <span>
-                              1. Copiar Código Sincronizador (Com as {tabs.length} Abas e {rows.filter((r) => r.empresa.trim()).length} Leads)
-                            </span>
-                          </>
-                        )}
-                      </button>
-
-                      {isRealGoogleSheetUrl(sheetUrl) && (
-                        <a
-                          href={sheetUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white"
-                        >
-                          <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
-                          <span>2. Abrir Planilha "{sheetTitle}"</span>
-                          <ExternalLink className="size-3 text-[#757575]" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Opção Secundária: Login Google OAuth ou URL opcional de Web App */}
-                  <div className="lg:col-span-4 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 flex flex-col justify-between gap-2">
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-semibold text-[#7fa9f7]">
-                        Alternativa · Login Google ou Web App
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAuthorizeGoogleSheetsPopup}
-                        className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-1.5 text-xs font-semibold cursor-pointer"
-                      >
-                        <Globe className="size-3.5" />
-                        <span>Autorizar com Google (1 Clique)</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 pt-1 border-t border-[#2e2e2e]">
-                      <input
-                        type="text"
-                        value={webhookUrl}
-                        onChange={(e) => handleWebhookInputChange(e.target.value)}
-                        placeholder="Opcional: URL script.google.com/.../exec"
-                        className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1 text-[11px] text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                      />
-                      {isValidAppsScriptUrl(webhookUrl) && (
-                        <button
-                          type="button"
-                          disabled={isSyncingSheets}
-                          onClick={() => handleSyncToGoogleSheets(webhookUrl)}
-                          className="inline-flex items-center justify-center gap-1 rounded-md bg-white text-[#0d0d0d] px-2.5 py-1 text-[11px] font-semibold shrink-0 cursor-pointer"
-                        >
-                          <Send className="size-3" />
-                          <span>Enviar</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* 2. Barra Compacta de Captação de Leads por Setor */}
-          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-12 border-b border-[#2e2e2e]">
-              <div className="md:col-span-2 p-3.5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1">
-                <label className="block text-[11px] font-medium text-[#afafaf]">
-                  Minha empresa
-                </label>
-                <input
-                  type="text"
-                  value={myCompany}
-                  onChange={(e) => setMyCompany(e.target.value)}
-                  placeholder="Gofer Metais"
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1.5 text-xs text-white font-semibold placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div className="md:col-span-3 p-3.5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1">
-                <label className="block text-[11px] font-medium text-[#afafaf]">
-                  Site institucional
-                </label>
-                <input
-                  type="text"
-                  value={representedWebsite}
-                  onChange={(e) => setRepresentedWebsite(e.target.value)}
-                  placeholder="https://gofermetais.com.br"
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1.5 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div className="md:col-span-4 p-3.5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1">
-                <label className="block text-[11px] font-medium text-[#afafaf]">
-                  Setor alvo de prospecção (abastece a aba ativa)
-                </label>
-                <input
-                  type="text"
-                  value={targetSegment}
-                  onChange={(e) => setTargetSegment(e.target.value)}
-                  placeholder="Casas Modulares, Fachadas, Esquadrias..."
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 py-1.5 text-xs text-white font-semibold placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              <div className="md:col-span-1 p-3.5 border-b md:border-b-0 md:border-r border-[#2e2e2e] space-y-1">
-                <label className="block text-[11px] font-medium text-[#afafaf]">
-                  Região
-                </label>
-                <select
-                  value={targetRegion}
-                  onChange={(e) => setTargetRegion(e.target.value)}
-                  className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2 py-1.5 text-xs text-white focus:ring-white focus:outline-none"
-                >
-                  <option value="Brasil">BR</option>
-                  <option value="São Paulo SP">SP</option>
-                  <option value="Santa Catarina SC">SC</option>
-                  <option value="Paraná PR">PR</option>
-                  <option value="Minas Gerais MG">MG</option>
-                  <option value="Rio Grande do Sul RS">RS</option>
-                  <option value="Espírito Santo ES">ES</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2 p-3.5 flex items-end">
                 <button
                   type="button"
-                  disabled={isExtracting}
-                  onClick={handleExtractLeads}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-white hover:bg-white/90 disabled:opacity-50 text-[#0d0d0d] font-semibold px-3 py-2 text-xs transition-colors cursor-pointer"
+                  onClick={() => setIsCaptureModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
                 >
-                  {isExtracting ? (
-                    <>
-                      <RefreshCw className="size-3.5 animate-spin" />
-                      <span>Captando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Search className="size-3.5" />
-                      <span>Captar Leads</span>
-                    </>
-                  )}
+                  <Search className="size-3.5" />
+                  <span>+ Captar Novos Leads</span>
                 </button>
               </div>
             </div>
 
-            {/* Linha de Abas da Planilha Ativa */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-[#000000]">
+            {/* Linha 2: Abas de Setores da Planilha + Ação Principal Enviar ao Kanban */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
               <div className="flex items-center gap-1.5 overflow-x-auto">
-                <span className="text-[11px] font-medium text-[#afafaf] mr-1 shrink-0">
-                  Abas de {sheetTitle}:
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
+                  Abas:
                 </span>
                 {tabs.map((tab) => {
                   const isCurrent = tab === activeTab;
@@ -3597,35 +3354,8 @@ export function GoogleSheetsLeadHunter({
                 </button>
               </div>
 
-              <div className="text-[11px] text-[#afafaf]">
-                Marque os leads abaixo que você decidiu começar e clique em{" "}
-                <strong className="text-white">Enviar para o Kanban</strong>
-              </div>
-            </div>
-          </section>
-
-          {/* 3. Tabela Data Warehouse com Seleção de Leads para o Kanban */}
-          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[#2e2e2e]">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex size-7 items-center justify-center rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-white">
-                  <FileSpreadsheet className="size-3.5" />
-                </span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={sheetTitle}
-                    onChange={(e) => handleUpdateActiveSheetTitle(e.target.value)}
-                    className="font-semibold text-sm text-white bg-transparent border border-transparent hover:border-[#2e2e2e] focus:border-white focus:bg-[#1a1a1a] rounded px-1.5 py-0.5 focus:outline-none w-36"
-                  />
-                  <span className="inline-flex h-5 items-center rounded-full bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2.5 text-[11px] font-semibold text-[#afafaf] tabular-nums">
-                    {activeTabRows.length} empresas em {activeTab}
-                  </span>
-                </div>
-              </div>
-
+              {/* Botão Principal: Enviar ao Kanban + Ações da tabela */}
               <div className="flex flex-wrap items-center gap-1.5">
-                {/* Botão Principal: Enviar leads decididos para o Kanban */}
                 <button
                   type="button"
                   disabled={isImportingKanban}
@@ -3636,7 +3366,7 @@ export function GoogleSheetsLeadHunter({
                     }
                     handleSendSelectedToKanban();
                   }}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
                     selectedRowIds.length > 0
                       ? "bg-[#14d06e] text-[#0d0d0d] hover:bg-[#14d06e]/90"
                       : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-white hover:bg-[#262626]"
@@ -3685,27 +3415,32 @@ export function GoogleSheetsLeadHunter({
                   className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
                 >
                   <Download className="size-3.5 text-[#afafaf]" />
-                  <span>Exportar .xls</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSyncingSheets}
-                  onClick={() => handleSyncToGoogleSheets()}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
-                >
-                  <Send className="size-3.5" />
-                  <span>
-                    {isSyncingSheets
-                      ? "Sincronizando..."
-                      : "Sincronizar Google Sheets"}
-                  </span>
+                  <span>.xls</span>
                 </button>
               </div>
             </div>
+          </section>
 
-            {/* Grade de Dados com Altura Controlada */}
-            <div className="overflow-x-auto max-h-[calc(100vh-350px)] min-h-[420px] overflow-y-auto">
+          {/* TABELA DE DADOS IMEDIATA */}
+          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-[#2e2e2e]">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="size-3.5 text-[#afafaf]" />
+                <span className="font-semibold text-xs text-white">
+                  {sheetTitle} &middot; {activeTab}
+                </span>
+                <span className="inline-flex h-5 items-center rounded-full bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2 text-[10px] font-semibold text-[#afafaf] tabular-nums">
+                  {activeTabRows.length} empresas
+                </span>
+              </div>
+
+              <div className="text-[11px] text-[#afafaf]">
+                Selecione as empresas para iniciar abordagem ou clique no WhatsApp para abrir direto.
+              </div>
+            </div>
+
+            {/* Grade de Dados com Altura Controlada e Máximo Espaço Vertical */}
+            <div className="overflow-x-auto max-h-[calc(100vh-230px)] min-h-[520px] overflow-y-auto">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 z-20 bg-[#1a1a1a] border-b border-[#2e2e2e]">
                   <tr className="text-xs font-semibold text-[#afafaf]">
@@ -5469,6 +5204,148 @@ export function GoogleSheetsLeadHunter({
           </div>
         </div>
       )}
+
+      {/* MODAL PARA CAPTAR NOVOS LEADS (ESTÉTICA IRVO.COM.BR) */}
+      {isCaptureModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] p-6 text-white space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-3">
+              <div className="flex items-center gap-2">
+                <Search className="size-4 text-[#14d06e]" />
+                <h3 className="text-sm font-semibold text-white">
+                  Captar Novos Leads para "{activeTab}"
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCaptureModalOpen(false)}
+                className="text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 pt-1">
+              <div>
+                <label className="block text-[11px] font-medium text-[#afafaf] mb-1">
+                  Nicho / Segmento
+                </label>
+                <input
+                  type="text"
+                  value={targetSegment}
+                  onChange={(e) => setTargetSegment(e.target.value)}
+                  placeholder="Ex: Serralherias e estruturas metálicas"
+                  className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#555] focus:ring-white focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-[#afafaf] mb-1">
+                    Região
+                  </label>
+                  <select
+                    value={targetRegion}
+                    onChange={(e) => setTargetRegion(e.target.value)}
+                    className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-2.5 py-2 text-xs text-white focus:ring-white focus:outline-none"
+                  >
+                    <option value="Brasil">Todo o Brasil (BR)</option>
+                    <option value="São Paulo SP">São Paulo (SP)</option>
+                    <option value="Santa Catarina SC">Santa Catarina (SC)</option>
+                    <option value="Paraná PR">Paraná (PR)</option>
+                    <option value="Minas Gerais MG">Minas Gerais (MG)</option>
+                    <option value="Rio Grande do Sul RS">Rio Grande do Sul (RS)</option>
+                    <option value="Espírito Santo ES">Espírito Santo (ES)</option>
+                    <option value="Rio de Janeiro RJ">Rio de Janeiro (RJ)</option>
+                    <option value="Bahia BA">Bahia (BA)</option>
+                    <option value="Goiás GO">Goiás (GO)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-[#afafaf] mb-1">
+                    Lote de Leads
+                  </label>
+                  <select
+                    value={batchLimit}
+                    onChange={(e) => setBatchLimit(Number(e.target.value))}
+                    className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-2.5 py-2 text-xs text-white focus:ring-white focus:outline-none"
+                  >
+                    <option value={10}>10 empresas</option>
+                    <option value={20}>20 empresas</option>
+                    <option value={30}>30 empresas</option>
+                    <option value={50}>50 empresas</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-[#afafaf] mb-1">
+                    Minha Empresa (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={myCompany}
+                    onChange={(e) => setMyCompany(e.target.value)}
+                    placeholder="Sua marca"
+                    className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#555] focus:ring-white focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-[#afafaf] mb-1">
+                    Site Representado (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={representedWebsite}
+                    onChange={(e) => setRepresentedWebsite(e.target.value)}
+                    placeholder="https://suaempresa.com"
+                    className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#555] focus:ring-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-[#afafaf] leading-relaxed pt-1">
+                Os leads encontrados serão salvos na aba <strong className="text-white">"{activeTab}"</strong> da planilha <strong className="text-white">"{sheetTitle}"</strong> e sincronizados instantaneamente.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#2e2e2e]">
+              <button
+                type="button"
+                onClick={() => setIsCaptureModalOpen(false)}
+                className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-4 py-2 text-xs font-semibold text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isExtracting || !targetSegment.trim()}
+                onClick={async () => {
+                  await handleExtractLeads();
+                  setIsCaptureModalOpen(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white hover:bg-white/90 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+              >
+                {isExtracting ? (
+                  <>
+                    <RefreshCw className="size-3.5 animate-spin" />
+                    <span>Captando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="size-3.5" />
+                    <span>Captar {batchLimit} Leads</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
