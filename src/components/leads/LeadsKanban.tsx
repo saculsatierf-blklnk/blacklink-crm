@@ -523,6 +523,15 @@ export function LeadsKanban({
               />
 
               <button
+                type="button"
+                onClick={() => setActiveWorkspaceTab("planilha")}
+                className="flex items-center gap-1.5 rounded-md bg-[#14d06e] px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] hover:bg-[#14d06e]/90 transition-colors cursor-pointer shadow-sm"
+              >
+                <Sparkles className="size-3.5" />
+                <span>+ Captar Leads (IA / Planilha)</span>
+              </button>
+
+              <button
                 data-tour="kanban-new-lead"
                 type="button"
                 onClick={() => setIsAddModalOpen(true)}

@@ -40,34 +40,34 @@ export interface VendasSidebarTabItem {
 
 export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
   {
-    id: "integracao",
-    label: "Conectar Google Sheets",
-    shortLabel: "Conexão",
-    icon: Terminal,
-  },
-  {
-    id: "nichos",
-    label: "Estudo & Mapa de Setores",
-    shortLabel: "Setores",
-    icon: Compass,
-  },
-  {
-    id: "planilha",
-    label: "Planilha & Captação",
-    shortLabel: "Planilha",
-    icon: FileSpreadsheet,
-  },
-  {
     id: "kanban",
     label: "Pipeline Kanban",
     shortLabel: "Kanban",
     icon: KanbanIcon,
   },
   {
+    id: "planilha",
+    label: "Captação & Planilhas (IA / Diogo)",
+    shortLabel: "Captação",
+    icon: FileSpreadsheet,
+  },
+  {
+    id: "nichos",
+    label: "Setores de Aço (Gofer)",
+    shortLabel: "Setores",
+    icon: Compass,
+  },
+  {
     id: "cadencia",
-    label: "Cadência & Catálogo PDF",
+    label: "Cadência & E-mails",
     shortLabel: "Cadência",
     icon: Calendar,
+  },
+  {
+    id: "integracao",
+    label: "Conectar Google Sheets",
+    shortLabel: "Conexão",
+    icon: Terminal,
   },
 ];
 

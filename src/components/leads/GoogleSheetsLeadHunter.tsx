@@ -1096,6 +1096,66 @@ export type VendasWorkspaceTab =
   | "kanban"
   | "integracao";
 
+export interface TargetSectorPreset {
+  id: string;
+  label: string;
+  segment: string;
+  tab: string;
+  badge: string;
+  desc: string;
+}
+
+export const GOFER_TARGET_SECTORS: TargetSectorPreset[] = [
+  {
+    id: "serralherias",
+    label: "Serralherias & Estruturas",
+    segment: "Serralherias e Estruturas Metálicas",
+    tab: "Serralherias",
+    badge: "Alta Demanda",
+    desc: "Perfis, tubos industriais quadrados e redondos, chapas de ferro",
+  },
+  {
+    id: "portoes",
+    label: "Portões & Fechamentos",
+    segment: "Fábricas de Portões e Grades Metálicas",
+    tab: "Portões e Grades",
+    badge: "Giro Rápido",
+    desc: "Tubos galvanizados, chapas perfuradas e búzios",
+  },
+  {
+    id: "casas_modulares",
+    label: "Casas Modulares & Galpões",
+    segment: "Casas Modulares, Containers e Galpões Pré-moldados",
+    tab: "Casas Modulares",
+    badge: "Volume Alto",
+    desc: "Vigas I/W, perfis U enrijecidos, chapas grossas e telhas",
+  },
+  {
+    id: "moveis_tubulares",
+    label: "Móveis Tubulares",
+    segment: "Indústria Moveleira e Móveis Tubulares de Design",
+    tab: "Móveis Tubulares",
+    badge: "Margem Boa",
+    desc: "Tubos finos parede 1,20 / 1,50mm com acabamento liso",
+  },
+  {
+    id: "esquadrias",
+    label: "Esquadrias & Fachadas",
+    segment: "Esquadrias Metálicas e Fachadas Comerciais",
+    tab: "Fachadas",
+    badge: "Construção Civil",
+    desc: "Tubos de precisão e chapas dobradas",
+  },
+  {
+    id: "corte_dobra",
+    label: "Corte, Dobra & Calhas",
+    segment: "Serviços de Corte e Dobra de Chapas de Aço e Calhas",
+    tab: "Corte e Dobra",
+    badge: "Revenda B2B",
+    desc: "Bobinas, chapas galvanizadas e pretas sob medida",
+  },
+];
+
 interface GoogleSheetsLeadHunterProps {
   onLeadImportedToKanban?: (newLead: Lead) => void;
   companyName?: string;
@@ -1113,6 +1173,14 @@ export function GoogleSheetsLeadHunter({
   currentUserId,
   currentCompanyId,
 }: GoogleSheetsLeadHunterProps) {
+  // Estados de Fluxo Direto (Modo IA Hunter 1-Clique & Modo Planilha do Diogo)
+  const [activeDirectMode, setActiveDirectMode] = useState<"ai_hunter" | "diogo_sheet">("ai_hunter");
+  const [quickPasteUrl, setQuickPasteUrl] = useState("");
+  const [isQuickImporting, setIsQuickImporting] = useState(false);
+  const [isAiHuntingAndSending, setIsAiHuntingAndSending] = useState(false);
+  const [selectedQuickNiche, setSelectedQuickNiche] = useState("Serralherias e Estruturas Metálicas");
+  const [quickLocation, setQuickLocation] = useState("Brasil");
+
   // Gestão de Múltiplas Planilhas (Ex: "Leads", "Logística & Galpões", "Energia & Infra")
   const [spreadsheets, setSpreadsheets] =
     useState<ManagedSpreadsheet[]>(DEFAULT_SPREADSHEETS);
@@ -3133,6 +3201,243 @@ export function GoogleSheetsLeadHunter({
     }
   };
 
+  const handleSendAllTabToKanban = async () => {
+    const validRows = activeTabRows.filter((r) => r.empresa && r.empresa.trim());
+    if (validRows.length === 0) {
+      setFeedbackBanner({
+        type: "info",
+        text: `A aba "${activeTab}" não possui empresas com nome preenchido.`,
+      });
+      return;
+    }
+
+    setIsImportingKanban(true);
+    setFeedbackBanner({
+      type: "info",
+      text: `Adicionando todos os ${validRows.length} leads da aba "${activeTab}" ao Kanban...`,
+    });
+
+    try {
+      const importedIds: string[] = [];
+      for (const row of validRows) {
+        const createdLead = await importSingleRowToKanban(row);
+        if (createdLead) {
+          onLeadImportedToKanban?.(createdLead);
+          importedIds.push(row.id);
+        }
+      }
+      setKanbanSentRowIds((prev) =>
+        Array.from(new Set([...prev, ...importedIds]))
+      );
+      setSelectedRowIds([]);
+      setFeedbackBanner({
+        type: "success",
+        text: `✦ Todos os ${importedIds.length} leads da aba "${activeTab}" foram adicionados ao Pipeline Kanban!`,
+      });
+      onWorkspaceTabChange?.("kanban");
+    } finally {
+      setIsImportingKanban(false);
+    }
+  };
+
+  const handleAiHuntAndSendToKanban = async (customSector?: string, customTab?: string) => {
+    const sectorToHunt = customSector || selectedQuickNiche;
+    const tabToUse = customTab || sectorToHunt.split("&")[0].trim().substring(0, 30);
+    setIsAiHuntingAndSending(true);
+    setFeedbackBanner({
+      type: "info",
+      text: `⚡ Buscando empresas reais de "${sectorToHunt}" no Google...`,
+    });
+
+    try {
+      const res = await fetch("/api/crm/lead-extractor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          myCompany,
+          representedWebsite,
+          targetSegment: sectorToHunt,
+          targetRegion: quickLocation || "Brasil",
+          tabName: tabToUse,
+          limit: 10,
+          existingLeads: rows,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Erro ao buscar leads com IA no Google");
+      }
+
+      const extractedLeads: ExtractedSheetLead[] = (data.leads || []).map((lead: any) => ({
+        ...lead,
+        tab: tabToUse,
+        contato: formatPhoneBrDisplay(lead.contato) || lead.contato,
+        empresa: decodeHtmlEntities(lead.empresa),
+      }));
+
+      if (extractedLeads.length === 0) {
+        setFeedbackBanner({
+          type: "info",
+          text: `Nenhum novo lead inédito encontrado para "${sectorToHunt}". Tente outro setor ou região.`,
+        });
+        return;
+      }
+
+      // Garante que a aba existe na planilha do CRM
+      if (!tabs.includes(tabToUse)) {
+        const nextTabs = [...tabs, tabToUse];
+        setTabs(nextTabs);
+        setSpreadsheets((prev) =>
+          prev.map((s) =>
+            s.id === activeSpreadsheet.id ? { ...s, tabs: nextTabs } : s
+          )
+        );
+      }
+      setActiveTab(tabToUse);
+
+      // Mescla com rows existentes aplicando deduplicação
+      const dedup = deduplicateAndMergeLeads(rows, extractedLeads);
+      setRows(dedup.updatedExistingRows);
+
+      // Sincroniza em background com o Google Sheets se a URL estiver configurada
+      if (isRealGoogleSheetUrl(sheetUrl)) {
+        fetch("/api/crm/sheets-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sheetUrl,
+            webhookUrl,
+            googleAccessToken,
+            googleRefreshToken,
+            title: sheetTitle,
+            tabName: tabToUse,
+            leads: extractedLeads,
+            replaceAllInTab: false,
+          }),
+        }).catch(() => {});
+      }
+
+      // Insere DIRETAMENTE cada lead no Kanban e no banco PostgreSQL
+      const importedIds: string[] = [];
+      for (const lead of extractedLeads) {
+        if (!lead.empresa.trim()) continue;
+        const createdLead = await importSingleRowToKanban(lead);
+        if (createdLead) {
+          onLeadImportedToKanban?.(createdLead);
+          importedIds.push(lead.id);
+        }
+      }
+
+      setKanbanSentRowIds((prev) => Array.from(new Set([...prev, ...importedIds])));
+
+      setFeedbackBanner({
+        type: "success",
+        text: `✦ ${importedIds.length} novos leads de "${sectorToHunt}" encontrados no Google e ADICIONADOS ao Kanban!`,
+      });
+
+      // Redireciona imediatamente ao Pipeline Kanban!
+      onWorkspaceTabChange?.("kanban");
+    } catch (err: any) {
+      setFeedbackBanner({
+        type: "error",
+        text: `Erro na busca com IA: ${err?.message || "Tente novamente"}`,
+      });
+    } finally {
+      setIsAiHuntingAndSending(false);
+    }
+  };
+
+  const handleQuickImportSheetToKanban = async () => {
+    const rawUrl = quickPasteUrl.trim();
+    if (!rawUrl || !isRealGoogleSheetUrl(rawUrl)) {
+      setFeedbackBanner({
+        type: "error",
+        text: "Por favor, cole um link válido do Google Sheets (ex: https://docs.google.com/spreadsheets/d/...)",
+      });
+      return;
+    }
+
+    setIsQuickImporting(true);
+    setFeedbackBanner({
+      type: "info",
+      text: "📥 Lendo planilha do Diogo e descobrindo abas...",
+    });
+
+    try {
+      const res = await fetch(
+        `/api/crm/sheets-sync?sheetUrl=${encodeURIComponent(rawUrl)}&readAllTabs=true`
+      );
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(
+          data.error ||
+            "Não foi possível ler a planilha. Verifique se o compartilhamento no Google Sheets está como 'Qualquer pessoa com o link'."
+        );
+      }
+
+      const incomingRows: ExtractedSheetLead[] = (data.rows || []).map((r: any) => ({
+        ...r,
+        empresa: decodeHtmlEntities(r.empresa || ""),
+        contato: formatPhoneBrDisplay(r.contato || "") || r.contato || "",
+      }));
+
+      const cleanTitle = data.title || "Planilha Leads";
+      setSheetUrl(rawUrl);
+      setSheetTitle(cleanTitle);
+
+      const discoveredTabs =
+        Array.isArray(data.tabs) && data.tabs.length > 0 ? data.tabs : tabs;
+      setTabs(discoveredTabs);
+      setActiveTab(discoveredTabs[0] || "Geral");
+
+      setSpreadsheets((prev) =>
+        prev.map((s) =>
+          s.id === activeSpreadsheet.id
+            ? { ...s, title: cleanTitle, sheetUrl: rawUrl, tabs: discoveredTabs }
+            : s
+        )
+      );
+
+      // Mescla com rows existentes
+      const dedup = deduplicateAndMergeLeads(rows, incomingRows);
+      setRows(dedup.updatedExistingRows);
+
+      // Adiciona TODOS os leads com nome de empresa diretamente no Kanban
+      const validLeads = incomingRows.filter((r) => r.empresa && r.empresa.trim());
+      const importedIds: string[] = [];
+      for (const lead of validLeads) {
+        const createdLead = await importSingleRowToKanban(lead);
+        if (createdLead) {
+          onLeadImportedToKanban?.(createdLead);
+          importedIds.push(lead.id);
+        }
+      }
+
+      setKanbanSentRowIds((prev) =>
+        Array.from(new Set([...prev, ...importedIds]))
+      );
+
+      setFeedbackBanner({
+        type: "success",
+        text: `✦ ${importedIds.length} leads importados da planilha e ENVIADOS direto ao Kanban!`,
+      });
+
+      setQuickPasteUrl("");
+
+      // Redireciona imediatamente ao Pipeline Kanban!
+      onWorkspaceTabChange?.("kanban");
+    } catch (err: any) {
+      setFeedbackBanner({
+        type: "error",
+        text: `Erro ao importar planilha: ${err?.message || "Verifique o link e se está compartilhado."}`,
+      });
+    } finally {
+      setIsQuickImporting(false);
+    }
+  };
+
   const handleCreateTab = () => {
     const clean = newTabName.trim();
     if (!clean) return;
@@ -3217,6 +3522,189 @@ export function GoogleSheetsLeadHunter({
          ===================================================================== */}
       {activeWorkspaceTab === "planilha" && (
         <div className="space-y-3">
+          {/* =================================================================
+              PAINEL DE AÇÃO DIRETA: PROSPECÇÃO IA OU PLANILHA DO DIOGO (1 CLIQUE)
+             ================================================================= */}
+          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-4 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2e2e2e] pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-5 items-center rounded-full bg-[#0c2b1c] px-2 text-[10px] font-semibold text-[#14d06e]">
+                    FLUXO DIRETO
+                  </span>
+                  <h3 className="text-sm font-semibold text-white">
+                    Como você quer abastecer o seu Pipeline Kanban agora?
+                  </h3>
+                </div>
+                <p className="mt-0.5 text-xs text-[#afafaf]">
+                  Escolha o setor ideal para a IA buscar empresas no Google e mandar direto ao Kanban, OU cole a planilha que o Diogo te enviou.
+                </p>
+              </div>
+
+              {/* Seletor de Modo: IA no Google vs Planilha do Diogo */}
+              <div className="inline-flex p-1 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveDirectMode("ai_hunter")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeDirectMode === "ai_hunter"
+                      ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
+                      : "text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <Sparkles className="size-3.5" />
+                  <span>1. Buscar no Google com IA</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveDirectMode("diogo_sheet")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    activeDirectMode === "diogo_sheet"
+                      ? "bg-white text-[#0d0d0d] shadow-sm"
+                      : "text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <FileSpreadsheet className="size-3.5" />
+                  <span>2. Planilha do Diogo / Google Sheets</span>
+                </button>
+              </div>
+            </div>
+
+            {/* CONTEÚDO MODO 1: BUSCA COM IA NO GOOGLE -> KANBAN */}
+            {activeDirectMode === "ai_hunter" && (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-[#afafaf] uppercase tracking-wider mb-2">
+                    Selecione o setor alvo da Gofer Metais (Tubos, Chapas e Perfis de Aço):
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    {GOFER_TARGET_SECTORS.map((sec) => {
+                      const isSelected = selectedQuickNiche === sec.segment;
+                      return (
+                        <button
+                          key={sec.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedQuickNiche(sec.segment);
+                            setTargetSegment(sec.segment);
+                          }}
+                          className={`flex flex-col text-left p-2.5 rounded-lg ring-1 transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[#14d06e]/10 ring-[#14d06e] text-white"
+                              : "bg-[#1a1a1a] ring-[#2e2e2e] text-[#afafaf] hover:text-white hover:bg-[#262626]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={`text-[10px] font-semibold uppercase ${
+                                isSelected ? "text-[#14d06e]" : "text-[#757575]"
+                              }`}
+                            >
+                              {sec.badge}
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="size-3 text-[#14d06e]" />
+                            )}
+                          </div>
+                          <span className="mt-1 text-xs font-semibold text-white">
+                            {sec.label}
+                          </span>
+                          <span className="mt-1 text-[10px] text-[#afafaf] line-clamp-2 leading-tight">
+                            {sec.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Barra de ação rápida */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                  <div className="flex-1 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={selectedQuickNiche}
+                      onChange={(e) => setSelectedQuickNiche(e.target.value)}
+                      placeholder="Ou digite outro setor (ex: Serralherias em Campinas, Caldeiraria...)"
+                      className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={quickLocation}
+                      onChange={(e) => setQuickLocation(e.target.value)}
+                      placeholder="Região (ex: SP, PR, Brasil)"
+                      className="w-32 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isAiHuntingAndSending}
+                    onClick={() => handleAiHuntAndSendToKanban()}
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] transition-all cursor-pointer shadow-md shrink-0 disabled:opacity-50"
+                  >
+                    {isAiHuntingAndSending ? (
+                      <>
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        <span>Buscando no Google e Enviando ao Kanban...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" />
+                        <span>⚡ Buscar no Google &amp; Enviar Direto ao Kanban</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CONTEÚDO MODO 2: IMPORTAR PLANILHA DO DIOGO -> KANBAN */}
+            {activeDirectMode === "diogo_sheet" && (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={quickPasteUrl}
+                      onChange={(e) => setQuickPasteUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleQuickImportSheetToKanban();
+                      }}
+                      placeholder="Cole aqui o link da planilha compartilhada pelo Diogo (ex: https://docs.google.com/spreadsheets/d/...)"
+                      className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] pl-9 pr-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
+                    />
+                    <FileSpreadsheet className="size-4 text-[#afafaf] absolute left-3 top-2.5" />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isQuickImporting || !quickPasteUrl.trim()}
+                    onClick={handleQuickImportSheetToKanban}
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                  >
+                    {isQuickImporting ? (
+                      <>
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        <span>Lendo Planilha e Adicionando ao Kanban...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="size-3.5" />
+                        <span>📥 Carregar &amp; Adicionar Todos os Leads no Kanban</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-[#afafaf]">
+                  ✦ Lê todas as abas da planilha do Diogo, cadastra os leads no CRM e já envia tudo para o Kanban automaticamente.
+                </p>
+              </div>
+            )}
+          </section>
+
           {/* BARRA SUPERIOR ÚNICA: SELETOR DE PLANILHAS + ABAS + AÇÕES DIRETAS */}
           <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 space-y-2.5">
             {/* Linha 1: Seleção de Planilhas + Status de Sincronização e Captação */}
@@ -3434,8 +3922,23 @@ export function GoogleSheetsLeadHunter({
                 </span>
               </div>
 
-              <div className="text-[11px] text-[#afafaf]">
-                Selecione as empresas para iniciar abordagem ou clique no WhatsApp para abrir direto.
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={
+                    isImportingKanban ||
+                    activeTabRows.filter((r) => r.empresa.trim()).length === 0
+                  }
+                  onClick={handleSendAllTabToKanban}
+                  className="inline-flex items-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  <Kanban className="size-3.5" />
+                  <span>
+                    {isImportingKanban
+                      ? "Enviando ao Kanban..."
+                      : `📥 Adicionar TODOS os (${activeTabRows.filter((r) => r.empresa.trim()).length}) leads desta aba no Kanban →`}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -4643,6 +5146,20 @@ export function GoogleSheetsLeadHunter({
                       <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-[#2e2e2e] pt-4">
                         <button
                           type="button"
+                          disabled={isAiHuntingAndSending}
+                          onClick={() => handleAiHuntAndSendToKanban(activeStudy.niche, activeStudy.niche)}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-[#14d06e] hover:bg-[#14d06e]/90 px-4 py-2.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer shadow-md disabled:opacity-50"
+                        >
+                          <Sparkles className="size-3.5" />
+                          <span>
+                            {isAiHuntingAndSending
+                              ? "Captando e Enviando ao Kanban..."
+                              : `⚡ Captar este Setor com IA & Enviar ao Kanban →`}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => {
                             const updatedTabs = tabs.includes(activeStudy.niche)
                               ? tabs
@@ -4660,14 +5177,14 @@ export function GoogleSheetsLeadHunter({
                             onWorkspaceTabChange?.("planilha");
                             setFeedbackBanner({
                               type: "success",
-                              text: `✦ Aba "${activeStudy.niche}" adicionada em "${sheetTitle}"! Clique em 'Captar Leads' para abastecer 15–20 empresas deste setor.`,
+                              text: `✦ Aba "${activeStudy.niche}" adicionada em "${sheetTitle}"!`,
                             });
                           }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-white hover:bg-white/90 px-4 py-2.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
+                          className="inline-flex items-center justify-center gap-2 rounded-lg bg-white hover:bg-white/90 px-3.5 py-2.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
                         >
                           <Plus className="size-3.5" />
                           <span>
-                            Atacar na Planilha "{sheetTitle}" (Criar Aba &amp; Captar Leads) &rarr;
+                            Criar Aba na Planilha &rarr;
                           </span>
                         </button>
 

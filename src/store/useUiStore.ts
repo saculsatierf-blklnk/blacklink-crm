@@ -24,7 +24,7 @@ export const useUiStore = create<UiState>()(
     (set) => ({
       isSidebarCollapsed: false,
       isMobileSidebarOpen: false,
-      activeVendasTab: "integracao",
+      activeVendasTab: "kanban",
       toggleSidebar: () =>
         set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
       setSidebarCollapsed: (collapsed: boolean) =>
@@ -37,7 +37,7 @@ export const useUiStore = create<UiState>()(
         set({ activeVendasTab: tab }),
     }),
     {
-      name: "blacklink-ui-storage-v3",
+      name: "blacklink-ui-storage-v4",
       partialize: (state) => ({
         isSidebarCollapsed: state.isSidebarCollapsed,
         activeVendasTab: state.activeVendasTab,
