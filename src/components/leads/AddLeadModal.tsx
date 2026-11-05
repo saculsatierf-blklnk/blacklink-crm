@@ -113,9 +113,13 @@ export function AddLeadModal({
     }
   }, [defaultOwnerId]);
 
-  // Radar Anti-Colisão: Execução em tempo real com debounce de 350ms
+  // Radar Anti-Colisão Triplo: Execução em tempo real com debounce de 350ms (E-mail, Domínio e Telefone)
   useEffect(() => {
-    if (!email.trim() || !email.includes("@")) {
+    const cleanEmail = email.trim();
+    const cleanPhoneDigits = phoneNumber.replace(/\D/g, "");
+    const fullPhone = cleanPhoneDigits.length >= 8 ? `${selectedDdi} ${phoneNumber.trim()}` : undefined;
+
+    if ((!cleanEmail || !cleanEmail.includes("@")) && cleanPhoneDigits.length < 8) {
       setCollisionResult(null);
       setIsCheckingCollision(false);
       return;
@@ -124,7 +128,7 @@ export function AddLeadModal({
     setIsCheckingCollision(true);
     const timer = setTimeout(async () => {
       try {
-        const result = await checkLeadCollisionAction(email.trim(), companyId);
+        const result = await checkLeadCollisionAction(cleanEmail, companyId, fullPhone);
         setCollisionResult(result);
       } catch (err) {
         console.error("Falha no radar de colisão:", err);
@@ -134,7 +138,7 @@ export function AddLeadModal({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [email, companyId]);
+  }, [email, companyId, phoneNumber, selectedDdi]);
 
   if (!isOpen) return null;
 

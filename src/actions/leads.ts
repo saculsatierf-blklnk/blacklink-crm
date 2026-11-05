@@ -654,9 +654,9 @@ export async function checkLeadCollisionAction(
       domain && !GENERIC_FREEMAIL_DOMAINS.has(domain)
     );
 
-    // 0. Busca por Telefone / WhatsApp higienizado (se informado)
-    if (normalizedPhone.length >= 10) {
-      const phoneTail = normalizedPhone.slice(-8);
+    // 0. Busca por Telefone / WhatsApp higienizado (se informado com pelo menos 8 dígitos)
+    if (cleanPhoneDigits.length >= 8) {
+      const phoneTail = cleanPhoneDigits.slice(-8);
       const phoneMatches = await db
         .select({
           id: leads.id,
@@ -673,15 +673,16 @@ export async function checkLeadCollisionAction(
             ? and(ilike(leads.leadPhone, `%${phoneTail}%`), eq(leads.companyId, companyId))
             : ilike(leads.leadPhone, `%${phoneTail}%`)
         )
-        .limit(5);
+        .limit(10);
 
       const exactPhoneMatch = phoneMatches.find((m) => {
         const mDigits = (m.leadPhone || "").replace(/\D/g, "");
-        const mNorm =
-          mDigits.length === 10 || mDigits.length === 11
-            ? `55${mDigits}`
-            : mDigits;
-        return mNorm === normalizedPhone || mDigits.slice(-9) === cleanPhoneDigits.slice(-9);
+        if (mDigits.length < 8) return false;
+        // Tronco de 8 dígitos ou 9 dígitos idêntico indica a mesmíssima linha / WhatsApp
+        return (
+          mDigits.slice(-8) === cleanPhoneDigits.slice(-8) ||
+          (cleanPhoneDigits.length >= 9 && mDigits.slice(-9) === cleanPhoneDigits.slice(-9))
+        );
       });
 
       if (exactPhoneMatch) {

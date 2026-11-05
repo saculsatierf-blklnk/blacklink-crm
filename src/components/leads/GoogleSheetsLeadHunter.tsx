@@ -3157,6 +3157,11 @@ export function GoogleSheetsLeadHunter({
       if (res.success && res.lead) {
         return res.lead;
       }
+      // Se detectou colisão (mesmo telefone, e-mail ou domínio no CRM), NÃO cria duplicata
+      if (!res.success && res.error && res.error.toLowerCase().includes("colisão")) {
+        console.warn(`[Anti-Colisão] Lead "${row.empresa}" bloqueado: ${res.error}`);
+        return null;
+      }
       return optimisticLead;
     } catch {
       return optimisticLead;
@@ -3178,6 +3183,11 @@ export function GoogleSheetsLeadHunter({
           text: `✦ "${row.empresa}" enviado para o Pipeline Kanban!`,
         });
         onWorkspaceTabChange?.("kanban");
+      } else {
+        setFeedbackBanner({
+          type: "info",
+          text: `⚠️ Lead "${row.empresa}" já existe no Pipeline Kanban (travado pela barreira anti-colisão).`,
+        });
       }
     } finally {
       setIsImportingKanban(false);
@@ -3193,22 +3203,26 @@ export function GoogleSheetsLeadHunter({
     setIsImportingKanban(true);
     try {
       const importedIds: string[] = [];
+      let blockedCount = 0;
       for (const row of selectedRows) {
         const createdLead = await importSingleRowToKanban(row);
         if (createdLead) {
           onLeadImportedToKanban?.(createdLead);
           importedIds.push(row.id);
+        } else {
+          blockedCount++;
         }
       }
       setKanbanSentRowIds((prev) =>
         Array.from(new Set([...prev, ...importedIds]))
       );
       setSelectedRowIds([]);
+      const blockedMsg = blockedCount > 0 ? ` (${blockedCount} duplicatas bloqueadas por anti-colisão)` : "";
       setFeedbackBanner({
         type: "success",
         text: `✦ ${importedIds.length} ${
           importedIds.length === 1 ? "lead enviado" : "leads enviados"
-        } para o Pipeline Kanban!`,
+        } para o Pipeline Kanban!${blockedMsg}`,
       });
       onWorkspaceTabChange?.("kanban");
     } finally {

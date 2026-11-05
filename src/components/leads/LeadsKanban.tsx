@@ -44,6 +44,11 @@ import { GoogleSheetsLeadHunter } from "./GoogleSheetsLeadHunter";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
 import { useUiStore } from "@/store/useUiStore";
+import {
+  deduplicateKanbanLeadsList,
+  checkLeadCollisionInMemory,
+  mergeTwoKanbanLeads,
+} from "@/lib/deduplication";
 
 interface LeadsKanbanProps {
   initialLeads: Lead[];
@@ -147,7 +152,9 @@ export function LeadsKanban({
   currentUser,
   companyName,
 }: LeadsKanbanProps) {
-  const [leadsList, setLeadsList] = useState<Lead[]>(initialLeads);
+  const [leadsList, setLeadsList] = useState<Lead[]>(() => {
+    return deduplicateKanbanLeadsList(initialLeads).deduplicated;
+  });
   const [operators, setOperators] = useState<Operator[]>(initialOperators || OPERATORS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -191,16 +198,13 @@ export function LeadsKanban({
         const parsedLocal: Lead[] = JSON.parse(savedLocal);
         if (Array.isArray(parsedLocal) && parsedLocal.length > 0) {
           setLeadsList((prev) => {
-            const existingIds = new Set(prev.map((l) => l.id));
-            const existingNames = new Set(
-              prev.map((l) => (l.leadName || "").toLowerCase().trim())
-            );
-            const extras = parsedLocal.filter(
-              (l) =>
-                !existingIds.has(l.id) &&
-                !existingNames.has((l.leadName || "").toLowerCase().trim())
-            );
-            return [...extras, ...prev];
+            // Unifica leads do servidor + espelho local e passa pelo motor anti-duplicidade rigoroso
+            const combined = [...prev, ...parsedLocal];
+            const { deduplicated } = deduplicateKanbanLeadsList(combined);
+            try {
+              localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(deduplicated));
+            } catch {}
+            return deduplicated;
           });
         }
       }
@@ -221,14 +225,13 @@ export function LeadsKanban({
     } catch {}
   }, [leadsList, isMounted]);
 
-  // Sincroniza novos leads do servidor sem sobrescrever as alterações locais do operador
+  // Sincroniza novos leads do servidor sem sobrescrever as alterações locais do operador, garantindo anti-colisão
   useEffect(() => {
     setLeadsList((prev) => {
-      if (prev.length === 0) return initialLeads;
-      const existingIds = new Set(prev.map((l) => l.id));
-      const incomingNewLeads = initialLeads.filter((l) => !existingIds.has(l.id));
-      if (incomingNewLeads.length === 0) return prev;
-      return [...prev, ...incomingNewLeads];
+      if (prev.length === 0) return deduplicateKanbanLeadsList(initialLeads).deduplicated;
+      const combined = [...prev, ...initialLeads];
+      const { deduplicated } = deduplicateKanbanLeadsList(combined);
+      return deduplicated;
     });
   }, [initialLeads]);
 
@@ -320,21 +323,33 @@ export function LeadsKanban({
   // Callback de novo lead cadastrado via AddLeadModal ou importado da Planilha
   const handleLeadCreated = (newLead: Lead, fromKanbanModal = false) => {
     setLeadsList((prev) => {
-      const alreadyExists = prev.some(
-        (l) =>
-          l.id === newLead.id ||
-          (l.leadName || "").toLowerCase().trim() ===
-            (newLead.leadName || "").toLowerCase().trim()
-      );
-      if (alreadyExists) return prev;
-      return [newLead, ...prev];
+      // Barreira anti-colisão rigorosa (Telefone, E-mail, Domínio, Nome da Empresa ou ID)
+      const collision = checkLeadCollisionInMemory(newLead, prev);
+      if (collision.collision && collision.matchedLead) {
+        // Funde os dados no lead existente preservando o estágio mais avançado (ex: Em Prospecção)
+        const updatedList = prev.map((l) =>
+          l.id === collision.matchedLead!.id ? mergeTwoKanbanLeads(l, newLead) : l
+        );
+        try {
+          localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(updatedList));
+        } catch {}
+        return updatedList;
+      }
+
+      const next = [newLead, ...prev];
+      try {
+        localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(next));
+      } catch {}
+      return next;
     });
+
     if (newLead.cadenceState?.completedSteps) {
       setCadenceMap((prev) => ({
         ...prev,
         [newLead.id]: newLead.cadenceState.completedSteps,
       }));
     }
+
     if (typeof window !== "undefined" && fromKanbanModal) {
       window.dispatchEvent(
         new CustomEvent("blacklink:kanban-to-sheets-sync", {

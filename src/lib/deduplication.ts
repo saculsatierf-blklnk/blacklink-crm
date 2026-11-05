@@ -1,3 +1,5 @@
+import type { Lead } from "@/db/schema";
+
 /**
  * MOTOR ANTI-DUPLICIDADE RIGOROSO (SÉRIE REA-DESCONSTRUÇÃO)
  * Trava tripla de integridade de dados para o Data Warehouse (Google Sheets + CRM):
@@ -442,4 +444,342 @@ export function deduplicateAndMergeLeads<T extends DeduplicationCandidate>(
     blockedCount,
     auditLogs,
   };
+}
+
+/**
+ * Normaliza o nome da empresa para detecção de colisão fonética/textual:
+ * - Remove acentos
+ * - Remove pontuação e caracteres especiais
+ * - Remove sufixos societários comuns (Ltda, ME, EPP, Eireli, SA, etc.) e termos genéricos
+ */
+export function normalizeLeadCompanyName(raw?: string | null): string {
+  if (!raw) return "";
+  return String(raw)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\b(ltda|me|epp|eireli|sa|s\/a|s\.a|industria|comercio|do brasil|brasil|empresa b2b|empresa|grupo)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Extrai todas as chaves de telefone (E.164, últimos 8 dígitos e últimos 9 dígitos)
+ * a partir de qualquer campo de lead ou estado de cadência.
+ */
+export function extractLeadPhoneKeys(lead: {
+  leadPhone?: string | null;
+  cadenceState?: { phone?: string; whatsapp?: string } | null;
+  phone?: string | null;
+  contato?: string | null;
+}): { fullE164: string[]; trunk8: string[]; trunk9: string[] } {
+  const rawList: (string | null | undefined)[] = [
+    lead.leadPhone,
+    lead.cadenceState?.phone,
+    lead.cadenceState?.whatsapp,
+    lead.phone,
+    lead.contato,
+  ];
+
+  const fullE164: string[] = [];
+  const trunk8: string[] = [];
+  const trunk9: string[] = [];
+
+  for (const raw of rawList) {
+    if (!raw) continue;
+    const digits = String(raw).replace(/\D/g, "");
+    if (digits.length >= 8) {
+      trunk8.push(digits.slice(-8));
+      if (digits.length >= 9) trunk9.push(digits.slice(-9));
+      const e164 = sanitizePhoneE164(raw);
+      if (e164) fullE164.push(e164);
+    }
+  }
+
+  return {
+    fullE164: Array.from(new Set(fullE164)),
+    trunk8: Array.from(new Set(trunk8)),
+    trunk9: Array.from(new Set(trunk9)),
+  };
+}
+
+export interface InMemoryCollisionResult {
+  collision: boolean;
+  matchedLead?: Lead;
+  matchedBy?: "id" | "telefone" | "email" | "dominio" | "empresa";
+  matchedValue?: string;
+}
+
+/**
+ * Radar Anti-Colisão em memória: Varre uma lista de Leads em busca de duplicações
+ * por ID, Telefone (E.164 ou últimos 8/9 dígitos), E-mail, Domínio Corporativo ou Razão Social normalizada.
+ */
+export function checkLeadCollisionInMemory(
+  candidate: Partial<Lead> | any,
+  existingList: Lead[]
+): InMemoryCollisionResult {
+  if (!candidate || !existingList || existingList.length === 0) {
+    return { collision: false };
+  }
+
+  const candPhones = extractLeadPhoneKeys(candidate);
+  const candEmail = (candidate.leadEmail || candidate.email || "").trim().toLowerCase();
+  const candDomain = candEmail ? extractCanonicalDomain(candEmail) : "";
+  const candCompanyRaw =
+    candidate.cadenceState?.companyName ||
+    candidate.company ||
+    candidate.empresa ||
+    candidate.leadName ||
+    "";
+  const candCompanyNorm = normalizeLeadCompanyName(candCompanyRaw);
+  const candNameRaw = candidate.leadName || candidate.name || "";
+  const candNameNorm = normalizeLeadCompanyName(candNameRaw);
+
+  for (const existing of existingList) {
+    // 0. Mesmo ID
+    if (candidate.id && existing.id && candidate.id === existing.id) {
+      return {
+        collision: true,
+        matchedLead: existing,
+        matchedBy: "id",
+        matchedValue: existing.id,
+      };
+    }
+
+    // 1. Colisão por Telefone / WhatsApp (8 ou 9 dígitos finais ou E.164 puro)
+    if (candPhones.trunk8.length > 0) {
+      const existPhones = extractLeadPhoneKeys(existing);
+      const matchedT8 = candPhones.trunk8.find((t8) => existPhones.trunk8.includes(t8));
+      if (matchedT8) {
+        return {
+          collision: true,
+          matchedLead: existing,
+          matchedBy: "telefone",
+          matchedValue: matchedT8,
+        };
+      }
+      const matchedE164 = candPhones.fullE164.find((e) => existPhones.fullE164.includes(e));
+      if (matchedE164) {
+        return {
+          collision: true,
+          matchedLead: existing,
+          matchedBy: "telefone",
+          matchedValue: matchedE164,
+        };
+      }
+    }
+
+    // 2. Colisão por E-mail idêntico
+    if (candEmail && candEmail.includes("@")) {
+      const existEmail = (existing.leadEmail || "").trim().toLowerCase();
+      if (existEmail && existEmail === candEmail) {
+        return {
+          collision: true,
+          matchedLead: existing,
+          matchedBy: "email",
+          matchedValue: candEmail,
+        };
+      }
+    }
+
+    // 3. Colisão por Domínio Corporativo (ex: '@empresa.com.br', desconsiderando freemails como gmail)
+    if (candDomain && !candDomain.startsWith("freemail:")) {
+      const existEmail = (existing.leadEmail || "").trim().toLowerCase();
+      const existDomain = extractCanonicalDomain(existEmail);
+      if (existDomain && existDomain === candDomain) {
+        return {
+          collision: true,
+          matchedLead: existing,
+          matchedBy: "dominio",
+          matchedValue: candDomain,
+        };
+      }
+    }
+
+    // 4. Colisão por Nome da Empresa (se tiver 5+ caracteres significativos)
+    const existCompanyRaw =
+      existing.cadenceState?.companyName || existing.leadName || "";
+    const existCompanyNorm = normalizeLeadCompanyName(existCompanyRaw);
+    const existNameNorm = normalizeLeadCompanyName(existing.leadName || "");
+
+    const candKeys = [candCompanyNorm, candNameNorm].filter((n) => n.length >= 5);
+    const existKeys = [existCompanyNorm, existNameNorm].filter((n) => n.length >= 5);
+
+    for (const ck of candKeys) {
+      for (const ek of existKeys) {
+        if (ck === ek) {
+          return {
+            collision: true,
+            matchedLead: existing,
+            matchedBy: "empresa",
+            matchedValue: ck,
+          };
+        }
+        // Substring mútua para variações com prefixo ou código (ex: 'Hidrocromo' e 'Hidrocromo - 8')
+        if (ck.length >= 7 && ek.length >= 7 && (ck.includes(ek) || ek.includes(ck))) {
+          return {
+            collision: true,
+            matchedLead: existing,
+            matchedBy: "empresa",
+            matchedValue: `${ck} ~ ${ek}`,
+          };
+        }
+      }
+    }
+  }
+
+  return { collision: false };
+}
+
+const STATUS_PRECEDENCE: Record<string, number> = {
+  closed: 3,
+  negotiation: 2,
+  new: 1,
+};
+
+/**
+ * Funde dois leads duplicados em um único registro preservando o estágio mais avançado
+ * do pipeline, histórico de anotações, passos completados da cadência e dados mais ricos.
+ */
+export function mergeTwoKanbanLeads(leadA: Lead, leadB: Lead): Lead {
+  const rankA = STATUS_PRECEDENCE[leadA.status] || 1;
+  const rankB = STATUS_PRECEDENCE[leadB.status] || 1;
+
+  let primary = leadA;
+  let secondary = leadB;
+
+  if (rankB > rankA) {
+    primary = leadB;
+    secondary = leadA;
+  } else if (rankA === rankB) {
+    const notesA = leadA.notes?.length || 0;
+    const notesB = leadB.notes?.length || 0;
+    if (notesB > notesA) {
+      primary = leadB;
+      secondary = leadA;
+    }
+  }
+
+  const primCad = (primary.cadenceState as any) || {};
+  const secCad = (secondary.cadenceState as any) || {};
+
+  // Resolve melhor nome da empresa (evita "Empresa B2B" ou números puros como "8")
+  const isGeneric = (name?: string | null) => {
+    if (!name) return true;
+    const t = name.trim().toLowerCase();
+    return !t || t === "empresa b2b" || /^\d+$/.test(t);
+  };
+
+  let bestCompanyName = primCad.companyName || primary.leadName;
+  if (isGeneric(bestCompanyName)) {
+    if (!isGeneric(secCad.companyName)) {
+      bestCompanyName = secCad.companyName;
+    } else if (!isGeneric(secondary.leadName)) {
+      bestCompanyName = secondary.leadName;
+    }
+  }
+
+  const bestContactPerson = primCad.contactPerson || secCad.contactPerson || "";
+  const bestPhone =
+    primCad.phone ||
+    secCad.phone ||
+    primary.leadPhone ||
+    secondary.leadPhone ||
+    "";
+  const bestWhatsapp =
+    primCad.whatsapp ||
+    secCad.whatsapp ||
+    bestPhone;
+  const bestEmail =
+    primary.leadEmail?.trim() ||
+    secondary.leadEmail?.trim() ||
+    null;
+  const bestLocation = primCad.location || secCad.location || "";
+
+  // Combina anotações sem duplicação de texto
+  const combinedNotes = [...(primary.notes || [])];
+  const seenTexts = new Set(combinedNotes.map((n) => n.text.trim()));
+  for (const n of secondary.notes || []) {
+    if (n && n.text && !seenTexts.has(n.text.trim())) {
+      combinedNotes.push(n);
+      seenTexts.add(n.text.trim());
+    }
+  }
+
+  // Combina passos concluídos da cadência
+  const stepsA: string[] = primCad.completedSteps || [];
+  const stepsB: string[] = secCad.completedSteps || [];
+  const mergedSteps = Array.from(new Set([...stepsA, ...stepsB]));
+
+  // Combina eventos de telemetria
+  const telemA = primary.telemetryEvents || [];
+  const telemB = secondary.telemetryEvents || [];
+  const mergedTelem = [...telemA];
+  const seenTelem = new Set(telemA.map((t) => `${t.type}-${t.timestamp}`));
+  for (const t of telemB) {
+    const k = `${t.type}-${t.timestamp}`;
+    if (!seenTelem.has(k)) {
+      mergedTelem.push(t);
+      seenTelem.add(k);
+    }
+  }
+
+  return {
+    ...primary,
+    leadName: bestCompanyName || primary.leadName,
+    leadEmail: bestEmail,
+    leadPhone: bestPhone || primary.leadPhone,
+    status: primary.status, // Preserva estágio mais avançado (ex: Em Prospecção)
+    dealScore: Math.max(primary.dealScore || 50, secondary.dealScore || 50),
+    notes: combinedNotes,
+    telemetryEvents: mergedTelem,
+    cadenceState: {
+      ...secCad,
+      ...primCad,
+      completedSteps: mergedSteps,
+      companyName: bestCompanyName,
+      contactPerson: bestContactPerson,
+      phone: bestPhone,
+      whatsapp: bestWhatsapp,
+      location: bestLocation,
+      roleTitle: primCad.roleTitle || secCad.roleTitle || "",
+      estimatedValue: primCad.estimatedValue || secCad.estimatedValue || "",
+      isDeactivated: Boolean(primCad.isDeactivated && secCad.isDeactivated),
+      deactivationReason: primCad.deactivationReason || secCad.deactivationReason,
+    },
+    nextActivityDate: primary.nextActivityDate || secondary.nextActivityDate || null,
+    nextActivityType: primary.nextActivityType || secondary.nextActivityType || null,
+  };
+}
+
+/**
+ * Deduplica e consolida uma lista inteira de Leads do Kanban.
+ * Garante que duplicatas (mesmo telefone, email, domínio ou empresa) sejam mescladas em 1 único card.
+ */
+export function deduplicateKanbanLeadsList(leads: Lead[]): {
+  deduplicated: Lead[];
+  mergedCount: number;
+} {
+  if (!Array.isArray(leads) || leads.length <= 1) {
+    return { deduplicated: leads || [], mergedCount: 0 };
+  }
+
+  const result: Lead[] = [];
+  let mergedCount = 0;
+
+  for (const candidate of leads) {
+    const collision = checkLeadCollisionInMemory(candidate, result);
+    if (collision.collision && collision.matchedLead) {
+      const matchIdx = result.findIndex((l) => l.id === collision.matchedLead!.id);
+      if (matchIdx !== -1) {
+        result[matchIdx] = mergeTwoKanbanLeads(result[matchIdx], candidate);
+        mergedCount++;
+      }
+    } else {
+      result.push(candidate);
+    }
+  }
+
+  return { deduplicated: result, mergedCount };
 }
