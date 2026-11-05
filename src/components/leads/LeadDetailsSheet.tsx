@@ -536,6 +536,7 @@ export function LeadDetailsSheet({
       cadenceState: {
         ...(lead.cadenceState || { completedSteps: [] }),
         completedSteps: nextCadence,
+        lastCompletedAt: new Date().toISOString(),
         estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : lead.cadenceState?.estimatedValue,
       },
     };
@@ -728,7 +729,7 @@ export function LeadDetailsSheet({
     handleSelectTemplatePhase(selectedPhaseKey, channel);
   };
 
-  // Conclui atividade pelo template (Bitrix Queue: timestamp + move para o final da coluna)
+  // Conclui atividade pelo template (Fila Inteligente: timestamp + move para o final da coluna)
   const handleCompleteTemplateTask = async (taskName: string, channel: TemplateChannel) => {
     if (!lead) return;
     const nowIso = new Date().toISOString();
@@ -780,7 +781,7 @@ export function LeadDetailsSheet({
 
     setSaveFeedback({
       type: "success",
-      text: `✓ ${taskName} concluída! Card reposicionado na fila Bitrix em verde fluorescente.`,
+      text: `✓ ${taskName} concluída! Card reposicionado na fila em verde fluorescente.`,
     });
     setTimeout(() => setSaveFeedback(null), 3500);
   };
@@ -1844,7 +1845,7 @@ export function LeadDetailsSheet({
                   </div>
                 </div>
 
-                {/* Ações do Template & Bitrix24 Queue Completion */}
+                {/* Ações do Template & Conclusão de Fila */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#262626]">
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
@@ -1900,12 +1901,12 @@ export function LeadDetailsSheet({
                     )}
                   </div>
 
-                  {/* BOTÃO BITRIX24: DAR OK & CONCLUIR HOJE */}
+                  {/* BOTÃO DE CONCLUSÃO: DAR OK & CONCLUIR HOJE */}
                   <button
                     type="button"
                     onClick={() => handleCompleteTemplateTask(currentTmpl.badge, selectedChannel)}
                     className="inline-flex items-center gap-1.5 rounded-md bg-[#0c2b1c] hover:bg-[#14d06e] text-[#14d06e] hover:text-[#0d0d0d] border border-[#14d06e]/70 px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-md"
-                    title="Dar OK nesta atividade (Mover lead para o final da fila do Bitrix em verde fluorescente com timestamp)"
+                    title="Dar OK nesta atividade (Mover lead para o final da fila em verde fluorescente com timestamp)"
                   >
                     <CheckCircle2 className="size-3.5" />
                     <span>✓ Dar OK & Concluir Atividade</span>

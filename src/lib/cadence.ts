@@ -15,53 +15,53 @@ export const CADENCE_STEPS: CadenceStep[] = [
     dayOffset: 0,
     dayLabel: "Dia 1",
     shortAction: "Cold Call",
-    title: "Cold Call & Qualificação",
-    description: "Mapeamento inicial de dores e identificação de decisores",
+    title: "1º Contato (Cold Call / Apresentação)",
+    description: "Contato inicial de apresentação da Gofer Metais e validação de decisor",
   },
   {
     id: "step-2",
-    dayNumber: 2,
-    dayOffset: 1,
-    dayLabel: "Dia 2",
-    shortAction: "E-mail Executivo",
-    title: "E-mail Executivo de Abordagem",
-    description: "Envio de proposta de valor e contextualização de mercado",
+    dayNumber: 1,
+    dayOffset: 0,
+    dayLabel: "Dia 1",
+    shortAction: "Envio Catálogo",
+    title: "Envio de Catálogo & Tabela (WhatsApp / E-mail)",
+    description: "Envio imediato da linha de tubos, perfis e chapas por WhatsApp ou E-mail",
   },
   {
     id: "step-3",
-    dayNumber: 3,
-    dayOffset: 2,
-    dayLabel: "Dia 3",
-    shortAction: "Interação LinkedIn",
-    title: "Conexão & Interação no LinkedIn",
-    description: "Aproximação com os líderes da conta no ambiente corporativo",
+    dayNumber: 2,
+    dayOffset: 1,
+    dayLabel: "Dia 2",
+    shortAction: "Follow-up 24h",
+    title: "Follow-up 24h (Ligação / WhatsApp)",
+    description: "Confirmação de recebimento do catálogo e sondagem de demandas abertas",
   },
   {
     id: "step-4",
-    dayNumber: 5,
-    dayOffset: 4,
-    dayLabel: "Dia 5",
-    shortAction: "Follow-up 1",
-    title: "Follow-up 1 (Cold Call + Mensagem)",
-    description: "Retomada de contato para agendamento de demonstração",
+    dayNumber: 4,
+    dayOffset: 3,
+    dayLabel: "Dia 4",
+    shortAction: "Gatilho Promoção",
+    title: "Gatilho de Oportunidade (Tubos & Perfis)",
+    description: "Oferta pontual de oportunidade para puxar cotação sem compromisso",
   },
   {
     id: "step-5",
     dayNumber: 7,
     dayOffset: 6,
     dayLabel: "Dia 7",
-    shortAction: "Estudo de Caso",
-    title: "Envio de Estudo de Caso & ROI",
-    description: "Apresentação de resultados obtidos em contas similares",
+    shortAction: "Cotação Base",
+    title: "Cotação Base & Fechamento",
+    description: "Envio de valores com prazo de entrega e rota de carga",
   },
   {
     id: "step-6",
     dayNumber: 10,
     dayOffset: 9,
     dayLabel: "Dia 10",
-    shortAction: "Breakup Call",
-    title: "Breakup Call / Encerramento",
-    description: "Última tentativa de alinhamento antes do arquivamento",
+    shortAction: "Follow-up Final",
+    title: "Follow-up Final de Posicionamento",
+    description: "Garantir segunda via de fornecimento para próximas compras",
   },
 ];
 
@@ -239,11 +239,14 @@ Segue o nosso catálogo em anexo. Podemos enviar os nossos valores sem compromis
 }
 
 /**
- * Verifica se o lead teve alguma atividade concluída hoje (Bitrix24 Dynamic Queue)
+ * Verifica se o lead teve alguma atividade concluída hoje ou se não tem pendências para hoje
+ * (ex: já ligou e enviou e-mail hoje, e o próximo passo é para amanhã/futuro)
  */
 export function isLeadCompletedToday(lead: {
+  createdAt?: Date | string;
   cadenceState?: any;
   notes?: Array<{ createdAt?: string | Date; text?: string }>;
+  status?: string;
 }): boolean {
   if (!lead) return false;
   const cadence = lead.cadenceState || {};
@@ -252,6 +255,7 @@ export function isLeadCompletedToday(lead: {
   const todayMonth = now.getMonth();
   const todayYear = now.getFullYear();
 
+  // 1. Teve registro de conclusão explícito hoje
   if (cadence.lastCompletedAt) {
     const compDate = new Date(cadence.lastCompletedAt);
     if (
@@ -264,7 +268,7 @@ export function isLeadCompletedToday(lead: {
     }
   }
 
-  // Verifica anotações salvas hoje com tags de conclusão ou métricas
+  // 2. Anotação registrada hoje (qualquer nota adicionada hoje pelo operador indica que o lead foi trabalhado)
   if (Array.isArray(lead.notes) && lead.notes.length > 0) {
     const latest = lead.notes[0];
     if (latest?.createdAt) {
@@ -275,19 +279,18 @@ export function isLeadCompletedToday(lead: {
         nDate.getMonth() === todayMonth &&
         nDate.getFullYear() === todayYear
       ) {
-        const text = latest.text || "";
-        if (
-          text.includes("[MÉTRICA]") ||
-          text.includes("[CADÊNCIA]") ||
-          text.includes("✓ Concluído") ||
-          text.includes("Desfecho:") ||
-          text.includes("Ligação realizada") ||
-          text.includes("Mensagem enviada") ||
-          text.includes("E-mail enviado")
-        ) {
-          return true;
-        }
+        return true;
       }
+    }
+  }
+
+  // 3. Se o lead tem etapas concluídas (ou está em negociação) e a PRÓXIMA ação é futura (amanhã ou próximos dias):
+  // Significa que as tarefas de hoje já foram cumpridas! Não deve ficar no topo pendente.
+  const completedSteps: string[] = cadence.completedSteps || [];
+  if (completedSteps.length > 0 && lead.createdAt) {
+    const nextAction = getNextCadenceAction(lead.createdAt, completedSteps, lead.status, now);
+    if (nextAction.type === "future" || nextAction.type === "completed") {
+      return true;
     }
   }
 
@@ -309,10 +312,19 @@ export function getLastCompletedTime(lead: {
   const d = new Date(rawTs);
   if (isNaN(d.getTime())) return null;
 
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d);
+  const now = new Date();
+  if (
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear()
+  ) {
+    return new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  }
+
+  return null;
 }
 
 

@@ -436,7 +436,7 @@ export function LeadsKanban({
     }
   };
 
-  // Conclusão com 1-clique (Bitrix24 Queue: move para o final da coluna em verde fluorescente)
+  // Conclusão com 1-clique (Move para o final da coluna em verde fluorescente)
   const handleQuickCompleteLead = (lead: Lead, stepTitle?: string) => {
     const actionName = stepTitle || "Atividade de Prospecção";
     const nowIso = new Date().toISOString();
@@ -457,7 +457,7 @@ export function LeadsKanban({
       sector: inferSectorFromLead(lead),
       channel,
       outcome: "atendeu",
-      notes: `✓ ${actionName} concluída via Bitrix Queue com 1 clique`,
+      notes: `✓ ${actionName} concluída via Fila Inteligente com 1 clique`,
     });
 
     setLeadsList((prev) => {
@@ -633,10 +633,21 @@ export function LeadsKanban({
 
   const getLeadsByStatus = (status: LeadStatus) => {
     const statusLeads = displayedLeads.filter((lead) => lead.status === status);
-    // Dinâmica Bitrix24: leads pendentes no topo; leads com atividades concluídas hoje vão para o final
+
+    // Fila Inteligente:
+    // 1. Leads com pendências imediatas (Atrasados e Hoje) no TOPO
+    // 2. Leads já concluídos hoje ou com tarefas apenas para AMANHÃ / FUTURO no FINAL (verde fluorescente)
     const pending = statusLeads.filter((lead) => !isLeadCompletedToday(lead));
-    const completedToday = statusLeads.filter((lead) => isLeadCompletedToday(lead));
-    return [...pending, ...completedToday];
+    const completedOrFuture = statusLeads.filter((lead) => isLeadCompletedToday(lead));
+
+    const sortedPending = [...pending].sort((a, b) => {
+      const actionA = getNextCadenceAction(a.createdAt, a.cadenceState?.completedSteps || [], a.status);
+      const actionB = getNextCadenceAction(b.createdAt, b.cadenceState?.completedSteps || [], b.status);
+      const score = (type: string) => (type === "overdue" ? 3 : type === "today" ? 2 : 1);
+      return score(actionB.type) - score(actionA.type);
+    });
+
+    return [...sortedPending, ...completedOrFuture];
   };
 
   const formatDate = (date: Date | string) => {
@@ -939,14 +950,20 @@ export function LeadsKanban({
                                       </div>
                                     )}
 
-                                    {/* Indicador Bitrix24 Queue: Lead Concluído Hoje */}
+                                    {/* Indicador de Fila Inteligente: Lead Concluído Hoje / Sem Pendências */}
                                     {isCompletedToday && (
                                       <div className="flex items-center justify-between gap-1 text-[10px] text-[#14d06e] bg-[#0c2b1c]/90 border border-[#14d06e]/60 px-2.5 py-1 rounded font-mono font-semibold shadow-sm">
                                         <div className="flex items-center gap-1.5 truncate">
                                           <CheckCircle2 className="size-3 shrink-0 text-[#14d06e]" />
-                                          <span className="truncate">✓ Concluído hoje {lastCompletedTime ? `às ${lastCompletedTime}` : ""}</span>
+                                          <span className="truncate">
+                                            {lastCompletedTime
+                                              ? `✓ Concluído hoje às ${lastCompletedTime}`
+                                              : "✓ Tarefas de hoje concluídas"}
+                                          </span>
                                         </div>
-                                        <span className="text-[9px] text-[#86efac] font-sans shrink-0 uppercase tracking-wider font-bold">Fila Bitrix</span>
+                                        <span className="text-[9px] text-[#86efac] font-sans shrink-0 uppercase tracking-wider font-bold">
+                                          {actionInfo.type === "future" ? actionInfo.temporalTag : "Concluído"}
+                                        </span>
                                       </div>
                                     )}
 
