@@ -820,7 +820,11 @@ export function LeadDetailsSheet({
     setIsDeactivateModalOpen(false);
 
     try {
-      await deactivateLeadAction(lead.id, cleanReason, currentOp);
+      await deactivateLeadAction(lead.id, cleanReason, currentOp, {
+        leadName: lead.leadName,
+        phone: lead.leadPhone || undefined,
+        email: lead.leadEmail || undefined,
+      });
     } catch (err) {
       console.warn("Falha ao persistir desativação no servidor:", err);
     } finally {
@@ -876,7 +880,11 @@ export function LeadDetailsSheet({
     setIsReactivateModalOpen(false);
 
     try {
-      await reactivateLeadAction(lead.id, reactivateNoteInput.trim(), currentOp);
+      await reactivateLeadAction(lead.id, reactivateNoteInput.trim(), currentOp, {
+        leadName: lead.leadName,
+        phone: lead.leadPhone || undefined,
+        email: lead.leadEmail || undefined,
+      });
     } catch (err) {
       console.warn("Falha ao persistir reativação no servidor:", err);
     } finally {

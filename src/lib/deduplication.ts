@@ -725,6 +725,56 @@ export function mergeTwoKanbanLeads(leadA: Lead, leadB: Lead): Lead {
     }
   }
 
+  // Resolução inteligente e ultra-estrita de desativação:
+  // Se qualquer uma das cópias estiver desativada, o lead DEVE permanecer desativado,
+  // a menos que a outra cópia tenha um registro explícito de reativação posterior.
+  const historyA: any[] = Array.isArray(primCad.deactivationHistory) ? primCad.deactivationHistory : [];
+  const historyB: any[] = Array.isArray(secCad.deactivationHistory) ? secCad.deactivationHistory : [];
+  
+  const mergedHistory: any[] = [...historyA];
+  const seenHistory = new Set(historyA.map((h) => `${h.deactivatedAt || h.date}-${h.reason}`));
+  for (const h of historyB) {
+    const k = `${h.deactivatedAt || h.date}-${h.reason}`;
+    if (!seenHistory.has(k)) {
+      mergedHistory.push(h);
+      seenHistory.add(k);
+    }
+  }
+  mergedHistory.sort((a, b) => {
+    const timeA = new Date(a.deactivatedAt || a.date || 0).getTime();
+    const timeB = new Date(b.deactivatedAt || b.date || 0).getTime();
+    return timeB - timeA;
+  });
+
+  const isDeactA = Boolean(primCad.isDeactivated);
+  const isDeactB = Boolean(secCad.isDeactivated);
+
+  let finalIsDeactivated = false;
+  let finalReason = primCad.deactivationReason || secCad.deactivationReason || "";
+  let finalAt = primCad.deactivatedAt || secCad.deactivatedAt;
+  let finalBy = primCad.deactivatedBy || secCad.deactivatedBy;
+
+  if (isDeactA && isDeactB) {
+    finalIsDeactivated = true;
+  } else if (isDeactA || isDeactB) {
+    const deactCopy = isDeactA ? primCad : secCad;
+    const activeCopy = isDeactA ? secCad : primCad;
+
+    // Verifica se a cópia ativa possui reativação posterior documentada no histórico
+    const lastReactivation = activeCopy.deactivationHistory?.[0]?.reactivatedAt;
+    const deactTime = deactCopy.deactivatedAt ? new Date(deactCopy.deactivatedAt).getTime() : 0;
+    const reactTime = lastReactivation ? new Date(lastReactivation).getTime() : 0;
+
+    if (reactTime > deactTime && reactTime > 0) {
+      finalIsDeactivated = false;
+    } else {
+      finalIsDeactivated = true;
+      finalReason = deactCopy.deactivationReason || finalReason;
+      finalAt = deactCopy.deactivatedAt || finalAt;
+      finalBy = deactCopy.deactivatedBy || finalBy;
+    }
+  }
+
   return {
     ...primary,
     leadName: bestCompanyName || primary.leadName,
@@ -745,8 +795,12 @@ export function mergeTwoKanbanLeads(leadA: Lead, leadB: Lead): Lead {
       location: bestLocation,
       roleTitle: primCad.roleTitle || secCad.roleTitle || "",
       estimatedValue: primCad.estimatedValue || secCad.estimatedValue || "",
-      isDeactivated: Boolean(primCad.isDeactivated && secCad.isDeactivated),
-      deactivationReason: primCad.deactivationReason || secCad.deactivationReason,
+      website: primCad.website || secCad.website || "",
+      isDeactivated: finalIsDeactivated,
+      deactivationReason: finalIsDeactivated ? finalReason : undefined,
+      deactivatedAt: finalIsDeactivated ? finalAt : undefined,
+      deactivatedBy: finalIsDeactivated ? finalBy : undefined,
+      deactivationHistory: mergedHistory,
     },
     nextActivityDate: primary.nextActivityDate || secondary.nextActivityDate || null,
     nextActivityType: primary.nextActivityType || secondary.nextActivityType || null,

@@ -117,16 +117,25 @@ export async function updateLeadCadenceAction(
       .where(eq(leads.id, leadId))
       .limit(1);
 
+    const existingCadence = (existing?.cadenceState as CadenceState) || { completedSteps: [] };
     const mergedCadence: CadenceState = {
-      completedSteps: cadenceState.completedSteps ?? existing?.cadenceState?.completedSteps ?? [],
-      roleTitle: cadenceState.roleTitle ?? existing?.cadenceState?.roleTitle,
-      estimatedValue: cadenceState.estimatedValue ?? existing?.cadenceState?.estimatedValue,
-      customScript: cadenceState.customScript ?? existing?.cadenceState?.customScript,
-      location: cadenceState.location ?? existing?.cadenceState?.location,
-      companyName: cadenceState.companyName ?? existing?.cadenceState?.companyName,
-      contactPerson: cadenceState.contactPerson ?? existing?.cadenceState?.contactPerson,
-      phone: cadenceState.phone ?? existing?.cadenceState?.phone,
-      whatsapp: cadenceState.whatsapp ?? existing?.cadenceState?.whatsapp,
+      ...existingCadence,
+      ...cadenceState,
+      completedSteps: cadenceState.completedSteps ?? existingCadence.completedSteps ?? [],
+      roleTitle: cadenceState.roleTitle ?? existingCadence.roleTitle,
+      estimatedValue: cadenceState.estimatedValue ?? existingCadence.estimatedValue,
+      website: cadenceState.website ?? existingCadence.website,
+      customScript: cadenceState.customScript ?? existingCadence.customScript,
+      location: cadenceState.location ?? existingCadence.location,
+      companyName: cadenceState.companyName ?? existingCadence.companyName,
+      contactPerson: cadenceState.contactPerson ?? existingCadence.contactPerson,
+      phone: cadenceState.phone ?? existingCadence.phone,
+      whatsapp: cadenceState.whatsapp ?? existingCadence.whatsapp,
+      isDeactivated: cadenceState.isDeactivated !== undefined ? cadenceState.isDeactivated : existingCadence.isDeactivated,
+      deactivationReason: cadenceState.deactivationReason !== undefined ? cadenceState.deactivationReason : existingCadence.deactivationReason,
+      deactivatedAt: cadenceState.deactivatedAt !== undefined ? cadenceState.deactivatedAt : existingCadence.deactivatedAt,
+      deactivatedBy: cadenceState.deactivatedBy !== undefined ? cadenceState.deactivatedBy : existingCadence.deactivatedBy,
+      deactivationHistory: cadenceState.deactivationHistory ?? existingCadence.deactivationHistory,
     };
 
     await db
@@ -1176,7 +1185,8 @@ export async function scheduleLeadActivityAction(
 export async function deactivateLeadAction(
   leadId: string,
   reason: string,
-  author: string = "Lucas de Freitas Leite (Gofer Metais)"
+  author: string = "Lucas de Freitas Leite (Gofer Metais)",
+  meta?: { leadName?: string; phone?: string; email?: string }
 ): Promise<ActionResponse & { cadenceState?: CadenceState; note?: NoteEntry }> {
   try {
     if (!leadId || !reason?.trim()) {
@@ -1200,7 +1210,43 @@ export async function deactivateLeadAction(
       author,
     };
 
-    if (!UUID_REGEX.test(leadId)) {
+    let targetDbId: string | null = null;
+    if (UUID_REGEX.test(leadId)) {
+      targetDbId = leadId;
+    } else if (meta) {
+      try {
+        const cleanPhone = meta.phone?.trim();
+        const cleanEmail = meta.email?.trim().toLowerCase();
+        const cleanName = meta.leadName?.trim();
+
+        if (cleanPhone) {
+          const [byPhone] = await db
+            .select({ id: leads.id })
+            .from(leads)
+            .where(eq(leads.leadPhone, cleanPhone))
+            .limit(1);
+          if (byPhone) targetDbId = byPhone.id;
+        }
+        if (!targetDbId && cleanEmail) {
+          const [byEmail] = await db
+            .select({ id: leads.id })
+            .from(leads)
+            .where(eq(leads.leadEmail, cleanEmail))
+            .limit(1);
+          if (byEmail) targetDbId = byEmail.id;
+        }
+        if (!targetDbId && cleanName) {
+          const [byName] = await db
+            .select({ id: leads.id })
+            .from(leads)
+            .where(ilike(leads.leadName, `%${cleanName}%`))
+            .limit(1);
+          if (byName) targetDbId = byName.id;
+        }
+      } catch {}
+    }
+
+    if (!targetDbId) {
       return {
         success: true,
         leadId,
@@ -1219,7 +1265,7 @@ export async function deactivateLeadAction(
     const [existing] = await db
       .select()
       .from(leads)
-      .where(eq(leads.id, leadId))
+      .where(eq(leads.id, targetDbId))
       .limit(1);
 
     if (!existing) {
@@ -1227,6 +1273,14 @@ export async function deactivateLeadAction(
         success: true,
         leadId,
         note: newNote,
+        cadenceState: {
+          completedSteps: [],
+          isDeactivated: true,
+          deactivationReason: cleanReason,
+          deactivatedAt: nowIso,
+          deactivatedBy: author,
+          deactivationHistory: [newDeactivationEntry],
+        },
       };
     }
 
@@ -1252,7 +1306,7 @@ export async function deactivateLeadAction(
         cadenceState: updatedCadence,
         notes: updatedNotes,
       })
-      .where(eq(leads.id, leadId));
+      .where(eq(leads.id, targetDbId));
 
     try {
       revalidatePath("/leads");
@@ -1277,6 +1331,13 @@ export async function deactivateLeadAction(
         deactivationReason: reason.trim(),
         deactivatedAt: nowIso,
         deactivatedBy: author,
+        deactivationHistory: [
+          {
+            deactivatedAt: nowIso,
+            reason: reason.trim(),
+            author,
+          },
+        ],
       },
     };
   }
@@ -1288,7 +1349,8 @@ export async function deactivateLeadAction(
 export async function reactivateLeadAction(
   leadId: string,
   reactivationNote?: string,
-  author: string = "Lucas de Freitas Leite (Gofer Metais)"
+  author: string = "Lucas de Freitas Leite (Gofer Metais)",
+  meta?: { leadName?: string; phone?: string; email?: string }
 ): Promise<ActionResponse & { cadenceState?: CadenceState; note?: NoteEntry }> {
   try {
     if (!leadId) {
@@ -1297,7 +1359,43 @@ export async function reactivateLeadAction(
 
     const nowIso = new Date().toISOString();
 
-    if (!UUID_REGEX.test(leadId)) {
+    let targetDbId: string | null = null;
+    if (UUID_REGEX.test(leadId)) {
+      targetDbId = leadId;
+    } else if (meta) {
+      try {
+        const cleanPhone = meta.phone?.trim();
+        const cleanEmail = meta.email?.trim().toLowerCase();
+        const cleanName = meta.leadName?.trim();
+
+        if (cleanPhone) {
+          const [byPhone] = await db
+            .select({ id: leads.id })
+            .from(leads)
+            .where(eq(leads.leadPhone, cleanPhone))
+            .limit(1);
+          if (byPhone) targetDbId = byPhone.id;
+        }
+        if (!targetDbId && cleanEmail) {
+          const [byEmail] = await db
+            .select({ id: leads.id })
+            .from(leads)
+            .where(eq(leads.leadEmail, cleanEmail))
+            .limit(1);
+          if (byEmail) targetDbId = byEmail.id;
+        }
+        if (!targetDbId && cleanName) {
+          const [byName] = await db
+            .select({ id: leads.id })
+            .from(leads)
+            .where(ilike(leads.leadName, `%${cleanName}%`))
+            .limit(1);
+          if (byName) targetDbId = byName.id;
+        }
+      } catch {}
+    }
+
+    if (!targetDbId) {
       const noteText = reactivationNote?.trim()
         ? `🔄 Lead reativado na prospecção.\nContexto: "${reactivationNote.trim()}"`
         : `🔄 Lead reativado na prospecção.`;
@@ -1323,7 +1421,7 @@ export async function reactivateLeadAction(
     const [existing] = await db
       .select()
       .from(leads)
-      .where(eq(leads.id, leadId))
+      .where(eq(leads.id, targetDbId))
       .limit(1);
 
     if (!existing) {
@@ -1372,7 +1470,7 @@ export async function reactivateLeadAction(
         cadenceState: updatedCadence,
         notes: updatedNotes,
       })
-      .where(eq(leads.id, leadId));
+      .where(eq(leads.id, targetDbId));
 
     try {
       revalidatePath("/leads");
