@@ -139,7 +139,7 @@ export function calculateStepTemporalStatus(
     type: "future",
     tag: daysUntil === 1 ? "Em 1 dia" : `Em ${daysUntil} dias`,
     targetDate,
-    badgeClass: "border-glass-border bg-carbon-muted/50 text-sub font-medium",
+    badgeClass: "border-[#2e2e2e] bg-[#141414] text-[#afafaf] font-medium",
   };
 }
 
@@ -196,7 +196,7 @@ export function getNextCadenceAction(
   } else if (temporalStatus.type === "today") {
     badgeClass = "border-amber-400/40 bg-amber-400/15 text-amber-300 font-semibold";
   } else {
-    badgeClass = "border-glass-border bg-void/60 text-sub font-medium";
+    badgeClass = "border-[#2e2e2e] bg-[#141414] text-[#afafaf] font-medium";
   }
 
   return {

@@ -12,6 +12,9 @@ import {
   Coins,
   Copy,
   Edit2,
+  ExternalLink,
+  FileText,
+  ListTodo,
   Mail,
   MapPin,
   MessageCircle,
@@ -34,7 +37,12 @@ import {
   scheduleLeadActivityAction,
   type LeadStatus,
 } from "@/actions/leads";
-import { parseLeadInfo } from "@/lib/cadence";
+import {
+  CADENCE_STEPS,
+  calculateStepTemporalStatus,
+  parseLeadInfo,
+  toStartOfDay,
+} from "@/lib/cadence";
 import { OPERATORS, getOperator, formatNoteAuthor, type Operator } from "@/lib/operators";
 import {
   GOFER_TEMPLATES,
@@ -66,6 +74,7 @@ export function LeadDetailsSheet({
   isOpen,
   onClose,
   onStatusChange,
+  onCadenceChange,
   onOwnerChange,
   onLeadUpdate,
   operators = OPERATORS,
@@ -96,7 +105,9 @@ export function LeadDetailsSheet({
   const [newNoteText, setNewNoteText] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
 
-  // 4. Próximos Passos de Prospecção
+  // 4. Próximos Passos de Prospecção & Cadência
+  const [completedCadence, setCompletedCadence] = useState<string[]>([]);
+  const [cadenceFilter, setCadenceFilter] = useState<"daily" | "weekly" | "monthly" | "all">("all");
   const [activityDate, setActivityDate] = useState("");
   const [activityType, setActivityType] = useState<string>("follow_up");
   const [isSavingNextStep, setIsSavingNextStep] = useState(false);
@@ -137,6 +148,9 @@ export function LeadDetailsSheet({
 
     // Anotações
     setNotes(lead.notes || []);
+
+    // Cadência de prospecção
+    setCompletedCadence(dbCadenceState.completedSteps || []);
 
     // Próximo passo
     if (lead.nextActivityDate) {
@@ -361,6 +375,73 @@ export function LeadDetailsSheet({
       setIsSavingNextStep(false);
     }
   };
+
+  // Alternar conclusão de etapa da cadência (Cold Call, Cold Mail, LinkedIn, etc.)
+  const toggleCadenceStep = async (stepId: string) => {
+    if (!lead) return;
+    const next = completedCadence.includes(stepId)
+      ? completedCadence.filter((id) => id !== stepId)
+      : [...completedCadence, stepId];
+
+    setCompletedCadence(next);
+    onCadenceChange?.(lead.id, next);
+
+    const updatedLead: Lead = {
+      ...lead,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        completedSteps: next,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+
+    try {
+      await updateLeadCadenceAction(lead.id, {
+        completedSteps: next,
+      });
+    } catch (err) {
+      console.warn("Falha ao salvar cadência:", err);
+    }
+  };
+
+  // Cálculos de progresso e filtragem temporal da Cadência
+  const cadenceProgress = Math.round(
+    (completedCadence.length / CADENCE_STEPS.length) * 100
+  );
+
+  const leadCreatedDay = lead?.createdAt ? toStartOfDay(lead.createdAt) : toStartOfDay(new Date());
+  const currentDay = toStartOfDay(new Date());
+
+  const getStepDiffDays = (dayOffset: number) => {
+    const targetDate = new Date(leadCreatedDay);
+    targetDate.setDate(targetDate.getDate() + dayOffset);
+    return Math.round((targetDate.getTime() - currentDay.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const dailySteps = CADENCE_STEPS.filter((step) => {
+    const isCompleted = completedCadence.includes(step.id);
+    const status = calculateStepTemporalStatus(lead?.createdAt || new Date(), step.dayOffset, isCompleted);
+    return status.type === "today" || status.type === "overdue" || !isCompleted;
+  });
+
+  const weeklySteps = CADENCE_STEPS.filter((step) => {
+    const diff = getStepDiffDays(step.dayOffset);
+    return diff <= 7;
+  });
+
+  const monthlySteps = CADENCE_STEPS.filter((step) => {
+    const diff = getStepDiffDays(step.dayOffset);
+    return diff <= 30;
+  });
+
+  const filteredSteps =
+    cadenceFilter === "daily"
+      ? (dailySteps.length > 0 ? dailySteps : [CADENCE_STEPS[0]])
+      : cadenceFilter === "weekly"
+      ? weeklySteps
+      : cadenceFilter === "monthly"
+      ? monthlySteps
+      : CADENCE_STEPS;
 
   // Troca de fase de template Gofer
   const handleSelectTemplatePhase = (phaseKey: TemplatePhaseKey) => {
@@ -805,6 +886,227 @@ export function LeadDetailsSheet({
                     <CheckCircle2 className="size-3" />
                     <span>Fechado</span>
                   </button>
+                </div>
+              </div>
+
+              {/* CADÊNCIA TEMPORAL DE PROSPECÇÃO B2B (COLD CALL, COLD MAIL, LINKEDIN, ETC.) */}
+              <div className="rounded-lg bg-[#141414] ring-1 ring-[#2e2e2e] p-4 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ListTodo className="size-4 text-[#14d06e]" />
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                        Cadência de Prospecção Outbound
+                      </h3>
+                      <p className="text-[11px] text-[#afafaf]">
+                        Sequência estratégica de passos (Cold Call, Cold Mail, LinkedIn...)
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-semibold text-white bg-[#0d0d0d] px-2.5 py-1 rounded-md border border-[#2e2e2e]">
+                    {completedCadence.length}/{CADENCE_STEPS.length} ({cadenceProgress}%)
+                  </span>
+                </div>
+
+                {/* Barra de Progresso da Cadência */}
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1a1a1a]">
+                  <div
+                    className="h-full bg-[#14d06e] transition-all duration-300"
+                    style={{ width: `${cadenceProgress}%` }}
+                  />
+                </div>
+
+                {/* Seletor Temporal Segmentado Estilo iOS */}
+                <div className="grid grid-cols-4 gap-1 rounded-lg bg-[#0d0d0d] p-1 border border-[#2e2e2e]">
+                  <button
+                    type="button"
+                    onClick={() => setCadenceFilter("daily")}
+                    className={`flex flex-col items-center justify-center rounded py-1.5 px-1 text-center transition-all cursor-pointer ${
+                      cadenceFilter === "daily"
+                        ? "bg-[#14d06e] text-[#0d0d0d] font-bold shadow-sm"
+                        : "text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Hoje</span>
+                    <span className="text-[11px] font-semibold">{dailySteps.length}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCadenceFilter("weekly")}
+                    className={`flex flex-col items-center justify-center rounded py-1.5 px-1 text-center transition-all cursor-pointer ${
+                      cadenceFilter === "weekly"
+                        ? "bg-[#14d06e] text-[#0d0d0d] font-bold shadow-sm"
+                        : "text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Semanal</span>
+                    <span className="text-[11px] font-semibold">{weeklySteps.length}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCadenceFilter("monthly")}
+                    className={`flex flex-col items-center justify-center rounded py-1.5 px-1 text-center transition-all cursor-pointer ${
+                      cadenceFilter === "monthly"
+                        ? "bg-[#14d06e] text-[#0d0d0d] font-bold shadow-sm"
+                        : "text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Mensal</span>
+                    <span className="text-[11px] font-semibold">{monthlySteps.length}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCadenceFilter("all")}
+                    className={`flex flex-col items-center justify-center rounded py-1.5 px-1 text-center transition-all cursor-pointer ${
+                      cadenceFilter === "all"
+                        ? "bg-[#14d06e] text-[#0d0d0d] font-bold shadow-sm"
+                        : "text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <span className="text-[10px] font-mono uppercase tracking-wider">Cadeia</span>
+                    <span className="text-[11px] font-semibold">{CADENCE_STEPS.length}</span>
+                  </button>
+                </div>
+
+                {/* Lista Estilo Apple Reminders com Passos da Cadência */}
+                <div className="rounded-lg border border-[#2e2e2e] bg-[#0a0a0a] divide-y divide-[#1f1f1f] overflow-hidden">
+                  {filteredSteps.length === 0 ? (
+                    <div className="p-6 text-center space-y-2">
+                      <CheckCircle2 className="size-6 text-[#14d06e] mx-auto" />
+                      <p className="text-xs text-[#afafaf]">Nenhum passo pendente neste período.</p>
+                      <button
+                        type="button"
+                        onClick={() => setCadenceFilter("all")}
+                        className="text-xs font-semibold text-[#14d06e] hover:underline cursor-pointer"
+                      >
+                        Ver cadeia completa de prospecção &rarr;
+                      </button>
+                    </div>
+                  ) : (
+                    filteredSteps.map((step) => {
+                      const isCompleted = completedCadence.includes(step.id);
+                      const temporalInfo = calculateStepTemporalStatus(
+                        lead.createdAt,
+                        step.dayOffset,
+                        isCompleted
+                      );
+
+                      return (
+                        <div
+                          key={step.id}
+                          className={`flex items-center justify-between gap-3 p-3 transition-colors ${
+                            isCompleted
+                              ? "bg-[#0d0d0d]/40 opacity-70 hover:opacity-100"
+                              : "hover:bg-[#141414]"
+                          }`}
+                        >
+                          {/* Checkbox circular e Título */}
+                          <div
+                            onClick={() => toggleCadenceStep(step.id)}
+                            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          >
+                            <div
+                              className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                                isCompleted
+                                  ? "border-[#14d06e] bg-[#14d06e] text-[#0d0d0d]"
+                                  : "border-[#757575] hover:border-white"
+                              }`}
+                            >
+                              {isCompleted && <Check className="size-3 stroke-[3]" />}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono font-semibold text-[#14d06e] uppercase">
+                                  {step.dayLabel}
+                                </span>
+                                <span
+                                  className={`text-xs font-semibold ${
+                                    isCompleted
+                                      ? "line-through text-[#757575]"
+                                      : "text-white"
+                                  }`}
+                                >
+                                  {step.title}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#afafaf] truncate">
+                                {step.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Badges e Ações Rápidas de 1 Clique */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Ação rápida contextual baseada no tipo de contato */}
+                            {(step.id === "step-1" || step.id === "step-4") && (
+                              formattedWhatsappUrl ? (
+                                <a
+                                  href={formattedWhatsappUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Chamar no WhatsApp"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#0c2b1c] text-[#14d06e] text-[10px] font-medium border border-[#14d06e]/30 hover:bg-[#14d06e] hover:text-[#0d0d0d] transition-colors"
+                                >
+                                  <Phone className="size-3" />
+                                  <span>Chamar</span>
+                                </a>
+                              ) : editPhone ? (
+                                <a
+                                  href={`tel:${editPhone}`}
+                                  title="Ligar"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a1a] text-[#afafaf] text-[10px] font-medium border border-[#2e2e2e] hover:text-white transition-colors"
+                                >
+                                  <Phone className="size-3" />
+                                  <span>Ligar</span>
+                                </a>
+                              ) : null
+                            )}
+
+                            {(step.id === "step-2" || step.id === "step-5") && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveBottomTab("templates");
+                                  setSelectedPhaseKey(step.id === "step-2" ? "contato_1" : "contato_2");
+                                }}
+                                title="Ver template pronto para esta etapa"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#0f1b33] text-[#7fa9f7] text-[10px] font-medium border border-[#7fa9f7]/30 hover:bg-[#7fa9f7] hover:text-[#0d0d0d] transition-colors cursor-pointer"
+                              >
+                                <Mail className="size-3" />
+                                <span>Template</span>
+                              </button>
+                            )}
+
+                            {step.id === "step-3" && (
+                              <a
+                                href={`https://www.google.com/search?q=${encodeURIComponent(
+                                  `${editCompanyName || leadCtx.company} ${editContactPerson || leadCtx.person} linkedin`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Buscar contato no LinkedIn"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a1a] text-[#afafaf] text-[10px] font-medium border border-[#2e2e2e] hover:text-white transition-colors"
+                              >
+                                <UserCheck className="size-3" />
+                                <span>LinkedIn</span>
+                              </a>
+                            )}
+
+                            {/* Badge temporal de status */}
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider font-semibold border ${temporalInfo.badgeClass}`}
+                            >
+                              {temporalInfo.tag}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
