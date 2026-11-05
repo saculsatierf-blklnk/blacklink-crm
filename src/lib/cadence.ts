@@ -144,6 +144,7 @@ export function calculateStepTemporalStatus(
 }
 
 export interface NextCadenceActionInfo {
+  stepId?: string;
   actionText: string;
   temporalTag: string;
   type: StepTemporalType;
@@ -162,6 +163,7 @@ export function getNextCadenceAction(
 ): NextCadenceActionInfo {
   if (leadStatus === "closed") {
     return {
+      stepId: undefined,
       actionText: "Negociação Concluída",
       temporalTag: "Fechado",
       type: "completed",
@@ -175,6 +177,7 @@ export function getNextCadenceAction(
 
   if (!nextStep) {
     return {
+      stepId: undefined,
       actionText: "Cadência Concluída",
       temporalTag: "Finalizado",
       type: "completed",
@@ -200,6 +203,7 @@ export function getNextCadenceAction(
   }
 
   return {
+    stepId: nextStep.id,
     actionText: nextStep.shortAction,
     temporalTag: temporalStatus.tag,
     type: temporalStatus.type,

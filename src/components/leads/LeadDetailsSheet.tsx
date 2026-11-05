@@ -458,7 +458,7 @@ export function LeadDetailsSheet({
     const nextNotes = [newNote, ...notes];
     setNotes(nextNotes);
 
-    const nextCadence = Array.from(new Set([...completedCadence, stepId, "1º Contato"]));
+    const nextCadence = Array.from(new Set([...completedCadence, stepId, "step-1", "step-2", "1º Contato"]));
     setCompletedCadence(nextCadence);
     onCadenceChange?.(lead.id, nextCadence);
 
@@ -725,12 +725,18 @@ export function LeadDetailsSheet({
   }) => {
     if (!lead) return;
 
-    let nextCadence = completedCadence;
-    if (data.completedStepId && !completedCadence.includes(data.completedStepId)) {
-      nextCadence = [...completedCadence, data.completedStepId];
-      setCompletedCadence(nextCadence);
-      onCadenceChange?.(lead.id, nextCadence);
+    let nextCadence = [...completedCadence];
+    if (data.completedStepId && !nextCadence.includes(data.completedStepId)) {
+      nextCadence.push(data.completedStepId);
     }
+    // Se a interação foi via WhatsApp ou Primeiro Contato:
+    if (data.channel === "whatsapp" || data.outcome === "pediu_whatsapp") {
+      if (!nextCadence.includes("step-1")) nextCadence.push("step-1");
+      if (!nextCadence.includes("step-2")) nextCadence.push("step-2");
+      if (!nextCadence.includes("1º Contato")) nextCadence.push("1º Contato");
+    }
+    setCompletedCadence(nextCadence);
+    onCadenceChange?.(lead.id, nextCadence);
 
     let nextNotes = notes;
     if (data.notes) {
@@ -1009,7 +1015,14 @@ export function LeadDetailsSheet({
     const nextNotes = [newNote, ...notes];
     setNotes(nextNotes);
 
-    const nextCadence = Array.from(new Set([...completedCadence, targetStepId, taskName]));
+    const stepsToAdd: string[] = [targetStepId, taskName];
+    // Se a atividade for de 1º Contato ou WhatsApp inicial:
+    // Deve dar OK automaticamente nas atividades de 1º contato da esteira (step-1 e step-2)
+    if (selectedPhaseKey === "contato_1" || (targetStepId === "step-2" && channel === "whatsapp")) {
+      stepsToAdd.push("step-1", "step-2", "1º Contato");
+    }
+
+    const nextCadence = Array.from(new Set([...completedCadence, ...stepsToAdd]));
     setCompletedCadence(nextCadence);
     onCadenceChange?.(lead.id, nextCadence);
 
@@ -2261,7 +2274,8 @@ export function LeadDetailsSheet({
                     const targetStepId = getStepIdForTemplate(selectedPhaseKey, selectedChannel);
                     const isStepDone =
                       completedCadence.includes(targetStepId) ||
-                      completedCadence.includes(currentTmpl.badge);
+                      completedCadence.includes(currentTmpl.badge) ||
+                      (selectedPhaseKey === "contato_1" && (completedCadence.includes("step-1") && completedCadence.includes("step-2")));
 
                     return (
                       <div className="flex flex-col items-end gap-1.5">

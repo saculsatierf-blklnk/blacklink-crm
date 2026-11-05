@@ -58,15 +58,23 @@ export function TaskOutcomeModal({
   onClose,
   stepId,
   stepTitle,
-  defaultChannel = "call",
+  defaultChannel,
   currentOperatorName = "Lucas de Freitas Leite",
   onSaveOutcome,
 }: TaskOutcomeModalProps) {
-  const [channel, setChannel] = useState<InteractionChannel>(defaultChannel);
+  const initialChannel: InteractionChannel =
+    defaultChannel ||
+    (stepTitle?.toLowerCase().includes("wpp") || stepTitle?.toLowerCase().includes("whats")
+      ? "whatsapp"
+      : stepTitle?.toLowerCase().includes("mail") || stepTitle?.toLowerCase().includes("e-mail")
+      ? "email"
+      : "call");
+
+  const [channel, setChannel] = useState<InteractionChannel>(initialChannel);
   const [outcome, setOutcome] = useState<InteractionOutcome>(() =>
-    defaultChannel === "email"
+    initialChannel === "email"
       ? "pediu_email"
-      : defaultChannel === "whatsapp"
+      : initialChannel === "whatsapp"
       ? "pediu_whatsapp"
       : "atendeu"
   );
