@@ -17,6 +17,7 @@ import {
   ExternalLink,
   FileText,
   ListTodo,
+  Loader2,
   Mail,
   MapPin,
   MessageCircle,
@@ -135,6 +136,8 @@ export function LeadDetailsSheet({
   const [templateSubject, setTemplateSubject] = useState("");
   const [templateBody, setTemplateBody] = useState("");
   const [copiedTarget, setCopiedTarget] = useState<"subject" | "body" | "all" | null>(null);
+  const [isCompletingTemplate, setIsCompletingTemplate] = useState(false);
+  const [templateSuccessFeedback, setTemplateSuccessFeedback] = useState<string | null>(null);
 
   // 6. Desativação & Reativação do Lead
   const [isLeadDeactivated, setIsLeadDeactivated] = useState(false);
@@ -430,19 +433,80 @@ export function LeadDetailsSheet({
   const toggleCadenceStep = async (stepId: string) => {
     if (!lead) return;
 
-    // Se estiver marcando como concluído, abre o modal de desfecho para capturar a métrica (call atendida, wpp, orçamento)
+    // Se estiver marcando como concluído
     if (!completedCadence.includes(stepId)) {
       const stepObj = CADENCE_STEPS.find((s) => s.id === stepId);
-      setOutcomeStepId(stepId);
-      setOutcomeStepTitle(stepObj?.title || stepObj?.shortAction || "Passo de Cadência");
-      setOutcomeDefaultChannel(
-        stepObj?.shortAction.toLowerCase().includes("call")
-          ? "call"
-          : stepObj?.shortAction.toLowerCase().includes("mail")
-          ? "email"
-          : "whatsapp"
-      );
-      setIsOutcomeModalOpen(true);
+      const isCall = Boolean(stepObj?.shortAction.toLowerCase().includes("call"));
+
+      // Apenas para ligações telefônicas é necessário saber se atendeu ou não
+      // Para e-mail, catálogo ou outros passos: conclui diretamente na hora com 1 clique!
+      if (isCall) {
+        setOutcomeStepId(stepId);
+        setOutcomeStepTitle(stepObj?.title || stepObj?.shortAction || "Passo de Cadência");
+        setOutcomeDefaultChannel("call");
+        setIsOutcomeModalOpen(true);
+        return;
+      }
+
+      // Conclusão direta de E-mail / WhatsApp / Catálogo (sem questionários desnecessários)
+      const nowIso = new Date().toISOString();
+      const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+      const stepName = stepObj?.title || stepObj?.shortAction || "Passo de Prospecção";
+      const isMail = Boolean(stepObj?.shortAction.toLowerCase().includes("mail") || stepObj?.shortAction.toLowerCase().includes("catálogo"));
+      const chosenChannel: InteractionChannel = isMail ? "email" : "whatsapp";
+
+      recordPersonalMetricEvent({
+        operatorId: "lucas-freitas",
+        operatorName: currentOp,
+        leadId: lead.id,
+        leadName: editContactPerson || editCompanyName || lead.leadName || "Lead",
+        companyName: editCompanyName || (lead.cadenceState as any)?.companyName || lead.leadName,
+        sector: inferSectorFromLead(lead),
+        channel: chosenChannel,
+        outcome: isMail ? "pediu_email" : "pediu_whatsapp",
+        stepId,
+        stepTitle: stepName,
+        notes: `✓ ${stepName} concluído com sucesso`,
+      });
+
+      const next = Array.from(new Set([...completedCadence, stepId]));
+      setCompletedCadence(next);
+      onCadenceChange?.(lead.id, next);
+
+      const newNote: NoteEntry = {
+        id: "note-" + Date.now(),
+        text: `[CADÊNCIA] ✓ ${stepName} realizado com sucesso hoje por ${currentOp}.`,
+        createdAt: nowIso,
+        author: currentOp,
+      };
+      const nextNotes = [newNote, ...notes];
+      setNotes(nextNotes);
+
+      const updatedLead: Lead = {
+        ...lead,
+        notes: nextNotes,
+        cadenceState: {
+          ...(lead.cadenceState || { completedSteps: [] }),
+          completedSteps: next,
+          lastCompletedAt: nowIso,
+        },
+      };
+      onLeadUpdate?.(updatedLead);
+
+      try {
+        await updateLeadCadenceAction(lead.id, {
+          completedSteps: next,
+        });
+        await addLeadNoteAction(lead.id, newNote.text, currentOp);
+      } catch (err) {
+        console.warn("Falha ao salvar cadência:", err);
+      }
+
+      setSaveFeedback({
+        type: "success",
+        text: `✓ ${stepName} concluído! Card reposicionado na fila em verde fluorescente.`,
+      });
+      setTimeout(() => setSaveFeedback(null), 3500);
       return;
     }
 
@@ -729,12 +793,34 @@ export function LeadDetailsSheet({
     handleSelectTemplatePhase(selectedPhaseKey, channel);
   };
 
+  // Mapeia fase de template e canal para o ID do passo na cadência
+  const getStepIdForTemplate = (phaseKey: TemplatePhaseKey, ch: TemplateChannel): string => {
+    switch (phaseKey) {
+      case "contato_1":
+        return ch === "ligacao" ? "step-1" : "step-2";
+      case "contato_2":
+        return "step-3";
+      case "promocao":
+        return "step-4";
+      case "orcamento_base":
+        return "step-5";
+      case "pos_orcamento":
+        return "step-6";
+      default:
+        return "step-1";
+    }
+  };
+
   // Conclui atividade pelo template (Fila Inteligente: timestamp + move para o final da coluna)
   const handleCompleteTemplateTask = async (taskName: string, channel: TemplateChannel) => {
     if (!lead) return;
+    setIsCompletingTemplate(true);
+    setTemplateSuccessFeedback(null);
+
     const nowIso = new Date().toISOString();
     const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
     const channelLabel = channel === "ligacao" ? "Ligação Telefônica" : channel === "email" ? "E-mail" : "WhatsApp";
+    const targetStepId = getStepIdForTemplate(selectedPhaseKey, channel);
 
     recordPersonalMetricEvent({
       operatorId: "lucas-freitas",
@@ -744,7 +830,9 @@ export function LeadDetailsSheet({
       companyName: editCompanyName || (lead.cadenceState as any)?.companyName || lead.leadName,
       sector: inferSectorFromLead(lead),
       channel: channel === "ligacao" ? "call" : channel,
-      outcome: "atendeu",
+      outcome: channel === "ligacao" ? "atendeu" : channel === "email" ? "pediu_email" : "pediu_whatsapp",
+      stepId: targetStepId,
+      stepTitle: taskName,
       notes: `✓ ${taskName} (${channelLabel}) executada com sucesso via Template Gofer`,
     });
 
@@ -757,7 +845,7 @@ export function LeadDetailsSheet({
     const nextNotes = [newNote, ...notes];
     setNotes(nextNotes);
 
-    const nextCadence = Array.from(new Set([...completedCadence, taskName]));
+    const nextCadence = Array.from(new Set([...completedCadence, targetStepId, taskName]));
     setCompletedCadence(nextCadence);
     onCadenceChange?.(lead.id, nextCadence);
 
@@ -777,13 +865,21 @@ export function LeadDetailsSheet({
         completedSteps: nextCadence,
       });
       await addLeadNoteAction(lead.id, newNote.text, currentOp);
-    } catch {}
+    } catch (err) {
+      console.warn("Falha ao salvar cadência:", err);
+    } finally {
+      setIsCompletingTemplate(false);
+    }
 
+    setTemplateSuccessFeedback(`✓ ${taskName} concluído com sucesso hoje! Card reposicionado na fila em verde.`);
     setSaveFeedback({
       type: "success",
       text: `✓ ${taskName} concluída! Card reposicionado na fila em verde fluorescente.`,
     });
-    setTimeout(() => setSaveFeedback(null), 3500);
+    setTimeout(() => {
+      setTemplateSuccessFeedback(null);
+      setSaveFeedback(null);
+    }, 4000);
   };
 
   const handleCopyText = (text: string, target: "subject" | "body" | "all") => {
@@ -1812,34 +1908,24 @@ export function LeadDetailsSheet({
                   </div>
 
                   <div className="space-y-2 text-xs">
-                    {/* Hook 15s */}
-                    <div className="bg-[#080d17] rounded p-2 border border-[#7fa9f7]/20">
-                      <span className="text-[10px] font-semibold text-[#7fa9f7] block uppercase tracking-wider">
-                        ⚡ {pelekeData.headline} ({pelekeData.phase}):
-                      </span>
-                      <p className="text-white text-xs mt-0.5 leading-relaxed font-sans font-medium whitespace-pre-line">
-                        {pelekeData.content}
-                      </p>
-                    </div>
-
-                    {/* Quebra de Objeção */}
-                    <div className="bg-[#080d17] rounded p-2 border border-[#e8c267]/30">
-                      <span className="text-[10px] font-semibold text-[#e8c267] block uppercase tracking-wider">
-                        🛡️ Quebrador de Objeção Letal:
-                      </span>
-                      <p className="text-[#afafaf] text-xs mt-0.5 leading-relaxed font-sans whitespace-pre-line">
-                        {pelekeData.objectionKiller}
-                      </p>
-                    </div>
-
                     {/* Objetivo Tático */}
                     <div className="flex items-center justify-between text-[11px] text-[#14d06e] bg-[#0c2b1c] px-2.5 py-1.5 rounded border border-[#14d06e]/30">
                       <span className="font-semibold">Objetivo da Etapa:</span>
                       <span className="font-sans text-xs">{pelekeData.tacticalObjective}</span>
                     </div>
 
+                    {/* Quebra de Objeção */}
+                    <div className="bg-[#080d17] rounded p-2.5 border border-[#e8c267]/30">
+                      <span className="text-[10px] font-semibold text-[#e8c267] block uppercase tracking-wider">
+                        🛡️ Quebrador de Objeção Letal:
+                      </span>
+                      <p className="text-[#d4d4d4] text-xs mt-1 leading-relaxed font-sans whitespace-pre-line">
+                        {pelekeData.objectionKiller}
+                      </p>
+                    </div>
+
                     {/* Dica Tática */}
-                    <div className="text-[11px] text-zinc-400 italic">
+                    <div className="text-[11px] text-zinc-400 italic bg-[#080d17] p-2 rounded border border-[#7fa9f7]/20">
                       💡 {pelekeData.pelekeNote}
                     </div>
                   </div>
@@ -1902,15 +1988,53 @@ export function LeadDetailsSheet({
                   </div>
 
                   {/* BOTÃO DE CONCLUSÃO: DAR OK & CONCLUIR HOJE */}
-                  <button
-                    type="button"
-                    onClick={() => handleCompleteTemplateTask(currentTmpl.badge, selectedChannel)}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[#0c2b1c] hover:bg-[#14d06e] text-[#14d06e] hover:text-[#0d0d0d] border border-[#14d06e]/70 px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-md"
-                    title="Dar OK nesta atividade (Mover lead para o final da fila em verde fluorescente com timestamp)"
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    <span>✓ Dar OK & Concluir Atividade</span>
-                  </button>
+                  {(() => {
+                    const targetStepId = getStepIdForTemplate(selectedPhaseKey, selectedChannel);
+                    const isStepDone =
+                      completedCadence.includes(targetStepId) ||
+                      completedCadence.includes(currentTmpl.badge);
+
+                    return (
+                      <div className="flex flex-col items-end gap-1.5">
+                        {templateSuccessFeedback && (
+                          <div className="text-[11px] font-bold text-[#14d06e] flex items-center gap-1.5 bg-[#0c2b1c] px-2.5 py-1 rounded border border-[#14d06e]/40 animate-in fade-in">
+                            <CheckCircle2 className="size-3 text-[#14d06e]" />
+                            <span>{templateSuccessFeedback}</span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          disabled={isCompletingTemplate}
+                          onClick={() =>
+                            handleCompleteTemplateTask(currentTmpl.badge, selectedChannel)
+                          }
+                          className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-md ${
+                            isStepDone
+                              ? "bg-[#14d06e] text-[#0d0d0d] hover:bg-[#14d06e]/90 ring-1 ring-[#14d06e]"
+                              : "bg-[#0c2b1c] hover:bg-[#14d06e] text-[#14d06e] hover:text-[#0d0d0d] border border-[#14d06e]/70"
+                          }`}
+                          title="Dar OK nesta atividade (Mover lead para o final da fila em verde fluorescente com timestamp)"
+                        >
+                          {isCompletingTemplate ? (
+                            <>
+                              <Loader2 className="size-3.5 animate-spin" />
+                              <span>Salvando...</span>
+                            </>
+                          ) : isStepDone ? (
+                            <>
+                              <CheckCircle2 className="size-3.5 text-[#0d0d0d]" />
+                              <span>✓ Atividade Concluída Hoje</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="size-3.5" />
+                              <span>✓ Dar OK & Concluir Atividade</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );

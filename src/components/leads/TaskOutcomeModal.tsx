@@ -62,13 +62,27 @@ export function TaskOutcomeModal({
   onSaveOutcome,
 }: TaskOutcomeModalProps) {
   const [channel, setChannel] = useState<InteractionChannel>(defaultChannel);
-  const [outcome, setOutcome] = useState<InteractionOutcome>("atendeu");
+  const [outcome, setOutcome] = useState<InteractionOutcome>(() =>
+    defaultChannel === "email"
+      ? "pediu_email"
+      : defaultChannel === "whatsapp"
+      ? "pediu_whatsapp"
+      : "atendeu"
+  );
   const [quotedValueStr, setQuotedValueStr] = useState<string>("");
   const [selectedSector, setSelectedSector] = useState<string>(() =>
     inferSectorFromLead(lead)
   );
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Troca de canal ajusta automaticamente o desfecho padrão
+  const handleSelectChannel = (c: InteractionChannel) => {
+    setChannel(c);
+    if (c === "email") setOutcome("pediu_email");
+    else if (c === "whatsapp") setOutcome("pediu_whatsapp");
+    else if (c === "call") setOutcome("atendeu");
+  };
 
   if (!isOpen) return null;
 
@@ -157,7 +171,7 @@ export function TaskOutcomeModal({
             <div className="grid grid-cols-4 gap-2">
               <button
                 type="button"
-                onClick={() => setChannel("call")}
+                onClick={() => handleSelectChannel("call")}
                 className={`py-2 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   channel === "call"
                     ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm font-bold"
@@ -170,7 +184,7 @@ export function TaskOutcomeModal({
 
               <button
                 type="button"
-                onClick={() => setChannel("whatsapp")}
+                onClick={() => handleSelectChannel("whatsapp")}
                 className={`py-2 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   channel === "whatsapp"
                     ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm font-bold"
@@ -183,7 +197,7 @@ export function TaskOutcomeModal({
 
               <button
                 type="button"
-                onClick={() => setChannel("email")}
+                onClick={() => handleSelectChannel("email")}
                 className={`py-2 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   channel === "email"
                     ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm font-bold"
@@ -196,7 +210,7 @@ export function TaskOutcomeModal({
 
               <button
                 type="button"
-                onClick={() => setChannel("reuniao")}
+                onClick={() => handleSelectChannel("reuniao")}
                 className={`py-2 px-2 rounded-lg font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   channel === "reuniao"
                     ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm font-bold"
@@ -209,95 +223,213 @@ export function TaskOutcomeModal({
             </div>
           </div>
 
-          {/* 2. Desfecho Imediato (O que aconteceu?) */}
+          {/* 2. Desfecho Imediato (Adaptado ao Canal) */}
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mb-1.5">
-              Qual foi o resultado imediato?
+              {channel === "email"
+                ? "Status do Envio de E-mail"
+                : channel === "whatsapp"
+                ? "Status do Envio de WhatsApp"
+                : "Qual foi o resultado da ligação?"}
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setOutcome("atendeu")}
-                className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
-                  outcome === "atendeu"
-                    ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm"
-                    : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <PhoneCall className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-white">Atendeu a ligação</div>
-                  <div className="text-[10px] text-[#afafaf]">Conversei com decisor / compras</div>
-                </div>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => setOutcome("nao_atendeu")}
-                className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
-                  outcome === "nao_atendeu"
-                    ? "bg-[#2b1310] border-[#ff5d48] text-white shadow-sm"
-                    : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <PhoneMissed className="size-4 text-[#ff5d48] shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-white">Não atendeu</div>
-                  <div className="text-[10px] text-[#afafaf]">Caixa postal / ocupado / sem sinal</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOutcome("pediu_whatsapp")}
-                className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
-                  outcome === "pediu_whatsapp"
-                    ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm"
-                    : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <MessageCircle className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-white">Solicitou WhatsApp</div>
-                  <div className="text-[10px] text-[#afafaf]">Pediu para enviar catálogo / tabela</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOutcome("pediu_email")}
-                className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
-                  outcome === "pediu_email"
-                    ? "bg-[#0f1b33] border-[#7fa9f7] text-white shadow-sm"
-                    : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <Mail className="size-4 text-[#7fa9f7] shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-white">Solicitou E-mail</div>
-                  <div className="text-[10px] text-[#afafaf]">Enviar apresentação formal de tubos</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setOutcome("solicitou_orcamento")}
-                className={`col-span-2 p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
-                  outcome === "solicitou_orcamento"
-                    ? "bg-[#2b2410] border-[#e8c267] text-white shadow-md ring-1 ring-[#e8c267]/50"
-                    : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
-                }`}
-              >
-                <Target className="size-4 text-[#e8c267] shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <div className="font-bold text-white flex items-center gap-1.5">
-                    <span>Solicitou Cotação / Orçamento!</span>
-                    <span className="text-[9px] bg-[#e8c267] text-[#0d0d0d] px-1.5 py-0.2 rounded font-black">QUENTE</span>
+            {channel === "email" ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setOutcome("pediu_email")}
+                  className={`w-full p-3 rounded-lg border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                    outcome === "pediu_email" || outcome === "atendeu"
+                      ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm ring-1 ring-[#14d06e]/50"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <Mail className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-bold text-white flex items-center justify-between">
+                      <span>✓ E-mail Enviado com Sucesso</span>
+                      <span className="text-[9px] bg-[#14d06e] text-[#0d0d0d] px-1.5 py-0.5 rounded font-black">PADRÃO</span>
+                    </div>
+                    <div className="text-[11px] text-[#afafaf] mt-0.5">Disparo realizado com apresentação e catálogo, aguardando retorno</div>
                   </div>
-                  <div className="text-[10px] text-[#e8c267]">Cliente tem demanda imediata de aço / perfis</div>
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOutcome("solicitou_orcamento")}
+                    className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                      outcome === "solicitou_orcamento"
+                        ? "bg-[#2b2410] border-[#e8c267] text-white shadow-md ring-1 ring-[#e8c267]/50"
+                        : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <Target className="size-4 text-[#e8c267] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">Já respondeu / Cotação</div>
+                      <div className="text-[10px] text-[#afafaf]">Cliente pediu cotação imediata</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setOutcome("pediu_whatsapp")}
+                    className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                      outcome === "pediu_whatsapp"
+                        ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm"
+                        : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <MessageCircle className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">Prefere WhatsApp</div>
+                      <div className="text-[10px] text-[#afafaf]">Pediu envio pelo WhatsApp</div>
+                    </div>
+                  </button>
                 </div>
-              </button>
-            </div>
+              </div>
+            ) : channel === "whatsapp" ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setOutcome("pediu_whatsapp")}
+                  className={`w-full p-3 rounded-lg border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
+                    outcome === "pediu_whatsapp"
+                      ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm ring-1 ring-[#14d06e]/50"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <MessageCircle className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-bold text-white flex items-center justify-between">
+                      <span>✓ Catálogo / Mensagem Enviada</span>
+                      <span className="text-[9px] bg-[#14d06e] text-[#0d0d0d] px-1.5 py-0.5 rounded font-black">PADRÃO</span>
+                    </div>
+                    <div className="text-[11px] text-[#afafaf] mt-0.5">Disparo realizado via WhatsApp Web</div>
+                  </div>
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOutcome("solicitou_orcamento")}
+                    className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                      outcome === "solicitou_orcamento"
+                        ? "bg-[#2b2410] border-[#e8c267] text-white shadow-md ring-1 ring-[#e8c267]/50"
+                        : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <Target className="size-4 text-[#e8c267] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">Solicitou Orçamento</div>
+                      <div className="text-[10px] text-[#afafaf]">Mandou lista de peças</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setOutcome("nao_atendeu")}
+                    className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                      outcome === "nao_atendeu"
+                        ? "bg-[#2b1310] border-[#ff5d48] text-white shadow-sm"
+                        : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <PhoneMissed className="size-4 text-[#ff5d48] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">Sem retorno</div>
+                      <div className="text-[10px] text-[#afafaf]">Mensagem não entregue</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Canal de Ligação Telefônica */
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOutcome("atendeu")}
+                  className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                    outcome === "atendeu"
+                      ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <PhoneCall className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white">Atendeu a ligação</div>
+                    <div className="text-[10px] text-[#afafaf]">Conversei com decisor / compras</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOutcome("nao_atendeu")}
+                  className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                    outcome === "nao_atendeu"
+                      ? "bg-[#2b1310] border-[#ff5d48] text-white shadow-sm"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <PhoneMissed className="size-4 text-[#ff5d48] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white">Não atendeu</div>
+                    <div className="text-[10px] text-[#afafaf]">Caixa postal / ocupado / sem sinal</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOutcome("pediu_whatsapp")}
+                  className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                    outcome === "pediu_whatsapp"
+                      ? "bg-[#0c2b1c] border-[#14d06e] text-white shadow-sm"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <MessageCircle className="size-4 text-[#14d06e] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white">Solicitou WhatsApp</div>
+                    <div className="text-[10px] text-[#afafaf]">Pediu para enviar catálogo / tabela</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOutcome("pediu_email")}
+                  className={`p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                    outcome === "pediu_email"
+                      ? "bg-[#0f1b33] border-[#7fa9f7] text-white shadow-sm"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <Mail className="size-4 text-[#7fa9f7] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-white">Solicitou E-mail</div>
+                    <div className="text-[10px] text-[#afafaf]">Enviar apresentação formal de tubos</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOutcome("solicitou_orcamento")}
+                  className={`col-span-2 p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                    outcome === "solicitou_orcamento"
+                      ? "bg-[#2b2410] border-[#e8c267] text-white shadow-md ring-1 ring-[#e8c267]/50"
+                      : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                  }`}
+                >
+                  <Target className="size-4 text-[#e8c267] shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="font-bold text-white flex items-center gap-1.5">
+                      <span>Solicitou Cotação / Orçamento!</span>
+                      <span className="text-[9px] bg-[#e8c267] text-[#0d0d0d] px-1.5 py-0.2 rounded font-black">QUENTE</span>
+                    </div>
+                    <div className="text-[10px] text-[#e8c267]">Cliente tem demanda imediata de aço / perfis</div>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Campo condicional de Valor Orçado */}
