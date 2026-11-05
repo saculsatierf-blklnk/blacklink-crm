@@ -41,6 +41,8 @@ import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
 import { TeamInviteModal } from "./TeamInviteModal";
 import { GoogleSheetsLeadHunter } from "./GoogleSheetsLeadHunter";
+import { PersonalMetricsAnalytics } from "./PersonalMetricsAnalytics";
+import { TaskOutcomeModal } from "./TaskOutcomeModal";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
 import { useUiStore } from "@/store/useUiStore";
@@ -160,6 +162,8 @@ export function LeadsKanban({
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [cardOutcomeLead, setCardOutcomeLead] = useState<Lead | null>(null);
+  const [cardOutcomeStepTitle, setCardOutcomeStepTitle] = useState<string | undefined>();
   const [isMounted, setIsMounted] = useState(false);
   const activeWorkspaceTab = useUiStore((state) => state.activeVendasTab);
   const setActiveWorkspaceTab = useUiStore((state) => state.setActiveVendasTab);
@@ -359,6 +363,68 @@ export function LeadsKanban({
     }
   };
 
+  // Callback de desfecho rápido registrado diretamente a partir do card no Kanban
+  const handleSaveCardOutcome = (data: {
+    outcome: string;
+    channel: string;
+    notes?: string;
+    quotedValue?: number;
+    completedStepId?: string;
+  }) => {
+    if (!cardOutcomeLead) return;
+
+    setLeadsList((prev) => {
+      const next = prev.map((l) => {
+        if (l.id !== cardOutcomeLead.id) return l;
+
+        const currentCadence = (l.cadenceState as any) || {};
+        const currentCompleted: string[] = currentCadence.completedSteps || [];
+        const nextSteps = data.completedStepId && !currentCompleted.includes(data.completedStepId)
+          ? [...currentCompleted, data.completedStepId]
+          : currentCompleted;
+
+        const currentNotes = l.notes || [];
+        const nextNotes = data.notes
+          ? [
+              {
+                id: "note-" + Date.now(),
+                text: data.notes,
+                createdAt: new Date().toISOString(),
+                author: currentUser?.name || "Lucas de Freitas Leite (Gofer Metais)",
+              },
+              ...currentNotes,
+            ]
+          : currentNotes;
+
+        // Se orçou, avança automaticamente para Em Prospecção caso esteja em Novo Lead
+        const nextStatus = (data.outcome === "solicitou_orcamento" && l.status === "new") ? "negotiation" : l.status;
+
+        return {
+          ...l,
+          status: nextStatus,
+          notes: nextNotes,
+          cadenceState: {
+            ...currentCadence,
+            completedSteps: nextSteps,
+            estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : currentCadence.estimatedValue,
+          },
+        };
+      });
+
+      try {
+        localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    if (data.completedStepId) {
+      setCadenceMap((prev) => ({
+        ...prev,
+        [cardOutcomeLead.id]: Array.from(new Set([...(prev[cardOutcomeLead.id] || []), data.completedStepId!])),
+      }));
+    }
+  };
+
   // Callback de atividade agendada e Hand-off processado
   const handleActivityScheduled = (
     leadId: string,
@@ -515,7 +581,7 @@ export function LeadsKanban({
   return (
     <div className="space-y-4">
       {/* Módulos Google Sheets (Planilha, Cadência, Nichos e Integração) — Controlados pelas abas na barra lateral esquerda */}
-      <div className={activeWorkspaceTab === "kanban" ? "hidden" : "block"}>
+      <div className={activeWorkspaceTab === "kanban" || activeWorkspaceTab === "metricas" ? "hidden" : "block"}>
         <GoogleSheetsLeadHunter
           companyName={companyName || "Gofer Metais"}
           onLeadImportedToKanban={handleLeadCreated}
@@ -525,6 +591,15 @@ export function LeadsKanban({
           currentCompanyId={currentUser?.company_id}
         />
       </div>
+
+      {/* ABA 5: MÉTRICAS PESSOAIS & ASSERTIVIDADE COM IA */}
+      {activeWorkspaceTab === "metricas" && (
+        <PersonalMetricsAnalytics
+          leadsList={leadsList}
+          currentOperatorName={currentUser?.name || "Lucas de Freitas Leite"}
+          onNavigateToKanban={() => setActiveWorkspaceTab("kanban")}
+        />
+      )}
 
       {/* ABA 4: PIPELINE KANBAN (ESTÉTICA ARQUITETÔNICA IRVO.COM.BR) */}
       {activeWorkspaceTab === "kanban" && (
@@ -915,6 +990,25 @@ export function LeadsKanban({
                                               <span>{op.shortName}</span>
                                             </span>
                                           </div>
+
+                                          {/* Ação com 1 Clique: Conclusão de Tarefa & Registro de Métricas */}
+                                          <div
+                                            className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-[#262626]"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setCardOutcomeLead(lead);
+                                                setCardOutcomeStepTitle(actionInfo.actionText);
+                                              }}
+                                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded bg-[#141414] hover:bg-[#14d06e] text-[#afafaf] hover:text-[#0d0d0d] border border-[#2e2e2e] hover:border-[#14d06e] py-1 px-2 text-[11px] font-semibold transition-all cursor-pointer group/btn shadow-sm"
+                                              title="Registrar desfecho (Ligação atendida, WhatsApp solicitado, Cotação gerada)"
+                                            >
+                                              <CheckCircle2 className="size-3 text-[#14d06e] group-hover/btn:text-[#0d0d0d]" />
+                                              <span>Registrar Desfecho</span>
+                                            </button>
+                                          </div>
                                         </>
                                       );
                                     })()}
@@ -1017,6 +1111,18 @@ export function LeadsKanban({
           });
         }}
       />
+
+      {/* Modal de Desfecho Rápido da Tarefa disparado diretamente do Card */}
+      {cardOutcomeLead && (
+        <TaskOutcomeModal
+          isOpen={Boolean(cardOutcomeLead)}
+          lead={cardOutcomeLead}
+          onClose={() => setCardOutcomeLead(null)}
+          stepTitle={cardOutcomeStepTitle}
+          currentOperatorName={currentUser?.name || "Lucas de Freitas Leite (Gofer Metais)"}
+          onSaveOutcome={handleSaveCardOutcome}
+        />
+      )}
     </div>
   );
 }

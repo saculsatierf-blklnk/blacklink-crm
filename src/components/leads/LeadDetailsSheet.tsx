@@ -22,10 +22,13 @@ import {
   MessageCircle,
   MessageSquare,
   Phone,
+  PhoneCall,
+  PhoneMissed,
   Plus,
   RotateCcw,
   Send,
   Sparkles,
+  Target,
   Trash2,
   User,
   UserCheck,
@@ -56,6 +59,13 @@ import {
   type TemplatePhaseKey,
   type TemplateChannel,
 } from "@/lib/templates-gofer";
+import { TaskOutcomeModal } from "./TaskOutcomeModal";
+import {
+  recordPersonalMetricEvent,
+  inferSectorFromLead,
+  type InteractionChannel,
+  type InteractionOutcome,
+} from "@/lib/personalMetrics";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
@@ -137,6 +147,12 @@ export function LeadDetailsSheet({
   const [reactivateNoteInput, setReactivateNoteInput] = useState("");
   const [isSubmittingDeactivation, setIsSubmittingDeactivation] = useState(false);
   const [isSubmittingReactivation, setIsSubmittingReactivation] = useState(false);
+
+  // 7. Modal de Desfecho de Tarefa & Registro de Métricas Operacionais
+  const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [outcomeStepId, setOutcomeStepId] = useState<string | undefined>();
+  const [outcomeStepTitle, setOutcomeStepTitle] = useState<string | undefined>();
+  const [outcomeDefaultChannel, setOutcomeDefaultChannel] = useState<InteractionChannel>("call");
 
   // Sincronização direta ao carregar o lead
   useEffect(() => {
@@ -408,10 +424,25 @@ export function LeadDetailsSheet({
   // Alternar conclusão de etapa da cadência (Cold Call, Cold Mail, LinkedIn, etc.)
   const toggleCadenceStep = async (stepId: string) => {
     if (!lead) return;
-    const next = completedCadence.includes(stepId)
-      ? completedCadence.filter((id) => id !== stepId)
-      : [...completedCadence, stepId];
 
+    // Se estiver marcando como concluído, abre o modal de desfecho para capturar a métrica (call atendida, wpp, orçamento)
+    if (!completedCadence.includes(stepId)) {
+      const stepObj = CADENCE_STEPS.find((s) => s.id === stepId);
+      setOutcomeStepId(stepId);
+      setOutcomeStepTitle(stepObj?.title || stepObj?.shortAction || "Passo de Cadência");
+      setOutcomeDefaultChannel(
+        stepObj?.shortAction.toLowerCase().includes("call")
+          ? "call"
+          : stepObj?.shortAction.toLowerCase().includes("mail")
+          ? "email"
+          : "whatsapp"
+      );
+      setIsOutcomeModalOpen(true);
+      return;
+    }
+
+    // Se estiver desmarcando
+    const next = completedCadence.filter((id) => id !== stepId);
     setCompletedCadence(next);
     onCadenceChange?.(lead.id, next);
 
@@ -431,6 +462,86 @@ export function LeadDetailsSheet({
     } catch (err) {
       console.warn("Falha ao salvar cadência:", err);
     }
+  };
+
+  // Handler de atalho rápido de desfecho clicado na aba de interações
+  const handleQuickChipOutcome = (
+    chosenOutcome: InteractionOutcome,
+    summaryText: string
+  ) => {
+    if (!lead) return;
+    setNewNoteText(summaryText);
+
+    // Registra métrica pessoal imediata
+    recordPersonalMetricEvent({
+      leadId: lead.id,
+      leadName: editContactPerson || lead.leadName || "Contato",
+      companyName: editCompanyName || lead.leadName || "Empresa",
+      sector: inferSectorFromLead(lead),
+      channel: chosenOutcome === "pediu_whatsapp" ? "whatsapp" : chosenOutcome === "pediu_email" ? "email" : "call",
+      outcome: chosenOutcome,
+      answeredCall: chosenOutcome !== "nao_atendeu",
+      requestedWhatsapp: chosenOutcome === "pediu_whatsapp",
+      requestedEmail: chosenOutcome === "pediu_email",
+      quoted: chosenOutcome === "solicitou_orcamento",
+      notes: summaryText,
+      operatorId: lead.ownerId || "lucas.leite",
+      operatorName: "Lucas de Freitas Leite (Gofer Metais)",
+    });
+  };
+
+  // Callback ao salvar desfecho no modal
+  const handleSaveOutcomeFromModal = async (data: {
+    outcome: InteractionOutcome;
+    channel: InteractionChannel;
+    notes?: string;
+    quotedValue?: number;
+    completedStepId?: string;
+  }) => {
+    if (!lead) return;
+
+    let nextCadence = completedCadence;
+    if (data.completedStepId && !completedCadence.includes(data.completedStepId)) {
+      nextCadence = [...completedCadence, data.completedStepId];
+      setCompletedCadence(nextCadence);
+      onCadenceChange?.(lead.id, nextCadence);
+    }
+
+    let nextNotes = notes;
+    if (data.notes) {
+      const nowIso = new Date().toISOString();
+      const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+      const newNote: NoteEntry = {
+        id: "note-" + Date.now(),
+        text: data.notes,
+        createdAt: nowIso,
+        author: currentOp,
+      };
+      nextNotes = [newNote, ...notes];
+      setNotes(nextNotes);
+
+      try {
+        await addLeadNoteAction(lead.id, data.notes, currentOp);
+      } catch {}
+    }
+
+    const updatedLead: Lead = {
+      ...lead,
+      notes: nextNotes,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        completedSteps: nextCadence,
+        estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : lead.cadenceState?.estimatedValue,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+
+    try {
+      await updateLeadCadenceAction(lead.id, {
+        completedSteps: nextCadence,
+        estimatedValue: updatedLead.cadenceState?.estimatedValue,
+      });
+    } catch {}
   };
 
   // Handler para Desativar o Lead com motivo registrado e histórico
@@ -1017,6 +1128,59 @@ export function LeadDetailsSheet({
           {activeBottomTab === "interacoes" && (
             <div className="space-y-3">
               <div className="rounded-lg bg-[#141414] ring-1 ring-[#2e2e2e] p-3 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1 border-b border-[#1f1f1f]">
+                  <span className="text-[10px] font-semibold text-[#afafaf] uppercase tracking-wider">
+                    Atalho de Desfecho (Alimenta Métricas):
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickChipOutcome("atendeu", "📞 Ligação atendida. Decisor conversou e alinhamos a apresentação de tubos e perfis.")}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#0c2b1c] border border-[#14d06e]/40 text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Registra ligação atendida"
+                    >
+                      <PhoneCall className="size-3" />
+                      <span>Atendeu</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickChipOutcome("nao_atendeu", "📵 Ligação realizada, porém não atendeu / caixa postal.")}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#2b1310] border border-[#ff5d48]/40 text-[#ff5d48] hover:bg-[#ff5d48] hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Registra ligação não atendida"
+                    >
+                      <PhoneMissed className="size-3" />
+                      <span>Não atendeu</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickChipOutcome("pediu_whatsapp", "💬 Cliente solicitou envio do catálogo e tabela de aço via WhatsApp.")}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#0c2b1c] border border-[#14d06e]/40 text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Registra pedido via WhatsApp"
+                    >
+                      <MessageCircle className="size-3" />
+                      <span>Pediu Wpp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickChipOutcome("pediu_email", "✉️ Cliente solicitou apresentação e catálogo por E-mail.")}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#0f1b33] border border-[#7fa9f7]/40 text-[#7fa9f7] hover:bg-[#7fa9f7] hover:text-[#0d0d0d] text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Registra pedido via E-mail"
+                    >
+                      <Mail className="size-3" />
+                      <span>Pediu E-mail</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickChipOutcome("solicitou_orcamento", "📑 Cliente solicitou COTAÇÃO / ORÇAMENTO de tubos e perfis Gofer Metais!")}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#2b2410] border border-[#e8c267]/60 text-[#e8c267] hover:bg-[#e8c267] hover:text-[#0d0d0d] text-[11px] font-bold transition-colors cursor-pointer"
+                      title="Registra cotação / orçamento solicitado"
+                    >
+                      <Target className="size-3" />
+                      <span>Pediu Orçamento</span>
+                    </button>
+                  </div>
+                </div>
+
                 <label className="block text-[11px] font-semibold text-white">
                   Registrar o que aconteceu no contato (ligação, WhatsApp, e-mail):
                 </label>
@@ -1739,6 +1903,20 @@ export function LeadDetailsSheet({
               </div>
             </motion.div>
           </div>
+        )}
+
+        {/* Modal de Registro de Desfecho & Métricas de Performance */}
+        {isOutcomeModalOpen && (
+          <TaskOutcomeModal
+            isOpen={isOutcomeModalOpen}
+            lead={lead}
+            onClose={() => setIsOutcomeModalOpen(false)}
+            stepId={outcomeStepId}
+            stepTitle={outcomeStepTitle}
+            defaultChannel={outcomeDefaultChannel}
+            currentOperatorName="Lucas de Freitas Leite (Gofer Metais)"
+            onSaveOutcome={handleSaveOutcomeFromModal}
+          />
         )}
       </motion.div>
     </div>

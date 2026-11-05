@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BarChart3,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -62,6 +63,12 @@ export const VENDAS_SIDEBAR_TABS: VendasSidebarTabItem[] = [
     label: "Cadência & E-mails",
     shortLabel: "Cadência",
     icon: Calendar,
+  },
+  {
+    id: "metricas",
+    label: "Minhas Métricas & Performance",
+    shortLabel: "Métricas",
+    icon: BarChart3,
   },
   {
     id: "integracao",

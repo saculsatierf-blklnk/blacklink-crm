@@ -1095,7 +1095,8 @@ export type VendasWorkspaceTab =
   | "cadencia"
   | "nichos"
   | "kanban"
-  | "integracao";
+  | "integracao"
+  | "metricas";
 
 export interface TargetSectorPreset {
   id: string;

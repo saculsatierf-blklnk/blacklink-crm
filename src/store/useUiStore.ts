@@ -6,7 +6,8 @@ export type VendasWorkspaceTab =
   | "cadencia"
   | "nichos"
   | "kanban"
-  | "integracao";
+  | "integracao"
+  | "metricas";
 
 interface UiState {
   isSidebarCollapsed: boolean;
