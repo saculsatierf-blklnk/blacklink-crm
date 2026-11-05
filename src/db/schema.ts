@@ -78,6 +78,11 @@ export interface CadenceState {
   roleTitle?: string;
   estimatedValue?: string;
   customScript?: string;
+  location?: string;
+  companyName?: string;
+  contactPerson?: string;
+  phone?: string;
+  whatsapp?: string;
 }
 
 export interface NoteEntry {

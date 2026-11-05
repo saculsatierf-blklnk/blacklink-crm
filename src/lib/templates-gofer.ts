@@ -181,6 +181,7 @@ export function extractLeadContext(lead?: Lead | null): {
   phone: string;
   cleanPhone: string;
   estimatedValue: string;
+  location: string;
 } {
   if (!lead) {
     return {
@@ -190,33 +191,36 @@ export function extractLeadContext(lead?: Lead | null): {
       phone: "",
       cleanPhone: "",
       estimatedValue: "1.850,00",
+      location: "",
     };
   }
 
+  const cadenceState = (lead.cadenceState as any) || {};
   const rawName = (lead.leadName || "").trim();
-  let person = "";
-  let company = "";
+  let person = cadenceState.contactPerson || "";
+  let company = cadenceState.companyName || "";
 
-  // 1. Tenta formato "Contato (Empresa)" ou "Empresa (Contato)"
-  const parenMatch = rawName.match(/^(.*?)\s*\((.*?)\)$/);
-  if (parenMatch) {
-    const part1 = parenMatch[1].trim();
-    const part2 = parenMatch[2].trim();
+  if (!company || !person) {
+    // 1. Tenta formato "Contato (Empresa)" ou "Empresa (Contato)"
+    const parenMatch = rawName.match(/^(.*?)\s*\((.*?)\)$/);
+    if (parenMatch) {
+      const part1 = parenMatch[1].trim();
+      const part2 = parenMatch[2].trim();
 
-    // Se part2 parecer nome próprio e part1 empresa (ou vice versa)
-    const companyKeywords = ["redes", "metais", "aço", "estruturas", "serralheria", "ltda", "me", "eireli", "industria", "indústria", "comércio", "soluções", "construtora", "engenharia"];
-    const isP1Company = companyKeywords.some((k) => part1.toLowerCase().includes(k));
-    const isP2Company = companyKeywords.some((k) => part2.toLowerCase().includes(k));
+      const companyKeywords = ["redes", "metais", "aço", "estruturas", "serralheria", "ltda", "me", "eireli", "industria", "indústria", "comércio", "soluções", "construtora", "engenharia"];
+      const isP1Company = companyKeywords.some((k) => part1.toLowerCase().includes(k));
+      const isP2Company = companyKeywords.some((k) => part2.toLowerCase().includes(k));
 
-    if (isP1Company && !isP2Company) {
-      company = part1;
-      person = part2;
+      if (isP1Company && !isP2Company) {
+        if (!company) company = part1;
+        if (!person) person = part2;
+      } else {
+        if (!person) person = part1;
+        if (!company) company = part2;
+      }
     } else {
-      person = part1;
-      company = part2;
+      if (!company) company = rawName;
     }
-  } else {
-    company = rawName;
   }
 
   // 2. Procura menção ao contato nas anotações (ex: "mundialredes@hotmail.com (Daiane);")
@@ -252,7 +256,6 @@ export function extractLeadContext(lead?: Lead | null): {
   }
 
   // Valor estimado
-  const cadenceState = (lead.cadenceState as any) || {};
   const estimatedValue =
     cadenceState.estimatedValue ||
     (lead as any).estimatedValue ||
@@ -265,6 +268,7 @@ export function extractLeadContext(lead?: Lead | null): {
     phone: lead.leadPhone || "",
     cleanPhone,
     estimatedValue,
+    location: cadenceState.location || "",
   };
 }
 

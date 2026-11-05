@@ -16,6 +16,8 @@ import {
   Globe,
   GripVertical,
   Mail,
+  MapPin,
+  MessageCircle,
   Phone,
   Plus,
   Sparkles,
@@ -264,9 +266,13 @@ export function LeadsKanban({
 
   // Atualização direta dos dados do lead a partir do slide-over lateral
   const handleLeadUpdate = (updatedLead: Lead) => {
-    setLeadsList((prev) =>
-      prev.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead))
-    );
+    setLeadsList((prev) => {
+      const next = prev.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead));
+      try {
+        localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     if (selectedLead && selectedLead.id === updatedLead.id) {
       setSelectedLead(updatedLead);
     }
@@ -622,117 +628,137 @@ export function LeadsKanban({
                                         : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626]"
                                     }`}
                                   >
-                                    {/* Topo do Card: Nome, Empresa e Alça */}
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="space-y-0.5 min-w-0">
-                                        <div className="font-semibold text-sm text-white truncate">
-                                          {parsed.name}
-                                        </div>
-                                        {parsed.company && (
-                                          <div className="flex items-center gap-1.5 text-xs text-[#afafaf]">
-                                            <Building2 className="size-3.5 shrink-0" />
-                                            <span className="truncate">
-                                              {parsed.company}
+                                    {/* Topo do Card: Nome da Empresa, Localização e Alça */}
+                                    {(() => {
+                                      const cardCadence = (lead.cadenceState as any) || {};
+                                      const displayCompany = cardCadence.companyName || parsed.company || parsed.name;
+                                      const displayPerson = cardCadence.contactPerson || (parsed.company && parsed.name !== parsed.company ? parsed.name : "");
+                                      const displayLocation = cardCadence.location || "";
+                                      const rawPhone = cardCadence.whatsapp || cardCadence.phone || lead.leadPhone || "";
+                                      const cleanDigits = rawPhone.replace(/\D/g, "");
+                                      const wppUrl = cleanDigits
+                                        ? `https://wa.me/${cleanDigits.length >= 10 && cleanDigits.length <= 11 ? `55${cleanDigits}` : cleanDigits}`
+                                        : "";
+
+                                      return (
+                                        <>
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="space-y-1 min-w-0 flex-1">
+                                              <div className="font-semibold text-sm text-white truncate">
+                                                {displayCompany}
+                                              </div>
+
+                                              {displayPerson && (
+                                                <div className="flex items-center gap-1.5 text-xs text-[#14d06e]">
+                                                  <User className="size-3.5 shrink-0" />
+                                                  <span className="truncate font-medium">
+                                                    {displayPerson}
+                                                  </span>
+                                                </div>
+                                              )}
+
+                                              {displayLocation && (
+                                                <div className="flex items-center gap-1 text-[11px] text-[#afafaf]">
+                                                  <MapPin className="size-3 shrink-0 text-[#757575]" />
+                                                  <span className="truncate">{displayLocation}</span>
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            <div
+                                              title="Arrastar Card"
+                                              className="text-[#757575] group-hover:text-white transition-colors p-0.5 rounded shrink-0"
+                                            >
+                                              <GripVertical className="size-3.5" />
+                                            </div>
+                                          </div>
+
+                                          {/* Contatos Rápidos: WhatsApp & E-mail */}
+                                          <div className="space-y-1.5 text-xs text-[#afafaf] bg-[#0d0d0d] rounded-md p-2 ring-1 ring-[#2e2e2e]">
+                                            {rawPhone && (
+                                              <div
+                                                className="flex items-center justify-between gap-2"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <div className="flex items-center gap-1.5 truncate">
+                                                  <Phone className="size-3 text-[#757575] shrink-0" />
+                                                  <span className="truncate tabular-nums text-white">
+                                                    {rawPhone}
+                                                  </span>
+                                                </div>
+
+                                                {wppUrl && (
+                                                  <a
+                                                    href={wppUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#0c2b1c] text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] font-semibold text-[10px] transition-colors shrink-0"
+                                                    title="Abrir WhatsApp"
+                                                  >
+                                                    <MessageCircle className="size-3" />
+                                                    <span>WhatsApp</span>
+                                                  </a>
+                                                )}
+                                              </div>
+                                            )}
+
+                                            {lead.leadEmail && (
+                                              <div
+                                                className="flex items-center gap-1.5 truncate"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <Mail className="size-3 text-[#757575] shrink-0" />
+                                                <a
+                                                  href={`mailto:${lead.leadEmail}`}
+                                                  className="truncate text-[#7fa9f7] hover:underline"
+                                                >
+                                                  {lead.leadEmail}
+                                                </a>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Próxima Atividade Agendada */}
+                                          {activityInfo && (
+                                            <div
+                                              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs ${activityInfo.badgeClass}`}
+                                            >
+                                              <Calendar className="size-3.5 shrink-0" />
+                                              <span className="truncate tabular-nums">
+                                                {activityInfo.formattedStr}
+                                              </span>
+                                              {activityInfo.isToday && (
+                                                <span className="ml-auto text-[10px] font-semibold">
+                                                  Hoje
+                                                </span>
+                                              )}
+                                              {activityInfo.isOverdue && (
+                                                <span className="ml-auto text-[10px] font-semibold">
+                                                  Atrasado
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* Próxima Ação da Cadência & Responsável */}
+                                          <div className="flex items-center justify-between gap-2 border-t border-[#2e2e2e] pt-2">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0f1b33] px-2.5 py-0.5 text-[11px] font-semibold text-[#7fa9f7] truncate">
+                                              <span className="truncate">
+                                                {actionInfo.fullLabel}
+                                              </span>
+                                            </span>
+
+                                            <span
+                                              title={`Responsável: ${op.name} (${op.role})`}
+                                              className="inline-flex items-center gap-1 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-2 py-0.5 text-[11px] text-[#afafaf] shrink-0"
+                                            >
+                                              <User className="size-3" />
+                                              <span>{op.shortName}</span>
                                             </span>
                                           </div>
-                                        )}
-                                      </div>
-
-                                      <div
-                                        title="Arrastar Card"
-                                        className="text-[#757575] group-hover:text-white transition-colors p-0.5 rounded shrink-0"
-                                      >
-                                        <GripVertical className="size-3.5" />
-                                      </div>
-                                    </div>
-
-                                    {/* Linha Operacional: Setor/Cargo & Valor */}
-                                    <div className="flex items-center justify-between gap-2 text-xs text-[#afafaf] bg-[#0d0d0d] rounded-md px-2.5 py-1.5 ring-1 ring-[#2e2e2e]">
-                                      <span className="truncate">
-                                        {lead.cadenceState?.roleTitle ||
-                                          "Decisor Comercial"}
-                                      </span>
-                                      {lead.cadenceState?.estimatedValue ? (
-                                        <span className="font-semibold text-white tabular-nums shrink-0">
-                                          {lead.cadenceState.estimatedValue}
-                                        </span>
-                                      ) : (
-                                        <span className="text-[11px] text-[#757575] shrink-0">
-                                          Cotação aberta
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Próxima Atividade Agendada */}
-                                    {activityInfo && (
-                                      <div
-                                        className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs ${activityInfo.badgeClass}`}
-                                      >
-                                        <Calendar className="size-3.5 shrink-0" />
-                                        <span className="truncate tabular-nums">
-                                          {activityInfo.formattedStr}
-                                        </span>
-                                        {activityInfo.isToday && (
-                                          <span className="ml-auto text-[10px] font-semibold">
-                                            Hoje
-                                          </span>
-                                        )}
-                                        {activityInfo.isOverdue && (
-                                          <span className="ml-auto text-[10px] font-semibold">
-                                            Atrasado
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Próxima Ação da Cadência & Responsável */}
-                                    <div className="flex items-center justify-between gap-2 border-y border-[#2e2e2e] py-2">
-                                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0f1b33] px-2.5 py-0.5 text-[11px] font-semibold text-[#7fa9f7] truncate">
-                                        <span className="truncate">
-                                          {actionInfo.fullLabel}
-                                        </span>
-                                      </span>
-
-                                      <span
-                                        title={`Responsável: ${op.name} (${op.role})`}
-                                        className="inline-flex items-center gap-1 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-2 py-0.5 text-[11px] text-[#afafaf] shrink-0"
-                                      >
-                                        <User className="size-3" />
-                                        <span>{op.shortName}</span>
-                                      </span>
-                                    </div>
-
-                                    {/* Contatos Rápidos */}
-                                    <div className="space-y-1 text-xs text-[#afafaf]">
-                                      {lead.leadEmail && (
-                                        <div
-                                          className="flex items-center gap-1.5 truncate"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <Mail className="size-3.5 text-[#757575] shrink-0" />
-                                          <a
-                                            href={`mailto:${lead.leadEmail}`}
-                                            className="truncate text-[#7fa9f7] hover:underline"
-                                          >
-                                            {lead.leadEmail}
-                                          </a>
-                                        </div>
-                                      )}
-                                      {lead.leadPhone && (
-                                        <div
-                                          className="flex items-center gap-1.5 tabular-nums"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <Phone className="size-3.5 text-[#757575] shrink-0" />
-                                          <a
-                                            href={`tel:${lead.leadPhone}`}
-                                            className="hover:text-white transition-colors"
-                                          >
-                                            {lead.leadPhone}
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
+                                        </>
+                                      );
+                                    })()}
 
                                     {/* Rodapé do Card: Origem e Data */}
                                     <div className="flex items-center justify-between pt-1 text-[11px] text-[#757575] tabular-nums">
