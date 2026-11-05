@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
+  AlertTriangle,
+  Ban,
   Building2,
   Calendar,
   Check,
@@ -21,6 +23,7 @@ import {
   MessageSquare,
   Phone,
   Plus,
+  RotateCcw,
   Send,
   Sparkles,
   Trash2,
@@ -35,6 +38,8 @@ import {
   addLeadNoteAction,
   deleteLeadNoteAction,
   scheduleLeadActivityAction,
+  deactivateLeadAction,
+  reactivateLeadAction,
   type LeadStatus,
 } from "@/actions/leads";
 import {
@@ -120,12 +125,36 @@ export function LeadDetailsSheet({
   const [templateBody, setTemplateBody] = useState("");
   const [copiedTarget, setCopiedTarget] = useState<"subject" | "body" | "all" | null>(null);
 
+  // 6. Desativação & Reativação do Lead
+  const [isLeadDeactivated, setIsLeadDeactivated] = useState(false);
+  const [deactivationReason, setDeactivationReason] = useState("");
+  const [deactivatedAt, setDeactivatedAt] = useState("");
+  const [deactivatedBy, setDeactivatedBy] = useState("");
+  const [deactivationHistory, setDeactivationHistory] = useState<any[]>([]);
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+  const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false);
+  const [deactivateReasonInput, setDeactivateReasonInput] = useState("");
+  const [reactivateNoteInput, setReactivateNoteInput] = useState("");
+  const [isSubmittingDeactivation, setIsSubmittingDeactivation] = useState(false);
+  const [isSubmittingReactivation, setIsSubmittingReactivation] = useState(false);
+
   // Sincronização direta ao carregar o lead
   useEffect(() => {
     if (!lead) return;
 
     const ctx = extractLeadContext(lead);
     const dbCadenceState = (lead.cadenceState as any) || {};
+
+    // Desativação / Auditoria
+    setIsLeadDeactivated(Boolean(dbCadenceState.isDeactivated));
+    setDeactivationReason(dbCadenceState.deactivationReason || "");
+    setDeactivatedAt(dbCadenceState.deactivatedAt || "");
+    setDeactivatedBy(dbCadenceState.deactivatedBy || "");
+    setDeactivationHistory(dbCadenceState.deactivationHistory || []);
+    setIsDeactivateModalOpen(false);
+    setIsReactivateModalOpen(false);
+    setDeactivateReasonInput("");
+    setReactivateNoteInput("");
 
     const comp = dbCadenceState.companyName || ctx.company || "";
     const person = dbCadenceState.contactPerson || ctx.person || "";
@@ -404,6 +433,120 @@ export function LeadDetailsSheet({
     }
   };
 
+  // Handler para Desativar o Lead com motivo registrado e histórico
+  const handleConfirmDeactivation = async () => {
+    if (!lead) return;
+    const cleanReason = deactivateReasonInput.trim();
+    if (!cleanReason) return;
+
+    setIsSubmittingDeactivation(true);
+    const nowIso = new Date().toISOString();
+    const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+
+    const newEntry = {
+      deactivatedAt: nowIso,
+      reason: cleanReason,
+      author: currentOp,
+    };
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now(),
+      text: `⛔ Lead desativado da prospecção.\nMotivo: "${cleanReason}"`,
+      createdAt: nowIso,
+      author: currentOp,
+    };
+
+    const nextHistory = [newEntry, ...deactivationHistory];
+    const nextNotes = [newNote, ...notes];
+
+    // Atualização otimista
+    setIsLeadDeactivated(true);
+    setDeactivationReason(cleanReason);
+    setDeactivatedAt(nowIso);
+    setDeactivatedBy(currentOp);
+    setDeactivationHistory(nextHistory);
+    setNotes(nextNotes);
+
+    const updatedLead: Lead = {
+      ...lead,
+      notes: nextNotes,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        isDeactivated: true,
+        deactivationReason: cleanReason,
+        deactivatedAt: nowIso,
+        deactivatedBy: currentOp,
+        deactivationHistory: nextHistory,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+    setIsDeactivateModalOpen(false);
+
+    try {
+      await deactivateLeadAction(lead.id, cleanReason, currentOp);
+    } catch (err) {
+      console.warn("Falha ao persistir desativação no servidor:", err);
+    } finally {
+      setIsSubmittingDeactivation(false);
+    }
+  };
+
+  // Handler para Reativar o Lead mantendo o histórico da desativação
+  const handleConfirmReactivation = async () => {
+    if (!lead) return;
+
+    setIsSubmittingReactivation(true);
+    const nowIso = new Date().toISOString();
+    const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+    const prevReason = deactivationReason || "Não informado";
+    const noteText = reactivateNoteInput.trim()
+      ? `🔄 Lead reativado na prospecção.\nMotivo anterior do descarte: "${prevReason}"\nContexto da reativação: "${reactivateNoteInput.trim()}"`
+      : `🔄 Lead reativado na prospecção.\nMotivo anterior do descarte: "${prevReason}"`;
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now(),
+      text: noteText,
+      createdAt: nowIso,
+      author: currentOp,
+    };
+
+    const nextHistory = deactivationHistory.map((item, idx) =>
+      idx === 0
+        ? {
+            ...item,
+            reactivatedAt: nowIso,
+            reactivationNote: reactivateNoteInput.trim() || undefined,
+          }
+        : item
+    );
+    const nextNotes = [newNote, ...notes];
+
+    // Atualização otimista
+    setIsLeadDeactivated(false);
+    setDeactivationHistory(nextHistory);
+    setNotes(nextNotes);
+
+    const updatedLead: Lead = {
+      ...lead,
+      notes: nextNotes,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        isDeactivated: false,
+        deactivationHistory: nextHistory,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+    setIsReactivateModalOpen(false);
+
+    try {
+      await reactivateLeadAction(lead.id, reactivateNoteInput.trim(), currentOp);
+    } catch (err) {
+      console.warn("Falha ao persistir reativação no servidor:", err);
+    } finally {
+      setIsSubmittingReactivation(false);
+    }
+  };
+
   // Cálculos de progresso e filtragem temporal da Cadência
   const cadenceProgress = Math.round(
     (completedCadence.length / CADENCE_STEPS.length) * 100
@@ -496,23 +639,129 @@ export function LeadDetailsSheet({
         className="relative z-50 flex h-full w-full max-w-2xl flex-col justify-between border-l border-[#2e2e2e] bg-[#0d0d0d] p-5 sm:p-6 shadow-2xl overflow-hidden"
       >
         <div className="space-y-4 overflow-y-auto pr-1">
-          {/* Topo: Título da Conta + Botão Fechar */}
-          <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-3">
-            <div className="flex items-center gap-2">
-              <Building2 className="size-4 text-[#14d06e]" />
-              <h2 className="text-base font-semibold text-white truncate max-w-sm">
+          {/* Topo: Título da Conta + Ações de Desativação + Botão Fechar */}
+          <div className="flex items-center justify-between border-b border-[#2e2e2e] pb-3 gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Building2 className="size-4 text-[#14d06e] shrink-0" />
+              <h2 className="text-base font-semibold text-white truncate max-w-[200px] sm:max-w-xs">
                 {editCompanyName || lead.leadName || "Detalhes do Lead"}
               </h2>
+              {isLeadDeactivated && (
+                <span className="inline-flex items-center gap-1 rounded bg-[#2b1310] border border-[#ff5d48]/40 px-2 py-0.5 text-[10px] font-mono text-[#ff5d48] font-bold shrink-0">
+                  <Ban className="size-3" />
+                  <span>DESATIVADO</span>
+                </span>
+              )}
             </div>
 
-            <button
-              onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-md border border-[#2e2e2e] bg-[#1a1a1a] text-[#afafaf] hover:text-white transition-colors cursor-pointer"
-              title="Fechar (ESC)"
-            >
-              <X className="size-4" />
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {!isLeadDeactivated ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeactivateReasonInput("");
+                    setIsDeactivateModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[#ff5d48]/30 bg-[#2b1310]/30 px-2.5 py-1 text-xs font-medium text-[#ff5d48] hover:bg-[#ff5d48] hover:text-[#0d0d0d] transition-all cursor-pointer"
+                  title="Desativar este lead e registrar o motivo"
+                >
+                  <Ban className="size-3.5" />
+                  <span className="hidden sm:inline">Desativar Lead</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReactivateNoteInput("");
+                    setIsReactivateModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[#14d06e]/40 bg-[#0c2b1c] px-2.5 py-1 text-xs font-semibold text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] transition-all cursor-pointer shadow-sm"
+                  title="Reativar este lead para prospecção"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span className="hidden sm:inline">Reativar Lead</span>
+                </button>
+              )}
+
+              <button
+                onClick={onClose}
+                className="flex size-7 items-center justify-center rounded-md border border-[#2e2e2e] bg-[#1a1a1a] text-[#afafaf] hover:text-white transition-colors cursor-pointer"
+                title="Fechar (ESC)"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
+
+          {/* BANNER DE AUDITORIA: LEAD DESATIVADO */}
+          {isLeadDeactivated && (
+            <div className="rounded-lg border border-[#ff5d48]/50 bg-[#1f0d0b] p-3.5 space-y-2 text-xs">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="size-4 text-[#ff5d48] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#ff5d48] uppercase tracking-wide">
+                        Lead Desativado da Prospecção
+                      </span>
+                      {deactivatedAt && (
+                        <span className="text-[10px] text-[#afafaf]">
+                          em {formatDate(deactivatedAt)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-white font-medium">
+                      Motivo registrado:{" "}
+                      <span className="text-[#ff5d48] font-semibold bg-[#2b1310] px-1.5 py-0.5 rounded border border-[#ff5d48]/30">
+                        &ldquo;{deactivationReason || "Não informado"}&rdquo;
+                      </span>
+                    </p>
+                    {deactivatedBy && (
+                      <p className="text-[11px] text-[#afafaf]">
+                        Registrado por: <strong className="text-white">{deactivatedBy}</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReactivateNoteInput("");
+                    setIsReactivateModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] font-semibold px-3 py-1.5 text-xs transition-colors shrink-0 cursor-pointer shadow-md"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Reativar Lead</span>
+                </button>
+              </div>
+
+              {/* Histórico anterior de desativações (se houver mais de 1) */}
+              {deactivationHistory.length > 1 && (
+                <div className="border-t border-[#ff5d48]/20 pt-2 text-[11px] text-[#afafaf] space-y-1">
+                  <span className="font-semibold text-white block">
+                    Histórico de Desativações Anteriores ({deactivationHistory.length}):
+                  </span>
+                  <div className="space-y-1 max-h-24 overflow-y-auto">
+                    {deactivationHistory.map((entry, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-[10px] bg-black/40 px-2 py-1 rounded"
+                      >
+                        <span className="text-[#ff5d48] font-medium truncate max-w-[260px]">
+                          &ldquo;{entry.reason}&rdquo;
+                        </span>
+                        <span className="text-zinc-500">
+                          {formatDate(entry.deactivatedAt)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Feedback de Salvamento */}
           {saveFeedback && (
@@ -1321,6 +1570,176 @@ export function LeadDetailsSheet({
             Fechar
           </button>
         </div>
+
+        {/* MODAL 1: DESATIVAR LEAD COM REGISTRO DE MOTIVO */}
+        {isDeactivateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg rounded-xl border border-[#ff5d48]/40 bg-[#121212] p-5 sm:p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-[#2b1310] p-2 text-[#ff5d48] border border-[#ff5d48]/30 shrink-0">
+                  <Ban className="size-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-white">
+                    Desativar Lead da Prospecção
+                  </h3>
+                  <p className="text-xs text-[#afafaf] leading-relaxed">
+                    Informe o motivo para desativar esta conta. Este registro ficará salvo no histórico caso o lead seja reativado no futuro.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sugestões de Motivo Rápido */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#afafaf] uppercase tracking-wider block">
+                  Motivos frequentes (clique para preencher):
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "Desligou na cara / Sem contato",
+                    "Não consome tubos / aço / metal",
+                    "Já tem fornecedor fixo / contrato",
+                    "Preço fora da margem / Muito caro",
+                    "Número errado / Inexistente",
+                    "Sem demanda no momento",
+                  ].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => setDeactivateReasonInput(sug)}
+                      className={`text-[11px] px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                        deactivateReasonInput === sug
+                          ? "border-[#ff5d48] bg-[#2b1310] text-[#ff5d48] font-bold"
+                          : "border-[#2e2e2e] bg-[#1a1a1a] text-[#afafaf] hover:text-white hover:border-[#ff5d48]/40"
+                      }`}
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Textarea para Motivo */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-white block">
+                  Motivo do Descarte (obrigatório):
+                </label>
+                <textarea
+                  value={deactivateReasonInput}
+                  onChange={(e) => setDeactivateReasonInput(e.target.value)}
+                  placeholder="Ex: Liguei e desligou na cara assim que falei que era da Gofer Metais... ou: Não tem interesse por já ter contrato vigente..."
+                  rows={3}
+                  className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] p-2.5 text-xs text-white placeholder:text-[#757575] focus:border-[#ff5d48] focus:outline-none"
+                />
+              </div>
+
+              {/* Ações */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#2e2e2e]">
+                <button
+                  type="button"
+                  onClick={() => setIsDeactivateModalOpen(false)}
+                  disabled={isSubmittingDeactivation}
+                  className="rounded-md border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs text-[#afafaf] hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmDeactivation}
+                  disabled={isSubmittingDeactivation || !deactivateReasonInput.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#ff5d48] hover:bg-[#ff5d48]/90 text-[#0d0d0d] font-bold px-4 py-1.5 text-xs transition-colors cursor-pointer disabled:opacity-40 shadow-md"
+                >
+                  <Ban className="size-3.5" />
+                  <span>{isSubmittingDeactivation ? "Desativando..." : "Confirmar Desativação"}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* MODAL 2: REATIVAR LEAD COM ALERTA DO HISTÓRICO ANTERIOR */}
+        {isReactivateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg rounded-xl border border-[#14d06e]/40 bg-[#121212] p-5 sm:p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-[#0c2b1c] p-2 text-[#14d06e] border border-[#14d06e]/30 shrink-0">
+                  <RotateCcw className="size-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-white">
+                    Reativar este Lead para Prospecção?
+                  </h3>
+                  <p className="text-xs text-[#afafaf] leading-relaxed">
+                    Este lead voltará ao pipeline ativo. O histórico de desativação anterior será preservado para auditoria.
+                  </p>
+                </div>
+              </div>
+
+              {/* Alerta de Auditoria: Motivo Anterior */}
+              <div className="rounded-lg border border-[#ff5d48]/40 bg-[#1f0d0b] p-3 space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 text-[#ff5d48] font-bold">
+                  <AlertTriangle className="size-3.5" />
+                  <span>Atenção: Motivo registrado quando o lead foi desativado:</span>
+                </div>
+                <p className="text-white font-medium pl-5 text-xs bg-black/40 p-2 rounded border border-[#ff5d48]/20">
+                  &ldquo;{deactivationReason || "Motivo não especificado no momento do descarte"}&rdquo;
+                </p>
+                {deactivatedAt && (
+                  <p className="text-[10px] text-zinc-400 pl-5">
+                    Desativado em {formatDate(deactivatedAt)} {deactivatedBy ? `por ${deactivatedBy}` : ""}
+                  </p>
+                )}
+              </div>
+
+              {/* Contexto da Reativação */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-white block">
+                  Contexto da Reativação (opcional):
+                </label>
+                <input
+                  type="text"
+                  value={reactivateNoteInput}
+                  onChange={(e) => setReactivateNoteInput(e.target.value)}
+                  placeholder="Ex: Novo comprador assumiu a empresa... ou: Solicitou cotação pelo site..."
+                  className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:border-[#14d06e] focus:outline-none"
+                />
+              </div>
+
+              {/* Ações */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#2e2e2e]">
+                <button
+                  type="button"
+                  onClick={() => setIsReactivateModalOpen(false)}
+                  disabled={isSubmittingReactivation}
+                  className="rounded-md border border-[#2e2e2e] bg-[#1a1a1a] px-3.5 py-1.5 text-xs text-[#afafaf] hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmReactivation}
+                  disabled={isSubmittingReactivation}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] font-bold px-4 py-1.5 text-xs transition-colors cursor-pointer disabled:opacity-40 shadow-md"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>{isSubmittingReactivation ? "Reativando..." : "Confirmar Reativação"}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </motion.div>
     </div>
   );

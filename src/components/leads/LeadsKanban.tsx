@@ -9,6 +9,7 @@ import {
 } from "@hello-pangea/dnd";
 import {
   AlertCircle,
+  Ban,
   Building2,
   Calendar,
   CheckCircle2,
@@ -159,6 +160,9 @@ export function LeadsKanban({
 
   // Mostra todos os leads da operação por padrão para que nenhum lead enviado da planilha fique oculto
   const [activeOperator, setActiveOperator] = useState<string>("todos");
+
+  // Filtro de status de leads: Ativos (padrão) vs Desativados / Perdidos vs Todos
+  const [leadStatusFilter, setLeadStatusFilter] = useState<"active" | "deactivated" | "all">("active");
 
   // Sincroniza operadores dinâmicos
   useEffect(() => {
@@ -424,8 +428,12 @@ export function LeadsKanban({
     }
   };
 
-  // Filtragem de visualização do Kanban
-  const displayedLeads =
+  // Contadores de status de leads
+  const activeLeadsCount = leadsList.filter((l) => !(l.cadenceState as any)?.isDeactivated).length;
+  const deactivatedLeadsCount = leadsList.filter((l) => (l.cadenceState as any)?.isDeactivated).length;
+
+  // Filtragem de visualização do Kanban (Operador + Ativo/Desativado)
+  const baseLeadsByOperator =
     activeOperator === "todos"
       ? leadsList
       : leadsList.filter(
@@ -433,6 +441,13 @@ export function LeadsKanban({
             (l.ownerId || operators[0]?.id) === activeOperator ||
             (currentUser?.email && l.ownerId === currentUser.email)
         );
+
+  const displayedLeads = baseLeadsByOperator.filter((l) => {
+    const isDeactivated = Boolean((l.cadenceState as any)?.isDeactivated);
+    if (leadStatusFilter === "active") return !isDeactivated;
+    if (leadStatusFilter === "deactivated") return isDeactivated;
+    return true; // "all"
+  });
 
   const getLeadsByStatus = (status: LeadStatus) => {
     return displayedLeads.filter((lead) => lead.status === status);
@@ -511,6 +526,43 @@ export function LeadsKanban({
                 </select>
               </div>
             )}
+
+            {/* Filtro de Status: Ativos vs Desativados / Perdidos */}
+            <div className="inline-flex rounded-md bg-[#1a1a1a] p-0.5 ring-1 ring-[#2e2e2e]">
+              <button
+                type="button"
+                onClick={() => setLeadStatusFilter("active")}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                  leadStatusFilter === "active"
+                    ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
+                    : "text-[#afafaf] hover:text-white"
+                }`}
+              >
+                Ativos ({activeLeadsCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeadStatusFilter("deactivated")}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                  leadStatusFilter === "deactivated"
+                    ? "bg-[#ff5d48] text-[#0d0d0d] shadow-sm"
+                    : "text-[#afafaf] hover:text-white"
+                }`}
+              >
+                Desativados ({deactivatedLeadsCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setLeadStatusFilter("all")}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                  leadStatusFilter === "all"
+                    ? "bg-white text-[#0d0d0d] shadow-sm"
+                    : "text-[#afafaf] hover:text-white"
+                }`}
+              >
+                Todos ({leadsList.length})
+              </button>
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -607,6 +659,9 @@ export function LeadsKanban({
                               lead.nextActivityType
                             );
 
+                            const cardCadence = (lead.cadenceState as any) || {};
+                            const isDeactivated = Boolean(cardCadence.isDeactivated);
+
                             return (
                               <Draggable
                                 key={lead.id}
@@ -623,14 +678,26 @@ export function LeadsKanban({
                                       handleOpenSheet(lead);
                                     }}
                                     className={`rounded-lg p-4 space-y-3 transition-colors select-none group cursor-grab active:cursor-grabbing ${
-                                      dragSnapshot.isDragging
+                                      isDeactivated
+                                        ? "bg-[#160f0e] ring-1 ring-[#ff5d48]/40 opacity-85 hover:opacity-100"
+                                        : dragSnapshot.isDragging
                                         ? "bg-[#262626] ring-1 ring-[#7fa9f7]/60 z-50"
                                         : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626]"
                                     }`}
                                   >
+                                    {/* Indicador de Lead Desativado */}
+                                    {isDeactivated && (
+                                      <div className="flex items-center justify-between gap-1 text-[10px] text-[#ff5d48] bg-[#2b1310] border border-[#ff5d48]/40 px-2 py-1 rounded font-mono font-semibold">
+                                        <div className="flex items-center gap-1.5 truncate">
+                                          <Ban className="size-3 shrink-0" />
+                                          <span className="truncate">Desativado: {cardCadence.deactivationReason || "Descartado"}</span>
+                                        </div>
+                                        <span className="text-[9px] text-[#14d06e] font-sans hover:underline shrink-0">Reativar</span>
+                                      </div>
+                                    )}
+
                                     {/* Topo do Card: Nome da Empresa, Localização e Alça */}
                                     {(() => {
-                                      const cardCadence = (lead.cadenceState as any) || {};
                                       const displayCompany = cardCadence.companyName || parsed.company || parsed.name;
                                       const displayPerson = cardCadence.contactPerson || (parsed.company && parsed.name !== parsed.company ? parsed.name : "");
                                       const displayLocation = cardCadence.location || "";

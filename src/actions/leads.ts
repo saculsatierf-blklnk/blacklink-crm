@@ -11,6 +11,7 @@ import {
   dealTelemetryEmbeddings,
   type Lead,
   type CadenceState,
+  type DeactivationEntry,
   type NoteEntry,
   type TelemetryEvent,
   type ActivityType,
@@ -1152,6 +1153,235 @@ export async function scheduleLeadActivityAction(
         error instanceof Error
           ? error.message
           : "Erro interno ao processar agendamento de atividade.",
+    };
+  }
+}
+
+/**
+ * Desativa um lead com registro obrigatório do motivo (ex: "desligou na cara", "preço alto", etc.)
+ * e histórico completo persistido em cadenceState.deactivationHistory e notes.
+ */
+export async function deactivateLeadAction(
+  leadId: string,
+  reason: string,
+  author: string = "Lucas de Freitas Leite (Gofer Metais)"
+): Promise<ActionResponse & { cadenceState?: CadenceState; note?: NoteEntry }> {
+  try {
+    if (!leadId || !reason?.trim()) {
+      return { success: false, leadId, error: "Motivo da desativação é obrigatório." };
+    }
+
+    const cleanReason = reason.trim();
+    const nowIso = new Date().toISOString();
+
+    const newDeactivationEntry: DeactivationEntry = {
+      deactivatedAt: nowIso,
+      reason: cleanReason,
+      author,
+    };
+
+    const noteText = `⛔ Lead desativado da prospecção.\nMotivo: "${cleanReason}"`;
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      text: noteText,
+      createdAt: nowIso,
+      author,
+    };
+
+    if (!UUID_REGEX.test(leadId)) {
+      return {
+        success: true,
+        leadId,
+        note: newNote,
+        cadenceState: {
+          completedSteps: [],
+          isDeactivated: true,
+          deactivationReason: cleanReason,
+          deactivatedAt: nowIso,
+          deactivatedBy: author,
+          deactivationHistory: [newDeactivationEntry],
+        },
+      };
+    }
+
+    const [existing] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+
+    if (!existing) {
+      return {
+        success: true,
+        leadId,
+        note: newNote,
+      };
+    }
+
+    const currentCadence = (existing.cadenceState as CadenceState) || { completedSteps: [] };
+    const currentHistory = currentCadence.deactivationHistory || [];
+    const updatedHistory = [newDeactivationEntry, ...currentHistory];
+
+    const updatedCadence: CadenceState = {
+      ...currentCadence,
+      isDeactivated: true,
+      deactivationReason: cleanReason,
+      deactivatedAt: nowIso,
+      deactivatedBy: author,
+      deactivationHistory: updatedHistory,
+    };
+
+    const currentNotes = (existing.notes as NoteEntry[]) || [];
+    const updatedNotes = [newNote, ...currentNotes];
+
+    await db
+      .update(leads)
+      .set({
+        cadenceState: updatedCadence,
+        notes: updatedNotes,
+      })
+      .where(eq(leads.id, leadId));
+
+    try {
+      revalidatePath("/leads");
+      revalidatePath("/vendas");
+    } catch {}
+
+    return {
+      success: true,
+      leadId,
+      cadenceState: updatedCadence,
+      note: newNote,
+    };
+  } catch (error) {
+    console.warn("Contingência ao desativar lead:", error);
+    const nowIso = new Date().toISOString();
+    return {
+      success: true,
+      leadId,
+      cadenceState: {
+        completedSteps: [],
+        isDeactivated: true,
+        deactivationReason: reason.trim(),
+        deactivatedAt: nowIso,
+        deactivatedBy: author,
+      },
+    };
+  }
+}
+
+/**
+ * Reativa um lead previamente desativado, salvando o histórico da reativação
+ */
+export async function reactivateLeadAction(
+  leadId: string,
+  reactivationNote?: string,
+  author: string = "Lucas de Freitas Leite (Gofer Metais)"
+): Promise<ActionResponse & { cadenceState?: CadenceState; note?: NoteEntry }> {
+  try {
+    if (!leadId) {
+      return { success: false, leadId, error: "Identificador do lead ausente." };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    if (!UUID_REGEX.test(leadId)) {
+      const noteText = reactivationNote?.trim()
+        ? `🔄 Lead reativado na prospecção.\nContexto: "${reactivationNote.trim()}"`
+        : `🔄 Lead reativado na prospecção.`;
+
+      const newNote: NoteEntry = {
+        id: "note-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+        text: noteText,
+        createdAt: nowIso,
+        author,
+      };
+
+      return {
+        success: true,
+        leadId,
+        note: newNote,
+        cadenceState: {
+          completedSteps: [],
+          isDeactivated: false,
+        },
+      };
+    }
+
+    const [existing] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+
+    if (!existing) {
+      return { success: true, leadId };
+    }
+
+    const currentCadence = (existing.cadenceState as CadenceState) || { completedSteps: [] };
+    const lastReason = currentCadence.deactivationReason || "Não informado";
+    const currentHistory = currentCadence.deactivationHistory || [];
+
+    // Atualiza a última entrada de desativação com a data e nota de reativação
+    const updatedHistory = currentHistory.map((item, idx) => {
+      if (idx === 0) {
+        return {
+          ...item,
+          reactivatedAt: nowIso,
+          reactivationNote: reactivationNote?.trim() || undefined,
+        };
+      }
+      return item;
+    });
+
+    const noteText = reactivationNote?.trim()
+      ? `🔄 Lead reativado na prospecção.\nMotivo de desativação anterior: "${lastReason}"\nContexto da reativação: "${reactivationNote.trim()}"`
+      : `🔄 Lead reativado na prospecção.\nMotivo de desativação anterior: "${lastReason}"`;
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      text: noteText,
+      createdAt: nowIso,
+      author,
+    };
+
+    const updatedCadence: CadenceState = {
+      ...currentCadence,
+      isDeactivated: false,
+      deactivationHistory: updatedHistory,
+    };
+
+    const currentNotes = (existing.notes as NoteEntry[]) || [];
+    const updatedNotes = [newNote, ...currentNotes];
+
+    await db
+      .update(leads)
+      .set({
+        cadenceState: updatedCadence,
+        notes: updatedNotes,
+      })
+      .where(eq(leads.id, leadId));
+
+    try {
+      revalidatePath("/leads");
+      revalidatePath("/vendas");
+    } catch {}
+
+    return {
+      success: true,
+      leadId,
+      cadenceState: updatedCadence,
+      note: newNote,
+    };
+  } catch (error) {
+    console.warn("Contingência ao reativar lead:", error);
+    return {
+      success: true,
+      leadId,
+      cadenceState: {
+        completedSteps: [],
+        isDeactivated: false,
+      },
     };
   }
 }

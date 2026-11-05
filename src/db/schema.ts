@@ -73,6 +73,14 @@ export const verificationTokens = pgTable("verification_tokens", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export interface DeactivationEntry {
+  deactivatedAt: string;
+  reason: string;
+  author: string;
+  reactivatedAt?: string;
+  reactivationNote?: string;
+}
+
 export interface CadenceState {
   completedSteps: string[];
   roleTitle?: string;
@@ -83,6 +91,11 @@ export interface CadenceState {
   contactPerson?: string;
   phone?: string;
   whatsapp?: string;
+  isDeactivated?: boolean;
+  deactivationReason?: string;
+  deactivatedAt?: string;
+  deactivatedBy?: string;
+  deactivationHistory?: DeactivationEntry[];
 }
 
 export interface NoteEntry {
