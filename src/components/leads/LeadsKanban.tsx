@@ -21,10 +21,12 @@ import {
   MessageCircle,
   Phone,
   Plus,
+  Search,
   Sparkles,
   User,
   UserCheck,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import type { Lead } from "@/db/schema";
@@ -154,6 +156,8 @@ export function LeadsKanban({
   const [isMounted, setIsMounted] = useState(false);
   const activeWorkspaceTab = useUiStore((state) => state.activeVendasTab);
   const setActiveWorkspaceTab = useUiStore((state) => state.setActiveVendasTab);
+  const leadSearchQuery = useUiStore((state) => state.leadSearchQuery);
+  const setLeadSearchQuery = useUiStore((state) => state.setLeadSearchQuery);
 
   const isCommercial = currentUser?.role === "commercial";
   const myUserId = currentUser?.id || "";
@@ -444,9 +448,38 @@ export function LeadsKanban({
 
   const displayedLeads = baseLeadsByOperator.filter((l) => {
     const isDeactivated = Boolean((l.cadenceState as any)?.isDeactivated);
-    if (leadStatusFilter === "active") return !isDeactivated;
-    if (leadStatusFilter === "deactivated") return isDeactivated;
-    return true; // "all"
+    if (leadStatusFilter === "active" && isDeactivated) return false;
+    if (leadStatusFilter === "deactivated" && !isDeactivated) return false;
+
+    // Filtro da Barra de Pesquisa de Leads
+    if (leadSearchQuery && leadSearchQuery.trim()) {
+      const q = leadSearchQuery.toLowerCase().trim();
+      const cardCadence = (l.cadenceState as any) || {};
+      const parsed = parseLeadInfo(l.leadName || "");
+      const company = (cardCadence.companyName || parsed.company || parsed.name || l.leadName || "").toLowerCase();
+      const person = (cardCadence.contactPerson || parsed.name || "").toLowerCase();
+      const location = (cardCadence.location || "").toLowerCase();
+      const rawPhone = (cardCadence.whatsapp || cardCadence.phone || l.leadPhone || "").toLowerCase();
+      const cleanPhoneDigits = rawPhone.replace(/\D/g, "");
+      const cleanQDigits = q.replace(/\D/g, "");
+      const email = (l.leadEmail || "").toLowerCase();
+      const deactivationReason = (cardCadence.deactivationReason || "").toLowerCase();
+      const notesText = (l.notes || []).map((n) => n.text.toLowerCase()).join(" ");
+
+      const matches =
+        company.includes(q) ||
+        person.includes(q) ||
+        location.includes(q) ||
+        rawPhone.includes(q) ||
+        (cleanQDigits.length >= 3 && cleanPhoneDigits.includes(cleanQDigits)) ||
+        email.includes(q) ||
+        deactivationReason.includes(q) ||
+        notesText.includes(q);
+
+      if (!matches) return false;
+    }
+
+    return true;
   });
 
   const getLeadsByStatus = (status: LeadStatus) => {
@@ -564,6 +597,28 @@ export function LeadsKanban({
               </button>
             </div>
 
+            {/* Barra de Pesquisa de Leads no Kanban */}
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-2.5 size-3.5 text-zinc-400" />
+              <input
+                type="text"
+                value={leadSearchQuery}
+                onChange={(e) => setLeadSearchQuery(e.target.value)}
+                placeholder="Pesquisar empresa, decisor, WhatsApp..."
+                className="h-8.5 w-full rounded-md border border-[#2e2e2e] bg-[#1a1a1a] pl-8.5 pr-8 text-xs text-white placeholder:text-zinc-500 focus:border-[#14d06e] focus:outline-none"
+              />
+              {leadSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setLeadSearchQuery("")}
+                  className="absolute right-2.5 top-2 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  title="Limpar pesquisa"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -600,6 +655,28 @@ export function LeadsKanban({
               </button>
             </div>
           </div>
+
+          {/* Indicador de Busca Ativa */}
+          {leadSearchQuery && leadSearchQuery.trim() && (
+            <div className="flex items-center justify-between rounded-lg bg-[#141414] ring-1 ring-[#2e2e2e] px-4 py-2.5 text-xs">
+              <div className="flex items-center gap-2 text-white">
+                <Search className="size-3.5 text-[#14d06e]" />
+                <span>
+                  Resultados da pesquisa por: <strong className="text-[#14d06e]">&ldquo;{leadSearchQuery}&rdquo;</strong>
+                </span>
+                <span className="text-[#afafaf] font-mono">
+                  &bull; {displayedLeads.length} {displayedLeads.length === 1 ? "lead encontrado" : "leads encontrados"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLeadSearchQuery("")}
+                className="text-xs text-[#afafaf] hover:text-white underline cursor-pointer"
+              >
+                Limpar pesquisa
+              </button>
+            </div>
+          )}
 
           {isMounted ? (
             <DragDropContext onDragEnd={onDragEnd}>
@@ -842,10 +919,21 @@ export function LeadsKanban({
                           {provided.placeholder}
 
                           {columnLeads.length === 0 && (
-                            <div className="flex flex-1 items-center justify-center p-8 text-center text-[#757575] rounded-lg bg-[#000000] ring-1 ring-[#2e2e2e] pointer-events-none">
+                            <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-[#757575] rounded-lg bg-[#000000] ring-1 ring-[#2e2e2e] space-y-1">
                               <span className="text-xs">
-                                Nenhum lead nesta etapa
+                                {leadSearchQuery.trim()
+                                  ? `Nenhum lead nesta etapa para "${leadSearchQuery}"`
+                                  : "Nenhum lead nesta etapa"}
                               </span>
+                              {leadSearchQuery.trim() && (
+                                <button
+                                  type="button"
+                                  onClick={() => setLeadSearchQuery("")}
+                                  className="text-[11px] text-[#14d06e] hover:underline cursor-pointer pt-1"
+                                >
+                                  Limpar pesquisa
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

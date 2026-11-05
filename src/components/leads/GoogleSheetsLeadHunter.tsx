@@ -48,6 +48,7 @@ import {
 } from "@/lib/deduplication";
 import { createLeadAction } from "@/actions/leads";
 import type { Lead } from "@/db/schema";
+import { useUiStore } from "@/store/useUiStore";
 
 const PLACEHOLDER_SHEET_ID = "PLACEHOLDER_NONE";
 const DEFAULT_USER_SHEET_URL =
@@ -1915,10 +1916,24 @@ export function GoogleSheetsLeadHunter({
     });
   };
 
-  const activeTabRows = useMemo(
-    () => rows.filter((r) => r.tab === activeTab),
-    [rows, activeTab]
-  );
+  const leadSearchQuery = useUiStore((state) => state.leadSearchQuery);
+
+  const activeTabRows = useMemo(() => {
+    let base = rows.filter((r) => r.tab === activeTab);
+    if (leadSearchQuery && leadSearchQuery.trim()) {
+      const q = leadSearchQuery.toLowerCase().trim();
+      base = base.filter(
+        (r) =>
+          (r.empresa || "").toLowerCase().includes(q) ||
+          (r.responsavel || "").toLowerCase().includes(q) ||
+          (r.contato || "").toLowerCase().includes(q) ||
+          (r.email || "").toLowerCase().includes(q) ||
+          (r.website || "").toLowerCase().includes(q) ||
+          (r.observacoes || "").toLowerCase().includes(q)
+      );
+    }
+    return base;
+  }, [rows, activeTab, leadSearchQuery]);
 
   // Estado do Laboratório & Estudo de Setores para Atacar
   const [selectedMacroCategory, setSelectedMacroCategory] = useState<string>("all");

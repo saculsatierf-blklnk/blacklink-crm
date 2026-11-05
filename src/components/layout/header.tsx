@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Compass, LogOut, Menu, Search, User as UserIcon, Users } from "lucide-react";
+import { Compass, LogOut, Menu, Search, User as UserIcon, Users, X } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTourStore } from "@/store/useTourStore";
@@ -18,6 +18,8 @@ export function Header({ initialRole }: HeaderProps) {
   const clearSession = useAuthStore((state) => state.clearSession);
   const resetTour = useTourStore((state) => state.resetTour);
   const toggleMobileSidebar = useUiStore((state) => state.toggleMobileSidebar);
+  const leadSearchQuery = useUiStore((state) => state.leadSearchQuery);
+  const setLeadSearchQuery = useUiStore((state) => state.setLeadSearchQuery);
 
   const handleLogout = async () => {
     clearSession();
@@ -58,9 +60,21 @@ export function Header({ initialRole }: HeaderProps) {
             <Search className="absolute left-3.5 top-3 h-3.5 w-3.5 text-zinc-400" />
             <input
               type="text"
-              placeholder="Buscar registros, leads ou contas..."
-              className="h-9.5 w-64 md:w-80 rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-4 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.08] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-300"
+              value={leadSearchQuery}
+              onChange={(e) => setLeadSearchQuery(e.target.value)}
+              placeholder="Buscar por empresa, decisor, WhatsApp..."
+              className="h-9.5 w-64 md:w-80 rounded-xl border border-white/10 bg-white/[0.03] pl-10 pr-8 text-xs text-white placeholder:text-zinc-500 focus:bg-white/[0.08] focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all duration-300"
             />
+            {leadSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setLeadSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="Limpar busca"
+              >
+                <X className="size-4" />
+              </button>
+            )}
           </div>
         </div>
 

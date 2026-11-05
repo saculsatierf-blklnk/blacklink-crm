@@ -12,6 +12,8 @@ interface UiState {
   isSidebarCollapsed: boolean;
   isMobileSidebarOpen: boolean;
   activeVendasTab: VendasWorkspaceTab;
+  leadSearchQuery: string;
+  setLeadSearchQuery: (query: string) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleMobileSidebar: () => void;
@@ -25,6 +27,8 @@ export const useUiStore = create<UiState>()(
       isSidebarCollapsed: false,
       isMobileSidebarOpen: false,
       activeVendasTab: "kanban",
+      leadSearchQuery: "",
+      setLeadSearchQuery: (query: string) => set({ leadSearchQuery: query }),
       toggleSidebar: () =>
         set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
       setSidebarCollapsed: (collapsed: boolean) =>
