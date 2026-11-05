@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  AlertTriangle,
   Check,
   CheckCircle2,
   DollarSign,
@@ -284,6 +285,27 @@ export function TaskOutcomeModal({
                     <div>
                       <div className="font-semibold text-white">Prefere WhatsApp</div>
                       <div className="text-[10px] text-[#afafaf]">Pediu envio pelo WhatsApp</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOutcome("sem_email");
+                      if (!notes.trim()) {
+                        setNotes("Lead sem e-mail cadastrado. Etapa cumprida via direcionamento para WhatsApp.");
+                      }
+                    }}
+                    className={`col-span-2 p-2.5 rounded-lg border text-left flex items-start gap-2 transition-all cursor-pointer ${
+                      outcome === "sem_email"
+                        ? "bg-[#2b1b0d] border-[#f59e0b] text-white shadow-md ring-1 ring-[#f59e0b]/50"
+                        : "bg-[#141414] border-[#2e2e2e] text-[#afafaf] hover:text-white"
+                    }`}
+                  >
+                    <AlertTriangle className="size-4 text-[#f59e0b] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">Lead sem E-mail Cadastrado</div>
+                      <div className="text-[10px] text-[#afafaf]">Concluir/pular etapa para destravar o funil e continuar via WhatsApp</div>
                     </div>
                   </button>
                 </div>

@@ -1054,6 +1054,24 @@ export function LeadsKanban({
                                                 </a>
                                               </div>
                                             )}
+
+                                            {cardCadence.website && (
+                                              <div
+                                                className="flex items-center gap-1.5 truncate text-[11px]"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <Globe className="size-3 text-[#757575] shrink-0" />
+                                                <a
+                                                  href={cardCadence.website.startsWith("http") ? cardCadence.website : `https://${cardCadence.website}`}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="truncate text-[#14d06e] hover:underline"
+                                                  title="Acessar site da empresa"
+                                                >
+                                                  {cardCadence.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                                                </a>
+                                              </div>
+                                            )}
                                           </div>
 
                                           {/* Próxima Atividade Agendada */}

@@ -16,6 +16,7 @@ import {
   Edit2,
   ExternalLink,
   FileText,
+  Globe,
   ListTodo,
   Loader2,
   Mail,
@@ -105,6 +106,9 @@ export function LeadDetailsSheet({
   const [editLocation, setEditLocation] = useState("");
   const [editRoleTitle, setEditRoleTitle] = useState("");
   const [editEstimatedValue, setEditEstimatedValue] = useState("");
+  const [editWebsite, setEditWebsite] = useState("");
+  const [inlineEmailInput, setInlineEmailInput] = useState("");
+  const [isSavingInlineEmail, setIsSavingInlineEmail] = useState(false);
 
   const [isSavingDetails, setIsSavingDetails] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
@@ -184,6 +188,7 @@ export function LeadDetailsSheet({
     const loc = dbCadenceState.location || "";
     const role = dbCadenceState.roleTitle || "";
     const val = dbCadenceState.estimatedValue || "";
+    const web = dbCadenceState.website || (lead as any).website || "";
 
     setEditCompanyName(comp);
     setEditContactPerson(person);
@@ -193,6 +198,8 @@ export function LeadDetailsSheet({
     setEditLocation(loc);
     setEditRoleTitle(role);
     setEditEstimatedValue(val);
+    setEditWebsite(web);
+    setInlineEmailInput("");
     setSaveFeedback(null);
 
     // Anotações
@@ -279,6 +286,7 @@ export function LeadDetailsSheet({
     const cleanLocation = editLocation.trim();
     const cleanRoleTitle = editRoleTitle.trim();
     const cleanEstimatedValue = editEstimatedValue.trim();
+    const cleanWebsite = editWebsite.trim();
 
     const resolvedName =
       cleanPerson && cleanCompany
@@ -295,6 +303,7 @@ export function LeadDetailsSheet({
         ...(lead.cadenceState || { completedSteps: [] }),
         roleTitle: cleanRoleTitle,
         estimatedValue: cleanEstimatedValue,
+        website: cleanWebsite,
         location: cleanLocation,
         companyName: cleanCompany,
         contactPerson: cleanPerson,
@@ -316,6 +325,7 @@ export function LeadDetailsSheet({
         location: cleanLocation,
         roleTitle: cleanRoleTitle,
         estimatedValue: cleanEstimatedValue,
+        website: cleanWebsite,
       });
 
       const finalLead = res?.lead || optimisticLead;
@@ -328,25 +338,171 @@ export function LeadDetailsSheet({
       setTimeout(() => setSaveFeedback(null), 3500);
 
       // Re-interpola templates
-      const updatedCtx = extractLeadContext(finalLead);
-      const tmpl =
-        GOFER_TEMPLATES.find((t) => t.key === selectedPhaseKey) || GOFER_TEMPLATES[0];
-      setTemplateSubject(interpolateGoferTemplateText(tmpl.email.subject, updatedCtx));
-      setTemplateBody(
-        interpolateGoferTemplateText(
-          selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
-          updatedCtx
-        )
-      );
-    } catch {
+    } catch (err) {
+      console.warn("Falha ao salvar detalhes do lead:", err);
       setSaveFeedback({
-        type: "success",
-        text: "Informações salvas com sucesso no Kanban!",
+        type: "error",
+        text: "Erro ao salvar informações.",
       });
       setTimeout(() => setSaveFeedback(null), 3500);
     } finally {
       setIsSavingDetails(false);
     }
+  };
+
+  // Cadastrar e-mail rápido inline (desbloqueia o funil)
+  const handleSaveInlineEmail = async (overrideEmail?: string) => {
+    if (!lead) return;
+    const emailToSave = (overrideEmail !== undefined ? overrideEmail : inlineEmailInput).trim();
+    if (!emailToSave || !emailToSave.includes("@")) return;
+
+    setIsSavingInlineEmail(true);
+    setEditEmail(emailToSave);
+    const updatedLead: Lead = {
+      ...lead,
+      leadEmail: emailToSave,
+    };
+    onLeadUpdate?.(updatedLead);
+
+    try {
+      await updateLeadDetailsAction({
+        leadId: lead.id,
+        email: emailToSave,
+      });
+      setSaveFeedback({
+        type: "success",
+        text: "✓ E-mail cadastrado com sucesso! Etapa de envio desbloqueada.",
+      });
+      setTimeout(() => setSaveFeedback(null), 3500);
+    } catch (err) {
+      console.warn("Falha ao salvar e-mail rápido:", err);
+    } finally {
+      setIsSavingInlineEmail(false);
+    }
+  };
+
+  // Pular etapa de e-mail por ausência de e-mail (destrava o funil)
+  const handleSkipEmailStep = async (stepId: string = "step-2") => {
+    if (!lead) return;
+    const nowIso = new Date().toISOString();
+    const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now(),
+      text: `[CADÊNCIA] ⚠️ Etapa de e-mail pulada: Lead não possui e-mail cadastrado. Prospecção priorizada via WhatsApp / Telefone.`,
+      createdAt: nowIso,
+      author: currentOp,
+    };
+    const nextNotes = [newNote, ...notes];
+    setNotes(nextNotes);
+
+    const nextCadence = Array.from(new Set([...completedCadence, stepId, `pular_${stepId}`]));
+    setCompletedCadence(nextCadence);
+    onCadenceChange?.(lead.id, nextCadence);
+
+    const updatedLead: Lead = {
+      ...lead,
+      notes: nextNotes,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        completedSteps: nextCadence,
+        lastCompletedAt: nowIso,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+
+    recordPersonalMetricEvent({
+      operatorId: "lucas-freitas",
+      operatorName: currentOp,
+      leadId: lead.id,
+      leadName: editContactPerson || editCompanyName || lead.leadName || "Lead",
+      companyName: editCompanyName || (lead.cadenceState as any)?.companyName || lead.leadName,
+      sector: inferSectorFromLead(lead),
+      channel: "email",
+      outcome: "sem_email",
+      stepId,
+      stepTitle: "Envio de Catálogo (Pulado por falta de e-mail)",
+      notes: "Lead sem e-mail cadastrado. Etapa pulada para não travar o funil.",
+    });
+
+    try {
+      await updateLeadCadenceAction(lead.id, { completedSteps: nextCadence });
+      await addLeadNoteAction(lead.id, newNote.text, currentOp);
+    } catch (err) {
+      console.warn("Erro ao registrar pulo de etapa:", err);
+    }
+
+    setSaveFeedback({
+      type: "success",
+      text: "✓ Etapa pulada e registrada! Funil destravado com sucesso.",
+    });
+    setTemplateSuccessFeedback("✓ Etapa pulada e registrada! Funil destravado com sucesso.");
+    setTimeout(() => {
+      setSaveFeedback(null);
+      setTemplateSuccessFeedback(null);
+    }, 4000);
+  };
+
+  // Enviar catálogo alternativamente via WhatsApp quando não há e-mail
+  const handleSendCatalogViaWhatsApp = async (stepId: string = "step-2") => {
+    if (!lead) return;
+    const nowIso = new Date().toISOString();
+    const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now(),
+      text: `[CADÊNCIA] ✓ Catálogo e tabela de preços enviados via WhatsApp (Lead sem e-mail cadastrado) por ${currentOp}.`,
+      createdAt: nowIso,
+      author: currentOp,
+    };
+    const nextNotes = [newNote, ...notes];
+    setNotes(nextNotes);
+
+    const nextCadence = Array.from(new Set([...completedCadence, stepId, "1º Contato"]));
+    setCompletedCadence(nextCadence);
+    onCadenceChange?.(lead.id, nextCadence);
+
+    const updatedLead: Lead = {
+      ...lead,
+      notes: nextNotes,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        completedSteps: nextCadence,
+        lastCompletedAt: nowIso,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+
+    recordPersonalMetricEvent({
+      operatorId: "lucas-freitas",
+      operatorName: currentOp,
+      leadId: lead.id,
+      leadName: editContactPerson || editCompanyName || lead.leadName || "Lead",
+      companyName: editCompanyName || (lead.cadenceState as any)?.companyName || lead.leadName,
+      sector: inferSectorFromLead(lead),
+      channel: "whatsapp",
+      outcome: "pediu_whatsapp",
+      stepId,
+      stepTitle: "Envio de Catálogo via WhatsApp",
+      notes: "Catálogo enviado via WhatsApp como alternativa à ausência de e-mail.",
+    });
+
+    try {
+      await updateLeadCadenceAction(lead.id, { completedSteps: nextCadence });
+      await addLeadNoteAction(lead.id, newNote.text, currentOp);
+    } catch (err) {
+      console.warn("Erro ao concluir catálogo via WhatsApp:", err);
+    }
+
+    setSaveFeedback({
+      type: "success",
+      text: "✓ Catálogo enviado via WhatsApp! Card concluído hoje e reposicionado.",
+    });
+    setTemplateSuccessFeedback("✓ Catálogo enviado via WhatsApp! Card concluído hoje.");
+    setTimeout(() => {
+      setSaveFeedback(null);
+      setTemplateSuccessFeedback(null);
+    }, 4000);
   };
 
   // 2. Adicionar Interação / Anotação
@@ -1220,16 +1376,29 @@ export function LeadDetailsSheet({
               </div>
 
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#757575] mb-1">
-                  Valor Estimado (R$)
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#afafaf] mb-1">
+                  Site / Domínio da Empresa
                 </label>
-                <input
-                  type="text"
-                  value={editEstimatedValue}
-                  onChange={(e) => setEditEstimatedValue(e.target.value)}
-                  placeholder="Ex: R$ 15.000,00"
-                  className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1 text-xs text-white focus:border-white focus:outline-none"
-                />
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={editWebsite}
+                    onChange={(e) => setEditWebsite(e.target.value)}
+                    placeholder="Ex: www.empresa.com.br"
+                    className="flex-1 rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1 text-xs text-white focus:border-[#14d06e] focus:outline-none"
+                  />
+                  {editWebsite && (
+                    <a
+                      href={editWebsite.startsWith("http") ? editWebsite : `https://${editWebsite}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center size-6 rounded bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] transition-colors"
+                      title="Visitar Site da Empresa"
+                    >
+                      <Globe className="size-3" />
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1648,6 +1817,36 @@ export function LeadDetailsSheet({
                               ) : null
                             )}
 
+                            {step.id === "step-2" && !editEmail && !isCompleted && (
+                              <div className="flex items-center gap-1.5 bg-[#2b1b0d] border border-[#f59e0b]/40 px-2 py-1 rounded text-[10px] font-semibold text-[#f59e0b]">
+                                <AlertTriangle className="size-3 text-[#f59e0b] shrink-0" />
+                                <span className="hidden sm:inline">Sem e-mail:</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSendCatalogViaWhatsApp(step.id);
+                                  }}
+                                  className="underline hover:text-white cursor-pointer"
+                                  title="Enviar catálogo pelo WhatsApp e concluir etapa"
+                                >
+                                  Mandar no WhatsApp
+                                </button>
+                                <span>&bull;</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSkipEmailStep(step.id);
+                                  }}
+                                  className="underline hover:text-white cursor-pointer"
+                                  title="Pular etapa de e-mail e não travar o funil"
+                                >
+                                  Pular
+                                </button>
+                              </div>
+                            )}
+
                             {(step.id === "step-2" || step.id === "step-5") && (
                               <button
                                 type="button"
@@ -1664,18 +1863,27 @@ export function LeadDetailsSheet({
                             )}
 
                             {step.id === "step-3" && (
-                              <a
-                                href={`https://www.google.com/search?q=${encodeURIComponent(
-                                  `${editCompanyName || leadCtx.company} ${editContactPerson || leadCtx.person} linkedin`
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Buscar contato no LinkedIn"
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a1a] text-[#afafaf] text-[10px] font-medium border border-[#2e2e2e] hover:text-white transition-colors"
-                              >
-                                <UserCheck className="size-3" />
-                                <span>LinkedIn</span>
-                              </a>
+                              formattedWhatsappUrl ? (
+                                <a
+                                  href={formattedWhatsappUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Chamar no WhatsApp (Follow-up 24h)"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#0c2b1c] text-[#14d06e] text-[10px] font-medium border border-[#14d06e]/30 hover:bg-[#14d06e] hover:text-[#0d0d0d] transition-colors"
+                                >
+                                  <MessageCircle className="size-3" />
+                                  <span>WhatsApp 24h</span>
+                                </a>
+                              ) : editPhone ? (
+                                <a
+                                  href={`tel:${editPhone}`}
+                                  title="Ligar (Follow-up 24h)"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a1a] text-[#afafaf] text-[10px] font-medium border border-[#2e2e2e] hover:text-white transition-colors"
+                                >
+                                  <Phone className="size-3" />
+                                  <span>Ligar</span>
+                                </a>
+                              ) : null
                             )}
 
                             {/* Badge temporal de status */}
@@ -1846,6 +2054,59 @@ export function LeadDetailsSheet({
                     <span>📞 Ligação (Cold Call)</span>
                   </button>
                 </div>
+
+                {/* Alerta e Desbloqueio Inteligente quando Falta E-mail */}
+                {selectedChannel === "email" && !editEmail && (
+                  <div className="rounded-lg bg-[#2b1b0d] border border-[#f59e0b]/60 p-3 space-y-2.5 animate-in fade-in">
+                    <div className="flex items-start gap-2 text-xs text-[#f59e0b]">
+                      <AlertTriangle className="size-4 shrink-0 text-[#f59e0b] mt-0.5" />
+                      <div className="flex-1">
+                        <span className="font-bold block">Lead sem E-mail Cadastrado</span>
+                        <p className="text-[11px] text-[#d4d4d4] mt-0.5 leading-relaxed">
+                          Para não travar a cadência deste lead, você pode cadastrar o e-mail agora, disparar a apresentação pelo WhatsApp ou pular esta etapa diretamente.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#f59e0b]/20">
+                      <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                        <input
+                          type="email"
+                          value={inlineEmailInput}
+                          onChange={(e) => setInlineEmailInput(e.target.value)}
+                          placeholder="Digite o e-mail: compras@empresa.com.br"
+                          className="flex-1 bg-[#141414] border border-[#2e2e2e] rounded px-2.5 py-1.5 text-xs text-white placeholder:text-[#757575] focus:border-[#14d06e] focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={isSavingInlineEmail || !inlineEmailInput.trim().includes("@")}
+                          onClick={() => handleSaveInlineEmail()}
+                          className="px-2.5 py-1.5 rounded bg-[#14d06e] text-[#0d0d0d] font-bold text-xs hover:bg-[#14d06e]/90 cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingInlineEmail ? "Salvando..." : "Salvar E-mail"}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectChannel("whatsapp")}
+                          className="px-2.5 py-1.5 rounded bg-[#0c2b1c] border border-[#14d06e]/50 text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] font-semibold text-xs cursor-pointer transition-colors"
+                        >
+                          Disparar via WhatsApp
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSkipEmailStep("step-2")}
+                          className="px-2.5 py-1.5 rounded bg-[#1a1a1a] border border-[#2e2e2e] text-[#afafaf] hover:text-white font-semibold text-xs cursor-pointer"
+                        >
+                          Pular Etapa
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Assunto do E-mail (quando canal for email) */}
                 {selectedChannel === "email" && (

@@ -152,6 +152,7 @@ export interface UpdateLeadDetailsInput {
   location?: string;
   roleTitle?: string;
   estimatedValue?: string;
+  website?: string;
 }
 
 /**
@@ -171,6 +172,7 @@ export async function updateLeadDetailsAction(
     location,
     roleTitle,
     estimatedValue,
+    website,
   } = input;
 
   if (!leadId) {
@@ -207,6 +209,7 @@ export async function updateLeadDetailsAction(
       completedSteps: [],
       roleTitle: roleTitle?.trim() || "",
       estimatedValue: estimatedValue?.trim() || "",
+      website: website?.trim() || "",
       location: location?.trim() || "",
       companyName: company?.trim() || "",
       contactPerson: contactPerson?.trim() || "",
@@ -263,6 +266,7 @@ export async function updateLeadDetailsAction(
       ...currentCadence,
       roleTitle: roleTitle !== undefined ? roleTitle.trim() : currentCadence.roleTitle,
       estimatedValue: estimatedValue !== undefined ? estimatedValue.trim() : currentCadence.estimatedValue,
+      website: website !== undefined ? website.trim() : currentCadence.website,
       location: location !== undefined ? location.trim() : currentCadence.location,
       companyName: company !== undefined ? company.trim() : currentCadence.companyName,
       contactPerson: contactPerson !== undefined ? contactPerson.trim() : currentCadence.contactPerson,
@@ -803,9 +807,10 @@ export interface CreateLeadInput {
   name: string;
   company: string;
   roleTitle?: string;
-  email: string;
+  email?: string;
   phone?: string;
   estimatedValue?: string;
+  website?: string;
   ownerId?: string;
   initialNote?: string;
 }
@@ -878,20 +883,25 @@ export async function createLeadAction(
   input: CreateLeadInput
 ): Promise<ActionResponse & { lead?: Lead }> {
   try {
-    const { name, company, roleTitle, email, phone, estimatedValue, ownerId, initialNote } = input;
+    const { name, company, roleTitle, email, phone, estimatedValue, website, ownerId, initialNote } = input;
 
-    if (!name?.trim() || !company?.trim() || !email?.trim()) {
-      return { success: false, leadId: "", error: "Nome, empresa e e-mail são obrigatórios." };
+    if (!name?.trim() || !company?.trim()) {
+      return { success: false, leadId: "", error: "Nome e empresa são obrigatórios." };
     }
 
+    const cleanEmail = email?.trim() || undefined;
+    const cleanPhone = phone?.trim() || undefined;
+
     // Validação estrita anti-colisão (Domínio Corporativo, E-mail e Telefone E.164) antes de persistir
-    const collisionCheck = await checkLeadCollisionAction(email, undefined, phone);
-    if (collisionCheck.collision && collisionCheck.collidedLead) {
-      return {
-        success: false,
-        leadId: collisionCheck.collidedLead.id,
-        error: `Colisão detectada (${collisionCheck.collidedWith}): A conta '${collisionCheck.collidedLead.leadName}' já pertence a ${collisionCheck.collidedLead.ownerName}.`,
-      };
+    if (cleanEmail || cleanPhone) {
+      const collisionCheck = await checkLeadCollisionAction(cleanEmail || "", undefined, cleanPhone);
+      if (collisionCheck.collision && collisionCheck.collidedLead) {
+        return {
+          success: false,
+          leadId: collisionCheck.collidedLead.id,
+          error: `Colisão detectada (${collisionCheck.collidedWith}): A conta '${collisionCheck.collidedLead.leadName}' já pertence a ${collisionCheck.collidedLead.ownerName}.`,
+        };
+      }
     }
 
     // Captura com prioridade absoluta o ID da empresa através do contexto da sessão do usuário autenticado
@@ -921,6 +931,7 @@ export async function createLeadAction(
       completedSteps: [],
       roleTitle: roleTitle?.trim() || "Decisor Comercial",
       estimatedValue: estimatedValue?.trim() || undefined,
+      website: website?.trim() || undefined,
     };
 
     const [newLead] = await db
@@ -928,8 +939,8 @@ export async function createLeadAction(
       .values({
         companyId,
         leadName: `${name.trim()} (${company.trim()})`,
-        leadEmail: email.trim().toLowerCase(),
-        leadPhone: phone?.trim() || null,
+        leadEmail: cleanEmail ? cleanEmail.toLowerCase() : null,
+        leadPhone: cleanPhone || null,
         origin: "Hunter Manual / Radar",
         status: "new",
         ownerId: assignedOwner,

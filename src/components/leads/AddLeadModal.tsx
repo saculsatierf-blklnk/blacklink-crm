@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Building2,
   CheckCircle2,
+  Globe,
   Mail,
   Phone,
   Radar,
@@ -67,6 +68,7 @@ export function AddLeadModal({
   const [company, setCompany] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
   const [selectedDdi, setSelectedDdi] = useState("+55");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [ownerId, setOwnerId] = useState(defaultOwnerId || "");
@@ -146,7 +148,7 @@ export function AddLeadModal({
   const isFormValid =
     name.trim().length > 0 &&
     company.trim().length > 0 &&
-    email.trim().length > 0 &&
+    (email.trim().length > 0 || phoneNumber.trim().length > 0) &&
     !hasCollision;
 
   const handlePhoneChange = (val: string) => {
@@ -177,8 +179,9 @@ export function AddLeadModal({
         name,
         company,
         roleTitle,
-        email,
+        email: email.trim() || undefined,
         phone: fullPhone,
+        website: website.trim() || undefined,
         ownerId: ownerId || undefined,
         initialNote,
       });
@@ -197,6 +200,7 @@ export function AddLeadModal({
     setCompany("");
     setRoleTitle("");
     setEmail("");
+    setWebsite("");
     setSelectedDdi("+55");
     setPhoneNumber("");
     setInitialNote("");
@@ -310,7 +314,7 @@ export function AddLeadModal({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
-                E-mail Corporativo *
+                E-mail Corporativo (Opcional se houver telefone)
               </label>
               <div className="flex items-center gap-1.5 text-[10px] font-mono">
                 {isCheckingCollision ? (
@@ -336,10 +340,9 @@ export function AddLeadModal({
               <Mail className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
               <input
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Ex: roberto@apexcapital.io"
+                placeholder="Ex: compras@empresa.com.br (ou deixe em branco se não tiver)"
                 className={`w-full rounded-xl border pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none transition-colors ${
                   hasCollision
                     ? "border-rose-500/80 bg-rose-500/10 focus:border-rose-400"
@@ -467,7 +470,24 @@ export function AddLeadModal({
             </div>
           </div>
 
-          {/* Linha 4: Operador Responsável (Dono Dinâmico) */}
+          {/* Linha 4: Site / Website da Empresa */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
+              Site / Website da Empresa (Opcional)
+            </label>
+            <div className="relative">
+              <Globe className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+              <input
+                type="text"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="Ex: www.empresa.com.br"
+                className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-white/30 focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Linha 5: Operador Responsável (Dono Dinâmico) */}
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 block">
               Operador Responsável (Dono)

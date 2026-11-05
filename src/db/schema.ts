@@ -85,6 +85,7 @@ export interface CadenceState {
   completedSteps: string[];
   roleTitle?: string;
   estimatedValue?: string;
+  website?: string;
   customScript?: string;
   location?: string;
   companyName?: string;

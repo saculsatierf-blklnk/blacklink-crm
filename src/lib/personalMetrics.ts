@@ -21,7 +21,8 @@ export type InteractionOutcome =
   | "pediu_email"          // Solicitou apresentação / proposta via E-mail
   | "solicitou_orcamento"  // Solicitou cotação / orçamento de tubos e perfis
   | "sem_interesse"        // Sem demanda / não tem interesse no momento
-  | "reuniao_agendada";    // Agendou reunião / visita comercial
+  | "reuniao_agendada"     // Agendou reunião / visita comercial
+  | "sem_email";           // Lead sem e-mail cadastrado / pulado / direcionado para WhatsApp
 
 export interface PersonalMetricEvent {
   id: string;
