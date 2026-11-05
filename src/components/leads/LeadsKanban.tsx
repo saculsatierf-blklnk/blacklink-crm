@@ -12,6 +12,7 @@ import {
   Ban,
   Building2,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
   Globe,
@@ -35,7 +36,12 @@ import {
   getCompanyOperatorsAction,
   type LeadStatus,
 } from "@/actions/leads";
-import { getNextCadenceAction, parseLeadInfo } from "@/lib/cadence";
+import {
+  getNextCadenceAction,
+  parseLeadInfo,
+  isLeadCompletedToday,
+  getLastCompletedTime,
+} from "@/lib/cadence";
 import { OPERATORS, getOperator, type Operator } from "@/lib/operators";
 import { LeadDetailsSheet } from "./LeadDetailsSheet";
 import { AddLeadModal } from "./AddLeadModal";
@@ -43,6 +49,10 @@ import { TeamInviteModal } from "./TeamInviteModal";
 import { GoogleSheetsLeadHunter } from "./GoogleSheetsLeadHunter";
 import { PersonalMetricsAnalytics } from "./PersonalMetricsAnalytics";
 import { TaskOutcomeModal } from "./TaskOutcomeModal";
+import {
+  recordPersonalMetricEvent,
+  inferSectorFromLead,
+} from "@/lib/personalMetrics";
 import { StartTourButton } from "@/components/tour/StartTourButton";
 import { KANBAN_TOUR_STEPS } from "@/store/useTourStore";
 import { useUiStore } from "@/store/useUiStore";
@@ -406,6 +416,7 @@ export function LeadsKanban({
           cadenceState: {
             ...currentCadence,
             completedSteps: nextSteps,
+            lastCompletedAt: new Date().toISOString(),
             estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : currentCadence.estimatedValue,
           },
         };
@@ -423,6 +434,63 @@ export function LeadsKanban({
         [cardOutcomeLead.id]: Array.from(new Set([...(prev[cardOutcomeLead.id] || []), data.completedStepId!])),
       }));
     }
+  };
+
+  // Conclusão com 1-clique (Bitrix24 Queue: move para o final da coluna em verde fluorescente)
+  const handleQuickCompleteLead = (lead: Lead, stepTitle?: string) => {
+    const actionName = stepTitle || "Atividade de Prospecção";
+    const nowIso = new Date().toISOString();
+    const currentOp = currentUser?.name || "Lucas de Freitas Leite (Gofer Metais)";
+
+    const channel = actionName.toLowerCase().includes("mail")
+      ? "email"
+      : actionName.toLowerCase().includes("wpp") || actionName.toLowerCase().includes("whats")
+      ? "whatsapp"
+      : "call";
+
+    recordPersonalMetricEvent({
+      operatorId: currentUser?.id || "lucas-freitas",
+      operatorName: currentOp,
+      leadId: lead.id,
+      leadName: (lead.cadenceState as any)?.contactPerson || parseLeadInfo(lead.leadName || "").name || lead.leadName,
+      companyName: (lead.cadenceState as any)?.companyName || parseLeadInfo(lead.leadName || "").company || lead.leadName,
+      sector: inferSectorFromLead(lead),
+      channel,
+      outcome: "atendeu",
+      notes: `✓ ${actionName} concluída via Bitrix Queue com 1 clique`,
+    });
+
+    setLeadsList((prev) => {
+      const next = prev.map((l) => {
+        if (l.id !== lead.id) return l;
+
+        const currentCadence = (l.cadenceState as any) || {};
+        const currentCompleted: string[] = currentCadence.completedSteps || [];
+        const nextSteps = Array.from(new Set([...currentCompleted, actionName]));
+
+        const newNote = {
+          id: "note-" + Date.now(),
+          text: `[CADÊNCIA] ✓ ${actionName} concluída hoje com sucesso por ${currentOp}.`,
+          createdAt: nowIso,
+          author: currentOp,
+        };
+
+        return {
+          ...l,
+          notes: [newNote, ...(l.notes || [])],
+          cadenceState: {
+            ...currentCadence,
+            completedSteps: nextSteps,
+            lastCompletedAt: nowIso,
+          },
+        };
+      });
+
+      try {
+        localStorage.setItem("gofer_kanban_leads_v1", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   // Callback de atividade agendada e Hand-off processado
@@ -564,7 +632,11 @@ export function LeadsKanban({
   });
 
   const getLeadsByStatus = (status: LeadStatus) => {
-    return displayedLeads.filter((lead) => lead.status === status);
+    const statusLeads = displayedLeads.filter((lead) => lead.status === status);
+    // Dinâmica Bitrix24: leads pendentes no topo; leads com atividades concluídas hoje vão para o final
+    const pending = statusLeads.filter((lead) => !isLeadCompletedToday(lead));
+    const completedToday = statusLeads.filter((lead) => isLeadCompletedToday(lead));
+    return [...pending, ...completedToday];
   };
 
   const formatDate = (date: Date | string) => {
@@ -828,6 +900,8 @@ export function LeadsKanban({
 
                             const cardCadence = (lead.cadenceState as any) || {};
                             const isDeactivated = Boolean(cardCadence.isDeactivated);
+                            const isCompletedToday = isLeadCompletedToday(lead);
+                            const lastCompletedTime = getLastCompletedTime(lead);
 
                             return (
                               <Draggable
@@ -844,11 +918,13 @@ export function LeadsKanban({
                                       if (dragSnapshot.isDragging) return;
                                       handleOpenSheet(lead);
                                     }}
-                                    className={`rounded-lg p-4 space-y-3 transition-colors select-none group cursor-grab active:cursor-grabbing ${
+                                    className={`rounded-lg p-4 space-y-3 transition-all select-none group cursor-grab active:cursor-grabbing ${
                                       isDeactivated
                                         ? "bg-[#160f0e] ring-1 ring-[#ff5d48]/40 opacity-85 hover:opacity-100"
                                         : dragSnapshot.isDragging
-                                        ? "bg-[#262626] ring-1 ring-[#7fa9f7]/60 z-50"
+                                        ? "bg-[#262626] ring-1 ring-[#7fa9f7]/60 z-50 shadow-2xl"
+                                        : isCompletedToday
+                                        ? "bg-[#092617]/85 ring-1 ring-[#14d06e] border border-[#14d06e]/70 shadow-[0_0_18px_rgba(20,208,110,0.22)] hover:bg-[#0c331f]"
                                         : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626]"
                                     }`}
                                   >
@@ -860,6 +936,17 @@ export function LeadsKanban({
                                           <span className="truncate">Desativado: {cardCadence.deactivationReason || "Descartado"}</span>
                                         </div>
                                         <span className="text-[9px] text-[#14d06e] font-sans hover:underline shrink-0">Reativar</span>
+                                      </div>
+                                    )}
+
+                                    {/* Indicador Bitrix24 Queue: Lead Concluído Hoje */}
+                                    {isCompletedToday && (
+                                      <div className="flex items-center justify-between gap-1 text-[10px] text-[#14d06e] bg-[#0c2b1c]/90 border border-[#14d06e]/60 px-2.5 py-1 rounded font-mono font-semibold shadow-sm">
+                                        <div className="flex items-center gap-1.5 truncate">
+                                          <CheckCircle2 className="size-3 shrink-0 text-[#14d06e]" />
+                                          <span className="truncate">✓ Concluído hoje {lastCompletedTime ? `às ${lastCompletedTime}` : ""}</span>
+                                        </div>
+                                        <span className="text-[9px] text-[#86efac] font-sans shrink-0 uppercase tracking-wider font-bold">Fila Bitrix</span>
                                       </div>
                                     )}
 
@@ -1003,10 +1090,20 @@ export function LeadsKanban({
                                                 setCardOutcomeStepTitle(actionInfo.actionText);
                                               }}
                                               className="flex-1 inline-flex items-center justify-center gap-1.5 rounded bg-[#141414] hover:bg-[#14d06e] text-[#afafaf] hover:text-[#0d0d0d] border border-[#2e2e2e] hover:border-[#14d06e] py-1 px-2 text-[11px] font-semibold transition-all cursor-pointer group/btn shadow-sm"
-                                              title="Registrar desfecho (Ligação atendida, WhatsApp solicitado, Cotação gerada)"
+                                              title="Registrar desfecho detalhado (Ligação atendida, WhatsApp solicitado, Cotação gerada)"
                                             >
                                               <CheckCircle2 className="size-3 text-[#14d06e] group-hover/btn:text-[#0d0d0d]" />
-                                              <span>Registrar Desfecho</span>
+                                              <span>Desfecho</span>
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQuickCompleteLead(lead, actionInfo.actionText)}
+                                              className="inline-flex items-center justify-center gap-1 rounded bg-[#0c2b1c] hover:bg-[#14d06e] text-[#14d06e] hover:text-[#0d0d0d] border border-[#14d06e]/50 hover:border-[#14d06e] py-1 px-2.5 text-[11px] font-bold transition-all cursor-pointer shadow-sm shrink-0"
+                                              title="Dar OK na tarefa e mover para o final da fila em verde fluorescente"
+                                            >
+                                              <Check className="size-3" />
+                                              <span>OK</span>
                                             </button>
                                           </div>
                                         </>

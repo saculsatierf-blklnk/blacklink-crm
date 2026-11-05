@@ -59,6 +59,7 @@ import {
   type TemplatePhaseKey,
   type TemplateChannel,
 } from "@/lib/templates-gofer";
+import { generatePelekeCustomScript } from "@/lib/pelekeHunter";
 import { TaskOutcomeModal } from "./TaskOutcomeModal";
 import {
   recordPersonalMetricEvent,
@@ -225,10 +226,14 @@ export function LeadDetailsSheet({
     const tmpl =
       GOFER_TEMPLATES.find((t) => t.key === initialPhase) || GOFER_TEMPLATES[0];
     const initialSubj = interpolateGoferTemplateText(tmpl.email.subject, ctx);
-    const initialBody = interpolateGoferTemplateText(
-      selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
-      ctx
-    );
+    let initialBody = "";
+    if (selectedChannel === "email") {
+      initialBody = interpolateGoferTemplateText(tmpl.email.body, ctx);
+    } else if (selectedChannel === "ligacao" && tmpl.ligacao) {
+      initialBody = interpolateGoferTemplateText(tmpl.ligacao.script, ctx);
+    } else {
+      initialBody = interpolateGoferTemplateText(tmpl.whatsapp.text, ctx);
+    }
     setTemplateSubject(initialSubj);
     setTemplateBody(initialBody);
   }, [lead, selectedChannel]);
@@ -698,19 +703,86 @@ export function LeadDetailsSheet({
       : CADENCE_STEPS;
 
   // Troca de fase de template Gofer
-  const handleSelectTemplatePhase = (phaseKey: TemplatePhaseKey) => {
+  const handleSelectTemplatePhase = (phaseKey: TemplatePhaseKey, overrideChannel?: TemplateChannel) => {
     setSelectedPhaseKey(phaseKey);
     const tmpl = GOFER_TEMPLATES.find((t) => t.key === phaseKey);
     if (!tmpl) return;
 
+    const channel = overrideChannel || selectedChannel;
     const ctx = extractLeadContext(lead);
     const subj = interpolateGoferTemplateText(tmpl.email.subject, ctx);
-    const body = interpolateGoferTemplateText(
-      selectedChannel === "email" ? tmpl.email.body : tmpl.whatsapp.text,
-      ctx
-    );
+    let body = "";
+    if (channel === "email") {
+      body = interpolateGoferTemplateText(tmpl.email.body, ctx);
+    } else if (channel === "ligacao" && tmpl.ligacao) {
+      body = interpolateGoferTemplateText(tmpl.ligacao.script, ctx);
+    } else {
+      body = interpolateGoferTemplateText(tmpl.whatsapp.text, ctx);
+    }
     setTemplateSubject(subj);
     setTemplateBody(body);
+  };
+
+  const handleSelectChannel = (channel: TemplateChannel) => {
+    setSelectedChannel(channel);
+    handleSelectTemplatePhase(selectedPhaseKey, channel);
+  };
+
+  // Conclui atividade pelo template (Bitrix Queue: timestamp + move para o final da coluna)
+  const handleCompleteTemplateTask = async (taskName: string, channel: TemplateChannel) => {
+    if (!lead) return;
+    const nowIso = new Date().toISOString();
+    const currentOp = "Lucas de Freitas Leite (Gofer Metais)";
+    const channelLabel = channel === "ligacao" ? "Ligação Telefônica" : channel === "email" ? "E-mail" : "WhatsApp";
+
+    recordPersonalMetricEvent({
+      operatorId: "lucas-freitas",
+      operatorName: currentOp,
+      leadId: lead.id,
+      leadName: editContactPerson || editCompanyName || lead.leadName || "Lead",
+      companyName: editCompanyName || (lead.cadenceState as any)?.companyName || lead.leadName,
+      sector: inferSectorFromLead(lead),
+      channel: channel === "ligacao" ? "call" : channel,
+      outcome: "atendeu",
+      notes: `✓ ${taskName} (${channelLabel}) executada com sucesso via Template Gofer`,
+    });
+
+    const newNote: NoteEntry = {
+      id: "note-" + Date.now(),
+      text: `[CADÊNCIA] ✓ ${taskName} (${channelLabel}) realizada com sucesso hoje às ${new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date())} por ${currentOp}.`,
+      createdAt: nowIso,
+      author: currentOp,
+    };
+    const nextNotes = [newNote, ...notes];
+    setNotes(nextNotes);
+
+    const nextCadence = Array.from(new Set([...completedCadence, taskName]));
+    setCompletedCadence(nextCadence);
+    onCadenceChange?.(lead.id, nextCadence);
+
+    const updatedLead: Lead = {
+      ...lead,
+      notes: nextNotes,
+      cadenceState: {
+        ...(lead.cadenceState || { completedSteps: [] }),
+        completedSteps: nextCadence,
+        lastCompletedAt: nowIso,
+      },
+    };
+    onLeadUpdate?.(updatedLead);
+
+    try {
+      await updateLeadCadenceAction(lead.id, {
+        completedSteps: nextCadence,
+      });
+      await addLeadNoteAction(lead.id, newNote.text, currentOp);
+    } catch {}
+
+    setSaveFeedback({
+      type: "success",
+      text: `✓ ${taskName} concluída! Card reposicionado na fila Bitrix em verde fluorescente.`,
+    });
+    setTimeout(() => setSaveFeedback(null), 3500);
   };
 
   const handleCopyText = (text: string, target: "subject" | "body" | "all") => {
@@ -1601,127 +1673,247 @@ export function LeadDetailsSheet({
           )}
 
           {/* ===================================================================
-              CONTEÚDO ABA 3: TEMPLATES GOFER METAIS (E-MAIL & WHATSAPP)
+              CONTEÚDO ABA 3: TEMPLATES GOFER METAIS & MOTOR HUNTER PELEKE
              =================================================================== */}
-          {activeBottomTab === "templates" && (
-            <div className="space-y-3">
-              {/* Seletor de Fase do Template */}
-              <div className="flex flex-wrap gap-1">
-                {GOFER_TEMPLATES.map((tmpl) => (
+          {activeBottomTab === "templates" && (() => {
+            const currentTmpl = GOFER_TEMPLATES.find((t) => t.key === selectedPhaseKey) || GOFER_TEMPLATES[0];
+            const pelekeData = generatePelekeCustomScript({
+              lead,
+              channel: selectedChannel,
+              phaseKey: selectedPhaseKey,
+            });
+
+            return (
+              <div className="space-y-3.5">
+                {/* Seletor de Fase do Template */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-[#afafaf] uppercase tracking-wider block">
+                    Etapa da Cadência Gofer:
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {GOFER_TEMPLATES.map((tmpl) => (
+                      <button
+                        key={tmpl.key}
+                        type="button"
+                        onClick={() => handleSelectTemplatePhase(tmpl.key)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                          selectedPhaseKey === tmpl.key
+                            ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
+                            : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                        }`}
+                      >
+                        {tmpl.badge}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Canal: WhatsApp vs E-mail vs Ligação Telefônica */}
+                <div className="flex items-center gap-2 pt-1 border-t border-[#262626]">
                   <button
-                    key={tmpl.key}
                     type="button"
-                    onClick={() => handleSelectTemplatePhase(tmpl.key)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                      selectedPhaseKey === tmpl.key
-                        ? "bg-[#14d06e] text-[#0d0d0d]"
-                        : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                    onClick={() => handleSelectChannel("whatsapp")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all ${
+                      selectedChannel === "whatsapp"
+                        ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm font-bold"
+                        : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
                     }`}
                   >
-                    {tmpl.badge}
+                    <MessageCircle className="size-3.5" />
+                    <span>WhatsApp</span>
                   </button>
-                ))}
-              </div>
 
-              {/* Canal: WhatsApp vs E-mail */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel("whatsapp")}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer ${
-                    selectedChannel === "whatsapp"
-                      ? "bg-white text-[#0d0d0d]"
-                      : "text-[#afafaf] hover:text-white"
-                  }`}
-                >
-                  WhatsApp
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedChannel("email")}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold cursor-pointer ${
-                    selectedChannel === "email"
-                      ? "bg-white text-[#0d0d0d]"
-                      : "text-[#afafaf] hover:text-white"
-                  }`}
-                >
-                  E-mail
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectChannel("email")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all ${
+                      selectedChannel === "email"
+                        ? "bg-white text-[#0d0d0d] shadow-sm font-bold"
+                        : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
+                    }`}
+                  >
+                    <Mail className="size-3.5" />
+                    <span>E-mail</span>
+                  </button>
 
-              {selectedChannel === "email" && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectChannel("ligacao")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all ${
+                      selectedChannel === "ligacao"
+                        ? "bg-[#7fa9f7] text-[#0d0d0d] shadow-sm font-bold"
+                        : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
+                    }`}
+                  >
+                    <PhoneCall className="size-3.5" />
+                    <span>📞 Ligação (Cold Call)</span>
+                  </button>
+                </div>
+
+                {/* Assunto do E-mail (quando canal for email) */}
+                {selectedChannel === "email" && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-semibold text-[#afafaf] uppercase tracking-wider">
+                        Assunto do E-mail:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(templateSubject, "subject")}
+                        className="text-[10px] text-[#7fa9f7] hover:underline cursor-pointer"
+                      >
+                        {copiedTarget === "subject" ? "Copiado!" : "Copiar Assunto"}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={templateSubject}
+                      onChange={(e) => setTemplateSubject(e.target.value)}
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-[#7fa9f7] focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* Script Principal Interpolado (Responsivo sem Person/Peterson) */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-[#afafaf] uppercase">
-                    Assunto do E-mail:
-                  </label>
-                  <input
-                    type="text"
-                    value={templateSubject}
-                    onChange={(e) => setTemplateSubject(e.target.value)}
-                    className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:outline-none"
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-semibold text-[#afafaf] uppercase tracking-wider">
+                      {selectedChannel === "ligacao" ? "Script da Ligação (Cold Call Adaptado):" : "Texto Pronto para Envio:"}
+                    </label>
+                    <span className="text-[10px] text-[#14d06e] font-mono">
+                      ✓ Nomes e placeholders adaptados
+                    </span>
+                  </div>
+                  <textarea
+                    value={templateBody}
+                    onChange={(e) => setTemplateBody(e.target.value)}
+                    rows={selectedChannel === "ligacao" ? 6 : 5}
+                    className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] p-3 text-xs text-white leading-relaxed focus:border-[#14d06e] focus:outline-none font-sans"
                   />
                 </div>
-              )}
 
-              {/* Mensagem */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-[#afafaf] uppercase">
-                  Texto Personalizado:
-                </label>
-                <textarea
-                  value={templateBody}
-                  onChange={(e) => setTemplateBody(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] p-3 text-xs text-white leading-relaxed focus:outline-none"
-                />
-              </div>
-
-              {/* Ações do Template */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleCopyText(templateBody, "body")}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
-                >
-                  {copiedTarget === "body" ? (
-                    <>
-                      <Check className="size-3 text-[#14d06e]" />
-                      <span className="text-[#14d06e]">Texto Copiado!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="size-3" />
-                      <span>Copiar Texto</span>
-                    </>
-                  )}
-                </button>
-
-                {selectedChannel === "whatsapp" ? (
-                  formattedWhatsappUrl && (
+                {/* MOTOR HUNTER PELEKE (Metodologia Ativa de Cold Calling & Outbound B2B) */}
+                <div className="rounded-lg border border-[#7fa9f7]/40 bg-[#0c1527]/50 p-3 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2 border-b border-[#7fa9f7]/20 pb-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#7fa9f7]">
+                      <Sparkles className="size-3.5 text-[#e8c267]" />
+                      <span>PELEKE HUNTER ENGINE · Gofer Metais</span>
+                    </div>
                     <a
-                      href={`${formattedWhatsappUrl}?text=${encodeURIComponent(templateBody)}`}
+                      href="https://github.com/Peleke"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] font-semibold px-3.5 py-1.5 text-xs cursor-pointer shadow-sm"
+                      className="text-[10px] text-zinc-400 hover:text-white underline font-mono flex items-center gap-1"
                     >
-                      <MessageCircle className="size-3.5" />
-                      <span>Disparar no WhatsApp Web ↗</span>
+                      <span>github.com/Peleke</span>
+                      <ExternalLink className="size-2.5" />
                     </a>
-                  )
-                ) : (
-                  <a
-                    href={`mailto:${editEmail}?subject=${encodeURIComponent(
-                      templateSubject
-                    )}&body=${encodeURIComponent(templateBody)}`}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] font-semibold px-3.5 py-1.5 text-xs cursor-pointer"
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    {/* Hook 15s */}
+                    <div className="bg-[#080d17] rounded p-2 border border-[#7fa9f7]/20">
+                      <span className="text-[10px] font-semibold text-[#7fa9f7] block uppercase tracking-wider">
+                        ⚡ {pelekeData.headline} ({pelekeData.phase}):
+                      </span>
+                      <p className="text-white text-xs mt-0.5 leading-relaxed font-sans font-medium whitespace-pre-line">
+                        {pelekeData.content}
+                      </p>
+                    </div>
+
+                    {/* Quebra de Objeção */}
+                    <div className="bg-[#080d17] rounded p-2 border border-[#e8c267]/30">
+                      <span className="text-[10px] font-semibold text-[#e8c267] block uppercase tracking-wider">
+                        🛡️ Quebrador de Objeção Letal:
+                      </span>
+                      <p className="text-[#afafaf] text-xs mt-0.5 leading-relaxed font-sans whitespace-pre-line">
+                        {pelekeData.objectionKiller}
+                      </p>
+                    </div>
+
+                    {/* Objetivo Tático */}
+                    <div className="flex items-center justify-between text-[11px] text-[#14d06e] bg-[#0c2b1c] px-2.5 py-1.5 rounded border border-[#14d06e]/30">
+                      <span className="font-semibold">Objetivo da Etapa:</span>
+                      <span className="font-sans text-xs">{pelekeData.tacticalObjective}</span>
+                    </div>
+
+                    {/* Dica Tática */}
+                    <div className="text-[11px] text-zinc-400 italic">
+                      💡 {pelekeData.pelekeNote}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ações do Template & Bitrix24 Queue Completion */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#262626]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(templateBody, "body")}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
+                    >
+                      {copiedTarget === "body" ? (
+                        <>
+                          <Check className="size-3 text-[#14d06e]" />
+                          <span className="text-[#14d06e]">Texto Copiado!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3" />
+                          <span>Copiar Script</span>
+                        </>
+                      )}
+                    </button>
+
+                    {selectedChannel === "whatsapp" && formattedWhatsappUrl && (
+                      <a
+                        href={`${formattedWhatsappUrl}?text=${encodeURIComponent(templateBody)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] font-semibold px-3 py-1.5 text-xs cursor-pointer shadow-sm"
+                      >
+                        <MessageCircle className="size-3.5" />
+                        <span>Disparar WhatsApp ↗</span>
+                      </a>
+                    )}
+
+                    {selectedChannel === "email" && (
+                      <a
+                        href={`mailto:${editEmail}?subject=${encodeURIComponent(
+                          templateSubject
+                        )}&body=${encodeURIComponent(templateBody)}`}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 text-[#0d0d0d] font-semibold px-3 py-1.5 text-xs cursor-pointer shadow-sm"
+                      >
+                        <Send className="size-3.5" />
+                        <span>Abrir Webmail / Enviar ↗</span>
+                      </a>
+                    )}
+
+                    {selectedChannel === "ligacao" && cleanWhatsappDigits && (
+                      <a
+                        href={`tel:${cleanWhatsappDigits}`}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#7fa9f7] hover:bg-[#7fa9f7]/90 text-[#0d0d0d] font-bold px-3 py-1.5 text-xs cursor-pointer shadow-sm"
+                      >
+                        <Phone className="size-3.5" />
+                        <span>Ligar Agora ↗</span>
+                      </a>
+                    )}
+                  </div>
+
+                  {/* BOTÃO BITRIX24: DAR OK & CONCLUIR HOJE */}
+                  <button
+                    type="button"
+                    onClick={() => handleCompleteTemplateTask(currentTmpl.badge, selectedChannel)}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#0c2b1c] hover:bg-[#14d06e] text-[#14d06e] hover:text-[#0d0d0d] border border-[#14d06e]/70 px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-md"
+                    title="Dar OK nesta atividade (Mover lead para o final da fila do Bitrix em verde fluorescente com timestamp)"
                   >
-                    <Send className="size-3.5" />
-                    <span>Abrir Webmail / Enviar E-mail ↗</span>
-                  </a>
-                )}
+                    <CheckCircle2 className="size-3.5" />
+                    <span>✓ Dar OK & Concluir Atividade</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Rodapé do Slide-over */}

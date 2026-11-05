@@ -91,6 +91,7 @@ export interface CadenceState {
   contactPerson?: string;
   phone?: string;
   whatsapp?: string;
+  lastCompletedAt?: string;
   isDeactivated?: boolean;
   deactivationReason?: string;
   deactivatedAt?: string;

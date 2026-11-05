@@ -238,3 +238,81 @@ Somos distribuidores de aço e o meu objetivo hoje é claro: quero ter a oportun
 Segue o nosso catálogo em anexo. Podemos enviar os nossos valores sem compromisso na sua próxima demanda?`;
 }
 
+/**
+ * Verifica se o lead teve alguma atividade concluída hoje (Bitrix24 Dynamic Queue)
+ */
+export function isLeadCompletedToday(lead: {
+  cadenceState?: any;
+  notes?: Array<{ createdAt?: string | Date; text?: string }>;
+}): boolean {
+  if (!lead) return false;
+  const cadence = lead.cadenceState || {};
+  const now = new Date();
+  const todayDate = now.getDate();
+  const todayMonth = now.getMonth();
+  const todayYear = now.getFullYear();
+
+  if (cadence.lastCompletedAt) {
+    const compDate = new Date(cadence.lastCompletedAt);
+    if (
+      !isNaN(compDate.getTime()) &&
+      compDate.getDate() === todayDate &&
+      compDate.getMonth() === todayMonth &&
+      compDate.getFullYear() === todayYear
+    ) {
+      return true;
+    }
+  }
+
+  // Verifica anotações salvas hoje com tags de conclusão ou métricas
+  if (Array.isArray(lead.notes) && lead.notes.length > 0) {
+    const latest = lead.notes[0];
+    if (latest?.createdAt) {
+      const nDate = new Date(latest.createdAt);
+      if (
+        !isNaN(nDate.getTime()) &&
+        nDate.getDate() === todayDate &&
+        nDate.getMonth() === todayMonth &&
+        nDate.getFullYear() === todayYear
+      ) {
+        const text = latest.text || "";
+        if (
+          text.includes("[MÉTRICA]") ||
+          text.includes("[CADÊNCIA]") ||
+          text.includes("✓ Concluído") ||
+          text.includes("Desfecho:") ||
+          text.includes("Ligação realizada") ||
+          text.includes("Mensagem enviada") ||
+          text.includes("E-mail enviado")
+        ) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Retorna o horário formatado (ex: 14:32) da última atividade concluída hoje
+ */
+export function getLastCompletedTime(lead: {
+  cadenceState?: any;
+  notes?: Array<{ createdAt?: string | Date }>;
+}): string | null {
+  if (!lead) return null;
+  const cadence = lead.cadenceState || {};
+  const rawTs = cadence.lastCompletedAt || (lead.notes && lead.notes[0]?.createdAt);
+  if (!rawTs) return null;
+
+  const d = new Date(rawTs);
+  if (isNaN(d.getTime())) return null;
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+
