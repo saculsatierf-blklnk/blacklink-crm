@@ -29,7 +29,9 @@ import {
   PhoneCall,
   Clock,
   ArrowRight,
+  ChevronRight,
   Flame,
+  MapPin,
   X,
 } from "lucide-react";
 import type {
@@ -46,13 +48,25 @@ import {
   deduplicateAndMergeLeads,
   type DeduplicationAuditEntry,
 } from "@/lib/deduplication";
-import { createLeadAction } from "@/actions/leads";
-import type { Lead } from "@/db/schema";
+import { createLeadAction, batchCreateLeadsAction } from "@/actions/leads";
+import type { Lead, KanbanStage } from "@/db/schema";
 import { useUiStore } from "@/store/useUiStore";
+import {
+  ANCHOR_CLIENTS_LEADS,
+  ANCHOR_SHEET_ID,
+  ANCHOR_SHEET_TABS,
+  ANCHOR_SHEET_TITLE,
+  ANCHOR_SHEET_URL,
+  LEGACY_SHEET_ID,
+  LEGACY_SHEET_TABS,
+  LEGACY_SHEET_TITLE,
+  LEGACY_SHEET_URL,
+  mapKanbanStageToDbStatus,
+  repairAndEnrichSheetRow,
+} from "@/lib/anchorClientsSheetData";
 
 const PLACEHOLDER_SHEET_ID = "PLACEHOLDER_NONE";
-const DEFAULT_USER_SHEET_URL =
-  "https://docs.google.com/spreadsheets/d/1m9Gjeb9UxLJ1aDgPOWOLmKzCqRf7CPkFFyXSGDJpUXA/edit?usp=sharing";
+const DEFAULT_USER_SHEET_URL = ANCHOR_SHEET_URL;
 
 export interface ManagedSpreadsheet {
   id: string;
@@ -61,12 +75,18 @@ export interface ManagedSpreadsheet {
   tabs: string[];
 }
 
-const DEFAULT_SPREADSHEETS: ManagedSpreadsheet[] = [
+export const DEFAULT_SPREADSHEETS: ManagedSpreadsheet[] = [
+  {
+    id: "sheet-ancora",
+    title: ANCHOR_SHEET_TITLE,
+    sheetUrl: ANCHOR_SHEET_URL,
+    tabs: ANCHOR_SHEET_TABS,
+  },
   {
     id: "sheet-imobiliario",
-    title: "Leads",
-    sheetUrl: DEFAULT_USER_SHEET_URL,
-    tabs: ["Casas Modulares", "Fachadas", "Lajes"],
+    title: LEGACY_SHEET_TITLE,
+    sheetUrl: LEGACY_SHEET_URL,
+    tabs: LEGACY_SHEET_TABS,
   },
 ];
 
@@ -1160,6 +1180,13 @@ export const GOFER_TARGET_SECTORS: TargetSectorPreset[] = [
 
 interface GoogleSheetsLeadHunterProps {
   onLeadImportedToKanban?: (newLead: Lead) => void;
+  onBatchLeadsImportedToKanban?: (newLeads: Lead[]) => void;
+  onSpreadsheetDeleted?: (
+    sheetId: string,
+    sheetTitle: string,
+    tabs: string[],
+    removeLeadsFromKanban: boolean
+  ) => void;
   companyName?: string;
   activeWorkspaceTab?: VendasWorkspaceTab;
   onWorkspaceTabChange?: (tab: VendasWorkspaceTab) => void;
@@ -1169,6 +1196,8 @@ interface GoogleSheetsLeadHunterProps {
 
 export function GoogleSheetsLeadHunter({
   onLeadImportedToKanban,
+  onBatchLeadsImportedToKanban,
+  onSpreadsheetDeleted,
   companyName = "Gofer Metais",
   activeWorkspaceTab = "integracao",
   onWorkspaceTabChange,
@@ -1176,18 +1205,19 @@ export function GoogleSheetsLeadHunter({
   currentCompanyId,
 }: GoogleSheetsLeadHunterProps) {
   // Estados de Fluxo Direto (Modo IA Hunter 1-Clique & Modo Planilha do Diogo)
-  const [activeDirectMode, setActiveDirectMode] = useState<"ai_hunter" | "diogo_sheet">("ai_hunter");
+  const [activeDirectMode, setActiveDirectMode] = useState<"ai_hunter" | "diogo_sheet">("diogo_sheet");
   const [quickPasteUrl, setQuickPasteUrl] = useState("");
   const [isQuickImporting, setIsQuickImporting] = useState(false);
   const [isAiHuntingAndSending, setIsAiHuntingAndSending] = useState(false);
   const [selectedQuickNiche, setSelectedQuickNiche] = useState("Serralherias e Estruturas Metálicas");
   const [quickLocation, setQuickLocation] = useState("Brasil");
 
-  // Gestão de Múltiplas Planilhas (Ex: "Leads", "Logística & Galpões", "Energia & Infra")
+  // Gestão de Múltiplas Planilhas Conectadas (Isoladas por ID/URL)
   const [spreadsheets, setSpreadsheets] =
     useState<ManagedSpreadsheet[]>(DEFAULT_SPREADSHEETS);
   const [activeSpreadsheetId, setActiveSpreadsheetId] =
-    useState<string>("sheet-imobiliario");
+    useState<string>("sheet-ancora");
+  const [sheetToDelete, setSheetToDelete] = useState<ManagedSpreadsheet | null>(null);
 
   const activeSpreadsheet = useMemo(
     () =>
@@ -1197,16 +1227,19 @@ export function GoogleSheetsLeadHunter({
     [spreadsheets, activeSpreadsheetId]
   );
 
-  const [sheetTitle, setSheetTitle] = useState("Leads");
+  const [sheetTitle, setSheetTitle] = useState(DEFAULT_SPREADSHEETS[0].title);
   const [tabs, setTabs] = useState<string[]>(DEFAULT_SPREADSHEETS[0].tabs);
-  const [activeTab, setActiveTab] = useState<string>("Casas Modulares");
-  const [rows, setRows] = useState<ExtractedSheetLead[]>(() =>
-    INITIAL_PRINT_LEADS.map((r) => ({
-      ...r,
-      empresa: decodeHtmlEntities(r.empresa),
-      contato: formatPhoneBrDisplay(r.contato) || r.contato,
-    }))
-  );
+  const [activeTab, setActiveTab] = useState<string>(DEFAULT_SPREADSHEETS[0].tabs[0]);
+  const [rows, setRows] = useState<ExtractedSheetLead[]>(() => {
+    const combinedInitial = [...ANCHOR_CLIENTS_LEADS, ...INITIAL_PRINT_LEADS];
+    return combinedInitial.map((r) =>
+      repairAndEnrichSheetRow({
+        ...r,
+        empresa: decodeHtmlEntities(r.empresa),
+        contato: formatPhoneBrDisplay(r.contato) || r.contato,
+      })
+    );
+  });
 
   // Seleção de Leads na Planilha para enviar em lote ou individualmente ao Kanban
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
@@ -1224,7 +1257,7 @@ export function GoogleSheetsLeadHunter({
   const [representedWebsite, setRepresentedWebsite] = useState(
     "https://gofermetais.com.br"
   );
-  const [targetSegment, setTargetSegment] = useState("Casas Modulares");
+  const [targetSegment, setTargetSegment] = useState(DEFAULT_SPREADSHEETS[0].tabs[0]);
   const [targetRegion, setTargetRegion] = useState("Brasil");
   const [batchLimit, setBatchLimit] = useState<number>(10);
 
@@ -1297,7 +1330,7 @@ export function GoogleSheetsLeadHunter({
 
     setFeedbackBanner({
       type: "success",
-      text: `✦ Código copiado com todas as ${tabs.length} abas (${tabs.join(", ")}) e ${rows.filter((r) => r.empresa.trim()).length} leads! Agora na planilha "Leads" do Google: clique em Extensões -> Apps Script, cole o código e clique apenas no botão "▷ Executar" no topo!`,
+      text: `✦ Código copiado com todas as ${tabs.length} abas (${tabs.join(", ")}) e ${rows.filter((r) => r.empresa.trim()).length} leads! Agora na planilha do Google: clique em Extensões -> Apps Script, cole o código e clique apenas no botão "▷ Executar" no topo!`,
     });
   };
 
@@ -1319,135 +1352,167 @@ export function GoogleSheetsLeadHunter({
   };
 
   useEffect(() => {
-    let initialUrlToSync = DEFAULT_USER_SHEET_URL;
-    let initialWebhookToSync = "";
-    let loadedRowTabs: string[] = [];
     try {
       const savedRows = localStorage.getItem("gofer_sheets_leads_v3");
-      const savedTabs = localStorage.getItem("gofer_sheets_tabs_v3");
       const savedSpreadsheets = localStorage.getItem("gofer_spreadsheets_v3");
       const savedActiveSheetId = localStorage.getItem("gofer_active_spreadsheet_id_v3");
+      const savedDeletedSheets = localStorage.getItem("gofer_deleted_sheets_v1");
       const savedWebhook = localStorage.getItem("gofer_sheets_webhook_v1");
       const savedGoogleAccess = localStorage.getItem("gofer_google_oauth_access_v1");
       const savedGoogleRefresh = localStorage.getItem("gofer_google_oauth_refresh_v1");
       const savedCampWebhook = localStorage.getItem("gofer_campaign_webhook_v1");
-      const savedSheetUrl = localStorage.getItem("gofer_sheets_url_v3");
       const savedMyCompany = localStorage.getItem("gofer_my_company_v1");
       const savedRepSite = localStorage.getItem("gofer_represented_site_v1");
       const savedKanbanSent = localStorage.getItem("gofer_kanban_sent_rows_v1");
 
+      const deletedSet = new Set<string>(
+        savedDeletedSheets ? JSON.parse(savedDeletedSheets) : []
+      );
+
       if (savedRows) {
         const parsed = JSON.parse(savedRows);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleanedRows: ExtractedSheetLead[] = parsed.map(
-            (r: ExtractedSheetLead) => ({
-              ...r,
-              empresa: decodeHtmlEntities(r.empresa || ""),
-              contato: formatPhoneBrDisplay(r.contato) || r.contato || "",
-            })
-          );
-          setRows(cleanedRows);
-          loadedRowTabs = Array.from(
-            new Set(cleanedRows.map((r) => (r.tab || "").trim()).filter(Boolean))
-          );
+          // Remove linhas cabeçalho acidentais ("Nome da Empresa") e repara números/cidades trocados
+          const cleanedRows: ExtractedSheetLead[] = parsed
+            .filter(
+              (r: ExtractedSheetLead) =>
+                r &&
+                r.empresa &&
+                r.empresa.trim().toLowerCase() !== "nome da empresa" &&
+                r.empresa.trim().toLowerCase() !== "empresa"
+            )
+            .map((r: ExtractedSheetLead) =>
+              repairAndEnrichSheetRow({
+                ...r,
+                empresa: decodeHtmlEntities(r.empresa || ""),
+                contato: formatPhoneBrDisplay(r.contato) || r.contato || "",
+              })
+            );
+
+          // Garante que todos os 48 leads de Clientes Âncora estejam presentes se a planilha não foi excluída
+          if (
+            !deletedSet.has("sheet-ancora") &&
+            !deletedSet.has(ANCHOR_SHEET_ID)
+          ) {
+            const dedup = deduplicateAndMergeLeads(cleanedRows, ANCHOR_CLIENTS_LEADS);
+            setRows(dedup.updatedExistingRows.map((r) => repairAndEnrichSheetRow(r)));
+          } else {
+            setRows(cleanedRows);
+          }
         }
       }
+
       if (savedKanbanSent) {
         const parsedSent = JSON.parse(savedKanbanSent);
         if (Array.isArray(parsedSent)) setKanbanSentRowIds(parsedSent);
       }
-      const cleanSavedUrl = isRealGoogleSheetUrl(savedSheetUrl)
-        ? savedSheetUrl!
-        : DEFAULT_USER_SHEET_URL;
-      setSheetUrl(cleanSavedUrl);
-      initialUrlToSync = cleanSavedUrl;
 
+      let finalSheets: ManagedSpreadsheet[] = [];
       if (savedSpreadsheets) {
         const parsedSheets: ManagedSpreadsheet[] = JSON.parse(savedSpreadsheets);
         if (Array.isArray(parsedSheets) && parsedSheets.length > 0) {
-          // Unifica planilhas duplicadas que apontam para o mesmo Google Sheet ID ou mesmo nome ("Leads")
-          const unifiedMap = new Map<string, ManagedSpreadsheet>();
+          const seenKeys = new Set<string>();
           for (const s of parsedSheets) {
-            const normalizedTitle =
-              !s.title ||
-              s.title.toLowerCase().startsWith("imobiliário") ||
-              s.title.toLowerCase().startsWith("imobiliario")
-                ? "Leads"
-                : s.title.trim();
-            const normalizedUrl = isRealGoogleSheetUrl(s.sheetUrl)
-              ? s.sheetUrl
-              : DEFAULT_USER_SHEET_URL;
-            const sheetKey =
-              extractSheetIdFromUrl(normalizedUrl) ||
-              normalizedTitle.toLowerCase();
+            const sheetGoogleId = extractSheetIdFromUrl(s.sheetUrl);
+            if (deletedSet.has(s.id) || (sheetGoogleId && deletedSet.has(sheetGoogleId))) {
+              continue;
+            }
+            const isAnchor =
+              sheetGoogleId === ANCHOR_SHEET_ID ||
+              s.id === "sheet-ancora" ||
+              (s.title || "").toLowerCase().includes("âncora") ||
+              (s.title || "").toLowerCase().includes("ancora");
+            const isLegacy =
+              sheetGoogleId === LEGACY_SHEET_ID ||
+              s.id === "sheet-imobiliario" ||
+              (s.title || "").toLowerCase() === "leads";
 
-            const existing = unifiedMap.get(sheetKey);
-            if (existing) {
-              existing.tabs = Array.from(
-                new Set([...existing.tabs, ...(s.tabs || [])])
-              );
-            } else {
-              unifiedMap.set(sheetKey, {
-                id: s.id || "sheet-imobiliario",
-                title: normalizedTitle,
-                sheetUrl: normalizedUrl,
-                tabs: Array.from(new Set([...(s.tabs || [])])),
+            const cleanTabs = (s.tabs || [])
+              .map((t) => t.trim())
+              .filter(Boolean)
+              .filter((t) => {
+                // Impede que abas da planilha âncora vazem para a planilha legacy e vice-versa
+                if (isLegacy && ANCHOR_SHEET_TABS.includes(t)) return false;
+                if (isAnchor && LEGACY_SHEET_TABS.includes(t)) return false;
+                return true;
               });
+
+            const resolvedSheet: ManagedSpreadsheet = {
+              id: isAnchor ? "sheet-ancora" : isLegacy ? "sheet-imobiliario" : s.id,
+              title: isAnchor
+                ? ANCHOR_SHEET_TITLE
+                : isLegacy
+                ? LEGACY_SHEET_TITLE
+                : s.title?.trim() || "Planilha Conectada",
+              sheetUrl: isAnchor
+                ? ANCHOR_SHEET_URL
+                : isLegacy
+                ? LEGACY_SHEET_URL
+                : s.sheetUrl || "",
+              tabs:
+                cleanTabs.length > 0
+                  ? Array.from(new Set(cleanTabs))
+                  : isAnchor
+                  ? ANCHOR_SHEET_TABS
+                  : LEGACY_SHEET_TABS,
+            };
+
+            const key =
+              extractSheetIdFromUrl(resolvedSheet.sheetUrl) || resolvedSheet.id;
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              finalSheets.push(resolvedSheet);
             }
           }
-
-          const deduplicated = Array.from(unifiedMap.values());
-          // Garante que qualquer aba criada nos leads locais (ex: Fabricante de Portão, Empresas de comunicação visual) esteja na planilha principal
-          if (deduplicated.length > 0 && loadedRowTabs.length > 0) {
-            deduplicated[0] = {
-              ...deduplicated[0],
-              tabs: Array.from(
-                new Set([...deduplicated[0].tabs, ...loadedRowTabs])
-              ),
-            };
-          }
-
-          setSpreadsheets(deduplicated);
-          const targetId =
-            savedActiveSheetId &&
-            deduplicated.some((s) => s.id === savedActiveSheetId)
-              ? savedActiveSheetId
-              : deduplicated[0].id;
-          setActiveSpreadsheetId(targetId);
-          const current =
-            deduplicated.find((s) => s.id === targetId) || deduplicated[0];
-          setSheetTitle(current.title);
-          setTabs(current.tabs);
-          setActiveTab(current.tabs[0] || "Casas Modulares");
-          setTargetSegment(current.tabs[0] || "Casas Modulares");
-          if (current.sheetUrl) {
-            setSheetUrl(current.sheetUrl);
-            initialUrlToSync = current.sheetUrl;
-          }
-        }
-      } else if (savedTabs) {
-        const parsedTabs = JSON.parse(savedTabs);
-        if (Array.isArray(parsedTabs) && parsedTabs.length > 0) {
-          const combinedTabs = Array.from(
-            new Set([...parsedTabs, ...loadedRowTabs])
-          );
-          setTabs(combinedTabs);
-          setSpreadsheets([
-            {
-              id: "sheet-imobiliario",
-              title: "Leads",
-              sheetUrl: cleanSavedUrl,
-              tabs: combinedTabs,
-            },
-          ]);
         }
       }
 
+      // Garante que a nova planilha "Clientes Âncora (R$ 50.000/mês cada)" esteja conectada se não foi excluída
+      if (
+        !deletedSet.has("sheet-ancora") &&
+        !deletedSet.has(ANCHOR_SHEET_ID) &&
+        !finalSheets.some(
+          (s) =>
+            s.id === "sheet-ancora" ||
+            extractSheetIdFromUrl(s.sheetUrl) === ANCHOR_SHEET_ID
+        )
+      ) {
+        finalSheets = [DEFAULT_SPREADSHEETS[0], ...finalSheets];
+      }
+
+      // Garante que a planilha "Leads — Construção Modular & Fachadas" esteja conectada se não foi excluída
+      if (
+        !deletedSet.has("sheet-imobiliario") &&
+        !deletedSet.has(LEGACY_SHEET_ID) &&
+        !finalSheets.some(
+          (s) =>
+            s.id === "sheet-imobiliario" ||
+            extractSheetIdFromUrl(s.sheetUrl) === LEGACY_SHEET_ID
+        )
+      ) {
+        finalSheets = [...finalSheets, DEFAULT_SPREADSHEETS[1]];
+      }
+
+      if (finalSheets.length === 0) {
+        finalSheets = [DEFAULT_SPREADSHEETS[0]];
+      }
+
+      setSpreadsheets(finalSheets);
+      const targetId =
+        savedActiveSheetId && finalSheets.some((s) => s.id === savedActiveSheetId)
+          ? savedActiveSheetId
+          : finalSheets[0].id;
+      setActiveSpreadsheetId(targetId);
+      const current = finalSheets.find((s) => s.id === targetId) || finalSheets[0];
+      setSheetTitle(current.title);
+      setTabs(current.tabs);
+      setActiveTab(current.tabs[0] || "Implementos Rodoviários");
+      setTargetSegment(current.tabs[0] || "Implementos Rodoviários");
+      setSheetUrl(current.sheetUrl || ANCHOR_SHEET_URL);
+
       if (savedWebhook && isValidAppsScriptUrl(savedWebhook)) {
         setWebhookUrl(savedWebhook);
-        initialWebhookToSync = savedWebhook;
       } else if (savedWebhook) {
-        // Limpa automaticamente links normais do Google Sheets colados por engano no campo de Webhook (evita erro 405)
         localStorage.removeItem("gofer_sheets_webhook_v1");
         setWebhookUrl("");
       }
@@ -1457,80 +1522,18 @@ export function GoogleSheetsLeadHunter({
       if (savedMyCompany) setMyCompany(savedMyCompany);
       if (savedRepSite) setRepresentedWebsite(savedRepSite);
     } catch {}
-
-    // Sincroniza automaticamente o nome oficial da planilha ("Leads") e as abas definidas no Google Sheets conectado
-    if (isRealGoogleSheetUrl(initialUrlToSync) || initialWebhookToSync) {
-      const params = new URLSearchParams({
-        sheetUrl: initialUrlToSync,
-        tabName: "Casas Modulares",
-        readAllTabs: "true",
-        knownTabs: [
-          "Casas Modulares",
-          "Fachadas",
-          "Lajes",
-          ...loadedRowTabs,
-        ].join(","),
-        webhookUrl: initialWebhookToSync,
-        spreadsheetId: extractSheetIdFromUrl(initialUrlToSync) || "",
-      });
-      fetch(`/api/crm/sheets-sync?${params.toString()}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data || !data.success) return;
-          const remoteTitle =
-            typeof data.title === "string" && data.title.trim()
-              ? data.title.trim()
-              : "Leads";
-          const remoteTabs: string[] =
-            Array.isArray(data.tabs) && data.tabs.length > 0 ? data.tabs : [];
-
-          setSheetTitle(remoteTitle);
-          setSpreadsheets((prev) =>
-            prev.map((s, idx) =>
-              idx === 0 || s.sheetUrl === initialUrlToSync
-                ? {
-                    ...s,
-                    title: remoteTitle,
-                    tabs:
-                      remoteTabs.length > 0
-                        ? Array.from(new Set([...remoteTabs, ...s.tabs]))
-                        : s.tabs,
-                  }
-                : s
-            )
-          );
-          if (remoteTabs.length > 0) {
-            setTabs((prev) => Array.from(new Set([...remoteTabs, ...prev])));
-          }
-          if (Array.isArray(data.rows) && data.rows.length > 0) {
-            const formattedIncoming: ExtractedSheetLead[] = data.rows.map(
-              (r: ExtractedSheetLead) => ({
-                ...r,
-                empresa: decodeHtmlEntities(r.empresa || ""),
-                contato: formatPhoneBrDisplay(r.contato) || r.contato || "",
-              })
-            );
-            setRows((prevRows) => {
-              const touchedTabs = Array.from(
-                new Set(formattedIncoming.map((r) => r.tab || "Casas Modulares"))
-              );
-              let updated = [...prevRows];
-              for (const tName of touchedTabs) {
-                const inc = formattedIncoming.filter(
-                  (r) => (r.tab || "Casas Modulares") === tName
-                );
-                const ex = updated.filter((r) => r.tab === tName);
-                const others = updated.filter((r) => r.tab !== tName);
-                const dedup = deduplicateAndMergeLeads(ex, inc);
-                updated = [...others, ...dedup.updatedExistingRows];
-              }
-              return updated;
-            });
-          }
-        })
-        .catch(() => {});
-    }
   }, []);
+
+  // Notifica o Kanban sempre que a lista de planilhas conectadas mudar
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("blacklink:spreadsheets-updated", {
+          detail: { spreadsheets, activeSpreadsheetId },
+        })
+      );
+    }
+  }, [spreadsheets, activeSpreadsheetId]);
 
   // Escuta retorno do Pop-up Google OAuth (1 Clique) para ativar gravação direta via Google Sheets API v4
   useEffect(() => {
@@ -1809,6 +1812,95 @@ export function GoogleSheetsLeadHunter({
     );
   };
 
+  const handleConfirmDeleteSpreadsheet = (
+    targetSheet: ManagedSpreadsheet,
+    removeLeadsFromKanban: boolean
+  ) => {
+    const googleId = extractSheetIdFromUrl(targetSheet.sheetUrl) || "";
+    try {
+      const savedDeleted = localStorage.getItem("gofer_deleted_sheets_v1");
+      const currentDeleted: string[] = savedDeleted ? JSON.parse(savedDeleted) : [];
+      const nextDeleted = Array.from(
+        new Set([...currentDeleted, targetSheet.id, ...(googleId ? [googleId] : [])])
+      );
+      localStorage.setItem("gofer_deleted_sheets_v1", JSON.stringify(nextDeleted));
+    } catch {}
+
+    // Remove as linhas pertencentes às abas desta planilha
+    setRows((prev) =>
+      prev.filter((r) => {
+        if (googleId && r.spreadsheetId === googleId) return false;
+        if (r.spreadsheetId === targetSheet.id) return false;
+        if (targetSheet.tabs.includes(r.tab)) return false;
+        return true;
+      })
+    );
+
+    const remaining = spreadsheets.filter((s) => s.id !== targetSheet.id);
+    const nextList =
+      remaining.length > 0
+        ? remaining
+        : [
+            {
+              id: `sheet-${Date.now()}`,
+              title: "Nova Planilha Comercial",
+              sheetUrl: "",
+              tabs: ["Geral"],
+            },
+          ];
+
+    setSpreadsheets(nextList);
+    const fallbackSheet = nextList[0];
+    setActiveSpreadsheetId(fallbackSheet.id);
+    setSheetTitle(fallbackSheet.title);
+    setTabs(fallbackSheet.tabs);
+    setActiveTab(fallbackSheet.tabs[0] || "Geral");
+    setTargetSegment(fallbackSheet.tabs[0] || "Geral");
+    setSheetUrl(fallbackSheet.sheetUrl || "");
+    setSelectedRowIds([]);
+    setSheetToDelete(null);
+
+    onSpreadsheetDeleted?.(
+      googleId || targetSheet.id,
+      targetSheet.title,
+      targetSheet.tabs,
+      removeLeadsFromKanban
+    );
+
+    setFeedbackBanner({
+      type: "success",
+      text: removeLeadsFromKanban
+        ? `✦ Planilha "${targetSheet.title}" excluída e seus leads foram removidos do Kanban!`
+        : `✦ Planilha "${targetSheet.title}" removida da central de planilhas!`,
+    });
+  };
+
+  useEffect(() => {
+    const handleRemoteDeleteReq = (e: Event) => {
+      const custom = e as CustomEvent<{
+        sheetId: string;
+        removeLeadsFromKanban?: boolean;
+      }>;
+      const targetId = custom.detail?.sheetId;
+      if (!targetId) return;
+      const found = spreadsheets.find(
+        (s) =>
+          s.id === targetId ||
+          extractSheetIdFromUrl(s.sheetUrl) === targetId ||
+          s.title === targetId
+      );
+      if (found) {
+        handleConfirmDeleteSpreadsheet(
+          found,
+          Boolean(custom.detail?.removeLeadsFromKanban)
+        );
+      }
+    };
+    window.addEventListener("blacklink:request-delete-spreadsheet", handleRemoteDeleteReq);
+    return () =>
+      window.removeEventListener("blacklink:request-delete-spreadsheet", handleRemoteDeleteReq);
+  }, [spreadsheets]);
+
   const handleCreateNewSpreadsheet = async () => {
     const cleanTitle = newSpreadsheetTitle.trim();
     const hasValidUrl = isRealGoogleSheetUrl(newSpreadsheetUrl);
@@ -1818,6 +1910,19 @@ export function GoogleSheetsLeadHunter({
     let finalSheetUrl = hasValidUrl ? newSpreadsheetUrl.trim() : "";
     let discoveredTitle = cleanTitle || "Planilha Conectada";
     let discoveredTabs: string[] = [firstTab];
+    const googleSheetId = extractSheetIdFromUrl(finalSheetUrl) || `sheet-${Date.now()}`;
+
+    // Se estava na lista de excluídas, reabilita
+    try {
+      const savedDeleted = localStorage.getItem("gofer_deleted_sheets_v1");
+      if (savedDeleted) {
+        const parsedDel: string[] = JSON.parse(savedDeleted);
+        const filteredDel = parsedDel.filter(
+          (id) => id !== googleSheetId && id !== "sheet-ancora"
+        );
+        localStorage.setItem("gofer_deleted_sheets_v1", JSON.stringify(filteredDel));
+      }
+    } catch {}
 
     setIsCreatingRemoteSheet(true);
     try {
@@ -1829,7 +1934,7 @@ export function GoogleSheetsLeadHunter({
           readAllTabs: "true",
           knownTabs: firstTab,
           webhookUrl: webhookUrl.trim(),
-          spreadsheetId: extractSheetIdFromUrl(finalSheetUrl) || "",
+          spreadsheetId: googleSheetId,
         });
         const res = await fetch(`/api/crm/sheets-sync?${params.toString()}`);
         const data = await res.json();
@@ -1841,12 +1946,19 @@ export function GoogleSheetsLeadHunter({
             discoveredTabs = Array.from(
               new Set(
                 newSpreadsheetFirstTab.trim()
-                  ? [...data.tabs, firstTab]
-                  : data.tabs
+                  ? [...data.tabs.map((t: string) => t.trim()), firstTab]
+                  : data.tabs.map((t: string) => t.trim())
               )
             );
           }
-          const incomingFromSheet: ExtractedSheetLead[] = data.rows || [];
+          const incomingFromSheet: ExtractedSheetLead[] = (data.rows || []).map(
+            (r: ExtractedSheetLead) =>
+              repairAndEnrichSheetRow({
+                ...r,
+                spreadsheetId: googleSheetId,
+                spreadsheetTitle: discoveredTitle,
+              })
+          );
           if (incomingFromSheet.length > 0) {
             const touchedTabs = Array.from(
               new Set(incomingFromSheet.map((r) => r.tab || discoveredTabs[0]))
@@ -1889,13 +2001,21 @@ export function GoogleSheetsLeadHunter({
 
     const primaryTab = discoveredTabs[0] || firstTab;
     const newSheet: ManagedSpreadsheet = {
-      id: `sheet-${Date.now()}`,
+      id: googleSheetId === ANCHOR_SHEET_ID ? "sheet-ancora" : `sheet-${Date.now()}`,
       title: discoveredTitle,
       sheetUrl: finalSheetUrl,
       tabs: discoveredTabs,
     };
 
-    setSpreadsheets((prev) => [...prev, newSheet]);
+    setSpreadsheets((prev) => {
+      const filtered = prev.filter(
+        (s) =>
+          s.id !== newSheet.id &&
+          (extractSheetIdFromUrl(s.sheetUrl) || s.id) !==
+            (extractSheetIdFromUrl(newSheet.sheetUrl) || newSheet.id)
+      );
+      return [newSheet, ...filtered];
+    });
     setActiveSpreadsheetId(newSheet.id);
     setSheetTitle(newSheet.title);
     setTabs(newSheet.tabs);
@@ -1930,6 +2050,10 @@ export function GoogleSheetsLeadHunter({
           (r.contato || "").toLowerCase().includes(q) ||
           (r.email || "").toLowerCase().includes(q) ||
           (r.website || "").toLowerCase().includes(q) ||
+          (r.cidadeRegiao || "").toLowerCase().includes(q) ||
+          (r.linhaProdutos || "").toLowerCase().includes(q) ||
+          (r.materiaisAco || "").toLowerCase().includes(q) ||
+          (r.argumentoHunter || "").toLowerCase().includes(q) ||
           (r.observacoes || "").toLowerCase().includes(q)
       );
     }
@@ -3068,23 +3192,27 @@ export function GoogleSheetsLeadHunter({
 
   const handleCopyForGoogleSheets = () => {
     const header = [
-      "Empresa",
-      "Responsável",
-      "E-mail",
-      "Contato",
-      "Nível de Prospecção",
-      "Observações",
+      "Nome da Empresa",
+      "Cidade / Região",
+      "Telefone Comercial",
+      "Site Oficial",
+      "Linha Principal de Produtos",
+      "Materiais de Aço Consumidos",
+      "Argumento de Abordagem Hunter",
+      "Status da Prospecção",
     ].join("\t");
     const lines = activeTabRows
       .filter((r) => r.empresa.trim())
       .map((r) =>
         [
           r.empresa,
-          r.responsavel,
-          r.email,
-          sanitizePhoneE164(r.contato) || r.contato,
-          r.nivelProspeccao,
-          r.observacoes,
+          r.cidadeRegiao || r.responsavel,
+          r.contato,
+          r.website || r.email,
+          r.linhaProdutos || "",
+          r.materiaisAco || "",
+          r.argumentoHunter || r.observacoes,
+          r.statusOriginal || r.nivelProspeccao,
         ].join("\t")
       );
     navigator.clipboard.writeText([header, ...lines].join("\n"));
@@ -3092,40 +3220,92 @@ export function GoogleSheetsLeadHunter({
     setTimeout(() => setCopiedTable(false), 3000);
   };
 
-  const buildOptimisticLeadFromRow = (row: ExtractedSheetLead): Lead => {
+  const buildOptimisticLeadFromRow = (
+    rawRow: ExtractedSheetLead,
+    overrideSheetTitle?: string,
+    overrideSheetId?: string
+  ): Lead => {
+    const row = repairAndEnrichSheetRow(rawRow);
     const cleanPhone = sanitizePhoneE164(row.contato) || row.contato.trim();
-    const cleanEmail =
-      row.email.trim() ||
-      `contato@${row.empresa.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.br`;
-    const contactName = row.responsavel.trim() || "Compras / Engenharia";
+    const cleanEmail = row.email && row.email.includes("@") ? row.email.trim().toLowerCase() : "";
     const companyLabel = row.empresa.trim();
-    const mappedStatus: "new" | "negotiation" | "closed" =
-      row.nivelProspeccao === "Reunião agendada" ||
-      row.nivelProspeccao === "Em contato"
+    const contactName = row.responsavel.trim();
+    const displayLeadName = contactName
+      ? `${contactName} - ${companyLabel}`
+      : companyLabel;
+
+    const statusLower = `${row.statusOriginal || ""} ${row.nivelProspeccao || ""} ${row.observacoes || ""}`.toLowerCase();
+    const kanbanStage: KanbanStage =
+      statusLower.includes("orçamento") ||
+      statusLower.includes("orcamento") ||
+      statusLower.includes("cotação") ||
+      statusLower.includes("cotacao")
+        ? "quoted"
+        : statusLower.includes("cultivo") || statusLower.includes("relacionamento")
+        ? "nurturing"
+        : row.nivelProspeccao === "Reunião agendada" ||
+          row.nivelProspeccao === "Em contato" ||
+          row.nivelProspeccao === "Atendeu"
         ? "negotiation"
         : "new";
 
+    const mappedStatus = mapKanbanStageToDbStatus(kanbanStage);
+    const resolvedSheetId =
+      overrideSheetId ||
+      row.spreadsheetId ||
+      extractSheetIdFromUrl(sheetUrl) ||
+      activeSpreadsheet.id;
+    const resolvedSheetTitle =
+      overrideSheetTitle ||
+      row.spreadsheetTitle ||
+      sheetTitle ||
+      activeSpreadsheet.title;
+
+    const noteSegments = [
+      `[Planilha ${resolvedSheetTitle} • ${row.tab} • ${row.statusOriginal || row.nivelProspeccao}]`,
+      row.cidadeRegiao ? `Região: ${row.cidadeRegiao}` : "",
+      row.linhaProdutos ? `Linha de Produtos: ${row.linhaProdutos}` : "",
+      row.materiaisAco ? `Aços Consumidos: ${row.materiaisAco}` : "",
+      row.argumentoHunter ? `Argumento Hunter: ${row.argumentoHunter}` : "",
+      row.observacoes && row.observacoes !== row.argumentoHunter
+        ? `Obs: ${row.observacoes}`
+        : "",
+    ].filter(Boolean);
+
     return {
-      id: `kanban-${row.id}-${Date.now()}`,
+      id: `kanban-${row.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       companyId: currentCompanyId || "default-company-id",
-      leadName: `${contactName} - ${companyLabel}`,
+      leadName: displayLeadName,
       leadEmail: cleanEmail,
-      leadPhone: cleanPhone || null,
-      origin: `${sheetTitle} · ${row.tab}`,
+      leadPhone: row.contato.trim() || cleanPhone || null,
+      origin: `${resolvedSheetTitle} · ${row.tab}`,
       status: mappedStatus,
-      dealScore: row.highlighted ? 92 : 78,
+      dealScore:
+        row.highlighted || resolvedSheetId === ANCHOR_SHEET_ID ? 94 : 82,
       telemetryEvents: [],
       cadenceState: {
         completedSteps:
           row.nivelProspeccao === "Catálogo enviado" ? ["D1", "D2"] : [],
-        roleTitle: `${sheetTitle} · ${row.tab}`,
+        roleTitle: `${resolvedSheetTitle} · ${row.tab}`,
+        companyName: companyLabel,
+        contactPerson: contactName || undefined,
+        phone: row.contato.trim() || undefined,
+        whatsapp: row.contato.trim() || undefined,
+        location: row.cidadeRegiao || undefined,
+        website: row.website || undefined,
+        mainProducts: row.linhaProdutos || undefined,
+        steelMaterials: row.materiaisAco || undefined,
+        hunterPitch: row.argumentoHunter || undefined,
+        prospectionStatus: row.statusOriginal || row.nivelProspeccao,
+        sourceSpreadsheetId: resolvedSheetId,
+        sourceSpreadsheetTitle: resolvedSheetTitle,
+        sourceTabName: row.tab,
+        kanbanStage,
       },
       notes: [
         {
-          id: `note-${Date.now()}`,
-          text: `[Planilha ${sheetTitle} • ${row.tab} • ${row.nivelProspeccao}] ${
-            row.observacoes || `Prospecção ${myCompany}`
-          }`,
+          id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          text: noteSegments.join(" | "),
           createdAt: new Date().toISOString(),
           author: myCompany,
         },
@@ -3138,57 +3318,74 @@ export function GoogleSheetsLeadHunter({
     };
   };
 
-  const importSingleRowToKanban = async (
-    row: ExtractedSheetLead
-  ): Promise<Lead | null> => {
-    if (!row.empresa.trim()) return null;
-    const optimisticLead = buildOptimisticLeadFromRow(row);
-    const contactName = row.responsavel.trim() || "Compras / Engenharia";
-    try {
-      const res = await createLeadAction({
-        name: contactName,
-        company: row.empresa.trim(),
-        roleTitle: `${sheetTitle} · ${row.tab}`,
-        email: optimisticLead.leadEmail || "",
-        phone: optimisticLead.leadPhone || undefined,
-        initialNote:
-          optimisticLead.notes?.[0]?.text ||
-          `[${row.tab}] Prospecção ${myCompany}`,
-      });
-      if (res.success && res.lead) {
-        return res.lead;
+  // Importação em Lote Instantânea (< 20ms na UI) + Persistência em Background no PostgreSQL
+  const batchImportRowsToKanban = (
+    rowsToImport: ExtractedSheetLead[],
+    overrideSheetTitle?: string,
+    overrideSheetId?: string
+  ): Lead[] => {
+    const validRows = rowsToImport.filter((r) => r.empresa && r.empresa.trim());
+    if (validRows.length === 0) return [];
+
+    const optimisticLeads = validRows.map((row) =>
+      buildOptimisticLeadFromRow(row, overrideSheetTitle, overrideSheetId)
+    );
+
+    if (onBatchLeadsImportedToKanban) {
+      onBatchLeadsImportedToKanban(optimisticLeads);
+    } else {
+      for (const lead of optimisticLeads) {
+        onLeadImportedToKanban?.(lead);
       }
-      // Se detectou colisão (mesmo telefone, e-mail ou domínio no CRM), NÃO cria duplicata
-      if (!res.success && res.error && res.error.toLowerCase().includes("colisão")) {
-        console.warn(`[Anti-Colisão] Lead "${row.empresa}" bloqueado: ${res.error}`);
-        return null;
-      }
-      return optimisticLead;
-    } catch {
-      return optimisticLead;
     }
+
+    const importedRowIds = validRows.map((r) => r.id);
+    setKanbanSentRowIds((prev) =>
+      Array.from(new Set([...prev, ...importedRowIds]))
+    );
+
+    // Persiste em background em 1 única transação sem travar a interface
+    const dbPayloads = optimisticLeads.map((kLead, idx) => {
+      const r = repairAndEnrichSheetRow(validRows[idx]);
+      return {
+        name: r.responsavel.trim() || r.empresa.trim(),
+        company: r.empresa.trim(),
+        roleTitle: kLead.cadenceState?.roleTitle || `${sheetTitle} · ${r.tab}`,
+        email: kLead.leadEmail || undefined,
+        phone: kLead.leadPhone || undefined,
+        whatsapp: kLead.leadPhone || undefined,
+        location: kLead.cadenceState?.location,
+        website: kLead.cadenceState?.website,
+        mainProducts: kLead.cadenceState?.mainProducts,
+        steelMaterials: kLead.cadenceState?.steelMaterials,
+        hunterPitch: kLead.cadenceState?.hunterPitch,
+        prospectionStatus: kLead.cadenceState?.prospectionStatus,
+        sourceSpreadsheetId: kLead.cadenceState?.sourceSpreadsheetId,
+        sourceSpreadsheetTitle: kLead.cadenceState?.sourceSpreadsheetTitle,
+        sourceTabName: kLead.cadenceState?.sourceTabName,
+        kanbanStage: kLead.cadenceState?.kanbanStage,
+        initialNote: kLead.notes?.[0]?.text,
+      };
+    });
+
+    batchCreateLeadsAction(dbPayloads).catch((err) => {
+      console.warn("[Batch Kanban Sync Background]", err);
+    });
+
+    return optimisticLeads;
   };
 
   const handleSendRowToKanban = async (row: ExtractedSheetLead) => {
     if (!row.empresa.trim()) return;
     setIsImportingKanban(true);
     try {
-      const createdLead = await importSingleRowToKanban(row);
-      if (createdLead) {
-        onLeadImportedToKanban?.(createdLead);
-        setKanbanSentRowIds((prev) =>
-          prev.includes(row.id) ? prev : [...prev, row.id]
-        );
+      const created = batchImportRowsToKanban([row]);
+      if (created.length > 0) {
         setFeedbackBanner({
           type: "success",
-          text: `✦ "${row.empresa}" enviado para o Pipeline Kanban!`,
+          text: `✦ "${row.empresa}" enviado instantaneamente para o Pipeline Kanban!`,
         });
         onWorkspaceTabChange?.("kanban");
-      } else {
-        setFeedbackBanner({
-          type: "info",
-          text: `⚠️ Lead "${row.empresa}" já existe no Pipeline Kanban (travado pela barreira anti-colisão).`,
-        });
       }
     } finally {
       setIsImportingKanban(false);
@@ -3203,27 +3400,13 @@ export function GoogleSheetsLeadHunter({
 
     setIsImportingKanban(true);
     try {
-      const importedIds: string[] = [];
-      let blockedCount = 0;
-      for (const row of selectedRows) {
-        const createdLead = await importSingleRowToKanban(row);
-        if (createdLead) {
-          onLeadImportedToKanban?.(createdLead);
-          importedIds.push(row.id);
-        } else {
-          blockedCount++;
-        }
-      }
-      setKanbanSentRowIds((prev) =>
-        Array.from(new Set([...prev, ...importedIds]))
-      );
+      const created = batchImportRowsToKanban(selectedRows);
       setSelectedRowIds([]);
-      const blockedMsg = blockedCount > 0 ? ` (${blockedCount} duplicatas bloqueadas por anti-colisão)` : "";
       setFeedbackBanner({
         type: "success",
-        text: `✦ ${importedIds.length} ${
-          importedIds.length === 1 ? "lead enviado" : "leads enviados"
-        } para o Pipeline Kanban!${blockedMsg}`,
+        text: `✦ ${created.length} ${
+          created.length === 1 ? "lead enviado" : "leads enviados"
+        } instantaneamente para o Pipeline Kanban!`,
       });
       onWorkspaceTabChange?.("kanban");
     } finally {
@@ -3242,27 +3425,44 @@ export function GoogleSheetsLeadHunter({
     }
 
     setIsImportingKanban(true);
-    setFeedbackBanner({
-      type: "info",
-      text: `Adicionando todos os ${validRows.length} leads da aba "${activeTab}" ao Kanban...`,
-    });
-
     try {
-      const importedIds: string[] = [];
-      for (const row of validRows) {
-        const createdLead = await importSingleRowToKanban(row);
-        if (createdLead) {
-          onLeadImportedToKanban?.(createdLead);
-          importedIds.push(row.id);
-        }
-      }
-      setKanbanSentRowIds((prev) =>
-        Array.from(new Set([...prev, ...importedIds]))
-      );
+      const created = batchImportRowsToKanban(validRows);
       setSelectedRowIds([]);
       setFeedbackBanner({
         type: "success",
-        text: `✦ Todos os ${importedIds.length} leads da aba "${activeTab}" foram adicionados ao Pipeline Kanban!`,
+        text: `✦ Todos os ${created.length} leads da aba "${activeTab}" foram carregados instantaneamente no Pipeline Kanban!`,
+      });
+      onWorkspaceTabChange?.("kanban");
+    } finally {
+      setIsImportingKanban(false);
+    }
+  };
+
+  const handleSendEntireSpreadsheetToKanban = (targetSheet?: ManagedSpreadsheet) => {
+    const sheet = targetSheet || activeSpreadsheet;
+    const googleId = extractSheetIdFromUrl(sheet.sheetUrl) || sheet.id;
+    const sheetRows = rows.filter(
+      (r) =>
+        r.empresa.trim() &&
+        (r.spreadsheetId === googleId ||
+          r.spreadsheetId === sheet.id ||
+          sheet.tabs.includes(r.tab))
+    );
+
+    if (sheetRows.length === 0) {
+      setFeedbackBanner({
+        type: "info",
+        text: `A planilha "${sheet.title}" ainda não possui leads carregados.`,
+      });
+      return;
+    }
+
+    setIsImportingKanban(true);
+    try {
+      const created = batchImportRowsToKanban(sheetRows, sheet.title, googleId);
+      setFeedbackBanner({
+        type: "success",
+        text: `✦ Todos os ${created.length} leads da planilha "${sheet.title}" (${sheet.tabs.length} abas) foram carregados instantaneamente no Kanban!`,
       });
       onWorkspaceTabChange?.("kanban");
     } finally {
@@ -3299,12 +3499,17 @@ export function GoogleSheetsLeadHunter({
         throw new Error(data.error || "Erro ao buscar leads com IA no Google");
       }
 
-      const extractedLeads: ExtractedSheetLead[] = (data.leads || []).map((lead: any) => ({
-        ...lead,
-        tab: tabToUse,
-        contato: formatPhoneBrDisplay(lead.contato) || lead.contato,
-        empresa: decodeHtmlEntities(lead.empresa),
-      }));
+      const currentGoogleId = extractSheetIdFromUrl(sheetUrl) || activeSpreadsheet.id;
+      const extractedLeads: ExtractedSheetLead[] = (data.leads || []).map((lead: any) =>
+        repairAndEnrichSheetRow({
+          ...lead,
+          tab: tabToUse,
+          contato: formatPhoneBrDisplay(lead.contato) || lead.contato,
+          empresa: decodeHtmlEntities(lead.empresa),
+          spreadsheetId: currentGoogleId,
+          spreadsheetTitle: sheetTitle,
+        })
+      );
 
       if (extractedLeads.length === 0) {
         setFeedbackBanner({
@@ -3314,7 +3519,6 @@ export function GoogleSheetsLeadHunter({
         return;
       }
 
-      // Garante que a aba existe na planilha do CRM
       if (!tabs.includes(tabToUse)) {
         const nextTabs = [...tabs, tabToUse];
         setTabs(nextTabs);
@@ -3326,11 +3530,9 @@ export function GoogleSheetsLeadHunter({
       }
       setActiveTab(tabToUse);
 
-      // Mescla com rows existentes aplicando deduplicação
       const dedup = deduplicateAndMergeLeads(rows, extractedLeads);
       setRows(dedup.updatedExistingRows);
 
-      // Sincroniza em background com o Google Sheets se a URL estiver configurada
       if (isRealGoogleSheetUrl(sheetUrl)) {
         fetch("/api/crm/sheets-sync", {
           method: "POST",
@@ -3348,25 +3550,17 @@ export function GoogleSheetsLeadHunter({
         }).catch(() => {});
       }
 
-      // Insere DIRETAMENTE cada lead no Kanban e no banco PostgreSQL
-      const importedIds: string[] = [];
-      for (const lead of extractedLeads) {
-        if (!lead.empresa.trim()) continue;
-        const createdLead = await importSingleRowToKanban(lead);
-        if (createdLead) {
-          onLeadImportedToKanban?.(createdLead);
-          importedIds.push(lead.id);
-        }
-      }
-
-      setKanbanSentRowIds((prev) => Array.from(new Set([...prev, ...importedIds])));
+      const created = batchImportRowsToKanban(
+        extractedLeads,
+        sheetTitle,
+        currentGoogleId
+      );
 
       setFeedbackBanner({
         type: "success",
-        text: `✦ ${importedIds.length} novos leads de "${sectorToHunt}" encontrados no Google e ADICIONADOS ao Kanban!`,
+        text: `✦ ${created.length} novos leads de "${sectorToHunt}" encontrados no Google e ADICIONADOS instantaneamente ao Kanban!`,
       });
 
-      // Redireciona imediatamente ao Pipeline Kanban!
       onWorkspaceTabChange?.("kanban");
     } catch (err: any) {
       setFeedbackBanner({
@@ -3391,10 +3585,23 @@ export function GoogleSheetsLeadHunter({
     setIsQuickImporting(true);
     setFeedbackBanner({
       type: "info",
-      text: "📥 Lendo planilha do Diogo e descobrindo abas...",
+      text: "📥 Lendo planilha do Google Sheets e mapeando colunas técnicas...",
     });
 
     try {
+      const googleSheetId = extractSheetIdFromUrl(rawUrl) || `sheet-${Date.now()}`;
+      // Remove da lista de excluídas caso estivesse lá
+      try {
+        const savedDeleted = localStorage.getItem("gofer_deleted_sheets_v1");
+        if (savedDeleted) {
+          const parsedDel: string[] = JSON.parse(savedDeleted);
+          localStorage.setItem(
+            "gofer_deleted_sheets_v1",
+            JSON.stringify(parsedDel.filter((id) => id !== googleSheetId))
+          );
+        }
+      } catch {}
+
       const res = await fetch(
         `/api/crm/sheets-sync?sheetUrl=${encodeURIComponent(rawUrl)}&readAllTabs=true`
       );
@@ -3407,56 +3614,58 @@ export function GoogleSheetsLeadHunter({
         );
       }
 
-      const incomingRows: ExtractedSheetLead[] = (data.rows || []).map((r: any) => ({
-        ...r,
-        empresa: decodeHtmlEntities(r.empresa || ""),
-        contato: formatPhoneBrDisplay(r.contato || "") || r.contato || "",
-      }));
+      const cleanTitle = data.title || "Planilha Google Sheets";
+      const discoveredTabs: string[] =
+        Array.isArray(data.tabs) && data.tabs.length > 0
+          ? data.tabs.map((t: string) => t.trim())
+          : tabs;
 
-      const cleanTitle = data.title || "Planilha Leads";
+      const incomingRows: ExtractedSheetLead[] = (data.rows || []).map((r: any) =>
+        repairAndEnrichSheetRow({
+          ...r,
+          empresa: decodeHtmlEntities(r.empresa || ""),
+          contato: formatPhoneBrDisplay(r.contato || "") || r.contato || "",
+          spreadsheetId: googleSheetId,
+          spreadsheetTitle: cleanTitle,
+        })
+      );
+
+      const newManagedSheet: ManagedSpreadsheet = {
+        id: googleSheetId === ANCHOR_SHEET_ID ? "sheet-ancora" : `sheet-${googleSheetId.slice(0, 12)}`,
+        title: cleanTitle,
+        sheetUrl: rawUrl,
+        tabs: discoveredTabs,
+      };
+
+      setSpreadsheets((prev) => {
+        const withoutSame = prev.filter(
+          (s) =>
+            s.id !== newManagedSheet.id &&
+            extractSheetIdFromUrl(s.sheetUrl) !== googleSheetId
+        );
+        return [newManagedSheet, ...withoutSame];
+      });
+      setActiveSpreadsheetId(newManagedSheet.id);
       setSheetUrl(rawUrl);
       setSheetTitle(cleanTitle);
-
-      const discoveredTabs =
-        Array.isArray(data.tabs) && data.tabs.length > 0 ? data.tabs : tabs;
       setTabs(discoveredTabs);
       setActiveTab(discoveredTabs[0] || "Geral");
 
-      setSpreadsheets((prev) =>
-        prev.map((s) =>
-          s.id === activeSpreadsheet.id
-            ? { ...s, title: cleanTitle, sheetUrl: rawUrl, tabs: discoveredTabs }
-            : s
-        )
-      );
-
-      // Mescla com rows existentes
       const dedup = deduplicateAndMergeLeads(rows, incomingRows);
       setRows(dedup.updatedExistingRows);
 
-      // Adiciona TODOS os leads com nome de empresa diretamente no Kanban
-      const validLeads = incomingRows.filter((r) => r.empresa && r.empresa.trim());
-      const importedIds: string[] = [];
-      for (const lead of validLeads) {
-        const createdLead = await importSingleRowToKanban(lead);
-        if (createdLead) {
-          onLeadImportedToKanban?.(createdLead);
-          importedIds.push(lead.id);
-        }
-      }
-
-      setKanbanSentRowIds((prev) =>
-        Array.from(new Set([...prev, ...importedIds]))
+      const created = batchImportRowsToKanban(
+        incomingRows,
+        cleanTitle,
+        googleSheetId
       );
 
       setFeedbackBanner({
         type: "success",
-        text: `✦ ${importedIds.length} leads importados da planilha e ENVIADOS direto ao Kanban!`,
+        text: `✦ ${created.length} leads importados da planilha "${cleanTitle}" (${discoveredTabs.length} abas) e carregados instantaneamente no Kanban!`,
       });
 
       setQuickPasteUrl("");
-
-      // Redireciona imediatamente ao Pipeline Kanban!
       onWorkspaceTabChange?.("kanban");
     } catch (err: any) {
       setFeedbackBanner({
@@ -3551,298 +3760,330 @@ export function GoogleSheetsLeadHunter({
           ABA: PLANILHA & CAPTAÇÃO (VISUAL ULTRA-LIMPO IRVO.COM.BR)
          ===================================================================== */}
       {activeWorkspaceTab === "planilha" && (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {/* =================================================================
-              PAINEL DE AÇÃO DIRETA: PROSPECÇÃO IA OU PLANILHA DO DIOGO (1 CLIQUE)
+              CENTRAL EXECUTIVA DE PLANILHAS CONECTADAS & ADESÃO RÁPIDA
              ================================================================= */}
-          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-4 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2e2e2e] pb-3">
+          <section className="rounded-xl bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-4 space-y-4">
+            {/* Cabeçalho da Central de Planilhas */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-[#2e2e2e] pb-3.5">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-5 items-center rounded-full bg-[#0c2b1c] px-2 text-[10px] font-semibold text-[#14d06e]">
-                    FLUXO DIRETO
+                  <span className="inline-flex h-5 items-center rounded-full bg-[#0c2b1c] px-2.5 text-[10px] font-bold tracking-wider text-[#14d06e] uppercase">
+                    CENTRAL DE PLANILHAS B2B
                   </span>
-                  <h3 className="text-sm font-semibold text-white">
-                    Como você quer abastecer o seu Pipeline Kanban agora?
+                  <h3 className="text-sm font-bold text-white">
+                    Gerencie suas Planilhas &amp; Carregue Filas no Kanban Instantaneamente
                   </h3>
                 </div>
                 <p className="mt-0.5 text-xs text-[#afafaf]">
-                  Escolha o setor ideal para a IA buscar empresas no Google e mandar direto ao Kanban, OU cole a planilha que o Diogo te enviou.
+                  Alterne entre suas carteiras, importe novas planilhas do Google Sheets em 1 clique ou exclua planilhas antigas.
                 </p>
               </div>
 
-              {/* Seletor de Modo: IA no Google vs Planilha do Diogo */}
-              <div className="inline-flex p-1 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setActiveDirectMode("ai_hunter")}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    activeDirectMode === "ai_hunter"
-                      ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
-                      : "text-[#afafaf] hover:text-white"
-                  }`}
-                >
-                  <Sparkles className="size-3.5" />
-                  <span>1. Buscar no Google com IA</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveDirectMode("diogo_sheet")}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    activeDirectMode === "diogo_sheet"
-                      ? "bg-white text-[#0d0d0d] shadow-sm"
-                      : "text-[#afafaf] hover:text-white"
-                  }`}
-                >
-                  <FileSpreadsheet className="size-3.5" />
-                  <span>2. Planilha do Diogo / Google Sheets</span>
-                </button>
-              </div>
-            </div>
-
-            {/* CONTEÚDO MODO 1: BUSCA COM IA NO GOOGLE -> KANBAN */}
-            {activeDirectMode === "ai_hunter" && (
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[11px] font-semibold text-[#afafaf] uppercase tracking-wider mb-2">
-                    Selecione o setor alvo da Gofer Metais (Tubos, Chapas e Perfis de Aço):
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                    {GOFER_TARGET_SECTORS.map((sec) => {
-                      const isSelected = selectedQuickNiche === sec.segment;
-                      return (
-                        <button
-                          key={sec.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedQuickNiche(sec.segment);
-                            setTargetSegment(sec.segment);
-                          }}
-                          className={`flex flex-col text-left p-2.5 rounded-lg ring-1 transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-[#14d06e]/10 ring-[#14d06e] text-white"
-                              : "bg-[#1a1a1a] ring-[#2e2e2e] text-[#afafaf] hover:text-white hover:bg-[#262626]"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span
-                              className={`text-[10px] font-semibold uppercase ${
-                                isSelected ? "text-[#14d06e]" : "text-[#757575]"
-                              }`}
-                            >
-                              {sec.badge}
-                            </span>
-                            {isSelected && (
-                              <CheckCircle2 className="size-3 text-[#14d06e]" />
-                            )}
-                          </div>
-                          <span className="mt-1 text-xs font-semibold text-white">
-                            {sec.label}
-                          </span>
-                          <span className="mt-1 text-[10px] text-[#afafaf] line-clamp-2 leading-tight">
-                            {sec.desc}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Barra de ação rápida */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
-                  <div className="flex-1 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={selectedQuickNiche}
-                      onChange={(e) => setSelectedQuickNiche(e.target.value)}
-                      placeholder="Ou digite outro setor (ex: Serralherias em Campinas, Caldeiraria...)"
-                      className="flex-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={quickLocation}
-                      onChange={(e) => setQuickLocation(e.target.value)}
-                      placeholder="Região (ex: SP, PR, Brasil)"
-                      className="w-32 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
-                    />
-                  </div>
-
+              {/* Barra Rápida de Adesão de Planilha via Link ou Busca IA */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex p-1 rounded-lg bg-[#161616] ring-1 ring-[#2e2e2e]">
                   <button
                     type="button"
-                    disabled={isAiHuntingAndSending}
-                    onClick={() => handleAiHuntAndSendToKanban()}
-                    className="inline-flex items-center justify-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] transition-all cursor-pointer shadow-md shrink-0 disabled:opacity-50"
+                    onClick={() => setActiveDirectMode("diogo_sheet")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      activeDirectMode === "diogo_sheet"
+                        ? "bg-white text-[#0d0d0d] shadow-sm"
+                        : "text-[#afafaf] hover:text-white"
+                    }`}
                   >
-                    {isAiHuntingAndSending ? (
-                      <>
-                        <RefreshCw className="size-3.5 animate-spin" />
-                        <span>Buscando no Google e Enviando ao Kanban...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="size-3.5" />
-                        <span>⚡ Buscar no Google &amp; Enviar Direto ao Kanban</span>
-                      </>
-                    )}
+                    <FileSpreadsheet className="size-3.5" />
+                    <span>Colar Link Google Sheets</span>
                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* CONTEÚDO MODO 2: IMPORTAR PLANILHA DO DIOGO -> KANBAN */}
-            {activeDirectMode === "diogo_sheet" && (
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={quickPasteUrl}
-                      onChange={(e) => setQuickPasteUrl(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleQuickImportSheetToKanban();
-                      }}
-                      placeholder="Cole aqui o link da planilha compartilhada pelo Diogo (ex: https://docs.google.com/spreadsheets/d/...)"
-                      className="w-full rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] pl-9 pr-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-white focus:outline-none"
-                    />
-                    <FileSpreadsheet className="size-4 text-[#afafaf] absolute left-3 top-2.5" />
-                  </div>
-
                   <button
                     type="button"
-                    disabled={isQuickImporting || !quickPasteUrl.trim()}
-                    onClick={handleQuickImportSheetToKanban}
-                    className="inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/90 px-4 py-2 text-xs font-semibold text-[#0d0d0d] transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                    onClick={() => setActiveDirectMode("ai_hunter")}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                      activeDirectMode === "ai_hunter"
+                        ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
+                        : "text-[#afafaf] hover:text-white"
+                    }`}
                   >
-                    {isQuickImporting ? (
-                      <>
-                        <RefreshCw className="size-3.5 animate-spin" />
-                        <span>Lendo Planilha e Adicionando ao Kanban...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download className="size-3.5" />
-                        <span>📥 Carregar &amp; Adicionar Todos os Leads no Kanban</span>
-                      </>
-                    )}
+                    <Sparkles className="size-3.5" />
+                    <span>Buscar Setor no Google (IA)</span>
                   </button>
                 </div>
-
-                <p className="text-[11px] text-[#afafaf]">
-                  ✦ Lê todas as abas da planilha do Diogo, cadastra os leads no CRM e já envia tudo para o Kanban automaticamente.
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* BARRA SUPERIOR ÚNICA: SELETOR DE PLANILHAS + ABAS + AÇÕES DIRETAS */}
-          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] p-3 space-y-2.5">
-            {/* Linha 1: Seleção de Planilhas + Status de Sincronização e Captação */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2e2e2e] pb-2.5">
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
-                  Planilhas:
-                </span>
-                {spreadsheets.map((sheet) => {
-                  const isCurrentSheet = sheet.id === activeSpreadsheet.id;
-                  const sheetLeadsCount = rows.filter((r) =>
-                    sheet.tabs.includes(r.tab)
-                  ).length;
-                  return (
-                    <button
-                      key={sheet.id}
-                      type="button"
-                      onClick={() => handleSelectSpreadsheet(sheet.id)}
-                      className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
-                        isCurrentSheet
-                          ? "bg-white text-[#0d0d0d]"
-                          : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
-                      }`}
-                    >
-                      <FileSpreadsheet className="size-3.5" />
-                      <span>{sheet.title}</span>
-                      <span
-                        className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
-                          isCurrentSheet
-                            ? "bg-[#0d0d0d]/15 text-[#0d0d0d]"
-                            : "bg-[#262626] text-[#afafaf]"
-                        }`}
-                      >
-                        {sheetLeadsCount}
-                      </span>
-                    </button>
-                  );
-                })}
 
                 <button
                   type="button"
                   onClick={() => setNewSpreadsheetModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-2 text-xs font-semibold text-white transition-colors cursor-pointer"
                 >
                   <Plus className="size-3.5 text-[#14d06e]" />
-                  <span>Nova Planilha</span>
-                </button>
-              </div>
-
-              {/* Ações da Planilha: Sincronizar, Abrir no Google e Captar */}
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isSyncingSheets}
-                  onClick={() => handleSyncToGoogleSheets()}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-white cursor-pointer"
-                >
-                  <RefreshCw className={`size-3.5 text-[#14d06e] ${isSyncingSheets ? "animate-spin" : ""}`} />
-                  <span>{isSyncingSheets ? "Sincronizando..." : "Sincronizar Sheets"}</span>
-                </button>
-
-                {isRealGoogleSheetUrl(sheetUrl) ? (
-                  <a
-                    href={sheetUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-3 py-1.5 text-xs font-semibold text-[#afafaf] hover:text-white"
-                  >
-                    <ExternalLink className="size-3.5 text-[#7fa9f7]" />
-                    <span>Abrir Google Sheets ↗</span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onWorkspaceTabChange?.("integracao")}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-[#2b2410] ring-1 ring-[#e8c267]/40 px-3 py-1.5 text-xs font-semibold text-[#e8c267] cursor-pointer"
-                  >
-                    <Link2 className="size-3.5" />
-                    <span>Conectar Google Sheets</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setIsCaptureModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-white hover:bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#0d0d0d] cursor-pointer"
-                >
-                  <Search className="size-3.5" />
-                  <span>+ Captar Novos Leads</span>
+                  <span>+ Nova Planilha</span>
                 </button>
               </div>
             </div>
 
-            {/* Linha 2: Abas de Setores da Planilha + Ação Principal Enviar ao Kanban */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+            {/* MODO ADESÃO RÁPIDA: COLAR LINK GOOGLE SHEETS */}
+            {activeDirectMode === "diogo_sheet" && (
+              <div className="rounded-lg bg-[#141414] ring-1 ring-[#262626] p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={quickPasteUrl}
+                    onChange={(e) => setQuickPasteUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleQuickImportSheetToKanban();
+                    }}
+                    placeholder="Cole o link da planilha Google Sheets (ex: https://docs.google.com/spreadsheets/d/15bQP-Xg7c_P_Zwe9oB-oRitWHdViCynVXXqds3Zr0co/edit)"
+                    className="w-full rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] pl-9 pr-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
+                  />
+                  <FileSpreadsheet className="size-4 text-[#14d06e] absolute left-3 top-2.5" />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isQuickImporting || !quickPasteUrl.trim()}
+                  onClick={handleQuickImportSheetToKanban}
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-4 py-2 text-xs font-bold text-[#0d0d0d] transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                >
+                  {isQuickImporting ? (
+                    <>
+                      <RefreshCw className="size-3.5 animate-spin" />
+                      <span>Importando Abas...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="size-3.5" />
+                      <span>Conectar Planilha &amp; Abrir no Kanban</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* MODO BUSCA IA NO GOOGLE */}
+            {activeDirectMode === "ai_hunter" && (
+              <div className="rounded-lg bg-[#141414] ring-1 ring-[#262626] p-3 space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  {GOFER_TARGET_SECTORS.map((sec) => {
+                    const isSelected = selectedQuickNiche === sec.segment;
+                    return (
+                      <button
+                        key={sec.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedQuickNiche(sec.segment);
+                          setTargetSegment(sec.segment);
+                        }}
+                        className={`flex flex-col text-left p-2.5 rounded-lg ring-1 transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#14d06e]/10 ring-[#14d06e] text-white"
+                            : "bg-[#0d0d0d] ring-[#2e2e2e] text-[#afafaf] hover:text-white hover:bg-[#1f1f1f]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span
+                            className={`text-[10px] font-semibold uppercase ${
+                              isSelected ? "text-[#14d06e]" : "text-[#757575]"
+                            }`}
+                          >
+                            {sec.badge}
+                          </span>
+                          {isSelected && (
+                            <CheckCircle2 className="size-3 text-[#14d06e]" />
+                          )}
+                        </div>
+                        <span className="mt-1 text-xs font-semibold text-white">
+                          {sec.label}
+                        </span>
+                        <span className="mt-0.5 text-[10px] text-[#afafaf] line-clamp-1">
+                          {sec.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="text"
+                    value={selectedQuickNiche}
+                    onChange={(e) => setSelectedQuickNiche(e.target.value)}
+                    placeholder="Ou digite outro setor (ex: Implementos Rodoviários, Caçambas, Baús...)"
+                    className="flex-1 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={quickLocation}
+                    onChange={(e) => setQuickLocation(e.target.value)}
+                    placeholder="Região (ex: SP, PR, Brasil)"
+                    className="w-36 rounded-md bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-3 py-2 text-xs text-white placeholder:text-[#757575] focus:ring-[#14d06e] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={isAiHuntingAndSending}
+                    onClick={() => handleAiHuntAndSendToKanban()}
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-4 py-2 text-xs font-bold text-[#0d0d0d] transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                  >
+                    {isAiHuntingAndSending ? (
+                      <>
+                        <RefreshCw className="size-3.5 animate-spin" />
+                        <span>Captando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" />
+                        <span>⚡ Buscar &amp; Enviar ao Kanban</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* GRADE DE CARDS DAS PLANILHAS CONECTADAS (COM OPÇÃO DE EXCLUIR E CARREGAR NO KANBAN) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {spreadsheets.map((sheet) => {
+                const isCurrentSheet = sheet.id === activeSpreadsheet.id;
+                const googleId = extractSheetIdFromUrl(sheet.sheetUrl) || sheet.id;
+                const sheetRows = rows.filter(
+                  (r) =>
+                    r.empresa.trim() &&
+                    (r.spreadsheetId === googleId ||
+                      r.spreadsheetId === sheet.id ||
+                      sheet.tabs.includes(r.tab))
+                );
+                const sheetLeadsCount = sheetRows.length;
+
+                return (
+                  <div
+                    key={sheet.id}
+                    onClick={() => handleSelectSpreadsheet(sheet.id)}
+                    className={`group relative flex flex-col justify-between rounded-xl p-3.5 transition-all cursor-pointer ring-1 ${
+                      isCurrentSheet
+                        ? "bg-[#161f1a] ring-[#14d06e] shadow-[0_0_20px_rgba(20,208,110,0.08)]"
+                        : "bg-[#141414] ring-[#2a2a2a] hover:bg-[#191919] hover:ring-[#3d3d3d]"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                              isCurrentSheet
+                                ? "bg-[#14d06e] text-[#0d0d0d]"
+                                : "bg-[#222222] text-[#afafaf]"
+                            }`}
+                          >
+                            <FileSpreadsheet className="size-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-white truncate">
+                                {sheet.title}
+                              </h4>
+                              {isCurrentSheet && (
+                                <span className="inline-flex items-center rounded-full bg-[#14d06e]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#14d06e] uppercase shrink-0">
+                                  Ativa
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-[#9a9a9a] tabular-nums">
+                              {sheetLeadsCount} empresas &middot; {sheet.tabs.length}{" "}
+                              {sheet.tabs.length === 1 ? "aba" : "abas"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Botões de Ação Rápida do Card (Abrir Link + Excluir Planilha) */}
+                        <div
+                          className="flex items-center gap-1 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {isRealGoogleSheetUrl(sheet.sheetUrl) && (
+                            <a
+                              href={sheet.sheetUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Abrir planilha original no Google Sheets"
+                              className="p-1.5 rounded-md text-[#afafaf] hover:text-white hover:bg-[#262626] transition-colors"
+                            >
+                              <ExternalLink className="size-3.5" />
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSheetToDelete(sheet)}
+                            title={`Excluir planilha "${sheet.title}"`}
+                            className="p-1.5 rounded-md text-[#afafaf] hover:text-[#ff5d48] hover:bg-[#2b1310] transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Pílulas de Abas da Planilha */}
+                      <div className="mt-2.5 flex flex-wrap gap-1">
+                        {sheet.tabs.slice(0, 5).map((t) => (
+                          <span
+                            key={t}
+                            className={`inline-flex items-center rounded px-2 py-0.5 text-[10px] font-medium ${
+                              isCurrentSheet && t === activeTab
+                                ? "bg-white text-[#0d0d0d] font-semibold"
+                                : "bg-[#222222] text-[#cfcfcf]"
+                            }`}
+                          >
+                            {t}
+                          </span>
+                        ))}
+                        {sheet.tabs.length > 5 && (
+                          <span className="inline-flex items-center rounded bg-[#222222] px-1.5 py-0.5 text-[10px] text-[#9a9a9a]">
+                            +{sheet.tabs.length - 5}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Rodapé do Card da Planilha: Carregar Tudo no Kanban em 1 Clique */}
+                    <div
+                      className="mt-3 pt-2.5 border-t border-[#262626] flex items-center justify-between gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSelectSpreadsheet(sheet.id)}
+                        className="text-[11px] font-semibold text-[#afafaf] hover:text-white cursor-pointer"
+                      >
+                        {isCurrentSheet ? "✓ Visualizando abaixo" : "Ver dados na tabela"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSendEntireSpreadsheetToKanban(sheet)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-2.5 py-1 text-[11px] font-bold text-[#0d0d0d] transition-colors cursor-pointer"
+                      >
+                        <Kanban className="size-3" />
+                        <span>Carregar no Kanban ({sheetLeadsCount}) →</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Barra de Abas da Planilha Selecionada + Controles de Sincronização */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#2e2e2e]">
               <div className="flex items-center gap-1.5 overflow-x-auto">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
-                  Abas:
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#afafaf] mr-1 shrink-0">
+                  Abas de {sheetTitle}:
                 </span>
                 {tabs.map((tab) => {
                   const isCurrent = tab === activeTab;
-                  const count = rows.filter((r) => r.tab === tab).length;
+                  const count = rows.filter((r) => r.tab === tab && r.empresa.trim()).length;
                   return (
                     <button
                       key={tab}
                       type="button"
                       onClick={() => handleSelectTab(tab)}
-                      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
+                      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer shrink-0 ${
                         isCurrent
                           ? "bg-white text-[#0d0d0d]"
                           : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
@@ -3865,40 +4106,37 @@ export function GoogleSheetsLeadHunter({
                   type="button"
                   onClick={() => setNewTabModalOpen(true)}
                   title="Criar nova aba de setor nesta planilha"
-                  className="inline-flex items-center gap-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1 text-xs font-medium text-[#afafaf] hover:text-white cursor-pointer shrink-0"
+                  className="inline-flex items-center gap-1 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-medium text-[#afafaf] hover:text-white cursor-pointer shrink-0"
                 >
                   <Plus className="size-3" />
                   <span>Nova aba</span>
                 </button>
               </div>
 
-              {/* Botão Principal: Enviar ao Kanban + Ações da tabela */}
+              {/* Ações da Tabela e Sincronização */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
-                  disabled={isImportingKanban}
-                  onClick={() => {
-                    if (selectedRowIds.length === 0) {
-                      toggleSelectAllActiveTab();
-                      return;
-                    }
-                    handleSendSelectedToKanban();
-                  }}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                    selectedRowIds.length > 0
-                      ? "bg-[#14d06e] text-[#0d0d0d] hover:bg-[#14d06e]/90"
-                      : "bg-[#1a1a1a] ring-1 ring-[#2e2e2e] text-white hover:bg-[#262626]"
-                  }`}
+                  disabled={isReadingSheets}
+                  onClick={handleReadFromGoogleSheets}
+                  title="Reler dados atualizados diretamente do Google Sheets"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-[#1a1a1a] ring-1 ring-[#2e2e2e] hover:bg-[#262626] px-2.5 py-1.5 text-xs font-semibold text-white cursor-pointer"
                 >
-                  <Kanban className="size-3.5" />
-                  <span>
-                    {isImportingKanban
-                      ? "Enviando ao Kanban..."
-                      : selectedRowIds.length > 0
-                      ? `Enviar selecionados para o Kanban (${selectedRowIds.length}) →`
-                      : "Selecionar todos p/ Kanban"}
-                  </span>
+                  <RefreshCw className={`size-3.5 text-[#14d06e] ${isReadingSheets ? "animate-spin" : ""}`} />
+                  <span>{isReadingSheets ? "Lendo..." : "Atualizar do Sheets"}</span>
                 </button>
+
+                {selectedRowIds.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={isImportingKanban}
+                    onClick={handleSendSelectedToKanban}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] text-[#0d0d0d] hover:bg-[#14d06e]/90 px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Kanban className="size-3.5" />
+                    <span>Enviar selecionados ({selectedRowIds.length}) →</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -3939,12 +4177,12 @@ export function GoogleSheetsLeadHunter({
             </div>
           </section>
 
-          {/* TABELA DE DADOS IMEDIATA */}
-          <section className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
+          {/* TABELA DE DADOS TÉCNICOS & B2B IMEDIATA */}
+          <section className="rounded-xl bg-[#0d0d0d] ring-1 ring-[#2e2e2e] overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-[#2e2e2e]">
               <div className="flex items-center gap-2">
-                <FileSpreadsheet className="size-3.5 text-[#afafaf]" />
-                <span className="font-semibold text-xs text-white">
+                <FileSpreadsheet className="size-3.5 text-[#14d06e]" />
+                <span className="font-bold text-xs text-white">
                   {sheetTitle} &middot; {activeTab}
                 </span>
                 <span className="inline-flex h-5 items-center rounded-full bg-[#1a1a1a] ring-1 ring-[#2e2e2e] px-2 text-[10px] font-semibold text-[#afafaf] tabular-nums">
@@ -3952,7 +4190,7 @@ export function GoogleSheetsLeadHunter({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   disabled={
@@ -3960,24 +4198,24 @@ export function GoogleSheetsLeadHunter({
                     activeTabRows.filter((r) => r.empresa.trim()).length === 0
                   }
                   onClick={handleSendAllTabToKanban}
-                  className="inline-flex items-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-3.5 py-1.5 text-xs font-semibold text-[#0d0d0d] transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 px-3.5 py-1.5 text-xs font-bold text-[#0d0d0d] transition-colors cursor-pointer shadow-sm disabled:opacity-50"
                 >
                   <Kanban className="size-3.5" />
                   <span>
                     {isImportingKanban
-                      ? "Enviando ao Kanban..."
-                      : `📥 Adicionar TODOS os (${activeTabRows.filter((r) => r.empresa.trim()).length}) leads desta aba no Kanban →`}
+                      ? "Carregando..."
+                      : `⚡ Enviar Aba "${activeTab}" (${activeTabRows.filter((r) => r.empresa.trim()).length}) p/ Kanban`}
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* Grade de Dados com Altura Controlada e Máximo Espaço Vertical */}
-            <div className="overflow-x-auto max-h-[calc(100vh-230px)] min-h-[520px] overflow-y-auto">
+            {/* Grade de Dados com Colunas B2B (Empresa + Cidade, Telefone, Site, Produtos & Aços, Argumento Hunter, Status) */}
+            <div className="overflow-x-auto max-h-[calc(100vh-240px)] min-h-[500px] overflow-y-auto">
               <table className="w-full border-collapse text-left">
-                <thead className="sticky top-0 z-20 bg-[#1a1a1a] border-b border-[#2e2e2e]">
-                  <tr className="text-xs font-semibold text-[#afafaf]">
-                    <th className="w-10 border-r border-[#2e2e2e] py-2.5 text-center">
+                <thead className="sticky top-0 z-20 bg-[#161616] border-b border-[#2e2e2e]">
+                  <tr className="text-[11px] font-bold uppercase tracking-wider text-[#afafaf]">
+                    <th className="w-9 border-r border-[#2e2e2e] py-2.5 text-center">
                       <input
                         type="checkbox"
                         checked={
@@ -3987,47 +4225,48 @@ export function GoogleSheetsLeadHunter({
                             .every((r) => selectedRowIds.includes(r.id))
                         }
                         onChange={toggleSelectAllActiveTab}
-                        title="Selecionar todos os leads desta aba para enviar ao Kanban"
+                        title="Selecionar todos os leads desta aba"
                         className="size-3.5 rounded accent-white cursor-pointer"
                       />
                     </th>
-                    <th className="w-9 border-r border-[#2e2e2e] py-2.5 text-center tabular-nums">
+                    <th className="w-8 border-r border-[#2e2e2e] py-2.5 text-center tabular-nums">
                       #
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[210px]">
-                      Empresa
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[200px]">
+                      Empresa &amp; Cidade / Região
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[140px]">
-                      Responsável
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[175px]">
+                      Telefone Comercial
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[220px]">
-                      E-mail
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[165px]">
+                      Site Oficial / E-mail
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[205px] min-w-[195px]">
-                      Contato
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[230px]">
+                      Linha de Produtos &amp; Materiais de Aço
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[175px]">
-                      Nível de Prospecção
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[250px]">
+                      Argumento de Abordagem Hunter
                     </th>
-                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 min-w-[210px]">
-                      Observações
+                    <th className="border-r border-[#2e2e2e] px-3 py-2.5 w-[160px]">
+                      Status
                     </th>
-                    <th className="w-40 px-2 py-2.5 text-center">
-                      Iniciar / Ações
+                    <th className="w-36 px-2 py-2.5 text-center">
+                      Ações
                     </th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-[#2e2e2e] text-xs">
-                  {activeTabRows.map((row, idx) => {
+                  {activeTabRows.map((rawRow, idx) => {
+                    const row = repairAndEnrichSheetRow(rawRow);
                     const rowNumber = idx + 1;
                     const isSelected = selectedRowIds.includes(row.id);
                     const isAlreadyInKanban = kanbanSentRowIds.includes(row.id);
                     const cleanE164 = sanitizePhoneE164(row.contato);
-                    const domainKey = extractCanonicalDomain(row.email, row.website);
                     const defaultMsg =
+                      row.argumentoHunter ||
                       row.scriptAbordagem ||
-                      `Olá ${row.responsavel || "tudo bem"}? Falo da ${myCompany}. Gostaria de enviar nosso catálogo de aços e perfis para a ${row.empresa}.`;
+                      `Olá! Falo da ${myCompany}. Gostaria de enviar nosso catálogo de aços e perfis para a ${row.empresa}.`;
                     const whatsappHref =
                       cleanE164.length >= 12
                         ? `https://wa.me/${cleanE164}?text=${encodeURIComponent(defaultMsg)}`
@@ -4036,15 +4275,15 @@ export function GoogleSheetsLeadHunter({
                     return (
                       <tr
                         key={row.id}
-                        className={`transition-colors ${
+                        className={`transition-colors align-top ${
                           isSelected
                             ? "bg-[#1a1a1a]"
                             : row.highlighted
-                            ? "bg-[#2b2410]/60 hover:bg-[#2b2410]"
-                            : "bg-[#000000] hover:bg-[#1a1a1a]/60"
+                            ? "bg-[#2b2410]/50 hover:bg-[#2b2410]/80"
+                            : "bg-[#050505] hover:bg-[#141414]"
                         }`}
                       >
-                        <td className="border-r border-[#2e2e2e] text-center py-2">
+                        <td className="border-r border-[#2e2e2e] text-center py-2.5">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -4053,12 +4292,12 @@ export function GoogleSheetsLeadHunter({
                           />
                         </td>
 
-                        <td className="border-r border-[#2e2e2e] text-center text-[#757575] tabular-nums py-2 select-none">
+                        <td className="border-r border-[#2e2e2e] text-center text-[#757575] tabular-nums py-2.5 select-none">
                           {rowNumber}
                         </td>
 
-                        {/* Empresa */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5">
+                        {/* Coluna 1 & 2: Empresa + Cidade / Região */}
+                        <td className="border-r border-[#2e2e2e] px-2.5 py-2 space-y-1">
                           <input
                             type="text"
                             value={row.empresa}
@@ -4066,51 +4305,24 @@ export function GoogleSheetsLeadHunter({
                               updateCell(row.id, "empresa", e.target.value)
                             }
                             placeholder="Nome da empresa..."
-                            className="w-full bg-transparent text-white font-semibold focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
+                            className="w-full bg-transparent text-white font-bold focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                           />
-                          {(row.cnpj ||
-                            (domainKey && !domainKey.startsWith("freemail:"))) && (
-                            <div className="flex items-center gap-1.5 px-1.5 text-[10px] text-[#757575] tabular-nums">
-                              {row.cnpj && <span>{sanitizeCnpj(row.cnpj)}</span>}
-                              {domainKey && !domainKey.startsWith("freemail:") && (
-                                <span>· {domainKey}</span>
-                              )}
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1 px-1.5">
+                            <MapPin className="size-3 text-[#14d06e] shrink-0" />
+                            <input
+                              type="text"
+                              value={row.cidadeRegiao || row.responsavel || ""}
+                              onChange={(e) =>
+                                updateCell(row.id, "cidadeRegiao", e.target.value)
+                              }
+                              placeholder="Cidade / UF..."
+                              className="w-full bg-transparent text-[11px] text-[#afafaf] placeholder:text-[#555] focus:text-white focus:outline-none rounded px-1 py-0.5"
+                            />
+                          </div>
                         </td>
 
-                        {/* Responsável */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5">
-                          <input
-                            type="text"
-                            value={row.responsavel}
-                            onChange={(e) =>
-                              updateCell(row.id, "responsavel", e.target.value)
-                            }
-                            placeholder="—"
-                            className="w-full bg-transparent text-white placeholder:text-[#757575] focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
-                          />
-                        </td>
-
-                        {/* E-mail */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5">
-                          <input
-                            type="text"
-                            value={row.email}
-                            onChange={(e) =>
-                              updateCell(row.id, "email", e.target.value)
-                            }
-                            placeholder="—"
-                            className={`w-full bg-transparent placeholder:text-[#757575] focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5 ${
-                              row.email.includes("@")
-                                ? "text-[#7fa9f7]"
-                                : "text-white"
-                            }`}
-                          />
-                        </td>
-
-                        {/* Contato */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5 w-[205px] min-w-[195px]">
+                        {/* Coluna 3: Telefone Comercial + Botão WhatsApp */}
+                        <td className="border-r border-[#2e2e2e] px-2.5 py-2">
                           <div className="flex items-center justify-between gap-1">
                             <input
                               type="text"
@@ -4123,15 +4335,15 @@ export function GoogleSheetsLeadHunter({
                                 if (formatted) updateCell(row.id, "contato", formatted);
                               }}
                               placeholder="(11) 99999-9999"
-                              className="w-full min-w-[145px] bg-transparent text-white font-medium tabular-nums focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
+                              className="w-full bg-transparent text-white font-semibold tabular-nums focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
                             />
                             {whatsappHref && (
                               <a
                                 href={whatsappHref}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title={`Abrir WhatsApp (${cleanE164})`}
-                                className="text-[#14d06e] hover:opacity-80 p-1 shrink-0"
+                                title={`Iniciar WhatsApp com Argumento Hunter (${cleanE164})`}
+                                className="inline-flex items-center justify-center rounded-md bg-[#0c2b1c] text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] p-1.5 transition-colors shrink-0"
                               >
                                 <MessageCircle className="size-3.5" />
                               </a>
@@ -4139,8 +4351,83 @@ export function GoogleSheetsLeadHunter({
                           </div>
                         </td>
 
-                        {/* Nível de Prospecção */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5">
+                        {/* Coluna 4: Site Oficial & E-mail */}
+                        <td className="border-r border-[#2e2e2e] px-2.5 py-2 space-y-1">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={row.website || ""}
+                              onChange={(e) =>
+                                updateCell(row.id, "website", e.target.value)
+                              }
+                              placeholder="www.empresa.com.br"
+                              className="w-full bg-transparent text-[#7fa9f7] text-[11px] font-medium placeholder:text-[#555] focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
+                            />
+                            {row.website && (
+                              <a
+                                href={
+                                  row.website.startsWith("http")
+                                    ? row.website
+                                    : `https://${row.website}`
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#7fa9f7] hover:text-white p-0.5 shrink-0"
+                                title="Abrir site oficial"
+                              >
+                                <ExternalLink className="size-3" />
+                              </a>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={row.email || ""}
+                            onChange={(e) =>
+                              updateCell(row.id, "email", e.target.value)
+                            }
+                            placeholder="E-mail (opcional)..."
+                            className="w-full bg-transparent text-[11px] text-[#9a9a9a] placeholder:text-[#444] focus:text-white focus:outline-none rounded px-1.5 py-0.5"
+                          />
+                        </td>
+
+                        {/* Coluna 5 & 6: Linha Principal de Produtos & Materiais de Aço Consumidos */}
+                        <td className="border-r border-[#2e2e2e] px-2.5 py-2 space-y-1">
+                          <input
+                            type="text"
+                            value={row.linhaProdutos || ""}
+                            onChange={(e) =>
+                              updateCell(row.id, "linhaProdutos", e.target.value)
+                            }
+                            placeholder="Linha de produtos (ex: Basculantes, Baús...)"
+                            className="w-full bg-transparent text-white font-medium text-[11px] placeholder:text-[#555] focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
+                          />
+                          <input
+                            type="text"
+                            value={row.materiaisAco || ""}
+                            onChange={(e) =>
+                              updateCell(row.id, "materiaisAco", e.target.value)
+                            }
+                            placeholder="Aços consumidos (ex: A36, USI SAC 350, Galvanizado...)"
+                            className="w-full bg-[#141f18] text-[#14d06e] font-medium text-[11px] placeholder:text-[#4b6b56] focus:outline-none focus:ring-1 focus:ring-[#14d06e] rounded px-1.5 py-0.5"
+                          />
+                        </td>
+
+                        {/* Coluna 7: Argumento de Abordagem Hunter / Observações */}
+                        <td className="border-r border-[#2e2e2e] px-2.5 py-2">
+                          <textarea
+                            rows={2}
+                            value={row.argumentoHunter || row.observacoes || ""}
+                            onChange={(e) => {
+                              updateCell(row.id, "argumentoHunter", e.target.value);
+                              updateCell(row.id, "observacoes", e.target.value);
+                            }}
+                            placeholder="Argumento de abordagem Hunter / observação..."
+                            className="w-full resize-none bg-transparent text-[11px] leading-snug text-[#d4d4d4] placeholder:text-[#555] focus:text-white focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
+                          />
+                        </td>
+
+                        {/* Coluna 8: Status da Prospecção */}
+                        <td className="border-r border-[#2e2e2e] px-2.5 py-2">
                           <select
                             value={row.nivelProspeccao}
                             onChange={(e) =>
@@ -4150,7 +4437,7 @@ export function GoogleSheetsLeadHunter({
                                 e.target.value as ProspectionLevel
                               )
                             }
-                            className={`w-full rounded-full px-2.5 py-1 text-xs font-semibold cursor-pointer focus:outline-none ${getIrvoLevelBadge(
+                            className={`w-full rounded-full px-2.5 py-1 text-[11px] font-semibold cursor-pointer focus:outline-none ${getIrvoLevelBadge(
                               row.nivelProspeccao
                             )}`}
                           >
@@ -4166,28 +4453,15 @@ export function GoogleSheetsLeadHunter({
                           </select>
                         </td>
 
-                        {/* Observações */}
-                        <td className="border-r border-[#2e2e2e] px-3 py-1.5">
-                          <input
-                            type="text"
-                            value={row.observacoes}
-                            onChange={(e) =>
-                              updateCell(row.id, "observacoes", e.target.value)
-                            }
-                            placeholder="Adicionar observação..."
-                            className="w-full bg-transparent text-[#afafaf] placeholder:text-[#757575] focus:text-white focus:outline-none focus:ring-1 focus:ring-white rounded px-1.5 py-0.5"
-                          />
-                        </td>
-
-                        {/* Ações: Botão explícito p/ enviar ao Kanban */}
-                        <td className="px-2 py-1.5 text-center">
+                        {/* Ações */}
+                        <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
                               disabled={isImportingKanban}
                               onClick={() => handleSendRowToKanban(row)}
-                              title="Iniciar prospecção deste lead no Pipeline Kanban"
-                              className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold transition-colors cursor-pointer ${
+                              title="Enviar este lead para o Pipeline Kanban"
+                              className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
                                 isAlreadyInKanban
                                   ? "bg-[#0c2b1c] text-[#14d06e]"
                                   : "bg-white text-[#0d0d0d] hover:bg-white/90"
@@ -4195,18 +4469,6 @@ export function GoogleSheetsLeadHunter({
                             >
                               <Kanban className="size-3" />
                               <span>{isAlreadyInKanban ? "No Kanban" : "+ Kanban"}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedCadenceLeadId(row.id);
-                                onWorkspaceTabChange?.("cadencia");
-                              }}
-                              title="Abrir scripts e PDF desta empresa na aba Cadência"
-                              className="p-1.5 rounded text-[#afafaf] hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                            >
-                              <Calendar className="size-3.5" />
                             </button>
 
                             <button
@@ -5887,6 +6149,85 @@ export function GoogleSheetsLeadHunter({
                     <span>Captar {batchLimit} Leads</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMAÇÃO PARA EXCLUIR PLANILHA */}
+      {sheetToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-[#161616] ring-1 ring-[#2e2e2e] p-6 text-white space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#2b1310] text-[#ff5d48]">
+                  <Trash2 className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    Excluir Planilha do CRM
+                  </h3>
+                  <p className="text-[11px] text-[#afafaf]">
+                    {sheetToDelete.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSheetToDelete(null)}
+                className="text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#cfcfcf] leading-relaxed">
+              Como você deseja remover a planilha{" "}
+              <strong className="text-white">"{sheetToDelete.title}"</strong> ({sheetToDelete.tabs.join(", ")})?
+            </p>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleConfirmDeleteSpreadsheet(sheetToDelete, false)}
+                className="w-full flex items-center justify-between rounded-lg bg-[#222222] hover:bg-[#2a2a2a] ring-1 ring-[#383838] px-4 py-2.5 text-left text-xs font-semibold text-white transition-colors cursor-pointer"
+              >
+                <div>
+                  <p className="font-bold text-white">
+                    Remover apenas da Central de Planilhas
+                  </p>
+                  <p className="text-[11px] text-[#afafaf]">
+                    Mantém no Kanban os leads que já estão em prospecção
+                  </p>
+                </div>
+                <ChevronRight className="size-4 text-[#afafaf]" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleConfirmDeleteSpreadsheet(sheetToDelete, true)}
+                className="w-full flex items-center justify-between rounded-lg bg-[#2b1310] hover:bg-[#3b1915] ring-1 ring-[#ff5d48]/40 px-4 py-2.5 text-left text-xs font-semibold text-[#ff5d48] transition-colors cursor-pointer"
+              >
+                <div>
+                  <p className="font-bold text-[#ff5d48]">
+                    Excluir Planilha + Remover Leads do Kanban
+                  </p>
+                  <p className="text-[11px] text-[#ff5d48]/80">
+                    Limpa a planilha e também remove todos os cards dela do Kanban
+                  </p>
+                </div>
+                <Trash2 className="size-4 text-[#ff5d48]" />
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSheetToDelete(null)}
+                className="rounded-lg bg-[#0d0d0d] ring-1 ring-[#2e2e2e] px-4 py-1.5 text-xs font-semibold text-[#afafaf] hover:text-white cursor-pointer"
+              >
+                Cancelar
               </button>
             </div>
           </div>

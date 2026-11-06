@@ -15,8 +15,11 @@ import {
   Copy,
   Edit2,
   ExternalLink,
+  FileSpreadsheet,
   FileText,
   Globe,
+  HeartHandshake,
+  Layers,
   ListTodo,
   Loader2,
   Mail,
@@ -34,6 +37,7 @@ import {
   Trash2,
   User,
   UserCheck,
+  Wrench,
   X,
 } from "lucide-react";
 import type { Lead, NoteEntry } from "@/db/schema";
@@ -69,6 +73,10 @@ import {
   type InteractionChannel,
   type InteractionOutcome,
 } from "@/lib/personalMetrics";
+import {
+  getEffectiveKanbanStage,
+  repairAndEnrichKanbanLead,
+} from "@/lib/anchorClientsSheetData";
 
 interface LeadDetailsSheetProps {
   lead: Lead | null;
@@ -97,7 +105,7 @@ export function LeadDetailsSheet({
   onLeadUpdate,
   operators = OPERATORS,
 }: LeadDetailsSheetProps) {
-  // 1. Estados dos 6 campos diretos do Lead (Empresa, Decisor, Número, WhatsApp, E-mail, Localização)
+  // 1. Estados dos campos diretos do Lead + Dossiê Técnico da Planilha
   const [editCompanyName, setEditCompanyName] = useState("");
   const [editContactPerson, setEditContactPerson] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -109,6 +117,15 @@ export function LeadDetailsSheet({
   const [editWebsite, setEditWebsite] = useState("");
   const [editBestCallTime, setEditBestCallTime] = useState("");
   const [editBestCallDay, setEditBestCallDay] = useState("");
+  const [editMainProducts, setEditMainProducts] = useState("");
+  const [editSteelMaterials, setEditSteelMaterials] = useState("");
+  const [editHunterPitch, setEditHunterPitch] = useState("");
+  const [editProspectionStatus, setEditProspectionStatus] = useState("");
+  const [editSourceSpreadsheetTitle, setEditSourceSpreadsheetTitle] = useState("");
+  const [editSourceTabName, setEditSourceTabName] = useState("");
+  const [editNurturingIntervalDays, setEditNurturingIntervalDays] = useState<number>(15);
+  const [editNurturingNote, setEditNurturingNote] = useState("");
+  const [copiedHunterPitch, setCopiedHunterPitch] = useState(false);
   const [inlineEmailInput, setInlineEmailInput] = useState("");
   const [isSavingInlineEmail, setIsSavingInlineEmail] = useState(false);
 
@@ -118,10 +135,10 @@ export function LeadDetailsSheet({
     text: string;
   } | null>(null);
 
-  // 2. Aba ativa inferior
+  // 2. Aba ativa inferior (incluindo Dossiê da Planilha & Aço)
   const [activeBottomTab, setActiveBottomTab] = useState<
-    "interacoes" | "proximos_passos" | "templates"
-  >("interacoes");
+    "dossie_planilha" | "interacoes" | "proximos_passos" | "templates"
+  >("dossie_planilha");
 
   // 3. Histórico de Anotações ("O que aconteceu nesta interação?")
   const [notes, setNotes] = useState<NoteEntry[]>([]);
@@ -164,12 +181,13 @@ export function LeadDetailsSheet({
   const [outcomeStepTitle, setOutcomeStepTitle] = useState<string | undefined>();
   const [outcomeDefaultChannel, setOutcomeDefaultChannel] = useState<InteractionChannel>("call");
 
-  // Sincronização direta ao carregar o lead
+  // Sincronização direta ao carregar o lead (com auto-reparo de dados de planilha)
   useEffect(() => {
     if (!lead) return;
 
-    const ctx = extractLeadContext(lead);
-    const dbCadenceState = (lead.cadenceState as any) || {};
+    const enrichedLead = repairAndEnrichKanbanLead(lead);
+    const ctx = extractLeadContext(enrichedLead);
+    const dbCadenceState = (enrichedLead.cadenceState as any) || {};
 
     // Desativação / Auditoria
     setIsLeadDeactivated(Boolean(dbCadenceState.isDeactivated));
@@ -184,13 +202,13 @@ export function LeadDetailsSheet({
 
     const comp = dbCadenceState.companyName || ctx.company || "";
     const person = dbCadenceState.contactPerson || ctx.person || "";
-    const rawPh = dbCadenceState.phone || lead.leadPhone || "";
-    const wpp = dbCadenceState.whatsapp || lead.leadPhone || "";
-    const mail = lead.leadEmail || "";
+    const rawPh = dbCadenceState.phone || enrichedLead.leadPhone || "";
+    const wpp = dbCadenceState.whatsapp || enrichedLead.leadPhone || "";
+    const mail = enrichedLead.leadEmail || "";
     const loc = dbCadenceState.location || "";
     const role = dbCadenceState.roleTitle || "";
     const val = dbCadenceState.estimatedValue || "";
-    const web = dbCadenceState.website || (lead as any).website || "";
+    const web = dbCadenceState.website || (enrichedLead as any).website || "";
 
     setEditCompanyName(comp);
     setEditContactPerson(person);
@@ -203,23 +221,31 @@ export function LeadDetailsSheet({
     setEditWebsite(web);
     setEditBestCallTime(dbCadenceState.bestCallTime || "");
     setEditBestCallDay(dbCadenceState.bestCallDay || "");
+    setEditMainProducts(dbCadenceState.mainProducts || "");
+    setEditSteelMaterials(dbCadenceState.steelMaterials || "");
+    setEditHunterPitch(dbCadenceState.hunterPitch || "");
+    setEditProspectionStatus(dbCadenceState.prospectionStatus || "");
+    setEditSourceSpreadsheetTitle(dbCadenceState.sourceSpreadsheetTitle || "");
+    setEditSourceTabName(dbCadenceState.sourceTabName || "");
+    setEditNurturingIntervalDays(Number(dbCadenceState.nurturingIntervalDays) || 15);
+    setEditNurturingNote(dbCadenceState.nurturingNote || "");
     setInlineEmailInput("");
     setSaveFeedback(null);
 
     // Anotações
-    setNotes(lead.notes || []);
+    setNotes(enrichedLead.notes || []);
 
     // Cadência de prospecção
     setCompletedCadence(dbCadenceState.completedSteps || []);
 
     // Próximo passo
-    if (lead.nextActivityDate) {
-      const d = new Date(lead.nextActivityDate);
+    if (enrichedLead.nextActivityDate) {
+      const d = new Date(enrichedLead.nextActivityDate);
       const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 16);
       setActivityDate(localIso);
-      setActivityType(lead.nextActivityType || "follow_up");
+      setActivityType(enrichedLead.nextActivityType || "follow_up");
     } else {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -232,9 +258,10 @@ export function LeadDetailsSheet({
     }
 
     // Templates
+    const stage = getEffectiveKanbanStage(enrichedLead);
     let initialPhase: TemplatePhaseKey = "contato_1";
-    if (lead.status === "negotiation") initialPhase = "contato_2";
-    else if (lead.status === "closed") initialPhase = "orcamento_base";
+    if (stage === "negotiation" || stage === "nurturing") initialPhase = "contato_2";
+    else if (stage === "quoted" || stage === "closed") initialPhase = "orcamento_base";
     setSelectedPhaseKey(initialPhase);
 
     const tmpl =
@@ -269,6 +296,7 @@ export function LeadDetailsSheet({
 
   if (!isOpen || !lead) return null;
 
+  const currentStage = getEffectiveKanbanStage(lead);
   const leadCtx = extractLeadContext(lead);
   const cleanWhatsappDigits = (editWhatsapp || editPhone || "")
     .replace(/\D/g, "");
@@ -276,7 +304,7 @@ export function LeadDetailsSheet({
     ? `https://wa.me/${cleanWhatsappDigits.length >= 10 && cleanWhatsappDigits.length <= 11 ? `55${cleanWhatsappDigits}` : cleanWhatsappDigits}`
     : "";
 
-  // 1. Salvar Informações Cadastrais (Empresa, Contato, Telefone, WhatsApp, E-mail, Localização)
+  // 1. Salvar Informações Cadastrais + Dossiê Técnico da Planilha
   const handleSaveLeadDetails = async () => {
     if (!lead) return;
     setIsSavingDetails(true);
@@ -294,6 +322,13 @@ export function LeadDetailsSheet({
     const cleanBestCallTime = editBestCallTime.trim();
     const cleanBestCallDay = editBestCallDay.trim();
     const cleanPreferredWindow = cleanBestCallTime ? `~${cleanBestCallTime}` : "";
+    const cleanMainProducts = editMainProducts.trim();
+    const cleanSteelMaterials = editSteelMaterials.trim();
+    const cleanHunterPitch = editHunterPitch.trim();
+    const cleanProspectionStatus = editProspectionStatus.trim();
+    const cleanSourceSpreadsheetTitle = editSourceSpreadsheetTitle.trim();
+    const cleanSourceTabName = editSourceTabName.trim();
+    const cleanNurturingNote = editNurturingNote.trim();
 
     const resolvedName =
       cleanPerson && cleanCompany
@@ -319,6 +354,14 @@ export function LeadDetailsSheet({
         bestCallTime: cleanBestCallTime,
         bestCallDay: cleanBestCallDay,
         preferredCallbackWindow: cleanPreferredWindow,
+        mainProducts: cleanMainProducts,
+        steelMaterials: cleanSteelMaterials,
+        hunterPitch: cleanHunterPitch,
+        prospectionStatus: cleanProspectionStatus,
+        sourceSpreadsheetTitle: cleanSourceSpreadsheetTitle,
+        sourceTabName: cleanSourceTabName,
+        nurturingIntervalDays: editNurturingIntervalDays,
+        nurturingNote: cleanNurturingNote,
       },
     };
 
@@ -344,6 +387,14 @@ export function LeadDetailsSheet({
           bestCallTime: cleanBestCallTime,
           bestCallDay: cleanBestCallDay,
           preferredCallbackWindow: cleanPreferredWindow,
+          mainProducts: cleanMainProducts,
+          steelMaterials: cleanSteelMaterials,
+          hunterPitch: cleanHunterPitch,
+          prospectionStatus: cleanProspectionStatus,
+          sourceSpreadsheetTitle: cleanSourceSpreadsheetTitle,
+          sourceTabName: cleanSourceTabName,
+          nurturingIntervalDays: editNurturingIntervalDays,
+          nurturingNote: cleanNurturingNote,
         });
 
         if (res?.success) {
@@ -373,6 +424,14 @@ export function LeadDetailsSheet({
               bestCallTime: cleanBestCallTime,
               bestCallDay: cleanBestCallDay,
               preferredCallbackWindow: cleanPreferredWindow,
+              mainProducts: cleanMainProducts,
+              steelMaterials: cleanSteelMaterials,
+              hunterPitch: cleanHunterPitch,
+              prospectionStatus: cleanProspectionStatus,
+              sourceSpreadsheetTitle: cleanSourceSpreadsheetTitle,
+              sourceTabName: cleanSourceTabName,
+              nurturingIntervalDays: editNurturingIntervalDays,
+              nurturingNote: cleanNurturingNote,
             }),
           });
           if (apiRes.ok) {
@@ -1653,9 +1712,108 @@ export function LeadDetailsSheet({
           </section>
 
           {/* ===================================================================
-              SELETOR DE ABAS INFERIORES: INTERAÇÕES, PRÓXIMOS PASSOS E TEMPLATES
+              BARRA RÁPIDA DE ESTÁGIO NO PIPELINE (5 COLUNAS DO KANBAN)
              =================================================================== */}
-          <div className="flex items-center gap-1.5 border-b border-[#2e2e2e] pb-2">
+          <div className="rounded-xl bg-[#141414] ring-1 ring-[#2e2e2e] p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#afafaf] uppercase tracking-wider">
+                Coluna Atual no Kanban (Clique para Mover):
+              </span>
+              {editSourceSpreadsheetTitle && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  <FileSpreadsheet className="size-3 text-emerald-400" />
+                  <span className="truncate max-w-[220px]">
+                    {editSourceSpreadsheetTitle}
+                    {editSourceTabName ? ` · ${editSourceTabName}` : ""}
+                  </span>
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+              <button
+                type="button"
+                onClick={() => onStatusChange?.(lead.id, "new")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  currentStage === "new"
+                    ? "bg-white text-[#0d0d0d] shadow-sm font-bold"
+                    : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                }`}
+              >
+                <Sparkles className="size-3 shrink-0" />
+                <span className="truncate">Novo Lead</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onStatusChange?.(lead.id, "negotiation")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  currentStage === "negotiation"
+                    ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm font-bold"
+                    : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                }`}
+              >
+                <Clock className="size-3 shrink-0" />
+                <span className="truncate">Em Prospecção</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onStatusChange?.(lead.id, "quoted")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  currentStage === "quoted"
+                    ? "bg-[#e8c267] text-[#0d0d0d] shadow-sm font-bold"
+                    : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                }`}
+              >
+                <FileText className="size-3 shrink-0" />
+                <span className="truncate">Orçamento Env.</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onStatusChange?.(lead.id, "nurturing")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  currentStage === "nurturing"
+                    ? "bg-[#38bdf8] text-[#0d0d0d] shadow-sm font-bold"
+                    : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                }`}
+              >
+                <HeartHandshake className="size-3 shrink-0" />
+                <span className="truncate">Cultivo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onStatusChange?.(lead.id, "closed")}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  currentStage === "closed"
+                    ? "bg-[#7fa9f7] text-[#0d0d0d] shadow-sm font-bold"
+                    : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                }`}
+              >
+                <CheckCircle2 className="size-3 shrink-0" />
+                <span className="truncate">Fechado</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ===================================================================
+              SELETOR DE ABAS INFERIORES: DOSSIÊ PLANILHA, INTERAÇÕES, PASSOS, TEMPLATES
+             =================================================================== */}
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-[#2e2e2e] pb-2">
+            <button
+              type="button"
+              onClick={() => setActiveBottomTab("dossie_planilha")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                activeBottomTab === "dossie_planilha"
+                  ? "bg-[#14d06e] text-[#0d0d0d] font-bold shadow-sm"
+                  : "bg-[#1a1a1a] text-[#afafaf] hover:text-white ring-1 ring-[#2e2e2e]"
+              }`}
+            >
+              <FileSpreadsheet className="size-3.5" />
+              <span>Dados da Planilha &amp; Aço</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setActiveBottomTab("interacoes")}
@@ -1666,7 +1824,7 @@ export function LeadDetailsSheet({
               }`}
             >
               <MessageSquare className="size-3.5" />
-              <span>O que aconteceu nesta interação? ({notes.length})</span>
+              <span>Interações ({notes.length})</span>
             </button>
 
             <button
@@ -1679,7 +1837,7 @@ export function LeadDetailsSheet({
               }`}
             >
               <Calendar className="size-3.5" />
-              <span>Próximos Passos de Prospecção</span>
+              <span>Próximos Passos &amp; Cadência</span>
             </button>
 
             <button
@@ -1695,6 +1853,339 @@ export function LeadDetailsSheet({
               <span>Mensagens Gofer Metais</span>
             </button>
           </div>
+
+          {/* ===================================================================
+              CONTEÚDO ABA 0: DOSSIÊ DA PLANILHA & ESPECIFICAÇÕES DE AÇO B2B
+             =================================================================== */}
+          {activeBottomTab === "dossie_planilha" && (
+            <div className="space-y-3.5 animate-in fade-in">
+              {/* Card 1: Resumo das 8 Colunas da Planilha */}
+              <div className="rounded-xl bg-[#141414] ring-1 ring-[#2e2e2e] p-4 space-y-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#262626] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                      <FileSpreadsheet className="size-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                        Ficha Técnica da Planilha (Inteligência B2B)
+                      </h3>
+                      <p className="text-[11px] text-[#afafaf]">
+                        Dados mapeados automaticamente da planilha sem desalinhamento de colunas
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {editSourceTabName && (
+                      <span className="px-2.5 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                        Aba: {editSourceTabName}
+                      </span>
+                    )}
+                    {editProspectionStatus && (
+                      <span className="px-2.5 py-0.5 rounded-md bg-neutral-900 border border-neutral-700 text-neutral-300 text-[10px] font-semibold">
+                        Status Planilha: {editProspectionStatus}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Grade rápida dos 4 dados de identificação da planilha */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  <div className="rounded-lg bg-[#0d0d0d] border border-[#242424] p-2.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#757575] block">
+                      1. Nome da Empresa
+                    </span>
+                    <p className="text-white font-bold mt-0.5 truncate">
+                      {editCompanyName || "Não informado"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-[#0d0d0d] border border-[#242424] p-2.5">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[#757575] block">
+                      2. Cidade / Região
+                    </span>
+                    <p className="text-emerald-300 font-semibold mt-0.5 flex items-center gap-1 truncate">
+                      <MapPin className="size-3 shrink-0 text-emerald-400" />
+                      <span>{editLocation || "Não informada"}</span>
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-[#0d0d0d] border border-[#242424] p-2.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#757575] block">
+                        3. Telefone Comercial
+                      </span>
+                      <p className="text-white font-mono font-semibold mt-0.5 truncate">
+                        {editPhone || editWhatsapp || "Sem telefone"}
+                      </p>
+                    </div>
+                    {(editPhone || editWhatsapp) && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <a
+                          href={`tel:${(editPhone || editWhatsapp).replace(/[^\d+]/g, "")}`}
+                          className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-white text-[10px] font-semibold transition-colors"
+                        >
+                          Ligar
+                        </a>
+                        {formattedWhatsappUrl && (
+                          <a
+                            href={formattedWhatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2 py-1 rounded bg-[#0c2b1c] border border-[#14d06e]/40 text-[#14d06e] hover:bg-[#14d06e] hover:text-[#0d0d0d] text-[10px] font-bold transition-colors"
+                          >
+                            Wpp
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg bg-[#0d0d0d] border border-[#242424] p-2.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#757575] block">
+                        4. Site Oficial
+                      </span>
+                      <p className="text-sky-400 font-medium mt-0.5 truncate">
+                        {editWebsite || "Não informado"}
+                      </p>
+                    </div>
+                    {editWebsite && (
+                      <a
+                        href={editWebsite.startsWith("http") ? editWebsite : `https://${editWebsite}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded bg-sky-950/60 border border-sky-500/30 text-sky-300 hover:bg-sky-500 hover:text-neutral-950 text-[10px] font-bold transition-colors shrink-0"
+                      >
+                        <Globe className="size-3" />
+                        <span>Abrir</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Linha Principal de Produtos */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-300">
+                    <Layers className="size-3.5 text-emerald-400" />
+                    <span>5. Linha Principal de Produtos (O que o cliente fabrica)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editMainProducts}
+                    onChange={(e) => setEditMainProducts(e.target.value)}
+                    placeholder="Ex: Semirreboques, Carretas Sider, Caçambas Basculantes, Baús Frigoríficos..."
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-2 text-xs text-white focus:border-[#14d06e] focus:outline-none"
+                  />
+                </div>
+
+                {/* 6. Materiais de Aço Consumidos */}
+                <div className="space-y-2 pt-1">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                    <Wrench className="size-3.5 text-amber-400" />
+                    <span>6. Materiais de Aço Consumidos (Alvo Gofer Metais)</span>
+                  </label>
+
+                  {/* Visual Chips dos Materiais de Aço */}
+                  {editSteelMaterials && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {editSteelMaterials
+                        .split(/[,;/]+/)
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                        .map((chip, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-950/60 border border-amber-500/40 text-amber-200 text-[11px] font-semibold"
+                          >
+                            <span className="size-1.5 rounded-full bg-amber-400" />
+                            <span>{chip}</span>
+                          </span>
+                        ))}
+                    </div>
+                  )}
+
+                  <input
+                    type="text"
+                    value={editSteelMaterials}
+                    onChange={(e) => setEditSteelMaterials(e.target.value)}
+                    placeholder="Ex: Tubos estruturais, Perfil U, Viga U, Chapas dobradas, Metalon..."
+                    className="w-full rounded-lg border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-2 text-xs text-white focus:border-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                {/* 7. Argumento de Abordagem Hunter */}
+                <div className="rounded-xl bg-[#0d1512] border border-emerald-500/30 p-3.5 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Target className="size-4 text-emerald-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                        7. Argumento de Abordagem Hunter (Script da Planilha)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!editHunterPitch) return;
+                          navigator.clipboard.writeText(editHunterPitch);
+                          setCopiedHunterPitch(true);
+                          setTimeout(() => setCopiedHunterPitch(false), 2000);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-700 text-neutral-200 hover:text-white text-[11px] font-semibold transition-colors cursor-pointer"
+                      >
+                        {copiedHunterPitch ? (
+                          <>
+                            <Check className="size-3 text-emerald-400" />
+                            <span className="text-emerald-400">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="size-3" />
+                            <span>Copiar Argumento</span>
+                          </>
+                        )}
+                      </button>
+
+                      {formattedWhatsappUrl && editHunterPitch && (
+                        <a
+                          href={`${formattedWhatsappUrl}?text=${encodeURIComponent(
+                            `Olá, tudo bem? Falo com o setor de compras da ${editCompanyName || "empresa"}?\n\nSou da Gofer Metais. ${editHunterPitch}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500 hover:bg-emerald-400 text-neutral-950 text-[11px] font-bold transition-colors shadow-sm"
+                        >
+                          <MessageCircle className="size-3" />
+                          <span>Disparar no WhatsApp &rarr;</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={editHunterPitch}
+                    onChange={(e) => setEditHunterPitch(e.target.value)}
+                    rows={3}
+                    placeholder="Argumento técnico de abordagem Hunter específico para a linha de produção deste cliente..."
+                    className="w-full rounded-lg border border-emerald-500/30 bg-[#070b09] p-2.5 text-xs text-white leading-relaxed focus:border-emerald-400 focus:outline-none"
+                  />
+                </div>
+
+                {/* Origem da Planilha & Aba */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-[#242424]">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#757575] mb-1">
+                      Planilha de Origem
+                    </label>
+                    <input
+                      type="text"
+                      value={editSourceSpreadsheetTitle}
+                      onChange={(e) => setEditSourceSpreadsheetTitle(e.target.value)}
+                      placeholder="Ex: Clientes Âncora (R$ 50.000/mês cada)"
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-[#14d06e] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-[#757575] mb-1">
+                      Aba / Setor da Planilha
+                    </label>
+                    <input
+                      type="text"
+                      value={editSourceTabName}
+                      onChange={(e) => setEditSourceTabName(e.target.value)}
+                      placeholder="Ex: Implementos Rodoviários, Caçambas, Baús..."
+                      className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-[#14d06e] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    disabled={isSavingDetails}
+                    onClick={handleSaveLeadDetails}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-[#14d06e] hover:bg-[#14d06e]/90 text-[#0d0d0d] font-bold px-4 py-2 text-xs transition-colors cursor-pointer shadow-md disabled:opacity-50"
+                  >
+                    <Check className="size-3.5" />
+                    <span>{isSavingDetails ? "Salvando..." : "Salvar Dossiê da Planilha"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Modo Cultivo & Relacionamento (Para clientes receptivos que exigem cadência espaçada) */}
+              <div className="rounded-xl bg-[#0c1924] ring-1 ring-sky-500/30 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                      <HeartHandshake className="size-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-sky-300">
+                        Modo Cultivo &amp; Relacionamento (Sem Encher o Saco)
+                      </h4>
+                      <p className="text-[11px] text-sky-200/70">
+                        Para clientes com quem você já simpatizou, mas que compram em ciclos mais espaçados
+                      </p>
+                    </div>
+                  </div>
+
+                  {currentStage !== "nurturing" ? (
+                    <button
+                      type="button"
+                      onClick={() => onStatusChange?.(lead.id, "nurturing")}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-neutral-950 font-bold text-xs transition-colors cursor-pointer shadow-sm"
+                    >
+                      <HeartHandshake className="size-3.5" />
+                      <span>Mover para Cultivo</span>
+                    </button>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-md bg-sky-500/20 border border-sky-400/40 text-sky-300 text-[10px] font-bold uppercase">
+                      🌱 Ativo na Aba Cultivo
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-sky-200/80 mb-1">
+                      Frequência de Toque Leve (Dias):
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      {[15, 21, 30, 45].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => setEditNurturingIntervalDays(days)}
+                          className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                            editNurturingIntervalDays === days
+                              ? "bg-sky-400 text-neutral-950 shadow-sm"
+                              : "bg-neutral-900/90 text-neutral-300 border border-sky-500/20 hover:text-white"
+                          }`}
+                        >
+                          {days}d
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-sky-200/80 mb-1">
+                      Contexto do Relacionamento / Lembrete:
+                    </label>
+                    <input
+                      type="text"
+                      value={editNurturingNote}
+                      onChange={(e) => setEditNurturingNote(e.target.value)}
+                      placeholder="Ex: Comprador super aberto, fechará lote no próx. mês"
+                      className="w-full rounded-md border border-sky-500/30 bg-[#071018] px-3 py-1.5 text-xs text-white focus:border-sky-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ===================================================================
               CONTEÚDO ABA 1: O QUE ACONTECEU NESTA INTERAÇÃO? (ANOTAÇÕES)
@@ -1829,17 +2320,17 @@ export function LeadDetailsSheet({
              =================================================================== */}
           {activeBottomTab === "proximos_passos" && (
             <div className="space-y-3.5">
-              {/* Estágio do Funil */}
+              {/* Estágio do Funil (5 Colunas) */}
               <div className="rounded-lg bg-[#141414] ring-1 ring-[#2e2e2e] p-3 space-y-2">
                 <span className="text-[11px] font-semibold text-[#afafaf] uppercase tracking-wider block">
                   Estágio no Pipeline
                 </span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <button
                     type="button"
                     onClick={() => onStatusChange?.(lead.id, "new")}
-                    className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      lead.status === "new"
+                    className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      currentStage === "new"
                         ? "bg-white text-[#0d0d0d] shadow-sm"
                         : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
                     }`}
@@ -1851,8 +2342,8 @@ export function LeadDetailsSheet({
                   <button
                     type="button"
                     onClick={() => onStatusChange?.(lead.id, "negotiation")}
-                    className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      lead.status === "negotiation"
+                    className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      currentStage === "negotiation"
                         ? "bg-[#14d06e] text-[#0d0d0d] shadow-sm"
                         : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
                     }`}
@@ -1863,9 +2354,35 @@ export function LeadDetailsSheet({
 
                   <button
                     type="button"
+                    onClick={() => onStatusChange?.(lead.id, "quoted")}
+                    className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      currentStage === "quoted"
+                        ? "bg-[#e8c267] text-[#0d0d0d] shadow-sm"
+                        : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                    }`}
+                  >
+                    <FileText className="size-3" />
+                    <span>Orçamento Env.</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onStatusChange?.(lead.id, "nurturing")}
+                    className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      currentStage === "nurturing"
+                        ? "bg-[#38bdf8] text-[#0d0d0d] shadow-sm"
+                        : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
+                    }`}
+                  >
+                    <HeartHandshake className="size-3" />
+                    <span>Cultivo</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => onStatusChange?.(lead.id, "closed")}
-                    className={`py-2 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                      lead.status === "closed"
+                    className={`py-2 px-2.5 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      currentStage === "closed"
                         ? "bg-[#7fa9f7] text-[#0d0d0d] shadow-sm"
                         : "bg-[#1a1a1a] text-[#afafaf] ring-1 ring-[#2e2e2e] hover:text-white"
                     }`}

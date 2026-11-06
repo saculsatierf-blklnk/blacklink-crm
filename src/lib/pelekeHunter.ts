@@ -33,25 +33,37 @@ export function generatePelekeCustomScript({
   phaseKey: string;
 }): PelekePlaybook {
   const ctx = extractLeadContext(lead);
+  const cs = (lead?.cadenceState as any) || {};
+  const steelSpecs = cs.steelMaterials ? String(cs.steelMaterials).trim() : "";
+  const productLine = cs.mainProducts ? String(cs.mainProducts).trim() : "";
+  const sheetHunterPitch = cs.hunterPitch ? String(cs.hunterPitch).trim() : "";
+
   const firstName = ctx.person && ctx.person !== ctx.company && !/ltda|eireli|s\/a|me\b/i.test(ctx.person)
     ? ctx.person.split(" ")[0].trim()
     : "";
 
   const greeting = firstName ? `Olá, ${firstName}` : `Olá, equipe da ${ctx.company}`;
+  const steelMention = steelSpecs
+    ? `(${steelSpecs})`
+    : "tubos, chapas e perfis de aço";
 
   if (channel === "ligacao") {
     if (phaseKey === "contato_1") {
       return {
         phase: "Cold Call de Abertura (15s Hook)",
         channel: "ligacao",
-        headline: "Abertura Direta para Comprador / Serralheiro",
-        tacticalObjective: "Pegar o decisor e validar se tem cotação de tubos ou perfis aberta.",
-        content: `— Alô, ${firstName || "quem cuida das compras de aço na " + ctx.company}? Aqui é o Lucas da Gofer Metais.
-— O motivo da minha ligação é bem rápido: somos distribuidores de tubos, chapas e perfis de aço, e quero ter a oportunidade de participar da sua próxima cotação.
-— Vocês têm alguma lista de materiais rodando aí hoje ou previsão para esta semana?`,
+        headline: productLine
+          ? `Abertura Técnica — Linha: ${productLine}`
+          : "Abertura Direta para Comprador / Serralheiro",
+        tacticalObjective: steelSpecs
+          ? `Validar cotação aberta de ${steelSpecs} para a linha de ${productLine || "produção"}.`
+          : "Pegar o decisor e validar se tem cotação de tubos ou perfis aberta.",
+        content: sheetHunterPitch
+          ? `— Alô, ${firstName || "quem cuida das compras de aço na " + ctx.company}? Aqui é o Lucas da Gofer Metais.\n— ${sheetHunterPitch}\n— Vocês têm alguma programação de compra de ${steelSpecs || "aço estrutural"} rodando esta semana para eu cotar sem compromisso?`
+          : `— Alô, ${firstName || "quem cuida das compras de aço na " + ctx.company}? Aqui é o Lucas da Gofer Metais.\n— O motivo da minha ligação é bem rápido: somos distribuidores de ${steelMention}, e quero ter a oportunidade de participar da sua próxima cotação.\n— Vocês têm alguma lista de materiais rodando aí hoje ou previsão para esta semana?`,
         objectionKiller: `Se disser "Já temos fornecedor fixo":
-— "Com certeza, ${firstName || "parceiro"}! Nosso papel não é tirar o seu fornecedor, mas ser a sua segunda via de cotação para garantir que você não pare obra por falta de material e sempre pague o melhor preço. Posso te mandar o catálogo no WhatsApp agora?"`,
-        pelekeNote: "Hunter Peleke: Nunca pergunte 'tudo bem?'. Vá direto ao ponto de negócio nos primeiros 7 segundos.",
+— "Com certeza, ${firstName || "parceiro"}! Nosso papel não é tirar o seu fornecedor, mas ser a sua segunda via de cotação em ${steelSpecs || "tubos e perfis"} para garantir pronta-entrega e preço competitivo. Posso te mandar o catálogo no WhatsApp agora?"`,
+        pelekeNote: "Hunter Peleke: Use a linha de produtos e o tipo de aço consumido logo nos primeiros 10 segundos para mostrar que você conhece a operação deles.",
       };
     }
 
@@ -63,10 +75,10 @@ export function generatePelekeCustomScript({
         tacticalObjective: "Destravar a lista de peças para orçar.",
         content: `— Fala, ${firstName || "tudo bem"}! Aqui é o Lucas da Gofer Metais.
 — Liguei rapidinho só para confirmar se você conseguiu dar uma olhada no catálogo que te enviei no WhatsApp.
-— Tem alguma demanda de tubos ou vigas aí na ${ctx.company} hoje para eu cotar sem compromisso para você ver nosso valor?`,
+— Tem alguma demanda de ${steelSpecs || "tubos ou vigas"} aí na ${ctx.company} hoje para eu cotar sem compromisso para você ver nosso valor?`,
         objectionKiller: `Se disser "Ainda não olhei":
-— "Sem problema nenhum! Vou te mandar um áudio de 15 segundos no WhatsApp destacando só as medidas que mais saem na sua região para facilitar. Combinado?"`,
-        pelekeNote: "Hunter Peleke: Reduza a carga cognitiva do decisor. Não peça para ele ler 20 páginas, peça a lista dele.",
+— "Sem problema nenhum! Vou te mandar uma mensagem curta no WhatsApp destacando só as bitolas de ${steelSpecs || "tubos e perfis"} que mais atendemos no seu segmento. Combinado?"`,
+        pelekeNote: "Hunter Peleke: Reduza a carga cognitiva do decisor. Cite exatamente o aço que ele consome.",
       };
     }
 
@@ -76,7 +88,7 @@ export function generatePelekeCustomScript({
       headline: "Fechamento de Orçamento com Pronta-Entrega",
       tacticalObjective: "Confirmar quantidades e travar o carregamento do caminhão.",
       content: `— ${firstName || "Tudo bem"}! Lucas da Gofer Metais.
-— Estou com o seu orçamento de ${ctx.company} na tela no valor de R$ ${ctx.estimatedValue}. O material está separado no nosso pátio.
+— Estou com o seu orçamento de ${ctx.company} na tela${ctx.estimatedValue ? ` no valor de R$ ${ctx.estimatedValue}` : ""}. O material está separado no nosso pátio.
 — Se fecharmos agora, consigo colocar na rota de entrega já para o próximo dia útil. Posso emitir o pedido?`,
       objectionKiller: `Se falar de preço da concorrência:
 — "Me passa a diferença por quilo que vou bater na gerência agora para igualar ou cobrir e já liberar a sua carga."`,
@@ -93,7 +105,7 @@ export function generatePelekeCustomScript({
         tacticalObjective: "Ativar compras com tubo quadrado galvanizado campeão de vendas.",
         content: `${greeting}! Tudo ótimo por aí?
 Queria te avisar em primeira mão: estamos com um lote promocional excelente em tubos galvanizados quadrados 20x20 saindo a R$ 40,60 (valor de varejo). Para compras em volume da ${ctx.company}, consigo puxar ainda mais para baixo!
-Se precisarem desse ou de outros perfis para reposição de estoque, me dá um toque aqui que já seguro o lote para vocês.`,
+Se precisarem desse ou de outros perfis (${steelSpecs || "Perfil U, Viga U, Metalon"}) para reposição de estoque, me dá um toque aqui que já seguro o lote para vocês.`,
         objectionKiller: `Se o cliente visualizar e não responder:
 Mande em seguida: "Consigo segurar essa condição até amanhã às 12h, tá bem? Um abraço!"`,
         pelekeNote: "Hunter Peleke: Urgência real de estoque gera resposta imediata.",
@@ -103,11 +115,13 @@ Mande em seguida: "Consigo segurar essa condição até amanhã às 12h, tá bem
     return {
       phase: "Mensagem Direta de WhatsApp",
       channel: "whatsapp",
-      headline: "Quebra de Gelo com Catálogo Instantâneo",
+      headline: sheetHunterPitch
+        ? "Abordagem Hunter Personalizada (Dados da Planilha)"
+        : "Quebra de Gelo com Catálogo Instantâneo",
       tacticalObjective: "Obter permissão para participar da próxima cotação.",
-      content: `${greeting}! Aqui é o Lucas da Gofer Metais.
-Somos distribuidores de aço e meu objetivo é simples: quero ter a oportunidade de participar da próxima cotação de tubos, chapas e perfis da ${ctx.company}.
-Segue nosso catálogo completo. Podemos enviar os nossos valores sem compromisso na sua próxima demanda?`,
+      content: sheetHunterPitch
+        ? `${greeting}! Aqui é o Lucas da Gofer Metais.\n\nVi a linha de ${productLine || "produção"} da ${ctx.company}. ${sheetHunterPitch}\n\nSegue nosso catálogo completo de ${steelSpecs || "tubos, chapas e perfis"}. Podemos cotar sem compromisso a próxima demanda de vocês?`
+        : `${greeting}! Aqui é o Lucas da Gofer Metais.\nSomos distribuidores de aço e meu objetivo é simples: quero ter a oportunidade de participar da próxima cotação de ${steelSpecs || "tubos, chapas e perfis"} da ${ctx.company}.\nSegue nosso catálogo completo. Podemos enviar os nossos valores sem compromisso na sua próxima demanda?`,
       objectionKiller: `Pergunta de fechamento sem atrito: cliente só precisa responder 'Sim' para avançar.`,
       pelekeNote: "Hunter Peleke: Menos de 4 linhas no WhatsApp garantem 85%+ de taxa de leitura no mobile.",
     };
@@ -121,8 +135,8 @@ Segue nosso catálogo completo. Podemos enviar os nossos valores sem compromisso
     tacticalObjective: "Colocar a Gofer Metais na lista de cotação do departamento de compras.",
     content: `${greeting},
 
-Sou o Lucas, da Gofer Metais. O meu objetivo com este e-mail é simples: queremos ter a oportunidade de participar na próxima cotação de tubos, chapas e perfis de aço da ${ctx.company}.
-
+Sou o Lucas, da Gofer Metais. O meu objetivo com este e-mail é simples: queremos ter a oportunidade de participar na próxima cotação de ${steelSpecs || "tubos, chapas e perfis de aço"} da ${ctx.company}${productLine ? ` (para a linha de ${productLine})` : ""}.
+${sheetHunterPitch ? `\n${sheetHunterPitch}\n` : ""}
 Segue em anexo a nossa apresentação e catálogo completo. Garantimos agilidade de expedição e preços altamente competitivos.
 
 Podemos enviar os nossos valores sem compromisso na vossa próxima necessidade?

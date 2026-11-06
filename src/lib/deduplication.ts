@@ -257,6 +257,13 @@ export interface DeduplicationCandidate {
   scriptAbordagem?: string;
   highlighted?: boolean;
   tab?: string;
+  cidadeRegiao?: string;
+  linhaProdutos?: string;
+  materiaisAco?: string;
+  argumentoHunter?: string;
+  statusOriginal?: string;
+  spreadsheetId?: string;
+  spreadsheetTitle?: string;
 }
 
 export interface DeduplicationAuditEntry {
@@ -358,6 +365,15 @@ export function deduplicateAndMergeLeads<T extends DeduplicationCandidate>(
       const target = workingRows[matchedIdx];
       const updatedFields: string[] = [];
 
+      // Repara se 'responsavel' antigo continha uma cidade por erro de coluna (ex: "Guarulhos - SP")
+      if (target.responsavel && /\s-\s[A-Z]{2}$/.test(target.responsavel.trim())) {
+        if (!target.cidadeRegiao) {
+          target.cidadeRegiao = target.responsavel.trim();
+        }
+        target.responsavel = incoming.responsavel?.trim() || "";
+        updatedFields.push("Cidade/Responsável Reparado");
+      }
+
       if (!target.cnpj?.trim() && incCnpj) {
         target.cnpj = formatCnpjDisplay(incCnpj);
         updatedFields.push("CNPJ");
@@ -370,10 +386,41 @@ export function deduplicateAndMergeLeads<T extends DeduplicationCandidate>(
         target.email = incoming.email.trim().toLowerCase();
         updatedFields.push("E-mail");
       }
-      if (!target.contato?.trim() && incoming.contato?.trim()) {
+      // Se o contato atual estava vazio OU corrompido (ex: era um site como www.truckvan.com.br sem dígitos de telefone)
+      const targetHasValidPhone = Boolean(sanitizePhoneE164(target.contato));
+      if ((!target.contato?.trim() || !targetHasValidPhone) && incoming.contato?.trim() && incPhone) {
         target.contato =
           formatPhoneBrDisplay(incoming.contato) || incoming.contato.trim();
         updatedFields.push("Contato");
+      }
+      if (!target.website?.trim() && incoming.website?.trim()) {
+        target.website = incoming.website.trim();
+        updatedFields.push("Website");
+      }
+      if (!target.cidadeRegiao?.trim() && incoming.cidadeRegiao?.trim()) {
+        target.cidadeRegiao = incoming.cidadeRegiao.trim();
+        updatedFields.push("Cidade/Região");
+      }
+      if (!target.linhaProdutos?.trim() && incoming.linhaProdutos?.trim()) {
+        target.linhaProdutos = incoming.linhaProdutos.trim();
+        updatedFields.push("Linha de Produtos");
+      }
+      if (!target.materiaisAco?.trim() && incoming.materiaisAco?.trim()) {
+        target.materiaisAco = incoming.materiaisAco.trim();
+        updatedFields.push("Materiais de Aço");
+      }
+      if (!target.argumentoHunter?.trim() && incoming.argumentoHunter?.trim()) {
+        target.argumentoHunter = incoming.argumentoHunter.trim();
+        updatedFields.push("Argumento Hunter");
+      }
+      if (!target.statusOriginal?.trim() && incoming.statusOriginal?.trim()) {
+        target.statusOriginal = incoming.statusOriginal.trim();
+      }
+      if (!target.spreadsheetId?.trim() && incoming.spreadsheetId?.trim()) {
+        target.spreadsheetId = incoming.spreadsheetId.trim();
+      }
+      if (!target.spreadsheetTitle?.trim() && incoming.spreadsheetTitle?.trim()) {
+        target.spreadsheetTitle = incoming.spreadsheetTitle.trim();
       }
       if (!target.observacoes?.trim() && incoming.observacoes?.trim()) {
         target.observacoes = incoming.observacoes.trim();
@@ -680,22 +727,55 @@ export function mergeTwoKanbanLeads(leadA: Lead, leadB: Lead): Lead {
     }
   }
 
-  const bestContactPerson = primCad.contactPerson || secCad.contactPerson || "";
-  const bestPhone =
-    primCad.phone ||
-    secCad.phone ||
-    primary.leadPhone ||
-    secondary.leadPhone ||
+  const isFakeOrCityPerson = (val?: string | null) => {
+    if (!val) return true;
+    const t = val.trim();
+    if (!t || t.toLowerCase() === "compras / engenharia") return true;
+    if (/\s-\s[A-Z]{2}$/.test(t)) return true;
+    return false;
+  };
+
+  let bestContactPerson = "";
+  if (!isFakeOrCityPerson(primCad.contactPerson)) {
+    bestContactPerson = primCad.contactPerson.trim();
+  } else if (!isFakeOrCityPerson(secCad.contactPerson)) {
+    bestContactPerson = secCad.contactPerson.trim();
+  }
+
+  // Escolhe o primeiro telefone que realmente possui dígitos válidos
+  const phoneCandidates = [
+    primCad.phone,
+    secCad.phone,
+    primary.leadPhone,
+    secondary.leadPhone,
+    primCad.whatsapp,
+    secCad.whatsapp,
+  ];
+  const validPhoneCandidate =
+    phoneCandidates.find((p) => Boolean(sanitizePhoneE164(p))) ||
+    phoneCandidates.find((p) => p && p.trim() && !p.includes("www.") && !p.includes(".com")) ||
     "";
+
+  const bestPhone = formatPhoneBrDisplay(validPhoneCandidate) || validPhoneCandidate;
   const bestWhatsapp =
-    primCad.whatsapp ||
-    secCad.whatsapp ||
+    (Boolean(sanitizePhoneE164(primCad.whatsapp)) ? formatPhoneBrDisplay(primCad.whatsapp) : "") ||
+    (Boolean(sanitizePhoneE164(secCad.whatsapp)) ? formatPhoneBrDisplay(secCad.whatsapp) : "") ||
     bestPhone;
   const bestEmail =
     primary.leadEmail?.trim() ||
     secondary.leadEmail?.trim() ||
     null;
-  const bestLocation = primCad.location || secCad.location || "";
+
+  const cityFromCorruptedPerson =
+    (primCad.contactPerson && /\s-\s[A-Z]{2}$/.test(primCad.contactPerson.trim())
+      ? primCad.contactPerson.trim()
+      : "") ||
+    (secCad.contactPerson && /\s-\s[A-Z]{2}$/.test(secCad.contactPerson.trim())
+      ? secCad.contactPerson.trim()
+      : "");
+
+  const bestLocation =
+    primCad.location || secCad.location || cityFromCorruptedPerson || "";
 
   // Combina anotações sem duplicação de texto
   const combinedNotes = [...(primary.notes || [])];
@@ -788,6 +868,7 @@ export function mergeTwoKanbanLeads(leadA: Lead, leadB: Lead): Lead {
       ...secCad,
       ...primCad,
       completedSteps: mergedSteps,
+      kanbanStage: primCad.kanbanStage || secCad.kanbanStage || primary.status,
       companyName: bestCompanyName,
       contactPerson: bestContactPerson,
       phone: bestPhone,
@@ -796,6 +877,15 @@ export function mergeTwoKanbanLeads(leadA: Lead, leadB: Lead): Lead {
       roleTitle: primCad.roleTitle || secCad.roleTitle || "",
       estimatedValue: primCad.estimatedValue || secCad.estimatedValue || "",
       website: primCad.website || secCad.website || "",
+      mainProducts: primCad.mainProducts || secCad.mainProducts || "",
+      steelMaterials: primCad.steelMaterials || secCad.steelMaterials || "",
+      hunterPitch: primCad.hunterPitch || secCad.hunterPitch || "",
+      prospectionStatus: primCad.prospectionStatus || secCad.prospectionStatus || "",
+      sourceSpreadsheetId: primCad.sourceSpreadsheetId || secCad.sourceSpreadsheetId || "",
+      sourceSpreadsheetTitle: primCad.sourceSpreadsheetTitle || secCad.sourceSpreadsheetTitle || "",
+      sourceTabName: primCad.sourceTabName || secCad.sourceTabName || "",
+      nurturingIntervalDays: primCad.nurturingIntervalDays || secCad.nurturingIntervalDays,
+      nurturingLastTouchAt: primCad.nurturingLastTouchAt || secCad.nurturingLastTouchAt,
       isDeactivated: finalIsDeactivated,
       deactivationReason: finalIsDeactivated ? finalReason : undefined,
       deactivatedAt: finalIsDeactivated ? finalAt : undefined,

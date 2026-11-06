@@ -81,8 +81,11 @@ export interface DeactivationEntry {
   reactivationNote?: string;
 }
 
+export type KanbanStage = "new" | "negotiation" | "quoted" | "nurturing" | "closed";
+
 export interface CadenceState {
   completedSteps: string[];
+  kanbanStage?: KanbanStage;
   roleTitle?: string;
   estimatedValue?: string;
   website?: string;
@@ -93,6 +96,18 @@ export interface CadenceState {
   phone?: string;
   whatsapp?: string;
   lastCompletedAt?: string;
+  // Dados Técnicos & Dossiê da Planilha (Clientes Âncora / B2B)
+  mainProducts?: string; // Linha Principal de Produtos
+  steelMaterials?: string; // Materiais de Aço Consumidos
+  hunterPitch?: string; // Argumento de Abordagem Hunter
+  prospectionStatus?: string; // Status da Prospecção na planilha (ex: "A Ligar")
+  sourceSpreadsheetId?: string; // ID da planilha de origem
+  sourceSpreadsheetTitle?: string; // Título da planilha de origem
+  sourceTabName?: string; // Aba de origem na planilha
+  // Inteligência de Cultivo & Relacionamento (Nurturing sem spam)
+  nurturingIntervalDays?: number; // Ex: 15 ou 30 dias
+  nurturingLastTouchAt?: string;
+  nurturingNote?: string;
   // Inteligência de Contato Efetivo & Janela Ideal de Retorno
   lastAnsweredAt?: string;
   bestCallTime?: string; // Ex: "14:35"

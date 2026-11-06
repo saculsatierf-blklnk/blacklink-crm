@@ -38,6 +38,17 @@ async function handleUpdateLeadDetails(
       bestCallDay,
       preferredCallbackWindow,
       lastAnsweredAt,
+      mainProducts,
+      steelMaterials,
+      hunterPitch,
+      prospectionStatus,
+      sourceSpreadsheetId,
+      sourceSpreadsheetTitle,
+      sourceTabName,
+      kanbanStage,
+      nurturingIntervalDays,
+      nurturingLastTouchAt,
+      nurturingNote,
     } = body || {};
 
     let resolvedLeadName = leadName;
@@ -67,6 +78,7 @@ async function handleUpdateLeadDetails(
       telemetryEvents: [],
       cadenceState: {
         completedSteps: [],
+        kanbanStage: kanbanStage || "new",
         roleTitle: roleTitle?.trim() || "",
         estimatedValue: estimatedValue?.trim() || "",
         website: website?.trim() || "",
@@ -79,6 +91,16 @@ async function handleUpdateLeadDetails(
         bestCallDay: bestCallDay?.trim() || "",
         preferredCallbackWindow: preferredCallbackWindow?.trim() || "",
         lastAnsweredAt: lastAnsweredAt?.trim() || "",
+        mainProducts: mainProducts?.trim() || "",
+        steelMaterials: steelMaterials?.trim() || "",
+        hunterPitch: hunterPitch?.trim() || "",
+        prospectionStatus: prospectionStatus?.trim() || "",
+        sourceSpreadsheetId: sourceSpreadsheetId?.trim() || "",
+        sourceSpreadsheetTitle: sourceSpreadsheetTitle?.trim() || "",
+        sourceTabName: sourceTabName?.trim() || "",
+        nurturingIntervalDays,
+        nurturingLastTouchAt,
+        nurturingNote,
       },
       notes: [],
       scriptVersion: "v1_direct",
@@ -107,6 +129,8 @@ async function handleUpdateLeadDetails(
     };
     const updatedCadence: CadenceState = {
       ...currentCadence,
+      kanbanStage:
+        kanbanStage !== undefined ? kanbanStage : currentCadence.kanbanStage,
       roleTitle:
         roleTitle !== undefined ? roleTitle.trim() : currentCadence.roleTitle,
       estimatedValue:
@@ -136,6 +160,38 @@ async function handleUpdateLeadDetails(
           : currentCadence.preferredCallbackWindow,
       lastAnsweredAt:
         lastAnsweredAt !== undefined ? lastAnsweredAt.trim() : currentCadence.lastAnsweredAt,
+      mainProducts:
+        mainProducts !== undefined ? mainProducts.trim() : currentCadence.mainProducts,
+      steelMaterials:
+        steelMaterials !== undefined ? steelMaterials.trim() : currentCadence.steelMaterials,
+      hunterPitch:
+        hunterPitch !== undefined ? hunterPitch.trim() : currentCadence.hunterPitch,
+      prospectionStatus:
+        prospectionStatus !== undefined
+          ? prospectionStatus.trim()
+          : currentCadence.prospectionStatus,
+      sourceSpreadsheetId:
+        sourceSpreadsheetId !== undefined
+          ? sourceSpreadsheetId.trim()
+          : currentCadence.sourceSpreadsheetId,
+      sourceSpreadsheetTitle:
+        sourceSpreadsheetTitle !== undefined
+          ? sourceSpreadsheetTitle.trim()
+          : currentCadence.sourceSpreadsheetTitle,
+      sourceTabName:
+        sourceTabName !== undefined
+          ? sourceTabName.trim()
+          : currentCadence.sourceTabName,
+      nurturingIntervalDays:
+        nurturingIntervalDays !== undefined
+          ? nurturingIntervalDays
+          : currentCadence.nurturingIntervalDays,
+      nurturingLastTouchAt:
+        nurturingLastTouchAt !== undefined
+          ? nurturingLastTouchAt
+          : currentCadence.nurturingLastTouchAt,
+      nurturingNote:
+        nurturingNote !== undefined ? nurturingNote : currentCadence.nurturingNote,
     };
 
     const updatePayload: Partial<typeof leads.$inferInsert> = {

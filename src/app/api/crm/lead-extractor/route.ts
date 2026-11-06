@@ -34,6 +34,14 @@ export interface ExtractedSheetLead {
   scriptAbordagem?: string;
   highlighted?: boolean;
   tab: string;
+  // Campos técnicos de planilhas B2B (ex: Clientes Âncora)
+  cidadeRegiao?: string;
+  linhaProdutos?: string;
+  materiaisAco?: string;
+  argumentoHunter?: string;
+  statusOriginal?: string;
+  spreadsheetId?: string;
+  spreadsheetTitle?: string;
 }
 
 export interface SectorPlaybook {

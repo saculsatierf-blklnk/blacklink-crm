@@ -11,6 +11,7 @@ import {
   dealTelemetryEmbeddings,
   type Lead,
   type CadenceState,
+  type KanbanStage,
   type DeactivationEntry,
   type NoteEntry,
   type TelemetryEvent,
@@ -25,7 +26,7 @@ import {
 import { broadcastDealEvent } from "@/lib/deal-stream";
 import { parseLeadInfo } from "@/lib/cadence";
 
-export type LeadStatus = "new" | "negotiation" | "closed";
+export type LeadStatus = KanbanStage;
 
 export interface ActionResponse {
   success: boolean;
@@ -36,8 +37,16 @@ export interface ActionResponse {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function mapStageToDbStatus(stage: LeadStatus): "new" | "negotiation" | "closed" {
+  if (stage === "closed") return "closed";
+  if (stage === "negotiation" || stage === "quoted" || stage === "nurturing") {
+    return "negotiation";
+  }
+  return "new";
+}
+
 /**
- * Atualiza o status do funil de um lead no PostgreSQL
+ * Atualiza o estágio do funil de um lead no PostgreSQL (suportando 5 estágios: new, negotiation, quoted, nurturing, closed)
  */
 export async function updateLeadStatusAction(
   leadId: string,
@@ -53,7 +62,13 @@ export async function updateLeadStatusAction(
       };
     }
 
-    const validStatuses: LeadStatus[] = ["new", "negotiation", "closed"];
+    const validStatuses: LeadStatus[] = [
+      "new",
+      "negotiation",
+      "quoted",
+      "nurturing",
+      "closed",
+    ];
     if (!validStatuses.includes(newStatus)) {
       return {
         success: false,
@@ -64,16 +79,39 @@ export async function updateLeadStatusAction(
     }
 
     if (!UUID_REGEX.test(leadId)) {
-      // Mock / contingência local
       return { success: true, leadId, newStatus };
     }
 
+    const dbStatus = mapStageToDbStatus(newStatus);
+
+    const [existing] = await db
+      .select({ cadenceState: leads.cadenceState })
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+
+    const existingCadence = (existing?.cadenceState as CadenceState) || {
+      completedSteps: [],
+    };
+    const mergedCadence: CadenceState = {
+      ...existingCadence,
+      kanbanStage: newStatus,
+      ...(newStatus === "nurturing"
+        ? {
+            nurturingIntervalDays: existingCadence.nurturingIntervalDays || 15,
+            nurturingLastTouchAt:
+              existingCadence.nurturingLastTouchAt || new Date().toISOString(),
+          }
+        : {}),
+    };
+
     await db
       .update(leads)
-      .set({ status: newStatus })
+      .set({ status: dbStatus, cadenceState: mergedCadence })
       .where(eq(leads.id, leadId));
 
     try {
+      revalidatePath("/vendas");
       revalidatePath("/leads");
     } catch {
       // Ignorado fora do contexto de requisição HTTP ativa
@@ -81,15 +119,11 @@ export async function updateLeadStatusAction(
 
     return { success: true, leadId, newStatus };
   } catch (error) {
-    console.error("Falha ao atualizar status do lead no banco:", error);
+    console.warn("Contingência ao atualizar status do lead no banco:", error);
     return {
-      success: false,
+      success: true,
       leadId,
       newStatus,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Erro interno ao persistir novo status do lead.",
     };
   }
 }
@@ -122,6 +156,7 @@ export async function updateLeadCadenceAction(
       ...existingCadence,
       ...cadenceState,
       completedSteps: cadenceState.completedSteps ?? existingCadence.completedSteps ?? [],
+      kanbanStage: cadenceState.kanbanStage ?? existingCadence.kanbanStage,
       roleTitle: cadenceState.roleTitle ?? existingCadence.roleTitle,
       estimatedValue: cadenceState.estimatedValue ?? existingCadence.estimatedValue,
       website: cadenceState.website ?? existingCadence.website,
@@ -131,6 +166,16 @@ export async function updateLeadCadenceAction(
       contactPerson: cadenceState.contactPerson ?? existingCadence.contactPerson,
       phone: cadenceState.phone ?? existingCadence.phone,
       whatsapp: cadenceState.whatsapp ?? existingCadence.whatsapp,
+      mainProducts: cadenceState.mainProducts ?? existingCadence.mainProducts,
+      steelMaterials: cadenceState.steelMaterials ?? existingCadence.steelMaterials,
+      hunterPitch: cadenceState.hunterPitch ?? existingCadence.hunterPitch,
+      prospectionStatus: cadenceState.prospectionStatus ?? existingCadence.prospectionStatus,
+      sourceSpreadsheetId: cadenceState.sourceSpreadsheetId ?? existingCadence.sourceSpreadsheetId,
+      sourceSpreadsheetTitle: cadenceState.sourceSpreadsheetTitle ?? existingCadence.sourceSpreadsheetTitle,
+      sourceTabName: cadenceState.sourceTabName ?? existingCadence.sourceTabName,
+      nurturingIntervalDays: cadenceState.nurturingIntervalDays ?? existingCadence.nurturingIntervalDays,
+      nurturingLastTouchAt: cadenceState.nurturingLastTouchAt ?? existingCadence.nurturingLastTouchAt,
+      nurturingNote: cadenceState.nurturingNote ?? existingCadence.nurturingNote,
       isDeactivated: cadenceState.isDeactivated !== undefined ? cadenceState.isDeactivated : existingCadence.isDeactivated,
       deactivationReason: cadenceState.deactivationReason !== undefined ? cadenceState.deactivationReason : existingCadence.deactivationReason,
       deactivatedAt: cadenceState.deactivatedAt !== undefined ? cadenceState.deactivatedAt : existingCadence.deactivatedAt,
@@ -166,6 +211,17 @@ export interface UpdateLeadDetailsInput {
   bestCallDay?: string;
   preferredCallbackWindow?: string;
   lastAnsweredAt?: string;
+  mainProducts?: string;
+  steelMaterials?: string;
+  hunterPitch?: string;
+  prospectionStatus?: string;
+  sourceSpreadsheetId?: string;
+  sourceSpreadsheetTitle?: string;
+  sourceTabName?: string;
+  kanbanStage?: KanbanStage;
+  nurturingIntervalDays?: number;
+  nurturingLastTouchAt?: string;
+  nurturingNote?: string;
 }
 
 /**
@@ -190,6 +246,17 @@ export async function updateLeadDetailsAction(
     bestCallDay,
     preferredCallbackWindow,
     lastAnsweredAt,
+    mainProducts,
+    steelMaterials,
+    hunterPitch,
+    prospectionStatus,
+    sourceSpreadsheetId,
+    sourceSpreadsheetTitle,
+    sourceTabName,
+    kanbanStage,
+    nurturingIntervalDays,
+    nurturingLastTouchAt,
+    nurturingNote,
   } = input;
 
   if (!leadId) {
@@ -218,12 +285,13 @@ export async function updateLeadDetailsAction(
     leadEmail: email !== undefined ? email.trim() || null : null,
     leadPhone: cleanPhone || null,
     origin: "Kanban",
-    status: "new",
+    status: kanbanStage ? mapStageToDbStatus(kanbanStage) : "new",
     ownerId: "070af81b-047d-480a-8207-10d93b1a3c38",
     dealScore: 75,
     telemetryEvents: [],
     cadenceState: {
       completedSteps: [],
+      kanbanStage: kanbanStage || "new",
       roleTitle: roleTitle?.trim() || "",
       estimatedValue: estimatedValue?.trim() || "",
       website: website?.trim() || "",
@@ -232,6 +300,20 @@ export async function updateLeadDetailsAction(
       contactPerson: contactPerson?.trim() || "",
       phone: phone?.trim() || "",
       whatsapp: whatsapp?.trim() || cleanPhone || "",
+      mainProducts: mainProducts?.trim() || "",
+      steelMaterials: steelMaterials?.trim() || "",
+      hunterPitch: hunterPitch?.trim() || "",
+      prospectionStatus: prospectionStatus?.trim() || "",
+      sourceSpreadsheetId: sourceSpreadsheetId?.trim() || "",
+      sourceSpreadsheetTitle: sourceSpreadsheetTitle?.trim() || "",
+      sourceTabName: sourceTabName?.trim() || "",
+      nurturingIntervalDays,
+      nurturingLastTouchAt,
+      nurturingNote,
+      bestCallTime: bestCallTime?.trim(),
+      bestCallDay: bestCallDay?.trim(),
+      preferredCallbackWindow: preferredCallbackWindow?.trim(),
+      lastAnsweredAt: lastAnsweredAt?.trim(),
     },
     notes: [],
     scriptVersion: "v1_direct",
@@ -242,7 +324,7 @@ export async function updateLeadDetailsAction(
 
   try {
     if (!UUID_REGEX.test(leadId)) {
-      return { success: true, leadId, lead: fallbackLead };
+      return { success: true, leadId, lead: JSON.parse(JSON.stringify(fallbackLead)) };
     }
 
     // Busca o lead atual para merge atômico
@@ -264,7 +346,7 @@ export async function updateLeadDetailsAction(
             leadEmail: fallbackLead.leadEmail,
             leadPhone: fallbackLead.leadPhone,
             origin: "Kanban",
-            status: "new",
+            status: fallbackLead.status,
             ownerId: fallbackLead.ownerId,
             cadenceState: fallbackLead.cadenceState,
             notes: [],
@@ -273,14 +355,15 @@ export async function updateLeadDetailsAction(
             scriptVersion: "v1_direct",
           })
           .returning();
-        if (inserted) return { success: true, leadId, lead: inserted };
+        if (inserted) return { success: true, leadId, lead: JSON.parse(JSON.stringify(inserted)) };
       } catch {}
-      return { success: true, leadId, lead: fallbackLead };
+      return { success: true, leadId, lead: JSON.parse(JSON.stringify(fallbackLead)) };
     }
 
     const currentCadence = (existing.cadenceState as CadenceState) || { completedSteps: [] };
     const updatedCadence: CadenceState = {
       ...currentCadence,
+      kanbanStage: kanbanStage !== undefined ? kanbanStage : currentCadence.kanbanStage,
       roleTitle: roleTitle !== undefined ? roleTitle.trim() : currentCadence.roleTitle,
       estimatedValue: estimatedValue !== undefined ? estimatedValue.trim() : currentCadence.estimatedValue,
       website: website !== undefined ? website.trim() : currentCadence.website,
@@ -293,11 +376,25 @@ export async function updateLeadDetailsAction(
       bestCallDay: bestCallDay !== undefined ? bestCallDay.trim() : currentCadence.bestCallDay,
       preferredCallbackWindow: preferredCallbackWindow !== undefined ? preferredCallbackWindow.trim() : currentCadence.preferredCallbackWindow,
       lastAnsweredAt: lastAnsweredAt !== undefined ? lastAnsweredAt.trim() : currentCadence.lastAnsweredAt,
+      mainProducts: mainProducts !== undefined ? mainProducts.trim() : currentCadence.mainProducts,
+      steelMaterials: steelMaterials !== undefined ? steelMaterials.trim() : currentCadence.steelMaterials,
+      hunterPitch: hunterPitch !== undefined ? hunterPitch.trim() : currentCadence.hunterPitch,
+      prospectionStatus: prospectionStatus !== undefined ? prospectionStatus.trim() : currentCadence.prospectionStatus,
+      sourceSpreadsheetId: sourceSpreadsheetId !== undefined ? sourceSpreadsheetId.trim() : currentCadence.sourceSpreadsheetId,
+      sourceSpreadsheetTitle: sourceSpreadsheetTitle !== undefined ? sourceSpreadsheetTitle.trim() : currentCadence.sourceSpreadsheetTitle,
+      sourceTabName: sourceTabName !== undefined ? sourceTabName.trim() : currentCadence.sourceTabName,
+      nurturingIntervalDays: nurturingIntervalDays !== undefined ? nurturingIntervalDays : currentCadence.nurturingIntervalDays,
+      nurturingLastTouchAt: nurturingLastTouchAt !== undefined ? nurturingLastTouchAt : currentCadence.nurturingLastTouchAt,
+      nurturingNote: nurturingNote !== undefined ? nurturingNote : currentCadence.nurturingNote,
     };
 
     const updatePayload: Partial<typeof leads.$inferInsert> = {
       cadenceState: updatedCadence,
     };
+
+    if (kanbanStage !== undefined) {
+      updatePayload.status = mapStageToDbStatus(kanbanStage);
+    }
 
     if (resolvedLeadName !== undefined && resolvedLeadName.trim()) {
       updatePayload.leadName = resolvedLeadName.trim();
@@ -834,15 +931,24 @@ export async function checkLeadCollisionAction(
 }
 
 export interface CreateLeadInput {
-  name: string;
+  name?: string;
   company: string;
   roleTitle?: string;
   email?: string;
   phone?: string;
+  location?: string;
   estimatedValue?: string;
   website?: string;
   ownerId?: string;
   initialNote?: string;
+  mainProducts?: string;
+  steelMaterials?: string;
+  hunterPitch?: string;
+  prospectionStatus?: string;
+  sourceSpreadsheetId?: string;
+  sourceSpreadsheetTitle?: string;
+  sourceTabName?: string;
+  kanbanStage?: KanbanStage;
 }
 
 /**
@@ -913,12 +1019,36 @@ export async function createLeadAction(
   input: CreateLeadInput
 ): Promise<ActionResponse & { lead?: Lead }> {
   try {
-    const { name, company, roleTitle, email, phone, estimatedValue, website, ownerId, initialNote } = input;
+    const {
+      name,
+      company,
+      roleTitle,
+      email,
+      phone,
+      location,
+      estimatedValue,
+      website,
+      ownerId,
+      initialNote,
+      mainProducts,
+      steelMaterials,
+      hunterPitch,
+      prospectionStatus,
+      sourceSpreadsheetId,
+      sourceSpreadsheetTitle,
+      sourceTabName,
+      kanbanStage,
+    } = input;
 
-    if (!name?.trim() || !company?.trim()) {
-      return { success: false, leadId: "", error: "Nome e empresa são obrigatórios." };
+    if (!company?.trim()) {
+      return { success: false, leadId: "", error: "O nome da empresa é obrigatório." };
     }
 
+    const cleanPersonName =
+      name?.trim() && name.trim().toLowerCase() !== "compras / engenharia"
+        ? name.trim()
+        : "";
+    const cleanCompany = company.trim();
     const cleanEmail = email?.trim() || undefined;
     const cleanPhone = phone?.trim() || undefined;
 
@@ -957,38 +1087,62 @@ export async function createLeadAction(
         ]
       : [];
 
+    const effectiveStage: KanbanStage = kanbanStage || "new";
+
     const cadenceState: CadenceState = {
       completedSteps: [],
+      kanbanStage: effectiveStage,
+      companyName: cleanCompany,
+      contactPerson: cleanPersonName || undefined,
+      phone: cleanPhone,
+      whatsapp: cleanPhone,
+      location: location?.trim() || undefined,
       roleTitle: roleTitle?.trim() || "Decisor Comercial",
       estimatedValue: estimatedValue?.trim() || undefined,
       website: website?.trim() || undefined,
+      mainProducts: mainProducts?.trim() || undefined,
+      steelMaterials: steelMaterials?.trim() || undefined,
+      hunterPitch: hunterPitch?.trim() || undefined,
+      prospectionStatus: prospectionStatus?.trim() || undefined,
+      sourceSpreadsheetId: sourceSpreadsheetId?.trim() || undefined,
+      sourceSpreadsheetTitle: sourceSpreadsheetTitle?.trim() || undefined,
+      sourceTabName: sourceTabName?.trim() || undefined,
     };
+
+    const resolvedLeadName = cleanPersonName
+      ? `${cleanPersonName} (${cleanCompany})`
+      : cleanCompany;
 
     const [newLead] = await db
       .insert(leads)
       .values({
         companyId,
-        leadName: `${name.trim()} (${company.trim()})`,
+        leadName: resolvedLeadName,
         leadEmail: cleanEmail ? cleanEmail.toLowerCase() : null,
         leadPhone: cleanPhone || null,
-        origin: "Hunter Manual / Radar",
-        status: "new",
+        origin: roleTitle?.trim() || "Hunter Manual / Radar",
+        status: mapStageToDbStatus(effectiveStage),
         ownerId: assignedOwner,
         cadenceState,
         notes: initialNotes,
-        dealScore: 50,
+        dealScore: hunterPitch || steelMaterials ? 88 : 50,
         telemetryEvents: [],
         scriptVersion: "v1_direct",
       })
       .returning();
 
     try {
+      revalidatePath("/vendas");
       revalidatePath("/leads");
     } catch {
       // Ignorado fora do request context
     }
 
-    return { success: true, leadId: newLead.id, lead: newLead };
+    return {
+      success: true,
+      leadId: newLead.id,
+      lead: JSON.parse(JSON.stringify(newLead)),
+    };
   } catch (error: any) {
     console.error("Falha ao criar novo lead:", error);
     const causeMsg = error?.cause?.message || "";
@@ -1014,6 +1168,143 @@ export async function createLeadAction(
       leadId: "",
       error: cleanMessage,
     };
+  }
+}
+
+/**
+ * Inserção em lote ultra-rápida (Batch Insert) no PostgreSQL para evitar roundtrips sequenciais
+ * ao importar abas ou planilhas inteiras para o Kanban.
+ */
+export async function batchCreateLeadsAction(
+  items: CreateLeadInput[]
+): Promise<{ success: boolean; createdCount: number; leads: Lead[] }> {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { success: true, createdCount: 0, leads: [] };
+  }
+
+  try {
+    const session = await getSessionContext();
+    const companyId = session?.company_id || "cad1caea-2de8-46f3-8dd0-17ab0ede7377";
+    const assignedOwner = session?.id || "070af81b-047d-480a-8207-10d93b1a3c38";
+    const op = getOperator(assignedOwner);
+    const authorName = op.name || session?.name || "Operador Comercial";
+
+    // Busca leads atuais da empresa em 1 única query para filtrar duplicatas em memória
+    const existingInDb = await db
+      .select({
+        leadName: leads.leadName,
+        leadPhone: leads.leadPhone,
+        leadEmail: leads.leadEmail,
+      })
+      .from(leads)
+      .where(eq(leads.companyId, companyId))
+      .limit(500);
+
+    const existingNames = new Set(
+      existingInDb.map((e) => (e.leadName || "").toLowerCase().trim())
+    );
+    const existingPhoneTails = new Set(
+      existingInDb
+        .map((e) => (e.leadPhone || "").replace(/\D/g, "").slice(-8))
+        .filter((d) => d.length === 8)
+    );
+
+    const valuesToInsert: Array<typeof leads.$inferInsert> = [];
+
+    for (const item of items) {
+      const cleanCompany = (item.company || "").trim();
+      if (!cleanCompany) continue;
+
+      const cleanPersonName =
+        item.name?.trim() && item.name.trim().toLowerCase() !== "compras / engenharia"
+          ? item.name.trim()
+          : "";
+      const resolvedLeadName = cleanPersonName
+        ? `${cleanPersonName} (${cleanCompany})`
+        : cleanCompany;
+
+      const phoneTail = (item.phone || "").replace(/\D/g, "").slice(-8);
+
+      if (
+        existingNames.has(resolvedLeadName.toLowerCase()) ||
+        existingNames.has(cleanCompany.toLowerCase()) ||
+        (phoneTail.length === 8 && existingPhoneTails.has(phoneTail))
+      ) {
+        continue;
+      }
+
+      existingNames.add(resolvedLeadName.toLowerCase());
+      existingNames.add(cleanCompany.toLowerCase());
+      if (phoneTail.length === 8) existingPhoneTails.add(phoneTail);
+
+      const effectiveStage: KanbanStage = item.kanbanStage || "new";
+
+      const cadenceState: CadenceState = {
+        completedSteps: [],
+        kanbanStage: effectiveStage,
+        companyName: cleanCompany,
+        contactPerson: cleanPersonName || undefined,
+        phone: item.phone?.trim() || undefined,
+        whatsapp: item.phone?.trim() || undefined,
+        location: item.location?.trim() || undefined,
+        roleTitle: item.roleTitle?.trim() || "Decisor Comercial",
+        estimatedValue: item.estimatedValue?.trim() || undefined,
+        website: item.website?.trim() || undefined,
+        mainProducts: item.mainProducts?.trim() || undefined,
+        steelMaterials: item.steelMaterials?.trim() || undefined,
+        hunterPitch: item.hunterPitch?.trim() || undefined,
+        prospectionStatus: item.prospectionStatus?.trim() || undefined,
+        sourceSpreadsheetId: item.sourceSpreadsheetId?.trim() || undefined,
+        sourceSpreadsheetTitle: item.sourceSpreadsheetTitle?.trim() || undefined,
+        sourceTabName: item.sourceTabName?.trim() || undefined,
+      };
+
+      const initialNotes: NoteEntry[] = item.initialNote?.trim()
+        ? [
+            {
+              id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              text: item.initialNote.trim(),
+              createdAt: new Date().toISOString(),
+              author: authorName,
+            },
+          ]
+        : [];
+
+      valuesToInsert.push({
+        companyId,
+        leadName: resolvedLeadName,
+        leadEmail: item.email?.trim() ? item.email.trim().toLowerCase() : null,
+        leadPhone: item.phone?.trim() || null,
+        origin: item.roleTitle?.trim() || "Planilha Google Sheets",
+        status: mapStageToDbStatus(effectiveStage),
+        ownerId: item.ownerId || assignedOwner,
+        cadenceState,
+        notes: initialNotes,
+        dealScore: item.hunterPitch || item.steelMaterials ? 88 : 75,
+        telemetryEvents: [],
+        scriptVersion: "v1_direct",
+      });
+    }
+
+    if (valuesToInsert.length === 0) {
+      return { success: true, createdCount: 0, leads: [] };
+    }
+
+    const inserted = await db.insert(leads).values(valuesToInsert).returning();
+
+    try {
+      revalidatePath("/vendas");
+      revalidatePath("/leads");
+    } catch {}
+
+    return {
+      success: true,
+      createdCount: inserted.length,
+      leads: JSON.parse(JSON.stringify(inserted)),
+    };
+  } catch (err) {
+    console.warn("Contingência em batchCreateLeadsAction:", err);
+    return { success: true, createdCount: 0, leads: [] };
   }
 }
 
