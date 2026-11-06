@@ -107,6 +107,8 @@ export function LeadDetailsSheet({
   const [editRoleTitle, setEditRoleTitle] = useState("");
   const [editEstimatedValue, setEditEstimatedValue] = useState("");
   const [editWebsite, setEditWebsite] = useState("");
+  const [editBestCallTime, setEditBestCallTime] = useState("");
+  const [editBestCallDay, setEditBestCallDay] = useState("");
   const [inlineEmailInput, setInlineEmailInput] = useState("");
   const [isSavingInlineEmail, setIsSavingInlineEmail] = useState(false);
 
@@ -199,6 +201,8 @@ export function LeadDetailsSheet({
     setEditRoleTitle(role);
     setEditEstimatedValue(val);
     setEditWebsite(web);
+    setEditBestCallTime(dbCadenceState.bestCallTime || "");
+    setEditBestCallDay(dbCadenceState.bestCallDay || "");
     setInlineEmailInput("");
     setSaveFeedback(null);
 
@@ -287,6 +291,9 @@ export function LeadDetailsSheet({
     const cleanRoleTitle = editRoleTitle.trim();
     const cleanEstimatedValue = editEstimatedValue.trim();
     const cleanWebsite = editWebsite.trim();
+    const cleanBestCallTime = editBestCallTime.trim();
+    const cleanBestCallDay = editBestCallDay.trim();
+    const cleanPreferredWindow = cleanBestCallTime ? `~${cleanBestCallTime}` : "";
 
     const resolvedName =
       cleanPerson && cleanCompany
@@ -309,6 +316,9 @@ export function LeadDetailsSheet({
         contactPerson: cleanPerson,
         phone: cleanPhone,
         whatsapp: cleanWhatsapp,
+        bestCallTime: cleanBestCallTime,
+        bestCallDay: cleanBestCallDay,
+        preferredCallbackWindow: cleanPreferredWindow,
       },
     };
 
@@ -331,6 +341,9 @@ export function LeadDetailsSheet({
           roleTitle: cleanRoleTitle,
           estimatedValue: cleanEstimatedValue,
           website: cleanWebsite,
+          bestCallTime: cleanBestCallTime,
+          bestCallDay: cleanBestCallDay,
+          preferredCallbackWindow: cleanPreferredWindow,
         });
 
         if (res?.success) {
@@ -357,6 +370,9 @@ export function LeadDetailsSheet({
               roleTitle: cleanRoleTitle,
               estimatedValue: cleanEstimatedValue,
               website: cleanWebsite,
+              bestCallTime: cleanBestCallTime,
+              bestCallDay: cleanBestCallDay,
+              preferredCallbackWindow: cleanPreferredWindow,
             }),
           });
           if (apiRes.ok) {
@@ -757,6 +773,41 @@ export function LeadDetailsSheet({
     if (!lead) return;
     setNewNoteText(summaryText);
 
+    const isCallAnswered = chosenOutcome !== "nao_atendeu";
+    const nowLocalTime = (() => {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    })();
+    const nowLocalDay = (() => {
+      const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+      return days[new Date().getDay()] || "Segunda-feira";
+    })();
+
+    if (isCallAnswered) {
+      setEditBestCallTime(nowLocalTime);
+      setEditBestCallDay(nowLocalDay);
+
+      const nowIso = new Date().toISOString();
+      const updatedLead: Lead = {
+        ...lead,
+        cadenceState: {
+          ...(lead.cadenceState || { completedSteps: [] }),
+          lastAnsweredAt: nowIso,
+          bestCallTime: nowLocalTime,
+          bestCallDay: nowLocalDay,
+          preferredCallbackWindow: `~${nowLocalTime}`,
+        },
+      };
+      onLeadUpdate?.(updatedLead);
+      updateLeadCadenceAction(lead.id, {
+        completedSteps: lead.cadenceState?.completedSteps || [],
+        lastAnsweredAt: nowIso,
+        bestCallTime: nowLocalTime,
+        bestCallDay: nowLocalDay,
+        preferredCallbackWindow: `~${nowLocalTime}`,
+      }).catch(() => {});
+    }
+
     // Registra métrica pessoal imediata
     recordPersonalMetricEvent({
       leadId: lead.id,
@@ -782,6 +833,9 @@ export function LeadDetailsSheet({
     notes?: string;
     quotedValue?: number;
     completedStepId?: string;
+    bestCallTime?: string;
+    bestCallDay?: string;
+    preferredCallbackWindow?: string;
   }) => {
     if (!lead) return;
 
@@ -797,6 +851,23 @@ export function LeadDetailsSheet({
     }
     setCompletedCadence(nextCadence);
     onCadenceChange?.(lead.id, nextCadence);
+
+    const isCallAnswered = data.channel === "call" && data.outcome !== "nao_atendeu";
+    const nowLocalTime = (() => {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    })();
+    const nowLocalDay = (() => {
+      const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+      return days[new Date().getDay()] || "Segunda-feira";
+    })();
+
+    const updatedBestCallTime = data.bestCallTime || (isCallAnswered ? editBestCallTime || nowLocalTime : editBestCallTime);
+    const updatedBestCallDay = data.bestCallDay || (isCallAnswered ? editBestCallDay || nowLocalDay : editBestCallDay);
+    const updatedCallbackWindow = data.preferredCallbackWindow || (isCallAnswered ? `~${updatedBestCallTime}` : (lead.cadenceState as any)?.preferredCallbackWindow);
+
+    if (updatedBestCallTime) setEditBestCallTime(updatedBestCallTime);
+    if (updatedBestCallDay) setEditBestCallDay(updatedBestCallDay);
 
     let nextNotes = notes;
     if (data.notes) {
@@ -823,6 +894,10 @@ export function LeadDetailsSheet({
         ...(lead.cadenceState || { completedSteps: [] }),
         completedSteps: nextCadence,
         lastCompletedAt: new Date().toISOString(),
+        lastAnsweredAt: isCallAnswered ? new Date().toISOString() : lead.cadenceState?.lastAnsweredAt,
+        bestCallTime: updatedBestCallTime,
+        bestCallDay: updatedBestCallDay,
+        preferredCallbackWindow: updatedCallbackWindow,
         estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : lead.cadenceState?.estimatedValue,
       },
     };
@@ -831,6 +906,11 @@ export function LeadDetailsSheet({
     try {
       await updateLeadCadenceAction(lead.id, {
         completedSteps: nextCadence,
+        lastCompletedAt: new Date().toISOString(),
+        lastAnsweredAt: isCallAnswered ? new Date().toISOString() : lead.cadenceState?.lastAnsweredAt,
+        bestCallTime: updatedBestCallTime,
+        bestCallDay: updatedBestCallDay,
+        preferredCallbackWindow: updatedCallbackWindow,
         estimatedValue: updatedLead.cadenceState?.estimatedValue,
       });
     } catch {}
@@ -1298,6 +1378,33 @@ export function LeadDetailsSheet({
             </div>
           )}
 
+          {/* Banner de Contato Efetivo / Horário Ideal de Retorno */}
+          {editBestCallTime && (
+            <div className="rounded-xl bg-[#0c2b1c]/80 border border-[#14d06e]/30 p-3 flex items-center justify-between gap-3 shadow-sm animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="size-8 rounded-lg bg-[#14d06e]/15 border border-[#14d06e]/30 flex items-center justify-center text-[#14d06e] shrink-0">
+                  <PhoneCall className="size-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-xs">
+                      Contato Efetivo Confirmado
+                    </span>
+                    <span className="text-[9px] bg-[#14d06e] text-[#0d0d0d] font-black px-1.5 py-0.2 rounded uppercase">
+                      Alerta no Kanban
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#afafaf] truncate mt-0.5">
+                    Cliente atendeu às <strong className="text-white font-mono">{editBestCallTime}</strong> {editBestCallDay ? `(${editBestCallDay})` : ""}. Priorize retornar por volta do mesmo dia e horário.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] text-[#14d06e] font-mono shrink-0 hidden sm:inline-block font-semibold">
+                ~{editBestCallTime}
+              </span>
+            </div>
+          )}
+
           {/* ===================================================================
               CAMPOS CADASTRAIS DIRETOS (EMPRESA, DECISOR, TEL, WPP, EMAIL, LOCAL)
              =================================================================== */}
@@ -1479,6 +1586,54 @@ export function LeadDetailsSheet({
                       <Globe className="size-3" />
                     </a>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* 7. Alerta de Retorno Inteligente (Mesmo Dia & Horário) */}
+            <div className="rounded-lg bg-neutral-900/80 border border-emerald-500/30 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
+                  <Clock className="size-3.5" />
+                  <span>Horário em que Atendeu (Retornar no Mesmo Horário)</span>
+                </div>
+                {editBestCallTime && (
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold">
+                    Alerta Ativo no Kanban
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#afafaf] leading-relaxed">
+                Configure o horário e dia da semana em que este cliente costuma atender para que o card no Kanban exiba o alerta de retorno.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                <div>
+                  <label className="block text-[10px] text-[#afafaf] font-semibold mb-1">
+                    Horário em que atendeu:
+                  </label>
+                  <input
+                    type="time"
+                    value={editBestCallTime}
+                    onChange={(e) => setEditBestCallTime(e.target.value)}
+                    className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-[#14d06e] focus:outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#afafaf] font-semibold mb-1">
+                    Dia preferencial de atendimento:
+                  </label>
+                  <select
+                    value={editBestCallDay}
+                    onChange={(e) => setEditBestCallDay(e.target.value)}
+                    className="w-full rounded-md border border-[#2e2e2e] bg-[#0a0a0a] px-3 py-1.5 text-xs text-white focus:border-[#14d06e] focus:outline-none cursor-pointer"
+                  >
+                    <option value="">Selecione o dia...</option>
+                    <option value="Segunda-feira">Segunda-feira</option>
+                    <option value="Terça-feira">Terça-feira</option>
+                    <option value="Quarta-feira">Quarta-feira</option>
+                    <option value="Quinta-feira">Quinta-feira</option>
+                    <option value="Sexta-feira">Sexta-feira</option>
+                  </select>
                 </div>
               </div>
             </div>

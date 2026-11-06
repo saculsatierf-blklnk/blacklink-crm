@@ -34,6 +34,10 @@ async function handleUpdateLeadDetails(
       estimatedValue,
       website,
       leadName,
+      bestCallTime,
+      bestCallDay,
+      preferredCallbackWindow,
+      lastAnsweredAt,
     } = body || {};
 
     let resolvedLeadName = leadName;
@@ -71,6 +75,10 @@ async function handleUpdateLeadDetails(
         contactPerson: contactPerson?.trim() || "",
         phone: phone?.trim() || "",
         whatsapp: whatsapp?.trim() || cleanPhone || "",
+        bestCallTime: bestCallTime?.trim() || "",
+        bestCallDay: bestCallDay?.trim() || "",
+        preferredCallbackWindow: preferredCallbackWindow?.trim() || "",
+        lastAnsweredAt: lastAnsweredAt?.trim() || "",
       },
       notes: [],
       scriptVersion: "v1_direct",
@@ -118,6 +126,16 @@ async function handleUpdateLeadDetails(
       phone: phone !== undefined ? phone.trim() : currentCadence.phone,
       whatsapp:
         whatsapp !== undefined ? whatsapp.trim() : currentCadence.whatsapp,
+      bestCallTime:
+        bestCallTime !== undefined ? bestCallTime.trim() : currentCadence.bestCallTime,
+      bestCallDay:
+        bestCallDay !== undefined ? bestCallDay.trim() : currentCadence.bestCallDay,
+      preferredCallbackWindow:
+        preferredCallbackWindow !== undefined
+          ? preferredCallbackWindow.trim()
+          : currentCadence.preferredCallbackWindow,
+      lastAnsweredAt:
+        lastAnsweredAt !== undefined ? lastAnsweredAt.trim() : currentCadence.lastAnsweredAt,
     };
 
     const updatePayload: Partial<typeof leads.$inferInsert> = {

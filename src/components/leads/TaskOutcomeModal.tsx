@@ -5,7 +5,9 @@ import {
   AlertTriangle,
   Check,
   CheckCircle2,
+  Clock,
   DollarSign,
+  Flame,
   Mail,
   MessageCircle,
   Phone,
@@ -38,6 +40,9 @@ interface TaskOutcomeModalProps {
     notes?: string;
     quotedValue?: number;
     completedStepId?: string;
+    bestCallTime?: string;
+    bestCallDay?: string;
+    preferredCallbackWindow?: string;
   }) => void;
 }
 
@@ -85,6 +90,32 @@ export function TaskOutcomeModal({
   const [notes, setNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Inteligência de Horário de Atendimento (Mesmo Dia & Horário)
+  const [capturedCallTime, setCapturedCallTime] = useState<string>(() => {
+    if (lead.cadenceState?.bestCallTime) return lead.cadenceState.bestCallTime;
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    return `${h}:${m}`;
+  });
+
+  const [capturedCallDay, setCapturedCallDay] = useState<string>(() => {
+    if (lead.cadenceState?.bestCallDay) return lead.cadenceState.bestCallDay;
+    const now = new Date();
+    const days = [
+      "Domingo",
+      "Segunda-feira",
+      "Terça-feira",
+      "Quarta-feira",
+      "Quinta-feira",
+      "Sexta-feira",
+      "Sábado",
+    ];
+    return days[now.getDay()] || "Segunda-feira";
+  });
+
+  const [enableCallbackAlert, setEnableCallbackAlert] = useState<boolean>(true);
+
   // Troca de canal ajusta automaticamente o desfecho padrão
   const handleSelectChannel = (c: InteractionChannel) => {
     setChannel(c);
@@ -98,12 +129,26 @@ export function TaskOutcomeModal({
   const leadName = lead.cadenceState?.contactPerson || lead.leadName || "Contato";
   const companyName = lead.cadenceState?.companyName || lead.leadName || "Empresa";
 
+  const calculateCallbackWindow = (timeStr: string) => {
+    try {
+      const [hStr] = timeStr.split(":");
+      const h = parseInt(hStr, 10);
+      const startH = Math.max(8, h - 1);
+      const endH = Math.min(18, h + 1);
+      return `${String(startH).padStart(2, "0")}:00 - ${String(endH).padStart(2, "0")}:00`;
+    } catch {
+      return `~${timeStr}`;
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     const cleanQuotedVal = quotedValueStr.replace(/\D/g, "");
     const numericQuoted = cleanQuotedVal ? Number(cleanQuotedVal) : undefined;
+    const isAnsweredCall = channel === "call" && outcome !== "nao_atendeu";
+    const windowStr = isAnsweredCall && enableCallbackAlert ? calculateCallbackWindow(capturedCallTime) : undefined;
 
     // Registra métrica pessoal
     recordPersonalMetricEvent({
@@ -131,6 +176,9 @@ export function TaskOutcomeModal({
       notes: notes.trim() || undefined,
       quotedValue: numericQuoted,
       completedStepId: stepId,
+      bestCallTime: isAnsweredCall && enableCallbackAlert ? capturedCallTime : undefined,
+      bestCallDay: isAnsweredCall && enableCallbackAlert ? capturedCallDay : undefined,
+      preferredCallbackWindow: windowStr,
     });
 
     setIsSubmitting(false);
@@ -461,6 +509,64 @@ export function TaskOutcomeModal({
               </div>
             )}
           </div>
+
+          {/* Alerta de Retorno Inteligente: Quando o cliente atendeu a ligação */}
+          {channel === "call" && outcome !== "nao_atendeu" && (
+            <div className="rounded-xl bg-[#0c2b1c]/80 border border-[#14d06e]/30 p-3 space-y-2 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs text-[#14d06e] font-bold">
+                  <Clock className="size-3.5" />
+                  <span>Alerta de Retorno (Mesmo Dia &amp; Horário)</span>
+                </div>
+                <label className="flex items-center gap-1.5 text-[11px] text-[#afafaf] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableCallbackAlert}
+                    onChange={(e) => setEnableCallbackAlert(e.target.checked)}
+                    className="accent-[#14d06e] rounded"
+                  />
+                  <span>Ativar alerta no card</span>
+                </label>
+              </div>
+
+              {enableCallbackAlert && (
+                <>
+                  <p className="text-[11px] text-[#afafaf] leading-relaxed">
+                    Registramos que este cliente atendeu. O card exibirá um alerta em destaque para você retornar por volta de <strong className="text-white font-mono">{capturedCallTime}</strong> ({capturedCallDay}).
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    <div>
+                      <label className="text-[10px] text-[#afafaf] font-semibold block mb-1">
+                        Horário em que atendeu:
+                      </label>
+                      <input
+                        type="time"
+                        value={capturedCallTime}
+                        onChange={(e) => setCapturedCallTime(e.target.value)}
+                        className="w-full bg-[#141414] border border-[#2e2e2e] focus:border-[#14d06e] rounded px-2.5 py-1.5 text-white text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#afafaf] font-semibold block mb-1">
+                        Dia da semana:
+                      </label>
+                      <select
+                        value={capturedCallDay}
+                        onChange={(e) => setCapturedCallDay(e.target.value)}
+                        className="w-full bg-[#141414] border border-[#2e2e2e] focus:border-[#14d06e] rounded px-2 py-1.5 text-white text-xs cursor-pointer"
+                      >
+                        <option value="Segunda-feira">Segunda-feira</option>
+                        <option value="Terça-feira">Terça-feira</option>
+                        <option value="Quarta-feira">Quarta-feira</option>
+                        <option value="Quinta-feira">Quinta-feira</option>
+                        <option value="Sexta-feira">Sexta-feira</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Campo condicional de Valor Orçado */}
           {outcome === "solicitou_orcamento" && (

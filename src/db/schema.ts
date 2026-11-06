@@ -93,6 +93,11 @@ export interface CadenceState {
   phone?: string;
   whatsapp?: string;
   lastCompletedAt?: string;
+  // Inteligência de Contato Efetivo & Janela Ideal de Retorno
+  lastAnsweredAt?: string;
+  bestCallTime?: string; // Ex: "14:35"
+  bestCallDay?: string; // Ex: "Sexta-feira"
+  preferredCallbackWindow?: string; // Ex: "14:00 - 15:30"
   isDeactivated?: boolean;
   deactivationReason?: string;
   deactivatedAt?: string;

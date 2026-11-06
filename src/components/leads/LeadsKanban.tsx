@@ -15,12 +15,14 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Flame,
   Globe,
   GripVertical,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
+  PhoneCall,
   Plus,
   Search,
   Sparkles,
@@ -384,6 +386,9 @@ export function LeadsKanban({
     notes?: string;
     quotedValue?: number;
     completedStepId?: string;
+    bestCallTime?: string;
+    bestCallDay?: string;
+    preferredCallbackWindow?: string;
   }) => {
     if (!cardOutcomeLead) return;
 
@@ -393,6 +398,21 @@ export function LeadsKanban({
 
     const currentCadence = (leadTarget.cadenceState as any) || {};
     const currentCompleted: string[] = currentCadence.completedSteps || [];
+
+    // Captura inteligência de retorno quando o cliente atendeu
+    const isCallAnswered = data.channel === "call" && data.outcome !== "nao_atendeu";
+    const nowLocalTime = (() => {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    })();
+    const nowLocalDay = (() => {
+      const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+      return days[new Date().getDay()] || "Segunda-feira";
+    })();
+
+    const updatedBestCallTime = data.bestCallTime || (isCallAnswered ? currentCadence.bestCallTime || nowLocalTime : currentCadence.bestCallTime);
+    const updatedBestCallDay = data.bestCallDay || (isCallAnswered ? currentCadence.bestCallDay || nowLocalDay : currentCadence.bestCallDay);
+    const updatedCallbackWindow = data.preferredCallbackWindow || (isCallAnswered ? currentCadence.preferredCallbackWindow || `~${updatedBestCallTime}` : currentCadence.preferredCallbackWindow);
 
     // Resolve os passos a serem marcados como concluídos
     const stepsToAdd: string[] = [];
@@ -437,6 +457,10 @@ export function LeadsKanban({
             ...currentCadence,
             completedSteps: nextSteps,
             lastCompletedAt: nowIso,
+            lastAnsweredAt: isCallAnswered ? nowIso : currentCadence.lastAnsweredAt,
+            bestCallTime: updatedBestCallTime,
+            bestCallDay: updatedBestCallDay,
+            preferredCallbackWindow: updatedCallbackWindow,
             estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : currentCadence.estimatedValue,
           },
         };
@@ -457,6 +481,10 @@ export function LeadsKanban({
       await updateLeadCadenceAction(leadTarget.id, {
         completedSteps: nextSteps,
         lastCompletedAt: nowIso,
+        lastAnsweredAt: isCallAnswered ? nowIso : currentCadence.lastAnsweredAt,
+        bestCallTime: updatedBestCallTime,
+        bestCallDay: updatedBestCallDay,
+        preferredCallbackWindow: updatedCallbackWindow,
         estimatedValue: data.quotedValue ? `R$ ${data.quotedValue.toLocaleString("pt-BR")}` : currentCadence.estimatedValue,
       });
       if (data.notes) {
@@ -506,6 +534,20 @@ export function LeadsKanban({
       notes: `✓ ${actionName} concluída via Fila Inteligente com 1 clique`,
     });
 
+    const isCall = channel === "call";
+    const nowLocalTime = (() => {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    })();
+    const nowLocalDay = (() => {
+      const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+      return days[new Date().getDay()] || "Segunda-feira";
+    })();
+
+    const updatedBestCallTime = isCall ? (currentCadence.bestCallTime || nowLocalTime) : currentCadence.bestCallTime;
+    const updatedBestCallDay = isCall ? (currentCadence.bestCallDay || nowLocalDay) : currentCadence.bestCallDay;
+    const updatedCallbackWindow = isCall ? (currentCadence.preferredCallbackWindow || `~${updatedBestCallTime}`) : currentCadence.preferredCallbackWindow;
+
     const newNote = {
       id: "note-" + Date.now(),
       text: `[CADÊNCIA] ✓ ${actionName} concluída hoje com sucesso por ${currentOp}.`,
@@ -524,6 +566,10 @@ export function LeadsKanban({
             ...currentCadence,
             completedSteps: nextSteps,
             lastCompletedAt: nowIso,
+            lastAnsweredAt: isCall ? nowIso : currentCadence.lastAnsweredAt,
+            bestCallTime: updatedBestCallTime,
+            bestCallDay: updatedBestCallDay,
+            preferredCallbackWindow: updatedCallbackWindow,
           },
         };
       });
@@ -543,6 +589,10 @@ export function LeadsKanban({
       await updateLeadCadenceAction(lead.id, {
         completedSteps: nextSteps,
         lastCompletedAt: nowIso,
+        lastAnsweredAt: isCall ? nowIso : currentCadence.lastAnsweredAt,
+        bestCallTime: updatedBestCallTime,
+        bestCallDay: updatedBestCallDay,
+        preferredCallbackWindow: updatedCallbackWindow,
       });
       await addLeadNoteAction(lead.id, newNote.text, currentOp);
     } catch (err) {
@@ -1023,6 +1073,58 @@ export function LeadsKanban({
                                         </span>
                                       </div>
                                     )}
+
+                                    {/* Alerta de Retorno no Mesmo Dia & Horário em que Atendeu */}
+                                    {cardCadence.bestCallTime && (() => {
+                                      let isCallbackWindowActive = false;
+                                      try {
+                                        const [hStr, mStr] = cardCadence.bestCallTime.split(":");
+                                        const h = parseInt(hStr, 10);
+                                        const m = parseInt(mStr || "0", 10);
+                                        if (!isNaN(h)) {
+                                          const now = new Date();
+                                          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                                          const targetMinutes = h * 60 + (isNaN(m) ? 0 : m);
+                                          isCallbackWindowActive = Math.abs(nowMinutes - targetMinutes) <= 45;
+                                        }
+                                      } catch {}
+
+                                      if (isCallbackWindowActive) {
+                                        return (
+                                          <div
+                                            className="flex items-center justify-between gap-1 text-[10px] text-amber-200 bg-amber-950/80 border border-amber-500/50 px-2.5 py-1 rounded-md font-medium shadow-sm animate-pulse"
+                                            title="Janela ativa agora! Este cliente costuma atender por volta deste horário."
+                                          >
+                                            <div className="flex items-center gap-1.5 truncate">
+                                              <Flame className="size-3 shrink-0 text-amber-400" />
+                                              <span className="truncate font-bold">
+                                                🔥 JANELA ATIVA: Retorne ~{cardCadence.bestCallTime}
+                                              </span>
+                                            </div>
+                                            <span className="text-[9px] font-mono text-amber-300 uppercase font-black shrink-0">
+                                              {cardCadence.bestCallDay || "Hoje"}
+                                            </span>
+                                          </div>
+                                        );
+                                      }
+
+                                      return (
+                                        <div
+                                          className="flex items-center justify-between gap-1 text-[10px] text-emerald-300 bg-emerald-950/50 border border-emerald-500/25 px-2 py-0.5 rounded-md font-medium"
+                                          title={`Contato efetivo registrado: atendeu às ${cardCadence.bestCallTime}. Retorne no mesmo horário.`}
+                                        >
+                                          <div className="flex items-center gap-1.5 truncate">
+                                            <PhoneCall className="size-2.5 shrink-0 text-emerald-400" />
+                                            <span className="truncate">
+                                              Atendeu às <strong className="text-white font-mono">{cardCadence.bestCallTime}</strong> ({cardCadence.bestCallDay || "horário ideal"})
+                                            </span>
+                                          </div>
+                                          <span className="text-[9px] text-emerald-400/80 font-mono shrink-0">
+                                            ~{cardCadence.bestCallTime}
+                                          </span>
+                                        </div>
+                                      );
+                                    })()}
 
                                     {/* Topo do Card: Título Inteligente sem Duplicidade */}
                                     {(() => {

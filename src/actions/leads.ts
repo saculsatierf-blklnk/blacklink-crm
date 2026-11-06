@@ -162,6 +162,10 @@ export interface UpdateLeadDetailsInput {
   roleTitle?: string;
   estimatedValue?: string;
   website?: string;
+  bestCallTime?: string;
+  bestCallDay?: string;
+  preferredCallbackWindow?: string;
+  lastAnsweredAt?: string;
 }
 
 /**
@@ -182,6 +186,10 @@ export async function updateLeadDetailsAction(
     roleTitle,
     estimatedValue,
     website,
+    bestCallTime,
+    bestCallDay,
+    preferredCallbackWindow,
+    lastAnsweredAt,
   } = input;
 
   if (!leadId) {
@@ -281,6 +289,10 @@ export async function updateLeadDetailsAction(
       contactPerson: contactPerson !== undefined ? contactPerson.trim() : currentCadence.contactPerson,
       phone: phone !== undefined ? phone.trim() : currentCadence.phone,
       whatsapp: whatsapp !== undefined ? whatsapp.trim() : currentCadence.whatsapp,
+      bestCallTime: bestCallTime !== undefined ? bestCallTime.trim() : currentCadence.bestCallTime,
+      bestCallDay: bestCallDay !== undefined ? bestCallDay.trim() : currentCadence.bestCallDay,
+      preferredCallbackWindow: preferredCallbackWindow !== undefined ? preferredCallbackWindow.trim() : currentCadence.preferredCallbackWindow,
+      lastAnsweredAt: lastAnsweredAt !== undefined ? lastAnsweredAt.trim() : currentCadence.lastAnsweredAt,
     };
 
     const updatePayload: Partial<typeof leads.$inferInsert> = {
