@@ -308,10 +308,19 @@ export async function updateLeadDetailsAction(
       revalidatePath("/leads");
     } catch {}
 
-    return { success: true, leadId, lead: updated || fallbackLead };
+    const leadToReturn = updated || fallbackLead;
+    return {
+      success: true,
+      leadId,
+      lead: JSON.parse(JSON.stringify(leadToReturn)),
+    };
   } catch (error) {
     console.warn("Contingência ao atualizar lead no Postgres:", error);
-    return { success: true, leadId, lead: fallbackLead };
+    return {
+      success: true,
+      leadId,
+      lead: JSON.parse(JSON.stringify(fallbackLead)),
+    };
   }
 }
 
